@@ -1,0 +1,61 @@
+{
+  "fashionpedia_train2020_annotation": {
+    "url": "https://s3.amazonaws.com/ifashionist-dataset/annotations/instances_attributes_train2020.json",
+    "note": "로컬 보존 안 함(542MB). r1/r2 instances_subset.json 이 파생본."
+  },
+  "fashionpedia_val2020_annotation": {
+    "url": "https://s3.amazonaws.com/ifashionist-dataset/annotations/instances_attributes_val2020.json",
+    "sha256": "f831f415edad12d52acde8b138fe7ebd1592b57bf0dcd6a3b63ba8cabd208223",
+    "local_path": "data/provenance/fashionpedia/seed/instances_attributes_val2020.json (gitignored)"
+  },
+  "fashionpedia_images_parquet": {
+    "url": "https://huggingface.co/datasets/detection-datasets/fashionpedia (refs/convert/parquet, default/train)",
+    "shards": {
+      "0": {
+        "rows": 6518,
+        "min_image_id": 23,
+        "max_image_id": 6805
+      },
+      "1": {
+        "rows": 6518,
+        "min_image_id": 6806,
+        "max_image_id": 15130
+      },
+      "2": {
+        "rows": 6518,
+        "min_image_id": 15131,
+        "max_image_id": 23671
+      },
+      "3": {
+        "rows": 6518,
+        "min_image_id": 23672,
+        "max_image_id": 30400
+      },
+      "4": {
+        "rows": 6517,
+        "min_image_id": 30401,
+        "max_image_id": 37093
+      },
+      "5": {
+        "rows": 6517,
+        "min_image_id": 37094,
+        "max_image_id": 43789
+      },
+      "6": {
+        "rows": 6517,
+        "min_image_id": 43790,
+        "max_image_id": 50531
+      }
+    }
+  },
+  "instances_subset": {
+    "r1": {
+      "local_path": "data/provenance/fashionpedia/r1/instances_subset.json (gitignored)",
+      "sha256": "9d301d364d819f0f6f365af512194ccfaceb5f7190694a2fa3c6cfe30d20f3e4"
+    },
+    "r2": {
+      "local_path": "data/provenance/fashionpedia/r2/instances_subset.json (gitignored)",
+      "sha256": "d63b45faa748807032028e33a764a038f18968cb166580cba5bd9c0420ef1804"
+    }
+  }
+}

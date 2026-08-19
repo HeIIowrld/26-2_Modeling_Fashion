@@ -1,0 +1,4190 @@
+{
+  "eval_set": {
+    "name": "기존 val",
+    "crops": 1195,
+    "note": "두 모델 모두 학습에 사용하지 않음. 단 배포 모델은 이 셋으로 early stopping·임계값을 선택했으므로 배포 모델에 유리한 비교다."
+  },
+  "overall": {
+    "baseline": {
+      "tasks": 17,
+      "mean_score": 0.7482,
+      "sample_weighted_score": 0.7735,
+      "mean_macro_f1": 0.6054
+    },
+    "augmented": {
+      "tasks": 17,
+      "mean_score": 0.7641,
+      "sample_weighted_score": 0.7826,
+      "mean_macro_f1": 0.6726
+    }
+  },
+  "per_task": {
+    "neckline": {
+      "baseline": {
+        "samples": 85,
+        "multi_label": false,
+        "accuracy": 0.6353,
+        "macro_recall": 0.5424,
+        "macro_f1": 0.5837,
+        "score": 0.6353,
+        "threshold": 0.52,
+        "accepted_coverage": 0.8,
+        "accepted_accuracy": 0.7059,
+        "per_label": {
+          "라운드넥": {
+            "support": 31,
+            "recall": 0.8065,
+            "precision": 0.6579,
+            "f1": 0.7246,
+            "blocked": false
+          },
+          "V넥": {
+            "support": 16,
+            "recall": 0.75,
+            "precision": 0.8,
+            "f1": 0.7742,
+            "blocked": false
+          },
+          "스퀘어넥": {
+            "support": 7,
+            "recall": 0.2857,
+            "precision": 0.2857,
+            "f1": 0.2857,
+            "blocked": false
+          },
+          "보트넥": {
+            "support": 11,
+            "recall": 0.4545,
+            "precision": 0.4167,
+            "f1": 0.4348,
+            "blocked": false
+          },
+          "오프숄더": {
+            "support": 8,
+            "recall": 0.5,
+            "precision": 1.0,
+            "f1": 0.6667,
+            "blocked": false
+          },
+          "홀터넥": {
+            "support": 4,
+            "recall": 0.5,
+            "precision": 1.0,
+            "f1": 0.6667,
+            "blocked": false
+          },
+          "터틀넥": {
+            "support": 8,
+            "recall": 0.5,
+            "precision": 0.5714,
+            "f1": 0.5333,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "보트넥",
+            "predicted": "라운드넥",
+            "count": 5
+          },
+          {
+            "truth": "터틀넥",
+            "predicted": "라운드넥",
+            "count": 4
+          },
+          {
+            "truth": "오프숄더",
+            "predicted": "보트넥",
+            "count": 3
+          },
+          {
+            "truth": "스퀘어넥",
+            "predicted": "라운드넥",
+            "count": 2
+          },
+          {
+            "truth": "라운드넥",
+            "predicted": "스퀘어넥",
+            "count": 2
+          },
+          {
+            "truth": "V넥",
+            "predicted": "라운드넥",
+            "count": 2
+          }
+        ]
+      },
+      "augmented": {
+        "samples": 85,
+        "multi_label": false,
+        "accuracy": 0.7059,
+        "macro_recall": 0.7596,
+        "macro_f1": 0.7249,
+        "score": 0.7059,
+        "threshold": 0.52,
+        "accepted_coverage": 0.8235,
+        "accepted_accuracy": 0.8286,
+        "per_label": {
+          "라운드넥": {
+            "support": 31,
+            "recall": 0.6129,
+            "precision": 0.7037,
+            "f1": 0.6552,
+            "blocked": false
+          },
+          "V넥": {
+            "support": 16,
+            "recall": 0.75,
+            "precision": 0.9231,
+            "f1": 0.8276,
+            "blocked": false
+          },
+          "스퀘어넥": {
+            "support": 7,
+            "recall": 1.0,
+            "precision": 0.7,
+            "f1": 0.8235,
+            "blocked": false
+          },
+          "보트넥": {
+            "support": 11,
+            "recall": 0.4545,
+            "precision": 0.4167,
+            "f1": 0.4348,
+            "blocked": false
+          },
+          "오프숄더": {
+            "support": 8,
+            "recall": 1.0,
+            "precision": 1.0,
+            "f1": 1.0,
+            "blocked": false
+          },
+          "홀터넥": {
+            "support": 4,
+            "recall": 0.75,
+            "precision": 0.6,
+            "f1": 0.6667,
+            "blocked": false
+          },
+          "터틀넥": {
+            "support": 8,
+            "recall": 0.75,
+            "precision": 0.6,
+            "f1": 0.6667,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "라운드넥",
+            "predicted": "보트넥",
+            "count": 6
+          },
+          {
+            "truth": "보트넥",
+            "predicted": "라운드넥",
+            "count": 5
+          },
+          {
+            "truth": "라운드넥",
+            "predicted": "터틀넥",
+            "count": 3
+          },
+          {
+            "truth": "터틀넥",
+            "predicted": "라운드넥",
+            "count": 2
+          },
+          {
+            "truth": "홀터넥",
+            "predicted": "스퀘어넥",
+            "count": 1
+          },
+          {
+            "truth": "V넥",
+            "predicted": "보트넥",
+            "count": 1
+          }
+        ]
+      }
+    },
+    "silhouette": {
+      "baseline": {
+        "samples": 101,
+        "multi_label": false,
+        "accuracy": 0.703,
+        "macro_recall": 0.5179,
+        "macro_f1": 0.518,
+        "score": 0.703,
+        "threshold": 0.5,
+        "accepted_coverage": 0.7624,
+        "accepted_accuracy": 0.8182,
+        "per_label": {
+          "H라인": {
+            "support": 45,
+            "recall": 0.8889,
+            "precision": 0.7692,
+            "f1": 0.8247,
+            "blocked": false
+          },
+          "A라인": {
+            "support": 20,
+            "recall": 0.4,
+            "precision": 0.5714,
+            "f1": 0.4706,
+            "blocked": false
+          },
+          "X라인": {
+            "support": 21,
+            "recall": 0.7619,
+            "precision": 0.6667,
+            "f1": 0.7111,
+            "blocked": false
+          },
+          "O라인": {
+            "support": 2,
+            "recall": 0.0,
+            "precision": null,
+            "f1": 0.0,
+            "blocked": true
+          },
+          "비대칭": {
+            "support": 13,
+            "recall": 0.5385,
+            "precision": 0.6364,
+            "f1": 0.5833,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "A라인",
+            "predicted": "H라인",
+            "count": 8
+          },
+          {
+            "truth": "A라인",
+            "predicted": "X라인",
+            "count": 4
+          },
+          {
+            "truth": "비대칭",
+            "predicted": "H라인",
+            "count": 3
+          },
+          {
+            "truth": "비대칭",
+            "predicted": "A라인",
+            "count": 2
+          },
+          {
+            "truth": "H라인",
+            "predicted": "비대칭",
+            "count": 2
+          },
+          {
+            "truth": "O라인",
+            "predicted": "X라인",
+            "count": 2
+          }
+        ]
+      },
+      "augmented": {
+        "samples": 101,
+        "multi_label": false,
+        "accuracy": 0.7723,
+        "macro_recall": 0.7097,
+        "macro_f1": 0.6959,
+        "score": 0.7723,
+        "threshold": 0.5,
+        "accepted_coverage": 0.802,
+        "accepted_accuracy": 0.8519,
+        "per_label": {
+          "H라인": {
+            "support": 45,
+            "recall": 0.8222,
+            "precision": 0.881,
+            "f1": 0.8506,
+            "blocked": false
+          },
+          "A라인": {
+            "support": 20,
+            "recall": 0.6,
+            "precision": 0.75,
+            "f1": 0.6667,
+            "blocked": false
+          },
+          "X라인": {
+            "support": 21,
+            "recall": 0.8571,
+            "precision": 0.8182,
+            "f1": 0.8372,
+            "blocked": false
+          },
+          "O라인": {
+            "support": 2,
+            "recall": 0.5,
+            "precision": 0.5,
+            "f1": 0.5,
+            "blocked": false
+          },
+          "비대칭": {
+            "support": 13,
+            "recall": 0.7692,
+            "precision": 0.5263,
+            "f1": 0.625,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "H라인",
+            "predicted": "비대칭",
+            "count": 4
+          },
+          {
+            "truth": "H라인",
+            "predicted": "A라인",
+            "count": 4
+          },
+          {
+            "truth": "A라인",
+            "predicted": "X라인",
+            "count": 3
+          },
+          {
+            "truth": "A라인",
+            "predicted": "H라인",
+            "count": 3
+          },
+          {
+            "truth": "X라인",
+            "predicted": "비대칭",
+            "count": 3
+          },
+          {
+            "truth": "A라인",
+            "predicted": "비대칭",
+            "count": 2
+          }
+        ]
+      }
+    },
+    "collar": {
+      "baseline": {
+        "samples": 87,
+        "multi_label": false,
+        "accuracy": 0.7356,
+        "macro_recall": 0.4712,
+        "macro_f1": 0.447,
+        "score": 0.7356,
+        "threshold": 0.52,
+        "accepted_coverage": 0.8736,
+        "accepted_accuracy": 0.8026,
+        "per_label": {
+          "칼라 없음": {
+            "support": 1,
+            "recall": 0.0,
+            "precision": 0.0,
+            "f1": 0.0,
+            "blocked": false
+          },
+          "폴로 칼라": {
+            "support": 17,
+            "recall": 0.9412,
+            "precision": 1.0,
+            "f1": 0.9697,
+            "blocked": false
+          },
+          "셔츠 칼라": {
+            "support": 32,
+            "recall": 0.6562,
+            "precision": 0.8077,
+            "f1": 0.7241,
+            "blocked": false
+          },
+          "스탠드 칼라": {
+            "support": 3,
+            "recall": 0.3333,
+            "precision": 0.1429,
+            "f1": 0.2,
+            "blocked": false
+          },
+          "라펠 칼라": {
+            "support": 29,
+            "recall": 0.8966,
+            "precision": 0.7027,
+            "f1": 0.7879,
+            "blocked": false
+          },
+          "피터팬 칼라": {
+            "support": 5,
+            "recall": 0.0,
+            "precision": null,
+            "f1": 0.0,
+            "blocked": false
+          },
+          "세일러 칼라": {
+            "support": 0,
+            "recall": null,
+            "precision": null,
+            "f1": null,
+            "blocked": true
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "셔츠 칼라",
+            "predicted": "라펠 칼라",
+            "count": 8
+          },
+          {
+            "truth": "셔츠 칼라",
+            "predicted": "스탠드 칼라",
+            "count": 3
+          },
+          {
+            "truth": "피터팬 칼라",
+            "predicted": "셔츠 칼라",
+            "count": 2
+          },
+          {
+            "truth": "피터팬 칼라",
+            "predicted": "라펠 칼라",
+            "count": 2
+          },
+          {
+            "truth": "칼라 없음",
+            "predicted": "스탠드 칼라",
+            "count": 1
+          },
+          {
+            "truth": "라펠 칼라",
+            "predicted": "셔츠 칼라",
+            "count": 1
+          }
+        ]
+      },
+      "augmented": {
+        "samples": 87,
+        "multi_label": false,
+        "accuracy": 0.8046,
+        "macro_recall": 0.7981,
+        "macro_f1": 0.6989,
+        "score": 0.8046,
+        "threshold": 0.52,
+        "accepted_coverage": 0.8506,
+        "accepted_accuracy": 0.8514,
+        "per_label": {
+          "칼라 없음": {
+            "support": 1,
+            "recall": 1.0,
+            "precision": 0.3333,
+            "f1": 0.5,
+            "blocked": false
+          },
+          "폴로 칼라": {
+            "support": 17,
+            "recall": 0.9412,
+            "precision": 1.0,
+            "f1": 0.9697,
+            "blocked": false
+          },
+          "셔츠 칼라": {
+            "support": 32,
+            "recall": 0.7188,
+            "precision": 0.92,
+            "f1": 0.807,
+            "blocked": false
+          },
+          "스탠드 칼라": {
+            "support": 3,
+            "recall": 0.6667,
+            "precision": 0.2222,
+            "f1": 0.3333,
+            "blocked": false
+          },
+          "라펠 칼라": {
+            "support": 29,
+            "recall": 0.8621,
+            "precision": 0.8065,
+            "f1": 0.8333,
+            "blocked": false
+          },
+          "피터팬 칼라": {
+            "support": 5,
+            "recall": 0.6,
+            "precision": 1.0,
+            "f1": 0.75,
+            "blocked": false
+          },
+          "세일러 칼라": {
+            "support": 0,
+            "recall": null,
+            "precision": null,
+            "f1": null,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "셔츠 칼라",
+            "predicted": "스탠드 칼라",
+            "count": 5
+          },
+          {
+            "truth": "셔츠 칼라",
+            "predicted": "라펠 칼라",
+            "count": 4
+          },
+          {
+            "truth": "피터팬 칼라",
+            "predicted": "라펠 칼라",
+            "count": 2
+          },
+          {
+            "truth": "라펠 칼라",
+            "predicted": "스탠드 칼라",
+            "count": 2
+          },
+          {
+            "truth": "라펠 칼라",
+            "predicted": "칼라 없음",
+            "count": 2
+          },
+          {
+            "truth": "스탠드 칼라",
+            "predicted": "셔츠 칼라",
+            "count": 1
+          }
+        ]
+      }
+    },
+    "upper_length": {
+      "baseline": {
+        "samples": 132,
+        "multi_label": false,
+        "accuracy": 0.7424,
+        "macro_recall": 0.7338,
+        "macro_f1": 0.7386,
+        "score": 0.7424,
+        "threshold": 0.5,
+        "accepted_coverage": 0.9924,
+        "accepted_accuracy": 0.7481,
+        "per_label": {
+          "크롭 기장": {
+            "support": 91,
+            "recall": 0.8681,
+            "precision": 0.7822,
+            "f1": 0.8229,
+            "blocked": false
+          },
+          "기본 기장": {
+            "support": 33,
+            "recall": 0.3333,
+            "precision": 0.4783,
+            "f1": 0.3929,
+            "blocked": false
+          },
+          "롱 기장": {
+            "support": 8,
+            "recall": 1.0,
+            "precision": 1.0,
+            "f1": 1.0,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "기본 기장",
+            "predicted": "크롭 기장",
+            "count": 22
+          },
+          {
+            "truth": "크롭 기장",
+            "predicted": "기본 기장",
+            "count": 12
+          }
+        ]
+      },
+      "augmented": {
+        "samples": 132,
+        "multi_label": false,
+        "accuracy": 0.8106,
+        "macro_recall": 0.761,
+        "macro_f1": 0.7917,
+        "score": 0.8106,
+        "threshold": 0.5,
+        "accepted_coverage": 0.9848,
+        "accepted_accuracy": 0.8231,
+        "per_label": {
+          "크롭 기장": {
+            "support": 91,
+            "recall": 0.9231,
+            "precision": 0.8235,
+            "f1": 0.8705,
+            "blocked": false
+          },
+          "기본 기장": {
+            "support": 33,
+            "recall": 0.4848,
+            "precision": 0.6957,
+            "f1": 0.5714,
+            "blocked": false
+          },
+          "롱 기장": {
+            "support": 8,
+            "recall": 0.875,
+            "precision": 1.0,
+            "f1": 0.9333,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "기본 기장",
+            "predicted": "크롭 기장",
+            "count": 17
+          },
+          {
+            "truth": "크롭 기장",
+            "predicted": "기본 기장",
+            "count": 7
+          },
+          {
+            "truth": "롱 기장",
+            "predicted": "크롭 기장",
+            "count": 1
+          }
+        ]
+      }
+    },
+    "pant_leg_shape": {
+      "baseline": {
+        "samples": 374,
+        "multi_label": false,
+        "accuracy": 0.5695,
+        "macro_recall": 0.5012,
+        "macro_f1": 0.503,
+        "score": 0.5695,
+        "threshold": 0.7,
+        "accepted_coverage": 0.3209,
+        "accepted_accuracy": 0.85,
+        "per_label": {
+          "스키니": {
+            "support": 70,
+            "recall": 0.7,
+            "precision": 0.7903,
+            "f1": 0.7424,
+            "blocked": false
+          },
+          "스트레이트": {
+            "support": 71,
+            "recall": 0.4648,
+            "precision": 0.4648,
+            "f1": 0.4648,
+            "blocked": false
+          },
+          "테이퍼드": {
+            "support": 40,
+            "recall": 0.45,
+            "precision": 0.375,
+            "f1": 0.4091,
+            "blocked": false
+          },
+          "페그": {
+            "support": 12,
+            "recall": 0.4167,
+            "precision": 0.4167,
+            "f1": 0.4167,
+            "blocked": false
+          },
+          "부츠컷": {
+            "support": 15,
+            "recall": 0.4667,
+            "precision": 0.3889,
+            "f1": 0.4242,
+            "blocked": false
+          },
+          "플레어": {
+            "support": 54,
+            "recall": 0.6296,
+            "precision": 0.68,
+            "f1": 0.6538,
+            "blocked": false
+          },
+          "와이드": {
+            "support": 89,
+            "recall": 0.7079,
+            "precision": 0.5943,
+            "f1": 0.6462,
+            "blocked": false
+          },
+          "팔라초": {
+            "support": 23,
+            "recall": 0.1739,
+            "precision": 0.5714,
+            "f1": 0.2667,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "팔라초",
+            "predicted": "와이드",
+            "count": 17
+          },
+          {
+            "truth": "스트레이트",
+            "predicted": "테이퍼드",
+            "count": 14
+          },
+          {
+            "truth": "스키니",
+            "predicted": "스트레이트",
+            "count": 13
+          },
+          {
+            "truth": "플레어",
+            "predicted": "와이드",
+            "count": 12
+          },
+          {
+            "truth": "테이퍼드",
+            "predicted": "스트레이트",
+            "count": 11
+          },
+          {
+            "truth": "와이드",
+            "predicted": "스트레이트",
+            "count": 9
+          }
+        ]
+      },
+      "augmented": {
+        "samples": 374,
+        "multi_label": false,
+        "accuracy": 0.6096,
+        "macro_recall": 0.5913,
+        "macro_f1": 0.5785,
+        "score": 0.6096,
+        "threshold": 0.45,
+        "accepted_coverage": 0.9412,
+        "accepted_accuracy": 0.6307,
+        "per_label": {
+          "스키니": {
+            "support": 70,
+            "recall": 0.7286,
+            "precision": 0.7727,
+            "f1": 0.75,
+            "blocked": false
+          },
+          "스트레이트": {
+            "support": 71,
+            "recall": 0.5352,
+            "precision": 0.4935,
+            "f1": 0.5135,
+            "blocked": false
+          },
+          "테이퍼드": {
+            "support": 40,
+            "recall": 0.5,
+            "precision": 0.4444,
+            "f1": 0.4706,
+            "blocked": false
+          },
+          "페그": {
+            "support": 12,
+            "recall": 0.5833,
+            "precision": 0.4667,
+            "f1": 0.5185,
+            "blocked": false
+          },
+          "부츠컷": {
+            "support": 15,
+            "recall": 0.5333,
+            "precision": 0.4444,
+            "f1": 0.4848,
+            "blocked": false
+          },
+          "플레어": {
+            "support": 54,
+            "recall": 0.6667,
+            "precision": 0.6667,
+            "f1": 0.6667,
+            "blocked": false
+          },
+          "와이드": {
+            "support": 89,
+            "recall": 0.618,
+            "precision": 0.7333,
+            "f1": 0.6707,
+            "blocked": false
+          },
+          "팔라초": {
+            "support": 23,
+            "recall": 0.5652,
+            "precision": 0.5417,
+            "f1": 0.5532,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "스트레이트",
+            "predicted": "테이퍼드",
+            "count": 11
+          },
+          {
+            "truth": "와이드",
+            "predicted": "플레어",
+            "count": 11
+          },
+          {
+            "truth": "테이퍼드",
+            "predicted": "스트레이트",
+            "count": 11
+          },
+          {
+            "truth": "플레어",
+            "predicted": "와이드",
+            "count": 10
+          },
+          {
+            "truth": "스키니",
+            "predicted": "스트레이트",
+            "count": 9
+          },
+          {
+            "truth": "와이드",
+            "predicted": "스트레이트",
+            "count": 9
+          }
+        ]
+      }
+    },
+    "sleeve_shape": {
+      "baseline": {
+        "samples": 122,
+        "multi_label": false,
+        "accuracy": 0.7951,
+        "macro_recall": 0.4627,
+        "macro_f1": 0.4661,
+        "score": 0.7951,
+        "threshold": 0.5,
+        "accepted_coverage": 0.9016,
+        "accepted_accuracy": 0.8273,
+        "per_label": {
+          "기본 소매": {
+            "support": 85,
+            "recall": 0.9059,
+            "precision": 0.875,
+            "f1": 0.8902,
+            "blocked": false
+          },
+          "퍼프 소매": {
+            "support": 6,
+            "recall": 0.3333,
+            "precision": 0.2,
+            "f1": 0.25,
+            "blocked": false
+          },
+          "벌룬 소매": {
+            "support": 5,
+            "recall": 0.2,
+            "precision": 1.0,
+            "f1": 0.3333,
+            "blocked": false
+          },
+          "벨 소매": {
+            "support": 5,
+            "recall": 0.6,
+            "precision": 0.5,
+            "f1": 0.5455,
+            "blocked": false
+          },
+          "래글런 소매": {
+            "support": 2,
+            "recall": 0.0,
+            "precision": null,
+            "f1": 0.0,
+            "blocked": false
+          },
+          "캡 소매": {
+            "support": 19,
+            "recall": 0.7368,
+            "precision": 0.8235,
+            "f1": 0.7778,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "기본 소매",
+            "predicted": "퍼프 소매",
+            "count": 6
+          },
+          {
+            "truth": "퍼프 소매",
+            "predicted": "기본 소매",
+            "count": 4
+          },
+          {
+            "truth": "캡 소매",
+            "predicted": "기본 소매",
+            "count": 3
+          },
+          {
+            "truth": "벌룬 소매",
+            "predicted": "벨 소매",
+            "count": 2
+          },
+          {
+            "truth": "벌룬 소매",
+            "predicted": "기본 소매",
+            "count": 2
+          },
+          {
+            "truth": "캡 소매",
+            "predicted": "퍼프 소매",
+            "count": 2
+          }
+        ]
+      },
+      "augmented": {
+        "samples": 122,
+        "multi_label": false,
+        "accuracy": 0.8279,
+        "macro_recall": 0.6214,
+        "macro_f1": 0.6032,
+        "score": 0.8279,
+        "threshold": 0.5,
+        "accepted_coverage": 0.9426,
+        "accepted_accuracy": 0.8609,
+        "per_label": {
+          "기본 소매": {
+            "support": 85,
+            "recall": 0.9059,
+            "precision": 0.9167,
+            "f1": 0.9112,
+            "blocked": false
+          },
+          "퍼프 소매": {
+            "support": 6,
+            "recall": 0.3333,
+            "precision": 0.6667,
+            "f1": 0.4444,
+            "blocked": false
+          },
+          "벌룬 소매": {
+            "support": 5,
+            "recall": 0.4,
+            "precision": 0.5,
+            "f1": 0.4444,
+            "blocked": false
+          },
+          "벨 소매": {
+            "support": 5,
+            "recall": 0.8,
+            "precision": 0.8,
+            "f1": 0.8,
+            "blocked": false
+          },
+          "래글런 소매": {
+            "support": 2,
+            "recall": 0.5,
+            "precision": 0.1667,
+            "f1": 0.25,
+            "blocked": false
+          },
+          "캡 소매": {
+            "support": 19,
+            "recall": 0.7895,
+            "precision": 0.75,
+            "f1": 0.7692,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "기본 소매",
+            "predicted": "캡 소매",
+            "count": 4
+          },
+          {
+            "truth": "퍼프 소매",
+            "predicted": "기본 소매",
+            "count": 3
+          },
+          {
+            "truth": "캡 소매",
+            "predicted": "래글런 소매",
+            "count": 3
+          },
+          {
+            "truth": "기본 소매",
+            "predicted": "래글런 소매",
+            "count": 2
+          },
+          {
+            "truth": "벌룬 소매",
+            "predicted": "기본 소매",
+            "count": 2
+          },
+          {
+            "truth": "벨 소매",
+            "predicted": "기본 소매",
+            "count": 1
+          }
+        ]
+      }
+    },
+    "lower_fit": {
+      "baseline": {
+        "samples": 442,
+        "multi_label": false,
+        "accuracy": 0.6697,
+        "macro_recall": 0.6615,
+        "macro_f1": 0.6602,
+        "score": 0.6697,
+        "threshold": 0.5,
+        "accepted_coverage": 0.8054,
+        "accepted_accuracy": 0.7247,
+        "per_label": {
+          "슬림핏": {
+            "support": 103,
+            "recall": 0.7184,
+            "precision": 0.8222,
+            "f1": 0.7668,
+            "blocked": false
+          },
+          "스트레이트핏": {
+            "support": 91,
+            "recall": 0.5495,
+            "precision": 0.4808,
+            "f1": 0.5128,
+            "blocked": false
+          },
+          "테이퍼드핏": {
+            "support": 52,
+            "recall": 0.6154,
+            "precision": 0.5161,
+            "f1": 0.5614,
+            "blocked": false
+          },
+          "와이드핏": {
+            "support": 122,
+            "recall": 0.7213,
+            "precision": 0.7652,
+            "f1": 0.7426,
+            "blocked": false
+          },
+          "플레어핏": {
+            "support": 74,
+            "recall": 0.7027,
+            "precision": 0.7324,
+            "f1": 0.7172,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "슬림핏",
+            "predicted": "스트레이트핏",
+            "count": 19
+          },
+          {
+            "truth": "스트레이트핏",
+            "predicted": "테이퍼드핏",
+            "count": 16
+          },
+          {
+            "truth": "플레어핏",
+            "predicted": "와이드핏",
+            "count": 15
+          },
+          {
+            "truth": "와이드핏",
+            "predicted": "스트레이트핏",
+            "count": 15
+          },
+          {
+            "truth": "와이드핏",
+            "predicted": "플레어핏",
+            "count": 13
+          },
+          {
+            "truth": "테이퍼드핏",
+            "predicted": "스트레이트핏",
+            "count": 13
+          }
+        ]
+      },
+      "augmented": {
+        "samples": 442,
+        "multi_label": false,
+        "accuracy": 0.6968,
+        "macro_recall": 0.6909,
+        "macro_f1": 0.6815,
+        "score": 0.6968,
+        "threshold": 0.5,
+        "accepted_coverage": 0.9163,
+        "accepted_accuracy": 0.7333,
+        "per_label": {
+          "슬림핏": {
+            "support": 103,
+            "recall": 0.7864,
+            "precision": 0.8182,
+            "f1": 0.802,
+            "blocked": false
+          },
+          "스트레이트핏": {
+            "support": 91,
+            "recall": 0.4615,
+            "precision": 0.5676,
+            "f1": 0.5091,
+            "blocked": false
+          },
+          "테이퍼드핏": {
+            "support": 52,
+            "recall": 0.7115,
+            "precision": 0.5068,
+            "f1": 0.592,
+            "blocked": false
+          },
+          "와이드핏": {
+            "support": 122,
+            "recall": 0.7787,
+            "precision": 0.748,
+            "f1": 0.7631,
+            "blocked": false
+          },
+          "플레어핏": {
+            "support": 74,
+            "recall": 0.7162,
+            "precision": 0.7681,
+            "f1": 0.7413,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "스트레이트핏",
+            "predicted": "테이퍼드핏",
+            "count": 20
+          },
+          {
+            "truth": "플레어핏",
+            "predicted": "와이드핏",
+            "count": 16
+          },
+          {
+            "truth": "스트레이트핏",
+            "predicted": "슬림핏",
+            "count": 14
+          },
+          {
+            "truth": "와이드핏",
+            "predicted": "스트레이트핏",
+            "count": 11
+          },
+          {
+            "truth": "스트레이트핏",
+            "predicted": "와이드핏",
+            "count": 11
+          },
+          {
+            "truth": "와이드핏",
+            "predicted": "플레어핏",
+            "count": 10
+          }
+        ]
+      }
+    },
+    "lower_subtype": {
+      "baseline": {
+        "samples": 252,
+        "multi_label": false,
+        "accuracy": 0.7063,
+        "macro_recall": 0.648,
+        "macro_f1": 0.6399,
+        "score": 0.7063,
+        "threshold": 0.65,
+        "accepted_coverage": 0.7262,
+        "accepted_accuracy": 0.8033,
+        "per_label": {
+          "슬랙스": {
+            "support": 12,
+            "recall": 0.8333,
+            "precision": 0.7143,
+            "f1": 0.7692,
+            "blocked": false
+          },
+          "치노 팬츠": {
+            "support": 24,
+            "recall": 0.75,
+            "precision": 0.6923,
+            "f1": 0.72,
+            "blocked": false
+          },
+          "청바지": {
+            "support": 10,
+            "recall": 0.8,
+            "precision": 0.4211,
+            "f1": 0.5517,
+            "blocked": false
+          },
+          "카고 팬츠": {
+            "support": 15,
+            "recall": 0.7333,
+            "precision": 0.6471,
+            "f1": 0.6875,
+            "blocked": false
+          },
+          "조거·스웨트팬츠": {
+            "support": 40,
+            "recall": 0.65,
+            "precision": 0.6842,
+            "f1": 0.6667,
+            "blocked": false
+          },
+          "트랙팬츠": {
+            "support": 17,
+            "recall": 0.4706,
+            "precision": 0.3333,
+            "f1": 0.3902,
+            "blocked": false
+          },
+          "레깅스": {
+            "support": 72,
+            "recall": 0.8889,
+            "precision": 0.9014,
+            "f1": 0.8951,
+            "blocked": false
+          },
+          "하렘 팬츠": {
+            "support": 51,
+            "recall": 0.5686,
+            "precision": 0.7632,
+            "f1": 0.6517,
+            "blocked": false
+          },
+          "요가 팬츠": {
+            "support": 7,
+            "recall": 0.2857,
+            "precision": 0.6667,
+            "f1": 0.4,
+            "blocked": false
+          },
+          "세일러 팬츠": {
+            "support": 4,
+            "recall": 0.5,
+            "precision": 1.0,
+            "f1": 0.6667,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "조거·스웨트팬츠",
+            "predicted": "트랙팬츠",
+            "count": 8
+          },
+          {
+            "truth": "하렘 팬츠",
+            "predicted": "트랙팬츠",
+            "count": 7
+          },
+          {
+            "truth": "레깅스",
+            "predicted": "청바지",
+            "count": 6
+          },
+          {
+            "truth": "조거·스웨트팬츠",
+            "predicted": "하렘 팬츠",
+            "count": 5
+          },
+          {
+            "truth": "하렘 팬츠",
+            "predicted": "조거·스웨트팬츠",
+            "count": 4
+          },
+          {
+            "truth": "트랙팬츠",
+            "predicted": "조거·스웨트팬츠",
+            "count": 4
+          }
+        ]
+      },
+      "augmented": {
+        "samples": 252,
+        "multi_label": false,
+        "accuracy": 0.7302,
+        "macro_recall": 0.6965,
+        "macro_f1": 0.689,
+        "score": 0.7302,
+        "threshold": 0.6,
+        "accepted_coverage": 0.9206,
+        "accepted_accuracy": 0.7672,
+        "per_label": {
+          "슬랙스": {
+            "support": 12,
+            "recall": 0.8333,
+            "precision": 0.7143,
+            "f1": 0.7692,
+            "blocked": false
+          },
+          "치노 팬츠": {
+            "support": 24,
+            "recall": 0.7917,
+            "precision": 0.76,
+            "f1": 0.7755,
+            "blocked": false
+          },
+          "청바지": {
+            "support": 10,
+            "recall": 0.8,
+            "precision": 0.4444,
+            "f1": 0.5714,
+            "blocked": false
+          },
+          "카고 팬츠": {
+            "support": 15,
+            "recall": 0.6667,
+            "precision": 0.6667,
+            "f1": 0.6667,
+            "blocked": false
+          },
+          "조거·스웨트팬츠": {
+            "support": 40,
+            "recall": 0.775,
+            "precision": 0.6327,
+            "f1": 0.6966,
+            "blocked": false
+          },
+          "트랙팬츠": {
+            "support": 17,
+            "recall": 0.4706,
+            "precision": 0.5714,
+            "f1": 0.5161,
+            "blocked": false
+          },
+          "레깅스": {
+            "support": 72,
+            "recall": 0.8611,
+            "precision": 0.9254,
+            "f1": 0.8921,
+            "blocked": false
+          },
+          "하렘 팬츠": {
+            "support": 51,
+            "recall": 0.5882,
+            "precision": 0.7143,
+            "f1": 0.6452,
+            "blocked": false
+          },
+          "요가 팬츠": {
+            "support": 7,
+            "recall": 0.4286,
+            "precision": 0.6,
+            "f1": 0.5,
+            "blocked": false
+          },
+          "세일러 팬츠": {
+            "support": 4,
+            "recall": 0.75,
+            "precision": 1.0,
+            "f1": 0.8571,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "하렘 팬츠",
+            "predicted": "조거·스웨트팬츠",
+            "count": 7
+          },
+          {
+            "truth": "조거·스웨트팬츠",
+            "predicted": "하렘 팬츠",
+            "count": 7
+          },
+          {
+            "truth": "레깅스",
+            "predicted": "청바지",
+            "count": 7
+          },
+          {
+            "truth": "트랙팬츠",
+            "predicted": "하렘 팬츠",
+            "count": 4
+          },
+          {
+            "truth": "하렘 팬츠",
+            "predicted": "치노 팬츠",
+            "count": 4
+          },
+          {
+            "truth": "하렘 팬츠",
+            "predicted": "트랙팬츠",
+            "count": 3
+          }
+        ]
+      }
+    },
+    "category": {
+      "baseline": {
+        "samples": 1195,
+        "multi_label": false,
+        "accuracy": 0.8703,
+        "macro_recall": 0.6331,
+        "macro_f1": 0.6376,
+        "score": 0.8703,
+        "threshold": 0.45,
+        "accepted_coverage": 0.9682,
+        "accepted_accuracy": 0.8859,
+        "per_label": {
+          "티셔츠": {
+            "support": 51,
+            "recall": 0.6863,
+            "precision": 0.8333,
+            "f1": 0.7527,
+            "blocked": false
+          },
+          "폴로 셔츠": {
+            "support": 18,
+            "recall": 0.8333,
+            "precision": 0.9375,
+            "f1": 0.8824,
+            "blocked": false
+          },
+          "셔츠": {
+            "support": 57,
+            "recall": 0.7018,
+            "precision": 0.6452,
+            "f1": 0.6723,
+            "blocked": false
+          },
+          "블라우스": {
+            "support": 71,
+            "recall": 0.6479,
+            "precision": 0.7077,
+            "f1": 0.6765,
+            "blocked": false
+          },
+          "니트": {
+            "support": 4,
+            "recall": 0.75,
+            "precision": 1.0,
+            "f1": 0.8571,
+            "blocked": false
+          },
+          "가디건": {
+            "support": 1,
+            "recall": 0.0,
+            "precision": null,
+            "f1": 0.0,
+            "blocked": false
+          },
+          "후드티": {
+            "support": 1,
+            "recall": 0.0,
+            "precision": 0.0,
+            "f1": 0.0,
+            "blocked": false
+          },
+          "재킷": {
+            "support": 21,
+            "recall": 0.8095,
+            "precision": 0.7391,
+            "f1": 0.7727,
+            "blocked": false
+          },
+          "블레이저": {
+            "support": 17,
+            "recall": 0.7059,
+            "precision": 0.6667,
+            "f1": 0.6857,
+            "blocked": false
+          },
+          "코트": {
+            "support": 17,
+            "recall": 0.6471,
+            "precision": 0.6111,
+            "f1": 0.6286,
+            "blocked": false
+          },
+          "베스트": {
+            "support": 2,
+            "recall": 0.5,
+            "precision": 0.2,
+            "f1": 0.2857,
+            "blocked": false
+          },
+          "탑": {
+            "support": 77,
+            "recall": 0.7143,
+            "precision": 0.6322,
+            "f1": 0.6707,
+            "blocked": false
+          },
+          "팬츠": {
+            "support": 662,
+            "recall": 0.9728,
+            "precision": 0.9787,
+            "f1": 0.9758,
+            "blocked": false
+          },
+          "청바지": {
+            "support": 38,
+            "recall": 0.6579,
+            "precision": 0.625,
+            "f1": 0.641,
+            "blocked": false
+          },
+          "쇼츠": {
+            "support": 19,
+            "recall": 0.7895,
+            "precision": 0.8333,
+            "f1": 0.8108,
+            "blocked": false
+          },
+          "스커트": {
+            "support": 20,
+            "recall": 0.65,
+            "precision": 0.7222,
+            "f1": 0.6842,
+            "blocked": false
+          },
+          "원피스": {
+            "support": 114,
+            "recall": 0.9298,
+            "precision": 0.8908,
+            "f1": 0.9099,
+            "blocked": false
+          },
+          "점프수트": {
+            "support": 5,
+            "recall": 0.4,
+            "precision": 1.0,
+            "f1": 0.5714,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "팬츠",
+            "predicted": "청바지",
+            "count": 15
+          },
+          {
+            "truth": "블라우스",
+            "predicted": "탑",
+            "count": 15
+          },
+          {
+            "truth": "청바지",
+            "predicted": "팬츠",
+            "count": 12
+          },
+          {
+            "truth": "탑",
+            "predicted": "블라우스",
+            "count": 11
+          },
+          {
+            "truth": "티셔츠",
+            "predicted": "탑",
+            "count": 9
+          },
+          {
+            "truth": "블라우스",
+            "predicted": "셔츠",
+            "count": 9
+          }
+        ]
+      },
+      "augmented": {
+        "samples": 1195,
+        "multi_label": false,
+        "accuracy": 0.8795,
+        "macro_recall": 0.7374,
+        "macro_f1": 0.7011,
+        "score": 0.8795,
+        "threshold": 0.45,
+        "accepted_coverage": 0.9715,
+        "accepted_accuracy": 0.8984,
+        "per_label": {
+          "티셔츠": {
+            "support": 51,
+            "recall": 0.6863,
+            "precision": 0.7143,
+            "f1": 0.7,
+            "blocked": false
+          },
+          "폴로 셔츠": {
+            "support": 18,
+            "recall": 0.8889,
+            "precision": 0.9412,
+            "f1": 0.9143,
+            "blocked": false
+          },
+          "셔츠": {
+            "support": 57,
+            "recall": 0.7193,
+            "precision": 0.6508,
+            "f1": 0.6833,
+            "blocked": false
+          },
+          "블라우스": {
+            "support": 71,
+            "recall": 0.7465,
+            "precision": 0.6974,
+            "f1": 0.7211,
+            "blocked": false
+          },
+          "니트": {
+            "support": 4,
+            "recall": 0.5,
+            "precision": 0.5,
+            "f1": 0.5,
+            "blocked": false
+          },
+          "가디건": {
+            "support": 1,
+            "recall": 0.0,
+            "precision": 0.0,
+            "f1": 0.0,
+            "blocked": false
+          },
+          "후드티": {
+            "support": 1,
+            "recall": 1.0,
+            "precision": 0.5,
+            "f1": 0.6667,
+            "blocked": false
+          },
+          "재킷": {
+            "support": 21,
+            "recall": 0.7143,
+            "precision": 0.7895,
+            "f1": 0.75,
+            "blocked": false
+          },
+          "블레이저": {
+            "support": 17,
+            "recall": 0.7647,
+            "precision": 0.7647,
+            "f1": 0.7647,
+            "blocked": false
+          },
+          "코트": {
+            "support": 17,
+            "recall": 0.7059,
+            "precision": 0.6667,
+            "f1": 0.6857,
+            "blocked": false
+          },
+          "베스트": {
+            "support": 2,
+            "recall": 0.5,
+            "precision": 0.5,
+            "f1": 0.5,
+            "blocked": false
+          },
+          "탑": {
+            "support": 77,
+            "recall": 0.6234,
+            "precision": 0.6957,
+            "f1": 0.6575,
+            "blocked": false
+          },
+          "팬츠": {
+            "support": 662,
+            "recall": 0.9683,
+            "precision": 0.9846,
+            "f1": 0.9764,
+            "blocked": false
+          },
+          "청바지": {
+            "support": 38,
+            "recall": 0.7368,
+            "precision": 0.6364,
+            "f1": 0.6829,
+            "blocked": false
+          },
+          "쇼츠": {
+            "support": 19,
+            "recall": 0.9474,
+            "precision": 0.75,
+            "f1": 0.8372,
+            "blocked": false
+          },
+          "스커트": {
+            "support": 20,
+            "recall": 0.85,
+            "precision": 0.7727,
+            "f1": 0.8095,
+            "blocked": false
+          },
+          "원피스": {
+            "support": 114,
+            "recall": 0.9211,
+            "precision": 0.9545,
+            "f1": 0.9375,
+            "blocked": false
+          },
+          "점프수트": {
+            "support": 5,
+            "recall": 1.0,
+            "precision": 0.7143,
+            "f1": 0.8333,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "팬츠",
+            "predicted": "청바지",
+            "count": 16
+          },
+          {
+            "truth": "탑",
+            "predicted": "블라우스",
+            "count": 14
+          },
+          {
+            "truth": "청바지",
+            "predicted": "팬츠",
+            "count": 9
+          },
+          {
+            "truth": "블라우스",
+            "predicted": "탑",
+            "count": 9
+          },
+          {
+            "truth": "셔츠",
+            "predicted": "블라우스",
+            "count": 9
+          },
+          {
+            "truth": "탑",
+            "predicted": "티셔츠",
+            "count": 8
+          }
+        ]
+      }
+    },
+    "detail": {
+      "baseline": {
+        "samples": 262,
+        "multi_label": true,
+        "micro_f1": 0.7203,
+        "macro_f1": 0.5343,
+        "score": 0.7203,
+        "threshold": 0.55,
+        "per_label": {
+          "디테일 없음": {
+            "support": 0,
+            "f1": null,
+            "blocked": true
+          },
+          "포켓": {
+            "support": 72,
+            "f1": 0.7568,
+            "blocked": false
+          },
+          "프릴·러플": {
+            "support": 13,
+            "f1": 0.3571,
+            "blocked": false
+          },
+          "지퍼": {
+            "support": 117,
+            "f1": 0.8417,
+            "blocked": false
+          },
+          "벨트": {
+            "support": 34,
+            "f1": 0.6269,
+            "blocked": false
+          },
+          "단추": {
+            "support": 56,
+            "f1": 0.8364,
+            "blocked": false
+          },
+          "리본": {
+            "support": 18,
+            "f1": 0.3889,
+            "blocked": false
+          },
+          "레이스": {
+            "support": 18,
+            "f1": 0.8649,
+            "blocked": false
+          },
+          "플리츠": {
+            "support": 25,
+            "f1": 0.383,
+            "blocked": false
+          },
+          "자수": {
+            "support": 2,
+            "f1": 0.25,
+            "blocked": false
+          },
+          "스팽글": {
+            "support": 4,
+            "f1": 0.0,
+            "blocked": false
+          },
+          "후드": {
+            "support": 4,
+            "f1": 0.5714,
+            "blocked": false
+          }
+        }
+      },
+      "augmented": {
+        "samples": 262,
+        "multi_label": true,
+        "micro_f1": 0.7226,
+        "macro_f1": 0.5722,
+        "score": 0.7226,
+        "threshold": 0.65,
+        "per_label": {
+          "디테일 없음": {
+            "support": 0,
+            "f1": null,
+            "blocked": true
+          },
+          "포켓": {
+            "support": 72,
+            "f1": 0.75,
+            "blocked": false
+          },
+          "프릴·러플": {
+            "support": 13,
+            "f1": 0.3125,
+            "blocked": false
+          },
+          "지퍼": {
+            "support": 117,
+            "f1": 0.8772,
+            "blocked": false
+          },
+          "벨트": {
+            "support": 34,
+            "f1": 0.6494,
+            "blocked": false
+          },
+          "단추": {
+            "support": 56,
+            "f1": 0.8,
+            "blocked": false
+          },
+          "리본": {
+            "support": 18,
+            "f1": 0.5,
+            "blocked": false
+          },
+          "레이스": {
+            "support": 18,
+            "f1": 0.8333,
+            "blocked": false
+          },
+          "플리츠": {
+            "support": 25,
+            "f1": 0.5,
+            "blocked": false
+          },
+          "자수": {
+            "support": 2,
+            "f1": 0.25,
+            "blocked": false
+          },
+          "스팽글": {
+            "support": 4,
+            "f1": 0.2222,
+            "blocked": false
+          },
+          "후드": {
+            "support": 4,
+            "f1": 0.6,
+            "blocked": false
+          }
+        }
+      }
+    },
+    "upper_fit": {
+      "baseline": {
+        "samples": 178,
+        "multi_label": false,
+        "accuracy": 0.6404,
+        "macro_recall": 0.4631,
+        "macro_f1": 0.4574,
+        "score": 0.6404,
+        "threshold": 0.5,
+        "accepted_coverage": 0.882,
+        "accepted_accuracy": 0.6497,
+        "per_label": {
+          "슬림핏": {
+            "support": 60,
+            "recall": 0.65,
+            "precision": 0.75,
+            "f1": 0.6964,
+            "blocked": false
+          },
+          "레귤러핏": {
+            "support": 86,
+            "recall": 0.7209,
+            "precision": 0.6526,
+            "f1": 0.6851,
+            "blocked": false
+          },
+          "여유핏": {
+            "support": 27,
+            "recall": 0.4815,
+            "precision": 0.4194,
+            "f1": 0.4483,
+            "blocked": false
+          },
+          "오버핏": {
+            "support": 5,
+            "recall": 0.0,
+            "precision": null,
+            "f1": 0.0,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "슬림핏",
+            "predicted": "레귤러핏",
+            "count": 20
+          },
+          {
+            "truth": "레귤러핏",
+            "predicted": "여유핏",
+            "count": 14
+          },
+          {
+            "truth": "여유핏",
+            "predicted": "레귤러핏",
+            "count": 12
+          },
+          {
+            "truth": "레귤러핏",
+            "predicted": "슬림핏",
+            "count": 10
+          },
+          {
+            "truth": "오버핏",
+            "predicted": "여유핏",
+            "count": 3
+          },
+          {
+            "truth": "여유핏",
+            "predicted": "슬림핏",
+            "count": 2
+          }
+        ]
+      },
+      "augmented": {
+        "samples": 178,
+        "multi_label": false,
+        "accuracy": 0.6404,
+        "macro_recall": 0.5255,
+        "macro_f1": 0.5014,
+        "score": 0.6404,
+        "threshold": 0.5,
+        "accepted_coverage": 0.8034,
+        "accepted_accuracy": 0.6993,
+        "per_label": {
+          "슬림핏": {
+            "support": 60,
+            "recall": 0.65,
+            "precision": 0.75,
+            "f1": 0.6964,
+            "blocked": false
+          },
+          "레귤러핏": {
+            "support": 86,
+            "recall": 0.7558,
+            "precision": 0.6701,
+            "f1": 0.7104,
+            "blocked": false
+          },
+          "여유핏": {
+            "support": 27,
+            "recall": 0.2963,
+            "precision": 0.4706,
+            "f1": 0.3636,
+            "blocked": false
+          },
+          "오버핏": {
+            "support": 5,
+            "recall": 0.4,
+            "precision": 0.1667,
+            "f1": 0.2353,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "슬림핏",
+            "predicted": "레귤러핏",
+            "count": 18
+          },
+          {
+            "truth": "여유핏",
+            "predicted": "레귤러핏",
+            "count": 12
+          },
+          {
+            "truth": "레귤러핏",
+            "predicted": "슬림핏",
+            "count": 12
+          },
+          {
+            "truth": "여유핏",
+            "predicted": "오버핏",
+            "count": 6
+          },
+          {
+            "truth": "레귤러핏",
+            "predicted": "여유핏",
+            "count": 6
+          },
+          {
+            "truth": "레귤러핏",
+            "predicted": "오버핏",
+            "count": 3
+          }
+        ]
+      }
+    },
+    "material": {
+      "baseline": {
+        "samples": 156,
+        "multi_label": true,
+        "micro_f1": 0.7059,
+        "macro_f1": 0.5909,
+        "score": 0.7059,
+        "threshold": 0.7,
+        "per_label": {
+          "코튼": {
+            "support": 14,
+            "f1": 0.5185,
+            "blocked": false
+          },
+          "데님": {
+            "support": 44,
+            "f1": 0.9885,
+            "blocked": false
+          },
+          "니트": {
+            "support": 21,
+            "f1": 0.6667,
+            "blocked": false
+          },
+          "울": {
+            "support": 10,
+            "f1": 0.3158,
+            "blocked": false
+          },
+          "가죽": {
+            "support": 5,
+            "f1": 0.5714,
+            "blocked": false
+          },
+          "스웨이드": {
+            "support": 4,
+            "f1": 0.6667,
+            "blocked": false
+          },
+          "시폰": {
+            "support": 8,
+            "f1": 0.3077,
+            "blocked": false
+          },
+          "실크·새틴": {
+            "support": 32,
+            "f1": 0.7368,
+            "blocked": false
+          },
+          "퍼·플리스": {
+            "support": 2,
+            "f1": 1.0,
+            "blocked": false
+          },
+          "메시": {
+            "support": 9,
+            "f1": 0.0,
+            "blocked": false
+          },
+          "레이스": {
+            "support": 18,
+            "f1": 0.7273,
+            "blocked": false
+          }
+        }
+      },
+      "augmented": {
+        "samples": 156,
+        "multi_label": true,
+        "micro_f1": 0.7003,
+        "macro_f1": 0.6429,
+        "score": 0.7003,
+        "threshold": 0.7,
+        "per_label": {
+          "코튼": {
+            "support": 14,
+            "f1": 0.4828,
+            "blocked": false
+          },
+          "데님": {
+            "support": 44,
+            "f1": 1.0,
+            "blocked": false
+          },
+          "니트": {
+            "support": 21,
+            "f1": 0.6316,
+            "blocked": false
+          },
+          "울": {
+            "support": 10,
+            "f1": 0.2667,
+            "blocked": false
+          },
+          "가죽": {
+            "support": 5,
+            "f1": 0.6,
+            "blocked": false
+          },
+          "스웨이드": {
+            "support": 4,
+            "f1": 1.0,
+            "blocked": false
+          },
+          "시폰": {
+            "support": 8,
+            "f1": 0.4,
+            "blocked": false
+          },
+          "실크·새틴": {
+            "support": 32,
+            "f1": 0.6486,
+            "blocked": false
+          },
+          "퍼·플리스": {
+            "support": 2,
+            "f1": 1.0,
+            "blocked": false
+          },
+          "메시": {
+            "support": 9,
+            "f1": 0.2857,
+            "blocked": false
+          },
+          "레이스": {
+            "support": 18,
+            "f1": 0.7568,
+            "blocked": false
+          }
+        }
+      }
+    },
+    "pattern": {
+      "baseline": {
+        "samples": 389,
+        "multi_label": true,
+        "micro_f1": 0.8841,
+        "macro_f1": 0.5612,
+        "score": 0.8841,
+        "threshold": 0.65,
+        "per_label": {
+          "무지": {
+            "support": 304,
+            "f1": 0.9472,
+            "blocked": false
+          },
+          "스트라이프": {
+            "support": 25,
+            "f1": 0.7083,
+            "blocked": false
+          },
+          "체크": {
+            "support": 21,
+            "f1": 0.7907,
+            "blocked": false
+          },
+          "도트": {
+            "support": 8,
+            "f1": 0.6316,
+            "blocked": false
+          },
+          "플로럴": {
+            "support": 26,
+            "f1": 0.7451,
+            "blocked": false
+          },
+          "그래픽": {
+            "support": 9,
+            "f1": 0.0,
+            "blocked": false
+          },
+          "애니멀": {
+            "support": 4,
+            "f1": 0.0,
+            "blocked": false
+          },
+          "카모": {
+            "support": 2,
+            "f1": 0.6667,
+            "blocked": false
+          },
+          "컬러 블록": {
+            "support": 0,
+            "f1": null,
+            "blocked": true
+          }
+        }
+      },
+      "augmented": {
+        "samples": 389,
+        "multi_label": true,
+        "micro_f1": 0.8732,
+        "macro_f1": 0.6956,
+        "score": 0.8732,
+        "threshold": 0.7,
+        "per_label": {
+          "무지": {
+            "support": 304,
+            "f1": 0.9444,
+            "blocked": false
+          },
+          "스트라이프": {
+            "support": 25,
+            "f1": 0.75,
+            "blocked": false
+          },
+          "체크": {
+            "support": 21,
+            "f1": 0.8333,
+            "blocked": false
+          },
+          "도트": {
+            "support": 8,
+            "f1": 0.6087,
+            "blocked": false
+          },
+          "플로럴": {
+            "support": 26,
+            "f1": 0.7119,
+            "blocked": false
+          },
+          "그래픽": {
+            "support": 9,
+            "f1": 0.3448,
+            "blocked": false
+          },
+          "애니멀": {
+            "support": 4,
+            "f1": 0.5714,
+            "blocked": false
+          },
+          "카모": {
+            "support": 2,
+            "f1": 0.8,
+            "blocked": false
+          },
+          "컬러 블록": {
+            "support": 0,
+            "f1": null,
+            "blocked": true
+          }
+        }
+      }
+    },
+    "pant_length": {
+      "baseline": {
+        "samples": 222,
+        "multi_label": false,
+        "accuracy": 0.7432,
+        "macro_recall": 0.7166,
+        "macro_f1": 0.7314,
+        "score": 0.7432,
+        "threshold": 0.7,
+        "accepted_coverage": 0.7207,
+        "accepted_accuracy": 0.8188,
+        "per_label": {
+          "카프리·7부": {
+            "support": 38,
+            "recall": 0.6842,
+            "precision": 0.8387,
+            "f1": 0.7536,
+            "blocked": false
+          },
+          "크롭·앵클": {
+            "support": 71,
+            "recall": 0.6338,
+            "precision": 0.6338,
+            "f1": 0.6338,
+            "blocked": false
+          },
+          "풀렝스": {
+            "support": 113,
+            "recall": 0.8319,
+            "precision": 0.7833,
+            "f1": 0.8069,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "크롭·앵클",
+            "predicted": "풀렝스",
+            "count": 22
+          },
+          {
+            "truth": "풀렝스",
+            "predicted": "크롭·앵클",
+            "count": 18
+          },
+          {
+            "truth": "카프리·7부",
+            "predicted": "크롭·앵클",
+            "count": 8
+          },
+          {
+            "truth": "카프리·7부",
+            "predicted": "풀렝스",
+            "count": 4
+          },
+          {
+            "truth": "크롭·앵클",
+            "predicted": "카프리·7부",
+            "count": 4
+          },
+          {
+            "truth": "풀렝스",
+            "predicted": "카프리·7부",
+            "count": 1
+          }
+        ]
+      },
+      "augmented": {
+        "samples": 222,
+        "multi_label": false,
+        "accuracy": 0.7252,
+        "macro_recall": 0.7136,
+        "macro_f1": 0.7268,
+        "score": 0.7252,
+        "threshold": 0.5,
+        "accepted_coverage": 0.982,
+        "accepted_accuracy": 0.7385,
+        "per_label": {
+          "카프리·7부": {
+            "support": 38,
+            "recall": 0.7632,
+            "precision": 0.8788,
+            "f1": 0.8169,
+            "blocked": false
+          },
+          "크롭·앵클": {
+            "support": 71,
+            "recall": 0.5634,
+            "precision": 0.6061,
+            "f1": 0.5839,
+            "blocked": false
+          },
+          "풀렝스": {
+            "support": 113,
+            "recall": 0.8142,
+            "precision": 0.748,
+            "f1": 0.7797,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "크롭·앵클",
+            "predicted": "풀렝스",
+            "count": 27
+          },
+          {
+            "truth": "풀렝스",
+            "predicted": "크롭·앵클",
+            "count": 21
+          },
+          {
+            "truth": "카프리·7부",
+            "predicted": "크롭·앵클",
+            "count": 5
+          },
+          {
+            "truth": "카프리·7부",
+            "predicted": "풀렝스",
+            "count": 4
+          },
+          {
+            "truth": "크롭·앵클",
+            "predicted": "카프리·7부",
+            "count": 4
+          }
+        ]
+      }
+    },
+    "sleeve_length": {
+      "baseline": {
+        "samples": 214,
+        "multi_label": false,
+        "accuracy": 0.8925,
+        "macro_recall": 0.7109,
+        "macro_f1": 0.7235,
+        "score": 0.8925,
+        "threshold": 0.5,
+        "accepted_coverage": 0.9673,
+        "accepted_accuracy": 0.9034,
+        "per_label": {
+          "민소매": {
+            "support": 8,
+            "recall": 0.875,
+            "precision": 1.0,
+            "f1": 0.9333,
+            "blocked": false
+          },
+          "반팔": {
+            "support": 62,
+            "recall": 0.9355,
+            "precision": 0.9206,
+            "f1": 0.928,
+            "blocked": false
+          },
+          "7부 소매": {
+            "support": 14,
+            "recall": 0.0714,
+            "precision": 0.1667,
+            "f1": 0.1,
+            "blocked": false
+          },
+          "긴팔": {
+            "support": 130,
+            "recall": 0.9615,
+            "precision": 0.9058,
+            "f1": 0.9328,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "7부 소매",
+            "predicted": "긴팔",
+            "count": 11
+          },
+          {
+            "truth": "긴팔",
+            "predicted": "7부 소매",
+            "count": 3
+          },
+          {
+            "truth": "반팔",
+            "predicted": "7부 소매",
+            "count": 2
+          },
+          {
+            "truth": "7부 소매",
+            "predicted": "반팔",
+            "count": 2
+          },
+          {
+            "truth": "반팔",
+            "predicted": "긴팔",
+            "count": 2
+          },
+          {
+            "truth": "긴팔",
+            "predicted": "반팔",
+            "count": 2
+          }
+        ]
+      },
+      "augmented": {
+        "samples": 214,
+        "multi_label": false,
+        "accuracy": 0.8738,
+        "macro_recall": 0.7803,
+        "macro_f1": 0.7744,
+        "score": 0.8738,
+        "threshold": 0.5,
+        "accepted_coverage": 0.9533,
+        "accepted_accuracy": 0.8922,
+        "per_label": {
+          "민소매": {
+            "support": 8,
+            "recall": 1.0,
+            "precision": 1.0,
+            "f1": 1.0,
+            "blocked": false
+          },
+          "반팔": {
+            "support": 62,
+            "recall": 0.9355,
+            "precision": 0.8923,
+            "f1": 0.9134,
+            "blocked": false
+          },
+          "7부 소매": {
+            "support": 14,
+            "recall": 0.2857,
+            "precision": 0.25,
+            "f1": 0.2667,
+            "blocked": false
+          },
+          "긴팔": {
+            "support": 130,
+            "recall": 0.9,
+            "precision": 0.936,
+            "f1": 0.9176,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "긴팔",
+            "predicted": "7부 소매",
+            "count": 9
+          },
+          {
+            "truth": "7부 소매",
+            "predicted": "긴팔",
+            "count": 7
+          },
+          {
+            "truth": "긴팔",
+            "predicted": "반팔",
+            "count": 4
+          },
+          {
+            "truth": "7부 소매",
+            "predicted": "반팔",
+            "count": 3
+          },
+          {
+            "truth": "반팔",
+            "predicted": "7부 소매",
+            "count": 3
+          },
+          {
+            "truth": "반팔",
+            "predicted": "긴팔",
+            "count": 1
+          }
+        ]
+      }
+    },
+    "lower_length": {
+      "baseline": {
+        "samples": 422,
+        "multi_label": false,
+        "accuracy": 0.8246,
+        "macro_recall": 0.7738,
+        "macro_f1": 0.7711,
+        "score": 0.8246,
+        "threshold": 0.5,
+        "accepted_coverage": 0.9455,
+        "accepted_accuracy": 0.8496,
+        "per_label": {
+          "쇼츠·미니 기장": {
+            "support": 81,
+            "recall": 0.9012,
+            "precision": 0.869,
+            "f1": 0.8848,
+            "blocked": false
+          },
+          "무릎 기장": {
+            "support": 23,
+            "recall": 0.5652,
+            "precision": 0.5652,
+            "f1": 0.5652,
+            "blocked": false
+          },
+          "미디·7부 기장": {
+            "support": 123,
+            "recall": 0.7724,
+            "precision": 0.7661,
+            "f1": 0.7692,
+            "blocked": false
+          },
+          "롱·긴바지 기장": {
+            "support": 195,
+            "recall": 0.8564,
+            "precision": 0.8743,
+            "f1": 0.8653,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "롱·긴바지 기장",
+            "predicted": "미디·7부 기장",
+            "count": 25
+          },
+          {
+            "truth": "미디·7부 기장",
+            "predicted": "롱·긴바지 기장",
+            "count": 23
+          },
+          {
+            "truth": "무릎 기장",
+            "predicted": "쇼츠·미니 기장",
+            "count": 7
+          },
+          {
+            "truth": "쇼츠·미니 기장",
+            "predicted": "무릎 기장",
+            "count": 6
+          },
+          {
+            "truth": "미디·7부 기장",
+            "predicted": "무릎 기장",
+            "count": 3
+          },
+          {
+            "truth": "무릎 기장",
+            "predicted": "미디·7부 기장",
+            "count": 2
+          }
+        ]
+      },
+      "augmented": {
+        "samples": 422,
+        "multi_label": false,
+        "accuracy": 0.7915,
+        "macro_recall": 0.7449,
+        "macro_f1": 0.7357,
+        "score": 0.7915,
+        "threshold": 0.5,
+        "accepted_coverage": 0.9905,
+        "accepted_accuracy": 0.7967,
+        "per_label": {
+          "쇼츠·미니 기장": {
+            "support": 81,
+            "recall": 0.8519,
+            "precision": 0.8846,
+            "f1": 0.8679,
+            "blocked": false
+          },
+          "무릎 기장": {
+            "support": 23,
+            "recall": 0.5652,
+            "precision": 0.4643,
+            "f1": 0.5098,
+            "blocked": false
+          },
+          "미디·7부 기장": {
+            "support": 123,
+            "recall": 0.7317,
+            "precision": 0.72,
+            "f1": 0.7258,
+            "blocked": false
+          },
+          "롱·긴바지 기장": {
+            "support": 195,
+            "recall": 0.8308,
+            "precision": 0.8482,
+            "f1": 0.8394,
+            "blocked": false
+          }
+        },
+        "top_confusions": [
+          {
+            "truth": "미디·7부 기장",
+            "predicted": "롱·긴바지 기장",
+            "count": 29
+          },
+          {
+            "truth": "롱·긴바지 기장",
+            "predicted": "미디·7부 기장",
+            "count": 29
+          },
+          {
+            "truth": "쇼츠·미니 기장",
+            "predicted": "무릎 기장",
+            "count": 9
+          },
+          {
+            "truth": "무릎 기장",
+            "predicted": "쇼츠·미니 기장",
+            "count": 7
+          },
+          {
+            "truth": "롱·긴바지 기장",
+            "predicted": "무릎 기장",
+            "count": 3
+          },
+          {
+            "truth": "쇼츠·미니 기장",
+            "predicted": "미디·7부 기장",
+            "count": 3
+          }
+        ]
+      }
+    },
+    "lower_detail": {
+      "baseline": {
+        "samples": 110,
+        "multi_label": true,
+        "micro_f1": 0.8807,
+        "macro_f1": 0.7275,
+        "score": 0.8807,
+        "threshold": 0.7,
+        "per_label": {
+          "5포켓": {
+            "support": 9,
+            "f1": 0.8421,
+            "blocked": false
+          },
+          "카고 포켓": {
+            "support": 15,
+            "f1": 0.8889,
+            "blocked": false
+          },
+          "플리츠·턱": {
+            "support": 42,
+            "f1": 0.9756,
+            "blocked": false
+          },
+          "드로스트링": {
+            "support": 24,
+            "f1": 0.9388,
+            "blocked": false
+          },
+          "밴딩 허리": {
+            "support": 4,
+            "f1": 0.0,
+            "blocked": false
+          },
+          "사이드 스트라이프": {
+            "support": 7,
+            "f1": 0.7143,
+            "blocked": false
+          },
+          "밑단 커프": {
+            "support": 8,
+            "f1": 0.5714,
+            "blocked": false
+          },
+          "스터럽": {
+            "support": 4,
+            "f1": 0.8889,
+            "blocked": false
+          }
+        }
+      },
+      "augmented": {
+        "samples": 110,
+        "multi_label": true,
+        "micro_f1": 0.8246,
+        "macro_f1": 0.6204,
+        "score": 0.8246,
+        "threshold": 0.6,
+        "per_label": {
+          "5포켓": {
+            "support": 9,
+            "f1": 0.8,
+            "blocked": false
+          },
+          "카고 포켓": {
+            "support": 15,
+            "f1": 0.8889,
+            "blocked": false
+          },
+          "플리츠·턱": {
+            "support": 42,
+            "f1": 0.9524,
+            "blocked": false
+          },
+          "드로스트링": {
+            "support": 24,
+            "f1": 0.9057,
+            "blocked": false
+          },
+          "밴딩 허리": {
+            "support": 4,
+            "f1": 0.0,
+            "blocked": false
+          },
+          "사이드 스트라이프": {
+            "support": 7,
+            "f1": 0.75,
+            "blocked": false
+          },
+          "밑단 커프": {
+            "support": 8,
+            "f1": 0.0,
+            "blocked": false
+          },
+          "스터럽": {
+            "support": 4,
+            "f1": 0.6667,
+            "blocked": false
+          }
+        }
+      }
+    }
+  },
+  "focus_labels": {
+    "category|니트": {
+      "baseline": {
+        "support": 4,
+        "tp": 3,
+        "fp": 0,
+        "fn": 1,
+        "precision": 1.0,
+        "recall": 0.75,
+        "f1": 0.8571,
+        "blocked": false,
+        "threshold": 0.45
+      },
+      "augmented": {
+        "support": 4,
+        "tp": 2,
+        "fp": 2,
+        "fn": 2,
+        "precision": 0.5,
+        "recall": 0.5,
+        "f1": 0.5,
+        "blocked": false,
+        "threshold": 0.45
+      }
+    },
+    "material|니트": {
+      "baseline": {
+        "support": 21,
+        "tp": 14,
+        "fp": 7,
+        "fn": 7,
+        "precision": 0.6667,
+        "recall": 0.6667,
+        "f1": 0.6667,
+        "blocked": false,
+        "threshold": 0.7
+      },
+      "augmented": {
+        "support": 21,
+        "tp": 12,
+        "fp": 5,
+        "fn": 9,
+        "precision": 0.7059,
+        "recall": 0.5714,
+        "f1": 0.6316,
+        "blocked": false,
+        "threshold": 0.7
+      }
+    },
+    "detail|단추": {
+      "baseline": {
+        "support": 56,
+        "tp": 46,
+        "fp": 8,
+        "fn": 10,
+        "precision": 0.8519,
+        "recall": 0.8214,
+        "f1": 0.8364,
+        "blocked": false,
+        "threshold": 0.55
+      },
+      "augmented": {
+        "support": 56,
+        "tp": 44,
+        "fp": 10,
+        "fn": 12,
+        "precision": 0.8148,
+        "recall": 0.7857,
+        "f1": 0.8,
+        "blocked": false,
+        "threshold": 0.65
+      }
+    }
+  },
+  "examples": {
+    "improved": [
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/90403072_0.jpeg",
+        "truth": "조거·스웨트팬츠",
+        "baseline": "트랙팬츠",
+        "baseline_conf": 0.673,
+        "augmented": "조거·스웨트팬츠",
+        "augmented_conf": 0.999
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/87807744_2.jpeg",
+        "truth": "팔라초",
+        "baseline": "와이드",
+        "baseline_conf": 0.407,
+        "augmented": "팔라초",
+        "augmented_conf": 0.998
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/89957824_1.jpeg",
+        "truth": "테이퍼드",
+        "baseline": "와이드",
+        "baseline_conf": 0.453,
+        "augmented": "테이퍼드",
+        "augmented_conf": 0.997
+      },
+      {
+        "task": "sleeve_shape",
+        "image": "fashionpedia_seed/images/a7cd14255a4b949380f8068a77e98a9a.jpg",
+        "truth": "벨 소매",
+        "baseline": "기본 소매",
+        "baseline_conf": 0.795,
+        "augmented": "벨 소매",
+        "augmented_conf": 0.996
+      },
+      {
+        "task": "category",
+        "image": "fashionpedia_seed/images/7be8af2ebbb6fa133131a2f42bdbe9f6.jpg",
+        "truth": "후드티",
+        "baseline": "탑",
+        "baseline_conf": 0.653,
+        "augmented": "후드티",
+        "augmented_conf": 0.99
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashion200k_bottoms/images/89957824_1.jpeg",
+        "truth": "테이퍼드핏",
+        "baseline": "와이드핏",
+        "baseline_conf": 0.473,
+        "augmented": "테이퍼드핏",
+        "augmented_conf": 0.99
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/89618047_0.jpeg",
+        "truth": "조거·스웨트팬츠",
+        "baseline": "하렘 팬츠",
+        "baseline_conf": 0.49,
+        "augmented": "조거·스웨트팬츠",
+        "augmented_conf": 0.986
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/89597211_1.jpeg",
+        "truth": "팔라초",
+        "baseline": "와이드",
+        "baseline_conf": 0.542,
+        "augmented": "팔라초",
+        "augmented_conf": 0.986
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/91407431_0.jpeg",
+        "truth": "스키니",
+        "baseline": "스트레이트",
+        "baseline_conf": 0.415,
+        "augmented": "스키니",
+        "augmented_conf": 0.986
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashionpedia_seed/images/320e6497373a2f91a108044407c69a9e.jpg",
+        "truth": "슬림핏",
+        "baseline": "스트레이트핏",
+        "baseline_conf": 0.536,
+        "augmented": "슬림핏",
+        "augmented_conf": 0.981
+      },
+      {
+        "task": "category",
+        "image": "fashionpedia_seed/images/33a60f6f6d0abe76697705b61564ad30.jpg",
+        "truth": "셔츠",
+        "baseline": "블레이저",
+        "baseline_conf": 0.289,
+        "augmented": "셔츠",
+        "augmented_conf": 0.979
+      },
+      {
+        "task": "sleeve_shape",
+        "image": "fashionpedia_seed/images/e91677348e11b75ee3ccdb9c8fd78032.jpg",
+        "truth": "기본 소매",
+        "baseline": "퍼프 소매",
+        "baseline_conf": 0.414,
+        "augmented": "기본 소매",
+        "augmented_conf": 0.977
+      },
+      {
+        "task": "upper_fit",
+        "image": "fashionpedia_seed/images/70eafbe28f1ce1a955c1acf2913ade0e.jpg",
+        "truth": "오버핏",
+        "baseline": "여유핏",
+        "baseline_conf": 0.773,
+        "augmented": "오버핏",
+        "augmented_conf": 0.974
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/90624479_0.jpeg",
+        "truth": "레깅스",
+        "baseline": "요가 팬츠",
+        "baseline_conf": 0.552,
+        "augmented": "레깅스",
+        "augmented_conf": 0.973
+      },
+      {
+        "task": "neckline",
+        "image": "fashionpedia_seed/images/3dc0b2b41d54c1b702e908f8aa5b4e04.jpg",
+        "truth": "오프숄더",
+        "baseline": "보트넥",
+        "baseline_conf": 0.777,
+        "augmented": "오프숄더",
+        "augmented_conf": 0.972
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashionpedia_seed/images/9fac627b1dc1153b5933ed3dc3020bac.jpg",
+        "truth": "플레어핏",
+        "baseline": "와이드핏",
+        "baseline_conf": 0.525,
+        "augmented": "플레어핏",
+        "augmented_conf": 0.972
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/91314255_0.jpeg",
+        "truth": "플레어",
+        "baseline": "부츠컷",
+        "baseline_conf": 0.58,
+        "augmented": "플레어",
+        "augmented_conf": 0.971
+      },
+      {
+        "task": "neckline",
+        "image": "fashionpedia_seed/images/ba230c5008aba14a031f540a7d601c57.jpg",
+        "truth": "오프숄더",
+        "baseline": "보트넥",
+        "baseline_conf": 0.737,
+        "augmented": "오프숄더",
+        "augmented_conf": 0.971
+      },
+      {
+        "task": "neckline",
+        "image": "fashionpedia_seed/images/eaac0d86af8296fe77b0cbaac0d04d93.jpg",
+        "truth": "홀터넥",
+        "baseline": "보트넥",
+        "baseline_conf": 0.443,
+        "augmented": "홀터넥",
+        "augmented_conf": 0.971
+      },
+      {
+        "task": "category",
+        "image": "fashionpedia_seed/images/775c380cd79c0f3a3e34a41f89468022.jpg",
+        "truth": "탑",
+        "baseline": "티셔츠",
+        "baseline_conf": 0.587,
+        "augmented": "탑",
+        "augmented_conf": 0.967
+      },
+      {
+        "task": "category",
+        "image": "fashionpedia_seed/images/bd4c2ae0478c2162033a02216e394604.jpg",
+        "truth": "셔츠",
+        "baseline": "베스트",
+        "baseline_conf": 0.369,
+        "augmented": "셔츠",
+        "augmented_conf": 0.965
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashionpedia_seed/images/5dbc92d79e36f8af3824a776b28b97d0.jpg",
+        "truth": "플레어핏",
+        "baseline": "와이드핏",
+        "baseline_conf": 0.56,
+        "augmented": "플레어핏",
+        "augmented_conf": 0.965
+      },
+      {
+        "task": "sleeve_shape",
+        "image": "fashionpedia_seed/images/fffea54b50ac7e4bf24688c8614a5f27.jpg",
+        "truth": "퍼프 소매",
+        "baseline": "기본 소매",
+        "baseline_conf": 0.748,
+        "augmented": "퍼프 소매",
+        "augmented_conf": 0.963
+      },
+      {
+        "task": "neckline",
+        "image": "fashionpedia_seed/images/0205895cfbb5348d94fda8ce32272fa5.jpg",
+        "truth": "스퀘어넥",
+        "baseline": "V넥",
+        "baseline_conf": 0.593,
+        "augmented": "스퀘어넥",
+        "augmented_conf": 0.963
+      },
+      {
+        "task": "lower_length",
+        "image": "fashionpedia_seed/images/5dbc92d79e36f8af3824a776b28b97d0.jpg",
+        "truth": "미디·7부 기장",
+        "baseline": "롱·긴바지 기장",
+        "baseline_conf": 0.624,
+        "augmented": "미디·7부 기장",
+        "augmented_conf": 0.96
+      },
+      {
+        "task": "neckline",
+        "image": "fashionpedia_seed/images/97cb9ef6e3eb1e4870201eb60ea875ac.jpg",
+        "truth": "터틀넥",
+        "baseline": "라운드넥",
+        "baseline_conf": 0.575,
+        "augmented": "터틀넥",
+        "augmented_conf": 0.958
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashion200k_bottoms/images/91300256_0.jpeg",
+        "truth": "와이드핏",
+        "baseline": "스트레이트핏",
+        "baseline_conf": 0.333,
+        "augmented": "와이드핏",
+        "augmented_conf": 0.955
+      },
+      {
+        "task": "neckline",
+        "image": "fashionpedia_seed/images/dd8239e8b7b5f3c9b86babc9754cf4a5.jpg",
+        "truth": "오프숄더",
+        "baseline": "스퀘어넥",
+        "baseline_conf": 0.314,
+        "augmented": "오프숄더",
+        "augmented_conf": 0.954
+      },
+      {
+        "task": "sleeve_shape",
+        "image": "fashionpedia_seed/images/b246457b56c522682a2400286ca834ec.jpg",
+        "truth": "기본 소매",
+        "baseline": "퍼프 소매",
+        "baseline_conf": 0.648,
+        "augmented": "기본 소매",
+        "augmented_conf": 0.95
+      },
+      {
+        "task": "lower_length",
+        "image": "fashionpedia_seed/images/2df8a3cbaf17a7e8441cf3f4bc73824c.jpg",
+        "truth": "롱·긴바지 기장",
+        "baseline": "쇼츠·미니 기장",
+        "baseline_conf": 0.566,
+        "augmented": "롱·긴바지 기장",
+        "augmented_conf": 0.95
+      },
+      {
+        "task": "category",
+        "image": "fashion200k_supplement/images/91307923_0.jpeg",
+        "truth": "블라우스",
+        "baseline": "탑",
+        "baseline_conf": 0.632,
+        "augmented": "블라우스",
+        "augmented_conf": 0.948
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/91169589_0.jpeg",
+        "truth": "치노 팬츠",
+        "baseline": "청바지",
+        "baseline_conf": 0.501,
+        "augmented": "치노 팬츠",
+        "augmented_conf": 0.947
+      },
+      {
+        "task": "category",
+        "image": "fashionpedia_seed/images/dc04491259bc9802758a0ec781f3983c.jpg",
+        "truth": "점프수트",
+        "baseline": "원피스",
+        "baseline_conf": 0.551,
+        "augmented": "점프수트",
+        "augmented_conf": 0.945
+      },
+      {
+        "task": "category",
+        "image": "fashion200k_supplement/images/91378243_0.jpeg",
+        "truth": "블라우스",
+        "baseline": "탑",
+        "baseline_conf": 0.494,
+        "augmented": "블라우스",
+        "augmented_conf": 0.939
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/87926712_0.jpeg",
+        "truth": "스키니",
+        "baseline": "스트레이트",
+        "baseline_conf": 0.415,
+        "augmented": "스키니",
+        "augmented_conf": 0.938
+      },
+      {
+        "task": "sleeve_shape",
+        "image": "fashionpedia_seed/images/d14c29b741ec264a1bc7ea1918898a99.jpg",
+        "truth": "기본 소매",
+        "baseline": "캡 소매",
+        "baseline_conf": 0.864,
+        "augmented": "기본 소매",
+        "augmented_conf": 0.936
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/30215157_1.jpeg",
+        "truth": "하렘 팬츠",
+        "baseline": "트랙팬츠",
+        "baseline_conf": 0.487,
+        "augmented": "하렘 팬츠",
+        "augmented_conf": 0.935
+      },
+      {
+        "task": "category",
+        "image": "fashionpedia_seed/images/265a6f3aee35666b2f62752c49f6dd63.jpg",
+        "truth": "팬츠",
+        "baseline": "청바지",
+        "baseline_conf": 0.591,
+        "augmented": "팬츠",
+        "augmented_conf": 0.933
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/87615545_0.jpeg",
+        "truth": "스트레이트",
+        "baseline": "테이퍼드",
+        "baseline_conf": 0.404,
+        "augmented": "스트레이트",
+        "augmented_conf": 0.928
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashionpedia_seed/images/b66643e09504500db84e3d75535a8273.jpg",
+        "truth": "와이드핏",
+        "baseline": "스트레이트핏",
+        "baseline_conf": 0.47,
+        "augmented": "와이드핏",
+        "augmented_conf": 0.925
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashion200k_bottoms/images/88635573_0.jpeg",
+        "truth": "와이드핏",
+        "baseline": "스트레이트핏",
+        "baseline_conf": 0.51,
+        "augmented": "와이드핏",
+        "augmented_conf": 0.924
+      },
+      {
+        "task": "neckline",
+        "image": "fashionpedia_seed/images/f5473bcc572a3e98faefd27b1a4ab688.jpg",
+        "truth": "스퀘어넥",
+        "baseline": "보트넥",
+        "baseline_conf": 0.821,
+        "augmented": "스퀘어넥",
+        "augmented_conf": 0.92
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/90492433_0.jpeg",
+        "truth": "테이퍼드",
+        "baseline": "스트레이트",
+        "baseline_conf": 0.406,
+        "augmented": "테이퍼드",
+        "augmented_conf": 0.919
+      },
+      {
+        "task": "collar",
+        "image": "fashionpedia_seed/images/5fc2853754a2d370b75869fe467672a5.jpg",
+        "truth": "스탠드 칼라",
+        "baseline": "라펠 칼라",
+        "baseline_conf": 0.367,
+        "augmented": "스탠드 칼라",
+        "augmented_conf": 0.916
+      },
+      {
+        "task": "category",
+        "image": "fashionpedia_seed/images/9a755d94e00922406ee34010fac8eec5.jpg",
+        "truth": "점프수트",
+        "baseline": "원피스",
+        "baseline_conf": 0.614,
+        "augmented": "점프수트",
+        "augmented_conf": 0.915
+      },
+      {
+        "task": "category",
+        "image": "fashionpedia_seed/images/1dc3829659f97c1cff867ef710ece470.jpg",
+        "truth": "티셔츠",
+        "baseline": "탑",
+        "baseline_conf": 0.899,
+        "augmented": "티셔츠",
+        "augmented_conf": 0.914
+      },
+      {
+        "task": "neckline",
+        "image": "fashionpedia_seed/images/31376f97ef5d1d083e6f1092d5d33b7b.jpg",
+        "truth": "스퀘어넥",
+        "baseline": "라운드넥",
+        "baseline_conf": 0.35,
+        "augmented": "스퀘어넥",
+        "augmented_conf": 0.914
+      },
+      {
+        "task": "collar",
+        "image": "fashionpedia_seed/images/a9c817161fda6df41766dfe80e939c6b.jpg",
+        "truth": "피터팬 칼라",
+        "baseline": "셔츠 칼라",
+        "baseline_conf": 0.602,
+        "augmented": "피터팬 칼라",
+        "augmented_conf": 0.912
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/57717842_1.jpeg",
+        "truth": "팔라초",
+        "baseline": "와이드",
+        "baseline_conf": 0.447,
+        "augmented": "팔라초",
+        "augmented_conf": 0.909
+      },
+      {
+        "task": "lower_length",
+        "image": "fashionpedia_seed/images/0a4aae5ecd970a120bfcc6b377b6e187.jpg",
+        "truth": "무릎 기장",
+        "baseline": "쇼츠·미니 기장",
+        "baseline_conf": 0.582,
+        "augmented": "무릎 기장",
+        "augmented_conf": 0.907
+      },
+      {
+        "task": "category",
+        "image": "fashionpedia_seed/images/320e6497373a2f91a108044407c69a9e.jpg",
+        "truth": "팬츠",
+        "baseline": "청바지",
+        "baseline_conf": 0.686,
+        "augmented": "팬츠",
+        "augmented_conf": 0.906
+      },
+      {
+        "task": "upper_fit",
+        "image": "fashionpedia_seed/images/3109762baa95cfc50b5a454db19d4143.jpg",
+        "truth": "슬림핏",
+        "baseline": "레귤러핏",
+        "baseline_conf": 0.495,
+        "augmented": "슬림핏",
+        "augmented_conf": 0.896
+      },
+      {
+        "task": "category",
+        "image": "fashionpedia_seed/images/e7bd5aa16c1acc64616bf60ea3aa0c36.jpg",
+        "truth": "티셔츠",
+        "baseline": "후드티",
+        "baseline_conf": 0.394,
+        "augmented": "티셔츠",
+        "augmented_conf": 0.893
+      },
+      {
+        "task": "neckline",
+        "image": "fashionpedia_seed/images/bf08a1955bfce99f913046ef11600913.jpg",
+        "truth": "오프숄더",
+        "baseline": "보트넥",
+        "baseline_conf": 0.498,
+        "augmented": "오프숄더",
+        "augmented_conf": 0.891
+      },
+      {
+        "task": "upper_fit",
+        "image": "fashionpedia_seed/images/dc04491259bc9802758a0ec781f3983c.jpg",
+        "truth": "여유핏",
+        "baseline": "레귤러핏",
+        "baseline_conf": 0.484,
+        "augmented": "여유핏",
+        "augmented_conf": 0.889
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashion200k_bottoms/images/87926712_0.jpeg",
+        "truth": "슬림핏",
+        "baseline": "스트레이트핏",
+        "baseline_conf": 0.424,
+        "augmented": "슬림핏",
+        "augmented_conf": 0.889
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashionpedia_seed/images/72a138c47a27759553ebb2b2c1a94707.jpg",
+        "truth": "와이드핏",
+        "baseline": "플레어핏",
+        "baseline_conf": 0.612,
+        "augmented": "와이드핏",
+        "augmented_conf": 0.886
+      },
+      {
+        "task": "silhouette",
+        "image": "fashionpedia_seed/images/54b5226293d7cf8eabc1421062284a05.jpg",
+        "truth": "O라인",
+        "baseline": "X라인",
+        "baseline_conf": 0.574,
+        "augmented": "O라인",
+        "augmented_conf": 0.884
+      },
+      {
+        "task": "category",
+        "image": "fashionpedia_seed/images/06017096e7f209d3b23802f546830b40.jpg",
+        "truth": "코트",
+        "baseline": "탑",
+        "baseline_conf": 0.36,
+        "augmented": "코트",
+        "augmented_conf": 0.883
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/91292477_0.jpeg",
+        "truth": "조거·스웨트팬츠",
+        "baseline": "트랙팬츠",
+        "baseline_conf": 0.779,
+        "augmented": "조거·스웨트팬츠",
+        "augmented_conf": 0.882
+      }
+    ],
+    "regressed": [
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/90131868_0.jpeg",
+        "truth": "와이드",
+        "baseline": "와이드",
+        "baseline_conf": 0.712,
+        "augmented": "플레어",
+        "augmented_conf": 0.997
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/91173328_0.jpeg",
+        "truth": "치노 팬츠",
+        "baseline": "치노 팬츠",
+        "baseline_conf": 0.611,
+        "augmented": "조거·스웨트팬츠",
+        "augmented_conf": 0.987
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/66071392_0.jpeg",
+        "truth": "와이드",
+        "baseline": "와이드",
+        "baseline_conf": 0.483,
+        "augmented": "팔라초",
+        "augmented_conf": 0.974
+      },
+      {
+        "task": "upper_fit",
+        "image": "fashionpedia_seed/images/91eeab2f8925619cbcaae92a12d83bc8.jpg",
+        "truth": "여유핏",
+        "baseline": "여유핏",
+        "baseline_conf": 0.606,
+        "augmented": "오버핏",
+        "augmented_conf": 0.961
+      },
+      {
+        "task": "category",
+        "image": "fashionpedia_seed/images/6729287d748766fc0730d981cc3e2b26.jpg",
+        "truth": "원피스",
+        "baseline": "원피스",
+        "baseline_conf": 0.502,
+        "augmented": "점프수트",
+        "augmented_conf": 0.956
+      },
+      {
+        "task": "sleeve_shape",
+        "image": "fashionpedia_seed/images/3d2c62435d6f70d51721670bc5e60ad2.jpg",
+        "truth": "기본 소매",
+        "baseline": "기본 소매",
+        "baseline_conf": 0.926,
+        "augmented": "캡 소매",
+        "augmented_conf": 0.949
+      },
+      {
+        "task": "pant_length",
+        "image": "fashion200k_bottoms/images/91366162_0.jpeg",
+        "truth": "풀렝스",
+        "baseline": "풀렝스",
+        "baseline_conf": 0.519,
+        "augmented": "크롭·앵클",
+        "augmented_conf": 0.947
+      },
+      {
+        "task": "sleeve_shape",
+        "image": "fashionpedia_seed/images/6c8834c6e3dfa2b294971d118eb505e8.jpg",
+        "truth": "벨 소매",
+        "baseline": "벨 소매",
+        "baseline_conf": 0.563,
+        "augmented": "기본 소매",
+        "augmented_conf": 0.943
+      },
+      {
+        "task": "lower_length",
+        "image": "fashion200k_bottoms/images/91194777_0.jpeg",
+        "truth": "미디·7부 기장",
+        "baseline": "미디·7부 기장",
+        "baseline_conf": 0.685,
+        "augmented": "롱·긴바지 기장",
+        "augmented_conf": 0.937
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashionpedia_seed/images/136ac2a820e9718e52835f815428be82.jpg",
+        "truth": "스트레이트핏",
+        "baseline": "스트레이트핏",
+        "baseline_conf": 0.553,
+        "augmented": "슬림핏",
+        "augmented_conf": 0.934
+      },
+      {
+        "task": "category",
+        "image": "fashion200k_supplement/images/91185381_0.jpeg",
+        "truth": "탑",
+        "baseline": "탑",
+        "baseline_conf": 0.689,
+        "augmented": "블라우스",
+        "augmented_conf": 0.93
+      },
+      {
+        "task": "lower_length",
+        "image": "fashionpedia_seed/images/70eafbe28f1ce1a955c1acf2913ade0e.jpg",
+        "truth": "무릎 기장",
+        "baseline": "무릎 기장",
+        "baseline_conf": 0.515,
+        "augmented": "미디·7부 기장",
+        "augmented_conf": 0.928
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/89443109_2.jpeg",
+        "truth": "하렘 팬츠",
+        "baseline": "하렘 팬츠",
+        "baseline_conf": 0.565,
+        "augmented": "슬랙스",
+        "augmented_conf": 0.906
+      },
+      {
+        "task": "lower_length",
+        "image": "fashionpedia_seed/images/7f9007ed8484e01e26dee5e2e7a633bf.jpg",
+        "truth": "롱·긴바지 기장",
+        "baseline": "롱·긴바지 기장",
+        "baseline_conf": 0.411,
+        "augmented": "미디·7부 기장",
+        "augmented_conf": 0.901
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashion200k_bottoms/images/91250349_0.jpeg",
+        "truth": "스트레이트핏",
+        "baseline": "스트레이트핏",
+        "baseline_conf": 0.493,
+        "augmented": "테이퍼드핏",
+        "augmented_conf": 0.901
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/91217981_0.jpeg",
+        "truth": "와이드",
+        "baseline": "와이드",
+        "baseline_conf": 0.533,
+        "augmented": "팔라초",
+        "augmented_conf": 0.895
+      },
+      {
+        "task": "lower_length",
+        "image": "fashion200k_bottoms/images/91217981_0.jpeg",
+        "truth": "미디·7부 기장",
+        "baseline": "미디·7부 기장",
+        "baseline_conf": 0.514,
+        "augmented": "롱·긴바지 기장",
+        "augmented_conf": 0.894
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashion200k_bottoms/images/90685970_0.jpeg",
+        "truth": "플레어핏",
+        "baseline": "플레어핏",
+        "baseline_conf": 0.495,
+        "augmented": "와이드핏",
+        "augmented_conf": 0.886
+      },
+      {
+        "task": "pant_length",
+        "image": "fashion200k_bottoms/images/91271971_0.jpeg",
+        "truth": "크롭·앵클",
+        "baseline": "크롭·앵클",
+        "baseline_conf": 0.534,
+        "augmented": "풀렝스",
+        "augmented_conf": 0.885
+      },
+      {
+        "task": "lower_length",
+        "image": "fashionpedia_seed/images/aaf6934258f226a68996b5922fa3f038.jpg",
+        "truth": "롱·긴바지 기장",
+        "baseline": "롱·긴바지 기장",
+        "baseline_conf": 0.35,
+        "augmented": "무릎 기장",
+        "augmented_conf": 0.881
+      },
+      {
+        "task": "category",
+        "image": "fashionpedia_seed/images/3c2ec192793fd46391289d2ba4527c09.jpg",
+        "truth": "셔츠",
+        "baseline": "셔츠",
+        "baseline_conf": 0.519,
+        "augmented": "티셔츠",
+        "augmented_conf": 0.876
+      },
+      {
+        "task": "sleeve_length",
+        "image": "fashionpedia_seed/images/3b0e3da1465e802b7855e4c532638e7e.jpg",
+        "truth": "반팔",
+        "baseline": "반팔",
+        "baseline_conf": 0.861,
+        "augmented": "7부 소매",
+        "augmented_conf": 0.862
+      },
+      {
+        "task": "lower_length",
+        "image": "fashion200k_bottoms/images/90668839_0.jpeg",
+        "truth": "미디·7부 기장",
+        "baseline": "미디·7부 기장",
+        "baseline_conf": 0.524,
+        "augmented": "롱·긴바지 기장",
+        "augmented_conf": 0.862
+      },
+      {
+        "task": "sleeve_length",
+        "image": "fashionpedia_seed/images/1c1b439e448879f805e8c827605ec96b.jpg",
+        "truth": "긴팔",
+        "baseline": "긴팔",
+        "baseline_conf": 0.651,
+        "augmented": "7부 소매",
+        "augmented_conf": 0.852
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/90685970_0.jpeg",
+        "truth": "플레어",
+        "baseline": "플레어",
+        "baseline_conf": 0.477,
+        "augmented": "와이드",
+        "augmented_conf": 0.845
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/90274429_1.jpeg",
+        "truth": "스키니",
+        "baseline": "스키니",
+        "baseline_conf": 0.602,
+        "augmented": "테이퍼드",
+        "augmented_conf": 0.841
+      },
+      {
+        "task": "category",
+        "image": "fashion200k_supplement/images/91390739_0.jpeg",
+        "truth": "셔츠",
+        "baseline": "셔츠",
+        "baseline_conf": 0.48,
+        "augmented": "블라우스",
+        "augmented_conf": 0.838
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/89957932_0.jpeg",
+        "truth": "스트레이트",
+        "baseline": "스트레이트",
+        "baseline_conf": 0.471,
+        "augmented": "테이퍼드",
+        "augmented_conf": 0.833
+      },
+      {
+        "task": "sleeve_shape",
+        "image": "fashionpedia_seed/images/e1f4adf88b71b15a4aaa6a32c6fa0d4a.jpg",
+        "truth": "퍼프 소매",
+        "baseline": "퍼프 소매",
+        "baseline_conf": 0.55,
+        "augmented": "기본 소매",
+        "augmented_conf": 0.829
+      },
+      {
+        "task": "upper_fit",
+        "image": "fashionpedia_seed/images/d451b646b79628026a369c045ed54462.jpg",
+        "truth": "레귤러핏",
+        "baseline": "레귤러핏",
+        "baseline_conf": 0.538,
+        "augmented": "슬림핏",
+        "augmented_conf": 0.828
+      },
+      {
+        "task": "lower_length",
+        "image": "fashion200k_bottoms/images/89782156_0.jpeg",
+        "truth": "롱·긴바지 기장",
+        "baseline": "롱·긴바지 기장",
+        "baseline_conf": 0.821,
+        "augmented": "미디·7부 기장",
+        "augmented_conf": 0.824
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashion200k_bottoms/images/90882216_0.jpeg",
+        "truth": "플레어핏",
+        "baseline": "플레어핏",
+        "baseline_conf": 0.468,
+        "augmented": "와이드핏",
+        "augmented_conf": 0.822
+      },
+      {
+        "task": "category",
+        "image": "fashion200k_supplement/images/91329062_0.jpeg",
+        "truth": "탑",
+        "baseline": "탑",
+        "baseline_conf": 0.705,
+        "augmented": "티셔츠",
+        "augmented_conf": 0.815
+      },
+      {
+        "task": "silhouette",
+        "image": "fashionpedia_seed/images/bf220f1c9ef47e7338d32cd082ecc15c.jpg",
+        "truth": "X라인",
+        "baseline": "X라인",
+        "baseline_conf": 0.442,
+        "augmented": "비대칭",
+        "augmented_conf": 0.815
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashion200k_bottoms/images/89888963_1.jpeg",
+        "truth": "플레어핏",
+        "baseline": "플레어핏",
+        "baseline_conf": 0.498,
+        "augmented": "와이드핏",
+        "augmented_conf": 0.812
+      },
+      {
+        "task": "pant_length",
+        "image": "fashion200k_bottoms/images/90983724_1.jpeg",
+        "truth": "크롭·앵클",
+        "baseline": "크롭·앵클",
+        "baseline_conf": 0.553,
+        "augmented": "풀렝스",
+        "augmented_conf": 0.81
+      },
+      {
+        "task": "upper_length",
+        "image": "fashionpedia_seed/images/d14c29b741ec264a1bc7ea1918898a99.jpg",
+        "truth": "기본 기장",
+        "baseline": "기본 기장",
+        "baseline_conf": 0.685,
+        "augmented": "크롭 기장",
+        "augmented_conf": 0.809
+      },
+      {
+        "task": "category",
+        "image": "fashionpedia_seed/images/f94473431eecc5ca5f6434ee413fc2d0.jpg",
+        "truth": "티셔츠",
+        "baseline": "티셔츠",
+        "baseline_conf": 0.475,
+        "augmented": "셔츠",
+        "augmented_conf": 0.802
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/90441379_0.jpeg",
+        "truth": "하렘 팬츠",
+        "baseline": "하렘 팬츠",
+        "baseline_conf": 0.535,
+        "augmented": "조거·스웨트팬츠",
+        "augmented_conf": 0.801
+      },
+      {
+        "task": "lower_length",
+        "image": "fashion200k_bottoms/images/91099520_0.jpeg",
+        "truth": "롱·긴바지 기장",
+        "baseline": "롱·긴바지 기장",
+        "baseline_conf": 0.565,
+        "augmented": "미디·7부 기장",
+        "augmented_conf": 0.798
+      }
+    ],
+    "still_wrong": [
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/90108158_0.jpeg",
+        "truth": "하렘 팬츠",
+        "baseline": "카고 팬츠",
+        "baseline_conf": 0.986,
+        "augmented": "카고 팬츠",
+        "augmented_conf": 1.0
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/90844023_0.jpeg",
+        "truth": "하렘 팬츠",
+        "baseline": "카고 팬츠",
+        "baseline_conf": 0.993,
+        "augmented": "카고 팬츠",
+        "augmented_conf": 1.0
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/90799373_0.jpeg",
+        "truth": "스트레이트",
+        "baseline": "스키니",
+        "baseline_conf": 0.933,
+        "augmented": "스키니",
+        "augmented_conf": 1.0
+      },
+      {
+        "task": "pant_length",
+        "image": "fashion200k_bottoms/images/90300527_0.jpeg",
+        "truth": "크롭·앵클",
+        "baseline": "풀렝스",
+        "baseline_conf": 0.975,
+        "augmented": "풀렝스",
+        "augmented_conf": 1.0
+      },
+      {
+        "task": "pant_length",
+        "image": "fashion200k_bottoms/images/90809670_1.jpeg",
+        "truth": "크롭·앵클",
+        "baseline": "풀렝스",
+        "baseline_conf": 0.994,
+        "augmented": "풀렝스",
+        "augmented_conf": 1.0
+      },
+      {
+        "task": "pant_length",
+        "image": "fashion200k_bottoms/images/91039088_0.jpeg",
+        "truth": "크롭·앵클",
+        "baseline": "카프리·7부",
+        "baseline_conf": 0.995,
+        "augmented": "카프리·7부",
+        "augmented_conf": 1.0
+      },
+      {
+        "task": "pant_length",
+        "image": "fashion200k_bottoms/images/91143599_0.jpeg",
+        "truth": "크롭·앵클",
+        "baseline": "카프리·7부",
+        "baseline_conf": 0.999,
+        "augmented": "카프리·7부",
+        "augmented_conf": 1.0
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/88180047_0.jpeg",
+        "truth": "청바지",
+        "baseline": "카고 팬츠",
+        "baseline_conf": 0.818,
+        "augmented": "카고 팬츠",
+        "augmented_conf": 0.999
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/90528994_0.jpeg",
+        "truth": "요가 팬츠",
+        "baseline": "레깅스",
+        "baseline_conf": 0.867,
+        "augmented": "레깅스",
+        "augmented_conf": 0.999
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/89703244_0.jpeg",
+        "truth": "스트레이트",
+        "baseline": "테이퍼드",
+        "baseline_conf": 0.698,
+        "augmented": "테이퍼드",
+        "augmented_conf": 0.999
+      },
+      {
+        "task": "pant_length",
+        "image": "fashion200k_bottoms/images/90679766_0.jpeg",
+        "truth": "풀렝스",
+        "baseline": "크롭·앵클",
+        "baseline_conf": 0.847,
+        "augmented": "크롭·앵클",
+        "augmented_conf": 0.999
+      },
+      {
+        "task": "pant_length",
+        "image": "fashion200k_bottoms/images/91346075_0.jpeg",
+        "truth": "크롭·앵클",
+        "baseline": "풀렝스",
+        "baseline_conf": 0.957,
+        "augmented": "풀렝스",
+        "augmented_conf": 0.999
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashion200k_bottoms/images/89703244_0.jpeg",
+        "truth": "스트레이트핏",
+        "baseline": "테이퍼드핏",
+        "baseline_conf": 0.778,
+        "augmented": "테이퍼드핏",
+        "augmented_conf": 0.999
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/90389831_0.jpeg",
+        "truth": "와이드",
+        "baseline": "스트레이트",
+        "baseline_conf": 0.734,
+        "augmented": "스트레이트",
+        "augmented_conf": 0.998
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/91329071_0.jpeg",
+        "truth": "스트레이트",
+        "baseline": "부츠컷",
+        "baseline_conf": 0.777,
+        "augmented": "부츠컷",
+        "augmented_conf": 0.998
+      },
+      {
+        "task": "pant_length",
+        "image": "fashion200k_bottoms/images/91410344_0.jpeg",
+        "truth": "풀렝스",
+        "baseline": "크롭·앵클",
+        "baseline_conf": 0.944,
+        "augmented": "크롭·앵클",
+        "augmented_conf": 0.998
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/90676079_0.jpeg",
+        "truth": "요가 팬츠",
+        "baseline": "레깅스",
+        "baseline_conf": 0.974,
+        "augmented": "레깅스",
+        "augmented_conf": 0.997
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/89680975_0.jpeg",
+        "truth": "스키니",
+        "baseline": "스트레이트",
+        "baseline_conf": 0.68,
+        "augmented": "스트레이트",
+        "augmented_conf": 0.997
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/91114153_0.jpeg",
+        "truth": "테이퍼드",
+        "baseline": "페그",
+        "baseline_conf": 0.662,
+        "augmented": "페그",
+        "augmented_conf": 0.997
+      },
+      {
+        "task": "pant_length",
+        "image": "fashion200k_bottoms/images/90569354_0.jpeg",
+        "truth": "크롭·앵클",
+        "baseline": "풀렝스",
+        "baseline_conf": 0.95,
+        "augmented": "풀렝스",
+        "augmented_conf": 0.997
+      },
+      {
+        "task": "pant_length",
+        "image": "fashion200k_bottoms/images/91199075_0.jpeg",
+        "truth": "크롭·앵클",
+        "baseline": "풀렝스",
+        "baseline_conf": 0.961,
+        "augmented": "풀렝스",
+        "augmented_conf": 0.997
+      },
+      {
+        "task": "lower_length",
+        "image": "fashion200k_bottoms/images/91410344_0.jpeg",
+        "truth": "롱·긴바지 기장",
+        "baseline": "미디·7부 기장",
+        "baseline_conf": 0.987,
+        "augmented": "미디·7부 기장",
+        "augmented_conf": 0.997
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/79170237_0.jpeg",
+        "truth": "조거·스웨트팬츠",
+        "baseline": "하렘 팬츠",
+        "baseline_conf": 0.641,
+        "augmented": "하렘 팬츠",
+        "augmented_conf": 0.996
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashion200k_bottoms/images/90799373_0.jpeg",
+        "truth": "스트레이트핏",
+        "baseline": "슬림핏",
+        "baseline_conf": 0.95,
+        "augmented": "슬림핏",
+        "augmented_conf": 0.996
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/90423350_0.jpeg",
+        "truth": "스트레이트",
+        "baseline": "와이드",
+        "baseline_conf": 0.735,
+        "augmented": "와이드",
+        "augmented_conf": 0.995
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashion200k_bottoms/images/90423350_0.jpeg",
+        "truth": "스트레이트핏",
+        "baseline": "와이드핏",
+        "baseline_conf": 0.741,
+        "augmented": "와이드핏",
+        "augmented_conf": 0.995
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/90257885_0.jpeg",
+        "truth": "하렘 팬츠",
+        "baseline": "치노 팬츠",
+        "baseline_conf": 0.864,
+        "augmented": "치노 팬츠",
+        "augmented_conf": 0.994
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/91272406_0.jpeg",
+        "truth": "청바지",
+        "baseline": "치노 팬츠",
+        "baseline_conf": 0.595,
+        "augmented": "치노 팬츠",
+        "augmented_conf": 0.994
+      },
+      {
+        "task": "lower_length",
+        "image": "fashionpedia_seed/images/05b5e806121325fe0b9879c18f146f39.jpg",
+        "truth": "미디·7부 기장",
+        "baseline": "쇼츠·미니 기장",
+        "baseline_conf": 0.356,
+        "augmented": "롱·긴바지 기장",
+        "augmented_conf": 0.994
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/91416470_0.jpeg",
+        "truth": "레깅스",
+        "baseline": "청바지",
+        "baseline_conf": 0.928,
+        "augmented": "청바지",
+        "augmented_conf": 0.993
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/89615158_0.jpeg",
+        "truth": "조거·스웨트팬츠",
+        "baseline": "하렘 팬츠",
+        "baseline_conf": 0.932,
+        "augmented": "하렘 팬츠",
+        "augmented_conf": 0.992
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/90701890_0.jpeg",
+        "truth": "하렘 팬츠",
+        "baseline": "트랙팬츠",
+        "baseline_conf": 0.925,
+        "augmented": "트랙팬츠",
+        "augmented_conf": 0.992
+      },
+      {
+        "task": "pant_length",
+        "image": "fashion200k_bottoms/images/90921518_0.jpeg",
+        "truth": "크롭·앵클",
+        "baseline": "풀렝스",
+        "baseline_conf": 0.762,
+        "augmented": "풀렝스",
+        "augmented_conf": 0.991
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashion200k_bottoms/images/79220998_0.jpeg",
+        "truth": "스트레이트핏",
+        "baseline": "와이드핏",
+        "baseline_conf": 0.811,
+        "augmented": "와이드핏",
+        "augmented_conf": 0.991
+      },
+      {
+        "task": "category",
+        "image": "fashion200k_supplement/images/90550185_0.jpeg",
+        "truth": "탑",
+        "baseline": "블라우스",
+        "baseline_conf": 0.862,
+        "augmented": "블라우스",
+        "augmented_conf": 0.99
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/90500614_0.jpeg",
+        "truth": "하렘 팬츠",
+        "baseline": "조거·스웨트팬츠",
+        "baseline_conf": 0.838,
+        "augmented": "조거·스웨트팬츠",
+        "augmented_conf": 0.99
+      },
+      {
+        "task": "pant_leg_shape",
+        "image": "fashion200k_bottoms/images/89618810_0.jpeg",
+        "truth": "와이드",
+        "baseline": "플레어",
+        "baseline_conf": 0.808,
+        "augmented": "플레어",
+        "augmented_conf": 0.99
+      },
+      {
+        "task": "lower_fit",
+        "image": "fashion200k_bottoms/images/90493848_0.jpeg",
+        "truth": "스트레이트핏",
+        "baseline": "테이퍼드핏",
+        "baseline_conf": 0.649,
+        "augmented": "테이퍼드핏",
+        "augmented_conf": 0.99
+      },
+      {
+        "task": "category",
+        "image": "fashionpedia_seed/images/263b6dd877a80699f43aef905d7ea37e.jpg",
+        "truth": "청바지",
+        "baseline": "팬츠",
+        "baseline_conf": 0.894,
+        "augmented": "팬츠",
+        "augmented_conf": 0.989
+      },
+      {
+        "task": "lower_subtype",
+        "image": "fashion200k_bottoms/images/90035779_0.jpeg",
+        "truth": "트랙팬츠",
+        "baseline": "조거·스웨트팬츠",
+        "baseline_conf": 0.763,
+        "augmented": "조거·스웨트팬츠",
+        "augmented_conf": 0.988
+      }
+    ],
+    "counts": {
+      "improved": 277,
+      "regressed": 223,
+      "still_wrong": 620
+    }
+  }
+}

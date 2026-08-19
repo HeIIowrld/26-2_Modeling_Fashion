@@ -1,0 +1,146 @@
+{
+  "pant_leg_shape": {
+    "original_accuracy": 0.5695,
+    "merged_accuracy": 0.7193,
+    "delta": 0.1497,
+    "errors": 161,
+    "errors_fixed_by_merge": 56,
+    "share_of_errors_from_adjacent_labels": 0.3478,
+    "merged_groups": [
+      "와이드+팔라초",
+      "스트레이트+테이퍼드",
+      "플레어+부츠컷"
+    ]
+  },
+  "lower_fit": {
+    "original_accuracy": 0.6697,
+    "merged_accuracy": 0.7986,
+    "delta": 0.129,
+    "errors": 146,
+    "errors_fixed_by_merge": 57,
+    "share_of_errors_from_adjacent_labels": 0.3904,
+    "merged_groups": [
+      "스트레이트핏+테이퍼드핏",
+      "와이드핏+플레어핏"
+    ]
+  },
+  "upper_fit": {
+    "original_accuracy": 0.6404,
+    "merged_accuracy": 0.8258,
+    "delta": 0.1854,
+    "errors": 64,
+    "errors_fixed_by_merge": 33,
+    "share_of_errors_from_adjacent_labels": 0.5156,
+    "merged_groups": [
+      "여유핏+오버핏",
+      "슬림핏+레귤러핏"
+    ]
+  },
+  "pant_length": {
+    "original_accuracy": 0.7432,
+    "merged_accuracy": 0.9234,
+    "delta": 0.1802,
+    "errors": 57,
+    "errors_fixed_by_merge": 40,
+    "share_of_errors_from_adjacent_labels": 0.7018,
+    "merged_groups": [
+      "크롭·앵클+풀렝스"
+    ]
+  },
+  "upper_length": {
+    "original_accuracy": 0.7424,
+    "merged_accuracy": 1.0,
+    "delta": 0.2576,
+    "errors": 34,
+    "errors_fixed_by_merge": 34,
+    "share_of_errors_from_adjacent_labels": 1.0,
+    "merged_groups": [
+      "크롭 기장+기본 기장"
+    ]
+  },
+  "lower_subtype": {
+    "original_accuracy": 0.7063,
+    "merged_accuracy": 0.7619,
+    "delta": 0.0556,
+    "errors": 74,
+    "errors_fixed_by_merge": 14,
+    "share_of_errors_from_adjacent_labels": 0.1892,
+    "merged_groups": [
+      "조거·스웨트팬츠+트랙팬츠",
+      "슬랙스+치노 팬츠"
+    ]
+  },
+  "neckline": {
+    "original_accuracy": 0.6353,
+    "merged_accuracy": 0.7059,
+    "delta": 0.0706,
+    "errors": 31,
+    "errors_fixed_by_merge": 6,
+    "share_of_errors_from_adjacent_labels": 0.1935,
+    "merged_groups": [
+      "라운드넥+보트넥"
+    ]
+  },
+  "collar": {
+    "original_accuracy": 0.7356,
+    "merged_accuracy": 0.7816,
+    "delta": 0.046,
+    "errors": 23,
+    "errors_fixed_by_merge": 4,
+    "share_of_errors_from_adjacent_labels": 0.1739,
+    "merged_groups": [
+      "셔츠 칼라+스탠드 칼라"
+    ]
+  },
+  "sleeve_length": {
+    "original_accuracy": 0.8925,
+    "merged_accuracy": 0.9579,
+    "delta": 0.0654,
+    "errors": 23,
+    "errors_fixed_by_merge": 14,
+    "share_of_errors_from_adjacent_labels": 0.6087,
+    "merged_groups": [
+      "7부 소매+긴팔"
+    ]
+  },
+  "silhouette": {
+    "original_accuracy": 0.703,
+    "merged_accuracy": 0.7624,
+    "delta": 0.0594,
+    "errors": 30,
+    "errors_fixed_by_merge": 6,
+    "share_of_errors_from_adjacent_labels": 0.2,
+    "merged_groups": [
+      "A라인+X라인"
+    ]
+  },
+  "lower_length": {
+    "original_accuracy": 0.8246,
+    "merged_accuracy": 0.8365,
+    "delta": 0.0118,
+    "errors": 74,
+    "errors_fixed_by_merge": 5,
+    "share_of_errors_from_adjacent_labels": 0.0676,
+    "merged_groups": [
+      "미디·7부 기장+무릎 기장"
+    ]
+  },
+  "category": {
+    "original_accuracy": 0.8703,
+    "merged_accuracy": 0.9172,
+    "delta": 0.0469,
+    "errors": 155,
+    "errors_fixed_by_merge": 56,
+    "share_of_errors_from_adjacent_labels": 0.3613,
+    "merged_groups": [
+      "티셔츠+탑",
+      "셔츠+블라우스",
+      "팬츠+청바지"
+    ]
+  },
+  "_total": {
+    "errors": 872,
+    "fixed": 325,
+    "share": 0.3727
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "dataset": "Fashion200K strict metadata supplement for sparse Fashionpedia labels",
+  "source": "https://huggingface.co/datasets/Marqo/fashion200k/resolve/refs%2Fconvert%2Fparquet/default/data/0007.parquet",
+  "license": "Apache-2.0",
+  "weak_label_note": "Only explicit category2/category3 product metadata was converted. These labels are weaker than Fashionpedia expert annotations and should be reviewed before production use.",
+  "seed": 43,
+  "selected_images": 820,
+  "train_products": 656,
+  "val_products": 164,
+  "label_counts": {
+    "category": {
+      "블라우스": 357,
+      "폴로 셔츠": 90,
+      "탑": 206,
+      "셔츠": 167
+    },
+    "sleeve_length": {
+      "민소매": 19,
+      "긴팔": 206,
+      "반팔": 67
+    },
+    "sleeve_shape": {},
+    "upper_length": {
+      "크롭 기장": 13,
+      "롱 기장": 31
+    },
+    "lower_length": {},
+    "neckline": {
+      "V넥": 12,
+      "오프숄더": 3,
+      "터틀넥": 2,
+      "라운드넥": 1
+    },
+    "collar": {
+      "폴로 칼라": 90
+    },
+    "upper_fit": {
+      "오버핏": 10,
+      "슬림핏": 15,
+      "레귤러핏": 3
+    },
+    "lower_fit": {},
+    "silhouette": {},
+    "pattern": {
+      "체크": 16,
+      "플로럴": 21,
+      "도트": 3,
+      "컬러 블록": 1,
+      "스트라이프": 32
+    },
+    "material": {
+      "실크·새틴": 154,
+      "레이스": 85,
+      "울": 42,
+      "코튼": 74,
+      "시폰": 54,
+      "데님": 50,
+      "메시": 36,
+      "스웨이드": 16,
+      "니트": 53,
+      "가죽": 20,
+      "퍼·플리스": 3
+    },
+    "detail": {
+      "프릴·러플": 21,
+      "레이스": 85,
+      "자수": 30,
+      "포켓": 11,
+      "리본": 7,
+      "스팽글": 2,
+      "지퍼": 4
+    }
+  },
+  "supplement_csv": "fashion_attribute_annotations.csv",
+  "combined_csv": "../fashion_attribute_annotations.csv",
+  "source_sha256": "c913a783dd9e81e64366b6debdeb784b1ab5ed66c7736a4f94bd5435de9590ea"
+}

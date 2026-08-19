@@ -1,0 +1,217 @@
+{
+  "metadata": {
+    "version": "ko-candidates-1.0",
+    "updated_at": "2026-08-12",
+    "status": "expert_review_required",
+    "description": "한국인 인체치수, 한국 날씨, 국내 학술연구를 반영한 추천 규칙 후보입니다. 현재 MVP 추천 엔진에는 자동 적용되지 않습니다."
+  },
+  "evidence_levels": {
+    "A": "한국 공공기관 자료 또는 국내 등재 학술연구",
+    "B": "국내 패션 전문가 자료에서 반복 확인된 내용",
+    "C": "해외 전문 매체 또는 스타일링 서비스의 실무 가이드",
+    "D": "프로젝트 가설로 전문가 검수와 사용자 실험이 필요한 내용"
+  },
+  "hard_filters": [
+    "out_of_stock",
+    "over_budget",
+    "explicit_user_exclusion",
+    "required_dress_code_violation",
+    "severe_weather_mismatch"
+  ],
+  "proposed_scoring_weights": {
+    "purpose_tpo_fit": 20,
+    "weather_activity_fit": 15,
+    "size_wearability": 15,
+    "silhouette_goal_fit": 15,
+    "color_tone_area_harmony": 12,
+    "pattern_material_harmony": 8,
+    "owned_clothes_utility": 5,
+    "preference_trend_fit": 10
+  },
+  "rules": [
+    {
+      "id": "R-KOR-01",
+      "category": "body_measurement",
+      "evidence_level": ["A", "D"],
+      "conditions": ["body_ratio_is_used"],
+      "recommend": [
+        "한국인 성별·연령별 분포에 맞춰 상대 구간으로 해석",
+        "사진 비율은 좁음·보통·넓음 또는 짧음·보통·김으로만 표현"
+      ],
+      "avoid": [
+        "사진만으로 실제 치수를 cm 단위로 단정",
+        "검증되지 않은 고정 임계값으로 체형 확정"
+      ],
+      "source_ids": ["SIZE_KOREA_INTRO", "SIZE_KOREA_BODY_CLASS"]
+    },
+    {
+      "id": "R-KOR-02",
+      "category": "user_intent",
+      "evidence_level": ["D"],
+      "conditions": ["user_selected_silhouette_goal"],
+      "recommend": [
+        "사용자가 선택한 강조 위치와 원하는 실루엣에 맞춰 기장·허리선·볼륨을 조정"
+      ],
+      "avoid": [
+        "특정 체형을 결점으로 표현",
+        "사용자 요청 없이 날씬해 보이는 방향을 강요"
+      ]
+    },
+    {
+      "id": "R-COL-07",
+      "category": "color_area",
+      "evidence_level": ["A"],
+      "conditions": ["two_or_more_large_color_areas"],
+      "recommend": [
+        "강한 색 두 개의 면적이 비슷하면 주색과 보조색으로 위계를 조정",
+        "1:1.6 또는 1:2 색면 후보도 탐색"
+      ],
+      "exceptions": ["intentional_color_blocking"],
+      "source_ids": ["KCI_COLOR_AREA_2009"]
+    },
+    {
+      "id": "R-COL-08",
+      "category": "color_context",
+      "evidence_level": ["A"],
+      "conditions": ["recommended_color_conflicts_with_owned_items"],
+      "recommend": [
+        "보유 옷과의 조화·장소와 상황·사용자 선호색을 함께 평가",
+        "기본색은 저위험 후보로만 취급하고 정답으로 고정하지 않음"
+      ],
+      "population_limit": "원 연구는 여대생 표본",
+      "source_ids": ["KCI_COLOR_PURCHASE_2019"]
+    },
+    {
+      "id": "R-PAT-03",
+      "category": "pattern",
+      "evidence_level": ["A"],
+      "conditions": ["pattern_detected"],
+      "required_attributes": [
+        "pattern_type",
+        "repeat_spacing",
+        "motif_size",
+        "value_chroma_contrast",
+        "pattern_area_ratio"
+      ],
+      "recommend": [
+        "큰 간격 또는 강한 대비는 높은 포인트 강도로 계산",
+        "상·하의 모두 패턴이면 공통 색과 포인트 강도 합을 확인"
+      ],
+      "source_ids": ["KCI_CHECK_PATTERN_2012"]
+    },
+    {
+      "id": "R-DET-01",
+      "category": "garment_detail",
+      "evidence_level": ["A"],
+      "conditions": ["garment_analysis_available"],
+      "required_attributes": [
+        "neckline_collar",
+        "sleeve_shape_length",
+        "seam_waistline",
+        "material_gloss",
+        "tone_accent_position",
+        "pattern_type_size"
+      ],
+      "population_limit": "참고 연구의 대상은 20대 여성 5개 체형",
+      "source_ids": ["KCI_AI_BODY_RECOMMENDER_2025"]
+    },
+    {
+      "id": "R-CTX-01",
+      "category": "occasion",
+      "evidence_level": ["A", "B"],
+      "conditions": ["purpose_provided"],
+      "recommend": [
+        "격식 범위·활동량·노출 허용·신발 기능을 미적 점수보다 먼저 확인",
+        "출근 목적에는 회사 드레스코드 수준을 추가 입력"
+      ]
+    },
+    {
+      "id": "R-WEA-01",
+      "category": "weather",
+      "evidence_level": ["A"],
+      "conditions": ["date_and_location_available"],
+      "required_inputs": [
+        "temperature",
+        "feels_like_temperature",
+        "humidity",
+        "precipitation_probability",
+        "precipitation_amount",
+        "wind_speed",
+        "uv_index"
+      ],
+      "avoid": ["기온 하나만으로 고정된 옷차림 표 적용"],
+      "source_ids": ["KMA_LIFE_INDEX"]
+    },
+    {
+      "id": "R-WEA-02",
+      "category": "hot_humid_weather",
+      "evidence_level": ["A", "D"],
+      "conditions": ["high_feels_like_temperature", "high_humidity", "outdoor_activity"],
+      "recommend": [
+        "통기성·건조 편의성이 높은 상품 우선",
+        "강한 실내 냉방에는 휴대 가능한 얇은 겉옷 보조 추천"
+      ],
+      "penalize": ["thick_layering", "high_cling_layer_overlap"]
+    },
+    {
+      "id": "R-WEA-03",
+      "category": "cold_windy_weather",
+      "evidence_level": ["A"],
+      "conditions": ["low_feels_like_temperature_or_strong_wind"],
+      "recommend": [
+        "이너·중간층·아우터의 레이어 조합 평가",
+        "장갑·목도리·모자 등 방한 액세서리 기능 점수 반영"
+      ],
+      "source_ids": ["KMA_COLD_WAVE_GUIDE"]
+    },
+    {
+      "id": "R-WEA-04",
+      "category": "rain_uv",
+      "evidence_level": ["A", "D"],
+      "conditions": ["rain_forecast_or_high_uv"],
+      "recommend": [
+        "비 예보 시 긴 밑단·물에 취약한 신발·관리 어려운 소재의 우선순위 감소",
+        "높은 자외선에는 모자·선글라스·가벼운 긴소매 선택지 제공"
+      ],
+      "source_ids": ["KMA_LIFE_INDEX"]
+    },
+    {
+      "id": "R-OWN-01",
+      "category": "wardrobe_compatibility",
+      "evidence_level": ["A"],
+      "conditions": ["shopping_product_recommendation"],
+      "recommend": [
+        "추천 상품이 보유 옷과 만들 수 있는 유효 코디 수 계산",
+        "동점이면 여러 보유 옷과 연결되는 상품 우선"
+      ],
+      "source_ids": ["KCI_PERSONAL_COORDINATION_APP_2019"]
+    },
+    {
+      "id": "R-TREND-01",
+      "category": "trend",
+      "evidence_level": ["D"],
+      "required_metadata": [
+        "valid_from",
+        "valid_until",
+        "target_age",
+        "style_tags",
+        "source_date"
+      ],
+      "recommend": [
+        "유행은 기본 규칙과 분리된 임시 점수로 관리",
+        "사용자가 트렌디한 스타일을 원할 때만 가중치 확대"
+      ]
+    }
+  ],
+  "sources": {
+    "SIZE_KOREA_INTRO": "https://sizekorea.kr/about/intro",
+    "SIZE_KOREA_BODY_CLASS": "https://sizekorea.kr/human-info/body-shape-class/std-body-size",
+    "KMA_LIFE_INDEX": "https://www.weather.go.kr/w/resources/jsp/life/jisu_data_table.html",
+    "KMA_COLD_WAVE_GUIDE": "https://www.weather.go.kr/wnuri_help/doc/wrn_coldwave_weak_health_manual.pdf",
+    "KCI_COLOR_PURCHASE_2019": "https://www.kci.go.kr/kciportal/landing/article.kci?arti_id=ART002549363",
+    "KCI_COLOR_AREA_2009": "https://www.kci.go.kr/kciportal/landing/article.kci?arti_id=ART001378164",
+    "KCI_CHECK_PATTERN_2012": "https://www.kci.go.kr/kciportal/landing/article.kci?arti_id=ART001666410",
+    "KCI_AI_BODY_RECOMMENDER_2025": "https://doi.org/10.30751/kfcda.2025.27.4.179",
+    "KCI_PERSONAL_COORDINATION_APP_2019": "https://www.kci.go.kr/kciportal/landing/article.kci?arti_id=ART002538102"
+  }
+}

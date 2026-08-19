@@ -1,0 +1,127 @@
+{
+  "image_level": [
+    {
+      "a": "old_train(4789)",
+      "b": "old_val(1195)",
+      "images_a": 4090,
+      "images_b": 1020,
+      "shared": 0,
+      "examples": []
+    },
+    {
+      "a": "old_train(4789)",
+      "b": "r1_val(1716)",
+      "images_a": 4090,
+      "images_b": 899,
+      "shared": 0,
+      "examples": []
+    },
+    {
+      "a": "r1_train(6797)",
+      "b": "old_val(1195)",
+      "images_a": 3597,
+      "images_b": 1020,
+      "shared": 0,
+      "examples": []
+    },
+    {
+      "a": "r1_train(6797)",
+      "b": "r1_val(1716)",
+      "images_a": 3597,
+      "images_b": 899,
+      "shared": 0,
+      "examples": []
+    },
+    {
+      "a": "r2_train(10755)",
+      "b": "old_val(1195)",
+      "images_a": 5993,
+      "images_b": 1020,
+      "shared": 0,
+      "examples": []
+    },
+    {
+      "a": "r2_train(10755)",
+      "b": "r1_val(1716)",
+      "images_a": 5993,
+      "images_b": 899,
+      "shared": 0,
+      "examples": []
+    },
+    {
+      "a": "r1_train(6797)",
+      "b": "r2_train(10755)",
+      "images_a": 3597,
+      "images_b": 5993,
+      "shared": 0,
+      "examples": []
+    },
+    {
+      "a": "old_val(1195)",
+      "b": "r1_val(1716)",
+      "images_a": 1020,
+      "images_b": 899,
+      "shared": 0,
+      "examples": []
+    },
+    {
+      "a": "old_train(4789)",
+      "b": "r1_train(6797)",
+      "images_a": 4090,
+      "images_b": 3597,
+      "shared": 0,
+      "examples": []
+    },
+    {
+      "a": "old_train(4789)",
+      "b": "r2_train(10755)",
+      "images_a": 4090,
+      "images_b": 5993,
+      "shared": 0,
+      "examples": []
+    }
+  ],
+  "fit_dev": {
+    "fit_crops": 18990,
+    "dev_crops": 3351,
+    "fit_images": 12429,
+    "dev_images": 3111,
+    "shared_images": 1860,
+    "contaminated_dev_crops": 2011,
+    "contaminated_ratio": 0.6001
+  },
+  "crops_per_image": {
+    "old_train(4789)": {
+      "crops": 4789,
+      "images": 4090,
+      "crops_per_image": 1.171,
+      "multi_crop_images": 529
+    },
+    "old_val(1195)": {
+      "crops": 1195,
+      "images": 1020,
+      "crops_per_image": 1.172,
+      "multi_crop_images": 133
+    },
+    "r1_train(6797)": {
+      "crops": 6797,
+      "images": 3597,
+      "crops_per_image": 1.89,
+      "multi_crop_images": 2244
+    },
+    "r1_val(1716)": {
+      "crops": 1716,
+      "images": 899,
+      "crops_per_image": 1.909,
+      "multi_crop_images": 566
+    },
+    "r2_train(10755)": {
+      "crops": 10755,
+      "images": 5993,
+      "crops_per_image": 1.795,
+      "multi_crop_images": 3248
+    }
+  },
+  "verdict": "PASS",
+  "train_eval_leak_images": 0
+}

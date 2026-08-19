@@ -1,0 +1,20 @@
+{
+  "dataset": "Fashionpedia official validation split used as an initial local seed set",
+  "license_note": "Fashionpedia annotations/ontology are CC BY 4.0. Image copyrights remain with their original sources; review Fashionpedia image terms before redistribution or commercial use.",
+  "annotation_source": "https://s3.amazonaws.com/ifashionist-dataset/annotations/instances_attributes_val2020.json",
+  "image_parquet_source": "https://huggingface.co/datasets/detection-datasets/fashionpedia/resolve/refs%2Fconvert%2Fparquet/default/val/0000.parquet",
+  "annotation_sha256": "f831f415edad12d52acde8b138fe7ebd1592b57bf0dcd6a3b63ba8cabd208223",
+  "parquet_sha256": "64fb378e09409c2859b3f3c2a521572b0d6f8118fc9274c03f3f8c34f3bf9132",
+  "seed": 42,
+  "validation_ratio": 0.2,
+  "images": 1158,
+  "train_images": 926,
+  "val_images": 232,
+  "conversion": {
+    "written": 2032,
+    "skipped_category": 6749,
+    "category_only": 2,
+    "associated_parts": 3734
+  },
+  "annotation_csv": "fashion_attribute_annotations.csv"
+}

@@ -1,0 +1,405 @@
+{
+  "files": [
+    {
+      "path": ".gitignore",
+      "bytes": 1596
+    },
+    {
+      "path": "data/fashionpedia_train/fashion_attribute_annotations.csv",
+      "bytes": 1253944
+    },
+    {
+      "path": "data/fashionpedia_train/fashion_attribute_annotations_r2.csv",
+      "bytes": 1587543
+    },
+    {
+      "path": "data/fashionpedia_train/manifest.json",
+      "bytes": 905
+    },
+    {
+      "path": "data/fashionpedia_train/manifest_r2.json",
+      "bytes": 879
+    },
+    {
+      "path": "data/fashionpedia_train/manifest_r2_corrected.json",
+      "bytes": 1581
+    },
+    {
+      "path": "data/fashionpedia_train/selection.json",
+      "bytes": 30984
+    },
+    {
+      "path": "data/fashionpedia_train/selection_r2.json",
+      "bytes": 44975
+    },
+    {
+      "path": "data/fashionpedia_train_r3/fashion_attribute_annotations.csv",
+      "bytes": 1450482
+    },
+    {
+      "path": "data/fashionpedia_train_r3/manifest.json",
+      "bytes": 941
+    },
+    {
+      "path": "data/fashionpedia_train_r3/selection_r3.json",
+      "bytes": 41337
+    },
+    {
+      "path": "data/provenance/fashionpedia/shard_index.json",
+      "bytes": 538022
+    },
+    {
+      "path": "experiments/ambiguity_headroom.py",
+      "bytes": 5324
+    },
+    {
+      "path": "experiments/assemble_and_evaluate.py",
+      "bytes": 13218
+    },
+    {
+      "path": "experiments/build_detailnone_checkpoint.py",
+      "bytes": 6047
+    },
+    {
+      "path": "experiments/build_provenance_manifests.py",
+      "bytes": 15471
+    },
+    {
+      "path": "experiments/build_release_zip.py",
+      "bytes": 9735
+    },
+    {
+      "path": "experiments/build_train_csv.py",
+      "bytes": 5599
+    },
+    {
+      "path": "experiments/compare_variants.py",
+      "bytes": 11747
+    },
+    {
+      "path": "experiments/copy_to_repo.py",
+      "bytes": 5517
+    },
+    {
+      "path": "experiments/diagnose_baseline.py",
+      "bytes": 5822
+    },
+    {
+      "path": "experiments/embed_round3.py",
+      "bytes": 5058
+    },
+    {
+      "path": "experiments/embed_train_subset.py",
+      "bytes": 5994
+    },
+    {
+      "path": "experiments/eval_lib.py",
+      "bytes": 9930
+    },
+    {
+      "path": "experiments/evaluate_relabel.py",
+      "bytes": 9229
+    },
+    {
+      "path": "experiments/evaluate_round3.py",
+      "bytes": 8688
+    },
+    {
+      "path": "experiments/extract_train_images.py",
+      "bytes": 2901
+    },
+    {
+      "path": "experiments/final_comparison.py",
+      "bytes": 12026
+    },
+    {
+      "path": "experiments/final_comparison_newval.py",
+      "bytes": 4693
+    },
+    {
+      "path": "experiments/finalize_model.py",
+      "bytes": 7697
+    },
+    {
+      "path": "experiments/finetune.py",
+      "bytes": 17436
+    },
+    {
+      "path": "experiments/image_level_split.py",
+      "bytes": 7890
+    },
+    {
+      "path": "experiments/plan_repo_migration.py",
+      "bytes": 7044
+    },
+    {
+      "path": "experiments/predict_image.py",
+      "bytes": 6058
+    },
+    {
+      "path": "experiments/preflight_commit_check.py",
+      "bytes": 7201
+    },
+    {
+      "path": "experiments/recount_migration.py",
+      "bytes": 7934
+    },
+    {
+      "path": "experiments/refit_full.py",
+      "bytes": 17197
+    },
+    {
+      "path": "experiments/relabel_caches.py",
+      "bytes": 9727
+    },
+    {
+      "path": "experiments/run_relabel_experiment.py",
+      "bytes": 2423
+    },
+    {
+      "path": "experiments/sanitize_notebook.py",
+      "bytes": 4675
+    },
+    {
+      "path": "experiments/scan_fashionpedia_train.py",
+      "bytes": 4950
+    },
+    {
+      "path": "experiments/select_round2.py",
+      "bytes": 4043
+    },
+    {
+      "path": "experiments/select_round3.py",
+      "bytes": 10436
+    },
+    {
+      "path": "experiments/train_round3.py",
+      "bytes": 7663
+    },
+    {
+      "path": "experiments/train_with_train_split.py",
+      "bytes": 12899
+    },
+    {
+      "path": "experiments/verify_provenance_manifests.py",
+      "bytes": 8845
+    },
+    {
+      "path": "experiments/verify_split_integrity.py",
+      "bytes": 6985
+    },
+    {
+      "path": "models/fashion_attribute_heads_augmented_r3.metrics.json",
+      "bytes": 6607
+    },
+    {
+      "path": "reports/00_repo_overview.md",
+      "bytes": 19109
+    },
+    {
+      "path": "reports/01_baseline_diagnosis.json",
+      "bytes": 121923
+    },
+    {
+      "path": "reports/03_finetune_selection.json",
+      "bytes": 12603
+    },
+    {
+      "path": "reports/04_comparison.json",
+      "bytes": 101179
+    },
+    {
+      "path": "reports/05_refit_comparison.json",
+      "bytes": 115631
+    },
+    {
+      "path": "reports/06_variant_comparison.json",
+      "bytes": 158157
+    },
+    {
+      "path": "reports/07_ambiguity_headroom.json",
+      "bytes": 3715
+    },
+    {
+      "path": "reports/08_relabel_summary.json",
+      "bytes": 1954
+    },
+    {
+      "path": "reports/09_relabel_results.json",
+      "bytes": 449970
+    },
+    {
+      "path": "reports/10_detailnone_checkpoint.json",
+      "bytes": 69554
+    },
+    {
+      "path": "reports/11_train_split_results.json",
+      "bytes": 149378
+    },
+    {
+      "path": "reports/12_train_split_round2.json",
+      "bytes": 149378
+    },
+    {
+      "path": "reports/13_split_integrity.json",
+      "bytes": 2709
+    },
+    {
+      "path": "reports/14_final_comparison.json",
+      "bytes": 117432
+    },
+    {
+      "path": "reports/15_final_comparison_newval.json",
+      "bytes": 58450
+    },
+    {
+      "path": "reports/16_real_photo_test.md",
+      "bytes": 5501
+    },
+    {
+      "path": "reports/16_round3_selection.json",
+      "bytes": 6477
+    },
+    {
+      "path": "reports/17_round3_extraction_issues.json",
+      "bytes": 104
+    },
+    {
+      "path": "reports/17_round3_split_integrity.json",
+      "bytes": 6607
+    },
+    {
+      "path": "reports/18_round3_comparison_oldval.json",
+      "bytes": 134004
+    },
+    {
+      "path": "reports/19_round3_comparison_newval.json",
+      "bytes": 105045
+    },
+    {
+      "path": "reports/20_preflight_commit_check.json",
+      "bytes": 9354
+    },
+    {
+      "path": "reports/21_migration_plan.json",
+      "bytes": 9200
+    },
+    {
+      "path": "reports/COMMIT_PLAN.md",
+      "bytes": 4723
+    },
+    {
+      "path": "reports/FINAL_REPORT.md",
+      "bytes": 42038
+    },
+    {
+      "path": "reports/manifests/fashion200k_images.csv",
+      "bytes": 293428
+    },
+    {
+      "path": "reports/manifests/fashionpedia_train_excluded_image_ids.json",
+      "bytes": 70328
+    },
+    {
+      "path": "reports/manifests/fashionpedia_train_r1_images.csv",
+      "bytes": 399944
+    },
+    {
+      "path": "reports/manifests/fashionpedia_train_r2_images.csv",
+      "bytes": 534265
+    },
+    {
+      "path": "reports/manifests/fashionpedia_train_r3_images.csv",
+      "bytes": 883625
+    },
+    {
+      "path": "reports/manifests/fashionpedia_val_seed_images.csv",
+      "bytes": 100277
+    },
+    {
+      "path": "reports/manifests/README.md",
+      "bytes": 3151
+    },
+    {
+      "path": "reports/manifests/sources.json",
+      "bytes": 1953
+    },
+    {
+      "path": "reports/manifests/used_image_manifest.csv",
+      "bytes": 1937850
+    },
+    {
+      "path": "reports/PRESENTATION_SUMMARY.md",
+      "bytes": 10195
+    },
+    {
+      "path": "reports/ROUND3_FINAL_REPORT.md",
+      "bytes": 17158
+    }
+  ],
+  "total_bytes": 11354267,
+  "checks": [
+    {
+      "name": "100MB 이상 파일",
+      "passed": true,
+      "detail": "0건"
+    },
+    {
+      "name": "이미지·모델·parquet·.env 포함 여부",
+      "passed": true,
+      "detail": "0건"
+    },
+    {
+      "name": "절대경로 흔적",
+      "passed": true,
+      "detail": "0건"
+    },
+    {
+      "name": "API key·token·password·개인정보",
+      "passed": true,
+      "detail": "0건"
+    },
+    {
+      "name": "읽기 실패 파일",
+      "passed": true,
+      "detail": "0건"
+    },
+    {
+      "name": "manifest CSV 절대경로",
+      "passed": true,
+      "detail": "0건"
+    },
+    {
+      "name": "제외 확인 — 3차 체크포인트",
+      "passed": true,
+      "detail": "0건 stage됨 (기대 0)"
+    },
+    {
+      "name": "제외 확인 — 원본 이미지",
+      "passed": true,
+      "detail": "0건 stage됨 (기대 0)"
+    },
+    {
+      "name": "제외 확인 — instances_subset",
+      "passed": true,
+      "detail": "0건 stage됨 (기대 0)"
+    },
+    {
+      "name": "제외 확인 — 원본 annotation",
+      "passed": true,
+      "detail": "0건 stage됨 (기대 0)"
+    },
+    {
+      "name": "제외 확인 — 임베딩 캐시",
+      "passed": true,
+      "detail": "0건 stage됨 (기대 0)"
+    },
+    {
+      "name": "제외 확인 — 임시 로그",
+      "passed": true,
+      "detail": "0건 stage됨 (기대 0)"
+    }
+  ],
+  "absolute_path_hits": [],
+  "secret_hits": []
+}

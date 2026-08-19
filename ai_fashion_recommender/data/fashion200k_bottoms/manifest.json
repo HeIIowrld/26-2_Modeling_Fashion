@@ -1,0 +1,58 @@
+{
+  "dataset": "Fashion200K multi-axis lower-garment supplement",
+  "source": [
+    "https://huggingface.co/datasets/Marqo/fashion200k/resolve/refs%2Fconvert%2Fparquet/default/data/0004.parquet",
+    "https://huggingface.co/datasets/Marqo/fashion200k/resolve/refs%2Fconvert%2Fparquet/default/data/0005.parquet"
+  ],
+  "license": "Apache-2.0",
+  "weak_label_note": "Only explicit category2/category3 product metadata was converted. The labels are weak supervision and require external photo validation.",
+  "seed": 44,
+  "selected_images": 3132,
+  "train_products": 2508,
+  "val_products": 624,
+  "label_counts": {
+    "lower_subtype": {
+      "하렘 팬츠": 237,
+      "조거·스웨트팬츠": 202,
+      "트랙팬츠": 109,
+      "청바지": 97,
+      "치노 팬츠": 102,
+      "레깅스": 379,
+      "카고 팬츠": 85,
+      "슬랙스": 81,
+      "요가 팬츠": 38,
+      "세일러 팬츠": 20
+    },
+    "lower_detail": {
+      "드로스트링": 135,
+      "플리츠·턱": 205,
+      "카고 포켓": 85,
+      "5포켓": 38,
+      "사이드 스트라이프": 30,
+      "밴딩 허리": 17,
+      "밑단 커프": 34,
+      "스터럽": 13
+    },
+    "pant_leg_shape": {
+      "테이퍼드": 204,
+      "스트레이트": 396,
+      "페그": 59,
+      "스키니": 355,
+      "플레어": 233,
+      "와이드": 396,
+      "팔라초": 115,
+      "부츠컷": 88
+    },
+    "pant_length": {
+      "카프리·7부": 219,
+      "풀렝스": 542,
+      "크롭·앵클": 409
+    }
+  },
+  "supplement_csv": "fashion_attribute_annotations.csv",
+  "combined_csv": "../fashion_attribute_annotations.csv",
+  "source_sha256": {
+    "0004.parquet": "1587d14f31864d1294192a9cae83de47cab6d0fa3ab8d215da9eecff78e6c9fc",
+    "0005.parquet": "016d2907f628fa59e4ad4d8df0b17270607236b034f6beab8d4a839ab558b88a"
+  }
+}

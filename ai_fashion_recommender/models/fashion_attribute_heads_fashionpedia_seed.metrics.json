@@ -1,0 +1,279 @@
+{
+  "device": "cpu",
+  "backbone_model_id": "Marqo/marqo-fashionSigLIP",
+  "train_samples": 1625,
+  "val_samples": 407,
+  "config": {
+    "epochs": 50,
+    "batch_size": 128,
+    "learning_rate": 0.0005,
+    "weight_decay": 0.0001,
+    "hidden_dim": 256,
+    "dropout": 0.3,
+    "patience": 8,
+    "seed": 42,
+    "minimum_label_examples": 5
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 1.248098,
+      "val_loss": 0.86544
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.868077,
+      "val_loss": 0.710884
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.638459,
+      "val_loss": 0.632745
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.500738,
+      "val_loss": 0.582029
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.403533,
+      "val_loss": 0.572743
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.334478,
+      "val_loss": 0.561964
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.28771,
+      "val_loss": 0.57257
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.246615,
+      "val_loss": 0.572062
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.212255,
+      "val_loss": 0.580269
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.18528,
+      "val_loss": 0.592837
+    },
+    {
+      "epoch": 11,
+      "train_loss": 0.171021,
+      "val_loss": 0.601589
+    },
+    {
+      "epoch": 12,
+      "train_loss": 0.14768,
+      "val_loss": 0.61536
+    },
+    {
+      "epoch": 13,
+      "train_loss": 0.133567,
+      "val_loss": 0.627863
+    },
+    {
+      "epoch": 14,
+      "train_loss": 0.119116,
+      "val_loss": 0.637517
+    }
+  ],
+  "metrics": {
+    "category": {
+      "samples": 407,
+      "accuracy": 0.7715,
+      "score": 0.7715
+    },
+    "sleeve_length": {
+      "samples": 152,
+      "accuracy": 0.8487,
+      "score": 0.8487
+    },
+    "sleeve_shape": {
+      "samples": 122,
+      "accuracy": 0.8197,
+      "score": 0.8197
+    },
+    "upper_length": {
+      "samples": 124,
+      "accuracy": 0.7823,
+      "score": 0.7823
+    },
+    "lower_length": {
+      "samples": 200,
+      "accuracy": 0.845,
+      "score": 0.845
+    },
+    "neckline": {
+      "samples": 81,
+      "accuracy": 0.6296,
+      "score": 0.6296
+    },
+    "collar": {
+      "samples": 71,
+      "accuracy": 0.7042,
+      "score": 0.7042
+    },
+    "upper_fit": {
+      "samples": 175,
+      "accuracy": 0.6457,
+      "score": 0.6457
+    },
+    "lower_fit": {
+      "samples": 68,
+      "accuracy": 0.7794,
+      "score": 0.7794
+    },
+    "silhouette": {
+      "samples": 101,
+      "accuracy": 0.6634,
+      "score": 0.6634
+    },
+    "pattern": {
+      "samples": 374,
+      "micro_f1": 0.8635,
+      "score": 0.8635
+    },
+    "material": {
+      "samples": 40,
+      "micro_f1": 0.925,
+      "score": 0.925
+    },
+    "detail": {
+      "samples": 233,
+      "micro_f1": 0.7105,
+      "score": 0.7105
+    }
+  },
+  "label_support": {
+    "category": {
+      "티셔츠": 200,
+      "폴로 셔츠": 1,
+      "셔츠": 77,
+      "블라우스": 0,
+      "니트": 17,
+      "가디건": 11,
+      "후드티": 6,
+      "재킷": 95,
+      "블레이저": 50,
+      "코트": 87,
+      "베스트": 20,
+      "탑": 184,
+      "팬츠": 157,
+      "청바지": 81,
+      "쇼츠": 87,
+      "스커트": 142,
+      "원피스": 394,
+      "점프수트": 16
+    },
+    "sleeve_length": {
+      "민소매": 7,
+      "반팔": 179,
+      "7부 소매": 63,
+      "긴팔": 351
+    },
+    "sleeve_shape": {
+      "기본 소매": 369,
+      "퍼프 소매": 25,
+      "벌룬 소매": 8,
+      "벨 소매": 22,
+      "래글런 소매": 13,
+      "캡 소매": 48
+    },
+    "upper_length": {
+      "크롭 기장": 415,
+      "기본 기장": 99,
+      "롱 기장": 0
+    },
+    "lower_length": {
+      "쇼츠·미니 기장": 360,
+      "무릎 기장": 71,
+      "미디·7부 기장": 48,
+      "롱·긴바지 기장": 290
+    },
+    "neckline": {
+      "라운드넥": 179,
+      "V넥": 68,
+      "스퀘어넥": 13,
+      "보트넥": 46,
+      "오프숄더": 14,
+      "홀터넥": 11,
+      "터틀넥": 23
+    },
+    "collar": {
+      "칼라 없음": 8,
+      "폴로 칼라": 0,
+      "셔츠 칼라": 93,
+      "스탠드 칼라": 21,
+      "라펠 칼라": 98,
+      "피터팬 칼라": 5,
+      "세일러 칼라": 0
+    },
+    "upper_fit": {
+      "슬림핏": 219,
+      "레귤러핏": 383,
+      "여유핏": 113,
+      "오버핏": 7
+    },
+    "lower_fit": {
+      "슬림핏": 126,
+      "스트레이트핏": 97,
+      "테이퍼드핏": 0,
+      "와이드핏": 20,
+      "플레어핏": 13
+    },
+    "silhouette": {
+      "H라인": 178,
+      "A라인": 81,
+      "X라인": 39,
+      "O라인": 3,
+      "비대칭": 51
+    },
+    "pattern": {
+      "무지": 1240,
+      "스트라이프": 76,
+      "체크": 36,
+      "도트": 33,
+      "플로럴": 104,
+      "그래픽": 22,
+      "애니멀": 15,
+      "카모": 5,
+      "컬러 블록": 0
+    },
+    "material": {
+      "코튼": 0,
+      "데님": 81,
+      "니트": 37,
+      "울": 0,
+      "가죽": 4,
+      "스웨이드": 2,
+      "시폰": 0,
+      "실크·새틴": 0,
+      "퍼·플리스": 25,
+      "메시": 0,
+      "레이스": 0
+    },
+    "detail": {
+      "디테일 없음": 0,
+      "포켓": 263,
+      "프릴·러플": 49,
+      "지퍼": 426,
+      "벨트": 124,
+      "단추": 202,
+      "리본": 57,
+      "레이스": 0,
+      "플리츠": 72,
+      "자수": 0,
+      "스팽글": 12,
+      "후드": 25
+    }
+  }
+}

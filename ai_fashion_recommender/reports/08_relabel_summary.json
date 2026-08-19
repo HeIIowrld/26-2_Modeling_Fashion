@@ -1,0 +1,74 @@
+[
+  {
+    "variant": "D25",
+    "detail_none": true,
+    "drop_knit": false,
+    "detail_none_ratio": 0.25,
+    "splits": {
+      "train": {
+        "rows": 4789,
+        "changed": {
+          "detail_none": 185,
+          "knit_removed": 0,
+          "material_emptied": 0
+        },
+        "detail_valid": 1199,
+        "detail_valid_before": 1014,
+        "material_valid": 657,
+        "material_valid_before": 657,
+        "detail_none_positives": 185,
+        "cache": "data/cache/fashion_attributes_train_D25.pt"
+      },
+      "val": {
+        "rows": 1195,
+        "changed": {
+          "detail_none": 174,
+          "knit_removed": 0,
+          "material_emptied": 0
+        },
+        "detail_valid": 436,
+        "detail_valid_before": 262,
+        "material_valid": 156,
+        "material_valid_before": 156,
+        "detail_none_positives": 174,
+        "cache": "data/cache/fashion_attributes_val_D25.pt"
+      }
+    }
+  },
+  {
+    "variant": "D50",
+    "detail_none": true,
+    "drop_knit": false,
+    "detail_none_ratio": 0.5,
+    "splits": {
+      "train": {
+        "rows": 4789,
+        "changed": {
+          "detail_none": 370,
+          "knit_removed": 0,
+          "material_emptied": 0
+        },
+        "detail_valid": 1384,
+        "detail_valid_before": 1014,
+        "material_valid": 657,
+        "material_valid_before": 657,
+        "detail_none_positives": 370,
+        "cache": "data/cache/fashion_attributes_train_D50.pt"
+      },
+      "val": {
+        "rows": 1195,
+        "changed": {
+          "detail_none": 174,
+          "knit_removed": 0,
+          "material_emptied": 0
+        },
+        "detail_valid": 436,
+        "detail_valid_before": 262,
+        "material_valid": 156,
+        "material_valid_before": 156,
+        "detail_none_positives": 174,
+        "cache": "data/cache/fashion_attributes_val_D50.pt"
+      }
+    }
+  }
+]
