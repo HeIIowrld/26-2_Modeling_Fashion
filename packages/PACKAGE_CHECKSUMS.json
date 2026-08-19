@@ -1,0 +1,93 @@
+{
+  "package": {
+    "filename": "ai_fashion_recommender_final_r2.zip",
+    "path": "packages/ai_fashion_recommender_final_r2.zip",
+    "bytes": 27914851,
+    "megabytes": 27.91,
+    "sha256": "8250e7ce4fca05fac25e862b9e88c8f4bec864bb6b3e84982de36299b4e13ce1",
+    "files": 145,
+    "top_level_dir": "ai_fashion_recommender",
+    "compression": "deflate level 6"
+  },
+  "adopted_model": {
+    "filename": "fashion_attribute_heads_augmented.pt",
+    "path": "ai_fashion_recommender/models/fashion_attribute_heads_augmented.pt",
+    "role": "최종 채택 배포 모델 (2차 보강, train 22,341 crop)",
+    "bytes": 13698355,
+    "sha256": "3c560c9db0ade6a62d3ead1fc61edc56ff6a935083ee7393858a3a757431765d",
+    "backbone": "Marqo/marqo-fashionSigLIP",
+    "head_parameters": 3404668
+  },
+  "baseline_model": {
+    "filename": "fashion_attribute_heads.pt",
+    "path": "ai_fashion_recommender/models/fashion_attribute_heads.pt",
+    "role": "초기 baseline · rollback용",
+    "bytes": 13665395,
+    "sha256": "0a649ba722ba52cdf2ad74eacba9a88af2fd329ed8ea7d6d80498b4f246626da"
+  },
+  "excluded_from_package": [
+    ".git",
+    "원본 이미지",
+    "개인 사진 및 파생 결과 이미지",
+    "data/cache",
+    "임베딩 캐시",
+    "원본 annotation JSON",
+    "parquet",
+    "3차 및 기타 미채택 모델",
+    "__pycache__",
+    ".pytest_cache",
+    "로그"
+  ],
+  "verification": [
+    {
+      "name": "1. 최상위 폴더명",
+      "passed": true,
+      "detail": "['ai_fashion_recommender']"
+    },
+    {
+      "name": "2. 파일 수 일치",
+      "passed": true,
+      "detail": "145 / 커밋 145"
+    },
+    {
+      "name": "3. fashion_attribute_heads.pt 1개",
+      "passed": true,
+      "detail": "1개"
+    },
+    {
+      "name": "3. fashion_attribute_heads_augmented.pt 1개",
+      "passed": true,
+      "detail": "1개"
+    },
+    {
+      "name": "4. 제외 대상 파일",
+      "passed": true,
+      "detail": "0건"
+    },
+    {
+      "name": "5. 절대경로·사용자명",
+      "passed": true,
+      "detail": "0건"
+    },
+    {
+      "name": "6. 상대경로 정상",
+      "passed": true,
+      "detail": "main.ipynb 절대경로 0건, config.py 프로젝트 기준 경로 True, 경로 설정 셀 마커 3개"
+    },
+    {
+      "name": "7. 기존 로더로 load",
+      "passed": true,
+      "detail": "2개 모델 로드 성공, 헤드 파라미터 3,404,668, 태스크 17개"
+    },
+    {
+      "name": "8. ZIP SHA256·용량",
+      "passed": true,
+      "detail": "27,914,851 bytes (27.91 MB)"
+    },
+    {
+      "name": "추가: 해제본 == 커밋본 SHA256",
+      "passed": true,
+      "detail": "0건 불일치"
+    }
+  ]
+}
