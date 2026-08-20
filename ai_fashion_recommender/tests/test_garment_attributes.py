@@ -28,7 +28,7 @@ def sample_pose() -> PoseAnalysis:
         "left_ankle": (0.42, 0.92, 1.0),
         "right_ankle": (0.58, 0.92, 1.0),
     }
-    return PoseAnalysis(True, 1.0, "균형형", 1.0, 0.5, 0.5, "정면", landmarks=landmarks)
+    return PoseAnalysis(True, 1.0, "사각체형", 1.0, 0.5, 0.5, "정면", landmarks=landmarks)
 
 
 class GarmentAttributeTests(unittest.TestCase):

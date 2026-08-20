@@ -9,7 +9,7 @@ from PIL import Image
 
 from clothing_parser import ClothingParser
 from config import ATTRIBUTE_CONFIDENCE_THRESHOLDS
-from fashion_attribute_model import AttributePrediction, fuse_measured_and_learned
+from fashion_attribute_model import AttributePrediction, fuse_measured_and_learned, geometry_vector
 from fashion_attribute_schema import LOWER_CATEGORIES, UPPER_CATEGORIES
 from fashion_prompts import (
     LOWER_TYPE_PROMPTS,
@@ -115,17 +115,42 @@ def color_harmony(first: str, second: str) -> str:
     return "보통 조합"
 
 
-def _masked_crop(rgb: np.ndarray, mask: np.ndarray) -> Image.Image:
-    """배경 영향을 줄이기 위해 선택한 의류만 흰 배경 위에 남긴다."""
+def _garment_crop(rgb: np.ndarray, mask: np.ndarray) -> Image.Image:
+    """의류 영역을 학습 데이터와 같은 방식(배경을 남긴 bbox crop)으로 자른다.
+
+    학습 표본은 Fashionpedia bbox crop이라 배경이 남아 있다. 추론에서만 배경을
+    흰색으로 지우면 같은 옷의 임베딩이 크게 달라져(코사인 0.81) 신뢰도가 무너진다.
+    """
     if not mask.any():
         return Image.fromarray(rgb)
+    y1, y2, x1, x2 = _mask_bounds(mask)
+    return Image.fromarray(rgb[y1:y2, x1:x2])
+
+
+def _mask_bounds(mask: np.ndarray) -> tuple[int, int, int, int]:
+    """마스크를 감싸는 최소 사각형. 학습의 bbox와 같은 의미가 되도록 여백을 두지 않는다."""
     ys, xs = np.where(mask)
+    return int(ys.min()), int(ys.max()) + 1, int(xs.min()), int(xs.max()) + 1
+
+
+def _crop_geometry(mask: np.ndarray) -> list[float]:
+    """학습과 같은 정의로 crop의 기하 특징을 만든다."""
+    if not mask.any():
+        return geometry_vector(1, 1, tight_crop=False)
+    y1, y2, x1, x2 = _mask_bounds(mask)
+    return geometry_vector(x2 - x1, y2 - y1, tight_crop=True)
+
+
+def _masked_crop(rgb: np.ndarray, mask: np.ndarray) -> Image.Image:
+    """배경을 흰색으로 지운 crop. 색 분석 등 배경을 빼야 하는 곳에서만 쓴다."""
+    if not mask.any():
+        return Image.fromarray(rgb)
+    y1, y2, x1, x2 = _mask_bounds(mask)
     padding = 12
-    x1, x2 = max(0, xs.min() - padding), min(rgb.shape[1], xs.max() + padding + 1)
-    y1, y2 = max(0, ys.min() - padding), min(rgb.shape[0], ys.max() + padding + 1)
+    x1, x2 = max(0, x1 - padding), min(rgb.shape[1], x2 + padding)
+    y1, y2 = max(0, y1 - padding), min(rgb.shape[0], y2 + padding)
     crop = rgb[y1:y2, x1:x2].copy()
-    crop_mask = mask[y1:y2, x1:x2]
-    crop[~crop_mask] = 255
+    crop[~mask[y1:y2, x1:x2]] = 255
     return Image.fromarray(crop)
 
 
@@ -157,7 +182,8 @@ class OutfitAnalyzer:
         learned_upper = {}
         learned_lower = {}
         if self.classifier.enabled:
-            upper_crop = _masked_crop(rgb, parsed["upper_mask"])
+            upper_crop = _garment_crop(rgb, parsed["upper_mask"])
+            upper_geometry = _crop_geometry(parsed["upper_mask"])
             learned_upper, upper_results = self.classifier.analyze_crop(
                 upper_crop,
                 tasks=[
@@ -170,6 +196,7 @@ class OutfitAnalyzer:
                     "material": MATERIAL_PROMPTS,
                     "neckline": NECKLINE_PROMPTS,
                 },
+                geometry=upper_geometry,
             )
             upper_type, upper_type_confidence = upper_results["category"]
             pattern, pattern_confidence = upper_results["pattern"]
@@ -257,7 +284,8 @@ class OutfitAnalyzer:
                 pant_leg_shape = "해당 없음"
                 pant_length = "해당 없음"
             else:
-                lower_crop = _masked_crop(rgb, parsed["lower_mask"])
+                lower_crop = _garment_crop(rgb, parsed["lower_mask"])
+                lower_geometry = _crop_geometry(parsed["lower_mask"])
                 learned_lower, lower_results = self.classifier.analyze_crop(
                     lower_crop,
                     tasks=[
@@ -269,6 +297,7 @@ class OutfitAnalyzer:
                         "pattern": PATTERN_PROMPTS,
                         "material": MATERIAL_PROMPTS,
                     },
+                    geometry=lower_geometry,
                 )
                 lower_type, lower_type_confidence = lower_results["category"]
                 lower_pattern_value, lower_pattern_confidence = lower_results["pattern"]

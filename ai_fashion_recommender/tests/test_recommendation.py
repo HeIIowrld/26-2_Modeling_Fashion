@@ -31,11 +31,14 @@ class RecommendationTests(unittest.TestCase):
     def setUp(self):
         self.catalog = ProductCatalog(ROOT / "data" / "products.csv")
         self.engine = RecommendationEngine(ROOT / "FASHION_RULES_MASTER.md", self.catalog)
-        self.pose = PoseAnalysis(True, 0.9, "균형형", 1.0, 0.5, 0.55, "정면에 가까움")
+        self.pose = PoseAnalysis(True, 0.9, "사각체형", 1.0, 0.5, 0.55, "정면에 가까움")
         self.outfit = OutfitAnalysis("test", "화이트", "블랙", "안정적인 무채색 조합", ["top", "pants"], "캐주얼")
 
     def test_catalog_loads(self):
-        self.assertEqual(len(self.catalog.products), 12)
+        self.assertTrue(self.catalog.products)
+        categories = {product.category for product in self.catalog.products}
+        self.assertEqual(categories, {"top", "bottom"})
+        self.assertTrue(all(product.price > 0 for product in self.catalog.products))
 
     def test_full_change_returns_ranked_pairs(self):
         profile = UserProfile(purpose="데일리", desired_style="캐주얼", budget=180_000, change_scope="전체 변경")
@@ -81,10 +84,27 @@ class RecommendationTests(unittest.TestCase):
             {"R-SIL-02", "R-SIL-04", "R-COL-06", "R-COL-07", "R-COL-12", "R-ACC-03", "R-TREND-01"},
         )
 
+    def _cheapest_daily_pair(self) -> int:
+        """카탈로그가 바뀌어도 유효한 '가장 싼 데일리 조합' 가격."""
+        profile = UserProfile(purpose="데일리", change_scope="전체 변경")
+        tops = self.engine._available_for_profile("top", profile)
+        bottoms = self.engine._available_for_profile("bottom", profile)
+        return min(top.price for top in tops) + min(bottom.price for bottom in bottoms)
+
     def test_budget_is_a_hard_filter(self):
-        profile = UserProfile(purpose="데일리", budget=70_000, change_scope="전체 변경")
+        floor = self._cheapest_daily_pair()
+        profile = UserProfile(purpose="데일리", budget=floor - 1, change_scope="전체 변경")
         with self.assertRaisesRegex(ValueError, "조건을 모두 만족"):
             self.engine.recommend(profile, self.pose, self.outfit)
+
+    def test_budget_just_above_the_floor_returns_a_pair(self):
+        floor = self._cheapest_daily_pair()
+        profile = UserProfile(purpose="데일리", budget=floor, change_scope="전체 변경")
+        recommendations = self.engine.recommend(profile, self.pose, self.outfit, top_k=1)
+        self.assertEqual(len(recommendations), 1)
+        self.assertLessEqual(
+            sum(product.price for product in recommendations[0].products), floor
+        )
 
     def test_user_exclusions_are_hard_filters(self):
         profile = UserProfile(
