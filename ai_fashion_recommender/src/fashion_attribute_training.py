@@ -11,7 +11,17 @@ from PIL import Image
 
 from config import FASHION_SIGLIP_MODEL_ID
 from fashion_attribute_dataset import AttributeRecord, encode_record_targets, load_attribute_csv
-from fashion_attribute_model import build_attribute_heads, save_attribute_checkpoint
+from fashion_attribute_model import (
+    GEOMETRY_DIM,
+    PREPROCESS_MODES,
+    PREPROCESS_SQUASH,
+    TASK_PREPROCESSING,
+    resolve_task_preprocessing,
+    apply_preprocess_mode,
+    build_attribute_heads,
+    geometry_vector,
+    save_attribute_checkpoint,
+)
 from fashion_attribute_schema import ATTRIBUTE_TASKS
 
 
@@ -26,15 +36,33 @@ class TrainingConfig:
     patience: int = 5
     seed: int = 42
     minimum_label_examples: int = 5
+    # crop의 종횡비 등 기하 특징을 임베딩과 함께 헤드에 넣을지 여부.
+    #
+    # 기본값은 False다. 5,984 crop으로 A/B한 결과 기하 의존 속성의 평균 macro-F1이
+    # 0.642 → 0.637로 오히려 소폭 낮아졌다. 이유는 두 가지다.
+    #   1) 바지 속성은 crop이 옷 단위가 아니다(tight 비율 0%). 종횡비가 상품 사진 규격이다.
+    #   2) 상의는 crop이 옷 단위인데도 종횡비가 핏을 구분하지 못한다. bbox 종횡비는 핏보다
+    #      기장에 지배되어, 오버핏이 슬림핏보다 오히려 좁고 길쭉하게 측정된다.
+    # 핏은 "옷 폭 ÷ 몸 기준폭"이라 학습 표본에 어깨·골반 좌표가 있어야 한다.
+    # 자세한 수치는 README의 '기하 특징 A/B 결과' 참조.
+    use_geometry: bool = False
 
 
 class FrozenFashionSigLIPEncoder:
     """FashionSigLIP은 고정하고 정규화된 이미지 임베딩만 만든다."""
 
-    def __init__(self, model_id: str = FASHION_SIGLIP_MODEL_ID, device: str = "auto") -> None:
+    def __init__(
+        self,
+        model_id: str = FASHION_SIGLIP_MODEL_ID,
+        device: str = "auto",
+        preprocessing: str = PREPROCESS_SQUASH,
+    ) -> None:
         import open_clip
         import torch
 
+        if preprocessing not in PREPROCESS_MODES:
+            raise ValueError(f"알 수 없는 전처리 방식입니다: {preprocessing}")
+        self.preprocessing = preprocessing
         self.model_id = model_id
         self.device = "cuda" if device == "auto" and torch.cuda.is_available() else ("cpu" if device == "auto" else device)
         self.model, _, self.preprocess = open_clip.create_model_and_transforms(
@@ -47,23 +75,45 @@ class FrozenFashionSigLIPEncoder:
     def encode_pil_batch(self, images: list[Image.Image]):
         import torch
 
-        batch = torch.stack([self.preprocess(image.convert("RGB")) for image in images]).to(self.device)
+        batch = torch.stack([
+            self.preprocess(apply_preprocess_mode(image.convert("RGB"), self.preprocessing))
+            for image in images
+        ]).to(self.device)
         with torch.inference_mode():
             return self.model.encode_image(batch, normalize=True).float().cpu()
 
 
-def _crop_record(record: AttributeRecord) -> Image.Image:
-    image = Image.open(record.image_path).convert("RGB")
+def _crop_box(record: AttributeRecord, image_size: tuple[int, int]) -> tuple[int, int, int, int]:
+    """crop 영역을 한 곳에서만 계산한다.
+
+    임베딩에 쓰는 crop과 기하 특징에 쓰는 crop이 달라지면 학습과 추론이 어긋난다.
+    """
+    image_width, image_height = image_size
     if record.bbox is None:
-        return image
+        return 0, 0, image_width, image_height
     x, y, width, height = record.bbox
     left = max(0, math.floor(x))
     top = max(0, math.floor(y))
-    right = min(image.width, math.ceil(x + width))
-    bottom = min(image.height, math.ceil(y + height))
+    right = min(image_width, math.ceil(x + width))
+    bottom = min(image_height, math.ceil(y + height))
     if right <= left or bottom <= top:
         raise ValueError(f"이미지 범위를 벗어난 bbox입니다: {record.image_path}, {record.bbox}")
-    return image.crop((left, top, right, bottom))
+    return left, top, right, bottom
+
+
+def _crop_record(record: AttributeRecord) -> Image.Image:
+    image = Image.open(record.image_path).convert("RGB")
+    box = _crop_box(record, image.size)
+    if box == (0, 0, image.width, image.height):
+        return image
+    return image.crop(box)
+
+
+def _record_geometry(record: AttributeRecord) -> list[float]:
+    """추론과 같은 정의로 crop의 기하 특징을 만든다. 픽셀은 읽지 않는다."""
+    with Image.open(record.image_path) as image:
+        left, top, right, bottom = _crop_box(record, image.size)
+    return geometry_vector(right - left, bottom - top, tight_crop=record.bbox is not None)
 
 
 def build_embedding_cache(
@@ -84,6 +134,11 @@ def build_embedding_cache(
         cache = load_embedding_cache(cache_path)
         if cache["backbone_model_id"] != encoder.model_id:
             raise ValueError("재사용 캐시의 FashionSigLIP 백본이 현재 백본과 다릅니다.")
+        if cache["preprocessing"] != encoder.preprocessing:
+            raise ValueError(
+                "재사용 캐시의 crop 처리 방식이 다릅니다: "
+                f"캐시={cache['preprocessing']}, 현재={encoder.preprocessing}"
+            )
         cached = {
             path.replace("\\", "/").lower(): feature
             for path, feature in zip(cache["image_paths"], cache["features"])
@@ -149,11 +204,14 @@ def build_embedding_cache(
         targets[task_name] = torch.tensor(values, dtype=torch.float32 if task.multi_label else torch.long)
         valid[task_name] = torch.tensor([row[1][task_name] for row in target_rows], dtype=torch.bool)
 
+    geometry = torch.tensor([_record_geometry(record) for record in records], dtype=torch.float32)
     torch.save(
         {
-            "version": 1,
+            "version": 2,
             "backbone_model_id": encoder.model_id,
+            "preprocessing": encoder.preprocessing,
             "features": features,
+            "geometry": geometry,
             "targets": targets,
             "valid": valid,
             "image_paths": [str(record.image_path) for record in records],
@@ -181,9 +239,14 @@ def load_embedding_cache(path: str | Path) -> dict[str, Any]:
         payload = torch.load(path, map_location="cpu", weights_only=False)
     except TypeError:
         payload = torch.load(path, map_location="cpu")
-    if payload.get("version") != 1:
+    if payload.get("version") not in (1, 2):
         raise ValueError("지원하지 않는 임베딩 캐시 버전입니다.")
     length = len(payload["features"])
+    payload.setdefault("preprocessing", PREPROCESS_SQUASH)
+    if "geometry" not in payload:
+        # 버전 1 캐시에는 기하 특징이 없다. 중립값으로 채워 두되,
+        # 이 캐시로는 기하 특징을 쓰는 헤드를 학습할 수 없다.
+        payload["geometry"] = None
     # 새 속성 헤드가 추가되어도 기존 FashionSigLIP 특징은 다시 계산하지 않는다.
     # 과거 캐시에 없는 task는 미주석(valid=False)으로 안전하게 보강한다.
     for task_name, task in ATTRIBUTE_TASKS.items():
@@ -208,6 +271,9 @@ def merge_embedding_caches(cache_paths: list[str | Path], output_path: str | Pat
     model_ids = {cache["backbone_model_id"] for cache in caches}
     if len(model_ids) != 1:
         raise ValueError("백본이 다른 임베딩 캐시는 합칠 수 없습니다.")
+    modes = {cache["preprocessing"] for cache in caches}
+    if len(modes) != 1:
+        raise ValueError("crop 처리 방식이 다른 임베딩 캐시는 합칠 수 없습니다.")
     feature_dims = {int(cache["features"].shape[1]) for cache in caches}
     if len(feature_dims) != 1:
         raise ValueError("특징 차원이 다른 임베딩 캐시는 합칠 수 없습니다.")
@@ -216,13 +282,18 @@ def merge_embedding_caches(cache_paths: list[str | Path], output_path: str | Pat
         if set(cache["targets"]) != expected_tasks or set(cache["valid"]) != expected_tasks:
             raise ValueError("라벨 task 구성이 다른 임베딩 캐시는 합칠 수 없습니다.")
 
+    geometries = [cache["geometry"] for cache in caches]
+    merged_geometry = None if any(item is None for item in geometries) else torch.cat(geometries, dim=0)
+
     output = Path(output_path).expanduser().resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
         {
-            "version": 1,
+            "version": 2,
             "backbone_model_id": caches[0]["backbone_model_id"],
+            "preprocessing": caches[0]["preprocessing"],
             "features": torch.cat([cache["features"] for cache in caches], dim=0),
+            "geometry": merged_geometry,
             "targets": {
                 task_name: torch.cat([cache["targets"][task_name] for cache in caches], dim=0)
                 for task_name in ATTRIBUTE_TASKS
@@ -264,9 +335,11 @@ def filter_embedding_cache(
     output.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
         {
-            "version": 1,
+            "version": 2,
             "backbone_model_id": cache["backbone_model_id"],
+            "preprocessing": cache["preprocessing"],
             "features": cache["features"][keep],
+            "geometry": None if cache["geometry"] is None else cache["geometry"][keep],
             "targets": {name: values[keep] for name, values in cache["targets"].items()},
             "valid": {name: values[keep] for name, values in cache["valid"].items()},
             "image_paths": [path for path, use in zip(cache["image_paths"], keep.tolist()) if use],
@@ -276,11 +349,45 @@ def filter_embedding_cache(
     return output
 
 
-def _multitask_loss(heads, features, targets, valid, *, pos_weights=None, class_weights=None):
+def _select_features(cache: dict[str, Any], routed: dict[str, Any] | None, indices=None, device: str = "cpu"):
+    """라우팅이 있으면 {전처리: 특징} 사전을, 없으면 텐서 하나를 돌려준다."""
+    if routed is None:
+        features = cache["features"]
+        return (features if indices is None else features[indices]).to(device)
+    return {
+        mode: (item["features"] if indices is None else item["features"][indices]).to(device)
+        for mode, item in routed.items()
+    }
+
+
+def load_routed_caches(cache_paths: dict[str, str | Path]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """전처리 방식별 캐시를 읽고, 같은 표본을 같은 순서로 담고 있는지 확인한다.
+
+    속성마다 다른 crop 처리를 쓰려면 한 표본의 여러 임베딩이 나란히 놓여야 한다.
+    """
+    caches = {mode: load_embedding_cache(path) for mode, path in cache_paths.items()}
+    reference = next(iter(caches.values()))
+    for mode, cache in caches.items():
+        if cache["preprocessing"] != mode:
+            raise ValueError(f"{mode} 자리에 {cache['preprocessing']} 캐시가 들어왔습니다.")
+        if cache["image_paths"] != reference["image_paths"]:
+            raise ValueError("전처리별 캐시의 표본 순서가 다릅니다. 같은 CSV로 다시 만드세요.")
+    return caches, reference
+
+
+def _cache_geometry(cache: dict[str, Any], device: str, *, use_geometry: bool = True):
+    """헤드가 기하 특징을 쓸 때만 캐시에서 꺼내 올린다."""
+    geometry = cache.get("geometry")
+    if not use_geometry or geometry is None:
+        return None
+    return geometry.to(device)
+
+
+def _multitask_loss(heads, features, targets, valid, *, pos_weights=None, class_weights=None, geometry=None):
     import torch
     import torch.nn.functional as functional
 
-    logits = heads(features)
+    logits = heads(features, geometry)
     losses = []
     task_losses = {}
     for task_name, task in ATTRIBUTE_TASKS.items():
@@ -363,12 +470,12 @@ def _label_support(cache: dict[str, Any]) -> dict[str, dict[str, int]]:
     return support
 
 
-def _metrics(heads, cache: dict[str, Any], device: str, thresholds: dict[str, float]) -> dict[str, dict[str, float | int | None]]:
+def _metrics(heads, cache: dict[str, Any], device: str, thresholds: dict[str, float], routed: dict[str, Any] | None = None) -> dict[str, dict[str, float | int | None]]:
     import torch
 
     heads.eval()
     with torch.inference_mode():
-        logits = heads(cache["features"].to(device))
+        logits = heads(_select_features(cache, routed, None, device), _cache_geometry(cache, device))
     results = {}
     for task_name, task in ATTRIBUTE_TASKS.items():
         mask = cache["valid"][task_name]
@@ -439,12 +546,12 @@ def _metrics(heads, cache: dict[str, Any], device: str, thresholds: dict[str, fl
     return results
 
 
-def _tune_multilabel_thresholds(heads, cache: dict[str, Any], device: str) -> dict[str, float]:
+def _tune_multilabel_thresholds(heads, cache: dict[str, Any], device: str, routed: dict[str, Any] | None = None) -> dict[str, float]:
     import torch
 
     heads.eval()
     with torch.inference_mode():
-        logits = heads(cache["features"].to(device))
+        logits = heads(_select_features(cache, routed, None, device), _cache_geometry(cache, device))
     thresholds = {}
     for task_name, task in ATTRIBUTE_TASKS.items():
         if not task.multi_label:
@@ -475,6 +582,7 @@ def _tune_pants_single_thresholds(
     device: str,
     *,
     target_accuracy: float = 0.80,
+    routed: dict[str, Any] | None = None,
 ) -> dict[str, float]:
     """새 하의 세부 축은 오답을 줄이도록 검증셋 정확도 기준으로 보정한다."""
     import torch
@@ -482,7 +590,7 @@ def _tune_pants_single_thresholds(
     selected_tasks = {"lower_subtype", "pant_leg_shape", "pant_length"}
     heads.eval()
     with torch.inference_mode():
-        logits = heads(cache["features"].to(device))
+        logits = heads(_select_features(cache, routed, None, device), _cache_geometry(cache, device))
     thresholds = {}
     for task_name in selected_tasks:
         task = ATTRIBUTE_TASKS[task_name]
@@ -521,15 +629,47 @@ def train_attribute_heads(
     random.seed(settings.seed)
     torch.manual_seed(settings.seed)
     selected_device = "cuda" if device == "auto" and torch.cuda.is_available() else ("cpu" if device == "auto" else device)
-    train_cache = load_embedding_cache(train_cache_path)
-    val_cache = load_embedding_cache(val_cache_path)
+    if isinstance(train_cache_path, dict) != isinstance(val_cache_path, dict):
+        raise ValueError("train/val 캐시 지정 방식이 서로 다릅니다.")
+    if isinstance(train_cache_path, dict):
+        train_routed, train_cache = load_routed_caches(train_cache_path)
+        val_routed, val_cache = load_routed_caches(val_cache_path)
+        if set(train_routed) != set(val_routed):
+            raise ValueError("train/val의 전처리 종류가 다릅니다.")
+        task_routing = {
+            task: mode for task, mode in TASK_PREPROCESSING.items() if task in ATTRIBUTE_TASKS
+        }
+        unavailable = set(task_routing.values()) - set(train_routed)
+        if unavailable:
+            raise ValueError(f"라우팅에 필요한 전처리 캐시가 없습니다: {sorted(unavailable)}")
+        checkpoint_preprocessing = task_routing
+    else:
+        train_routed = val_routed = None
+        train_cache = load_embedding_cache(train_cache_path)
+        val_cache = load_embedding_cache(val_cache_path)
+        task_routing = None
+        checkpoint_preprocessing = train_cache["preprocessing"]
     if train_cache["backbone_model_id"] != val_cache["backbone_model_id"]:
         raise ValueError("train/val 임베딩 캐시의 백본이 다릅니다.")
+    if train_cache["preprocessing"] != val_cache["preprocessing"]:
+        raise ValueError("train/val 임베딩 캐시의 crop 처리 방식이 다릅니다.")
     input_dim = int(train_cache["features"].shape[1])
     if int(val_cache["features"].shape[1]) != input_dim:
         raise ValueError("train/val 임베딩 차원이 다릅니다.")
 
-    heads = build_attribute_heads(input_dim, settings.hidden_dim, settings.dropout).to(selected_device)
+    use_geometry = settings.use_geometry
+    if use_geometry and (train_cache["geometry"] is None or val_cache["geometry"] is None):
+        raise ValueError(
+            "기하 특징이 없는 예전 캐시입니다. 캐시를 다시 만들거나 use_geometry=False로 학습하세요."
+        )
+    geometry_dim = GEOMETRY_DIM if use_geometry else 0
+    train_geometry = _cache_geometry(train_cache, selected_device, use_geometry=use_geometry)
+    val_geometry = _cache_geometry(val_cache, selected_device, use_geometry=use_geometry)
+
+    heads = build_attribute_heads(
+        input_dim, settings.hidden_dim, settings.dropout, geometry_dim=geometry_dim,
+        task_preprocessing=task_routing,
+    ).to(selected_device)
     optimizer = torch.optim.AdamW(heads.parameters(), lr=settings.learning_rate, weight_decay=settings.weight_decay)
     pos_weights = _positive_weights(train_cache, selected_device)
     class_weights = _single_class_weights(train_cache, selected_device)
@@ -545,7 +685,7 @@ def train_attribute_heads(
         epoch_losses = []
         for start in range(0, train_size, settings.batch_size):
             indices = permutation[start:start + settings.batch_size]
-            features = train_cache["features"][indices].to(selected_device)
+            features = _select_features(train_cache, train_routed, indices, selected_device)
             targets = {name: value[indices].to(selected_device) for name, value in train_cache["targets"].items()}
             valid = {name: value[indices].to(selected_device) for name, value in train_cache["valid"].items()}
             optimizer.zero_grad(set_to_none=True)
@@ -556,6 +696,7 @@ def train_attribute_heads(
                 valid,
                 pos_weights=pos_weights,
                 class_weights=class_weights,
+                geometry=None if train_geometry is None else train_geometry[indices],
             )
             loss.backward()
             optimizer.step()
@@ -565,9 +706,10 @@ def train_attribute_heads(
         with torch.inference_mode():
             val_loss, val_task_losses = _multitask_loss(
                 heads,
-                val_cache["features"].to(selected_device),
+                _select_features(val_cache, val_routed, None, selected_device),
                 {name: value.to(selected_device) for name, value in val_cache["targets"].items()},
                 {name: value.to(selected_device) for name, value in val_cache["valid"].items()},
+                geometry=val_geometry,
             )
         row = {
             "epoch": epoch,
@@ -599,9 +741,9 @@ def train_attribute_heads(
     for task_name, state in best_task_states.items():
         heads.heads[task_name].load_state_dict(state)
     heads.to(selected_device).eval()
-    thresholds = _tune_multilabel_thresholds(heads, val_cache, selected_device)
-    thresholds.update(_tune_pants_single_thresholds(heads, val_cache, selected_device))
-    metrics = _metrics(heads, val_cache, selected_device, thresholds)
+    thresholds = _tune_multilabel_thresholds(heads, val_cache, selected_device, val_routed)
+    thresholds.update(_tune_pants_single_thresholds(heads, val_cache, selected_device, routed=val_routed))
+    metrics = _metrics(heads, val_cache, selected_device, thresholds, val_routed)
     label_support = _label_support(train_cache)
     summary = {
         "device": selected_device,
@@ -621,6 +763,7 @@ def train_attribute_heads(
         training_summary=summary,
         label_support=label_support,
         minimum_label_examples=settings.minimum_label_examples,
+        preprocessing=checkpoint_preprocessing,
     )
     report_path = Path(output_checkpoint).expanduser().resolve().with_suffix(".metrics.json")
     report_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -637,12 +780,13 @@ def prepare_embedding_caches(
     device: str = "auto",
     batch_size: int = 64,
     reuse_cache_paths: list[str | Path] | None = None,
+    preprocessing: str = PREPROCESS_SQUASH,
 ) -> tuple[Path, Path]:
     train_records = load_attribute_csv(annotation_csv, image_root, split="train")
     val_records = load_attribute_csv(annotation_csv, image_root, split="val")
     if not train_records or not val_records:
         raise ValueError("CSV에 train과 val split이 모두 있어야 합니다.")
-    encoder = FrozenFashionSigLIPEncoder(model_id=model_id, device=device)
+    encoder = FrozenFashionSigLIPEncoder(model_id=model_id, device=device, preprocessing=preprocessing)
     return (
         build_embedding_cache(
             train_records,

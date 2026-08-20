@@ -29,6 +29,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from config import DATA_DIR, GARMENT_RAW_DIR
+from schemas import BODY_SHAPES
 
 API_URL = "https://api.musinsa.com/api2/dp/v2/plp/goods"
 # size=100이 1페이지에서 허용하는 최대치다(그 이상은 400 Bad Request).
@@ -184,7 +185,7 @@ def parse_item(item: dict, category: str) -> CrawledProduct | None:
         purposes=_guess_purposes(name, style),
         # 상품 이미지만으로 체형 적합도를 알 수 없어 전 체형 허용으로 두고,
         # 이후 FashionSigLIP 속성 분석으로 세분화한다.
-        body_shapes="상체 강조형|하체 강조형|균형형",
+        body_shapes="|".join(BODY_SHAPES),
         price=price,
         season=_match_keyword(name, SEASON_KEYWORDS, "사계절"),
         stock=True,

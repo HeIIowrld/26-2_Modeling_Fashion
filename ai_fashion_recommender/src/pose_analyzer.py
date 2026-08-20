@@ -9,8 +9,45 @@ import mediapipe as mp
 import numpy as np
 from PIL import Image
 
-from config import MIN_BODY_SHAPE_CONFIDENCE, MIN_FULL_BODY_SCORE, MIN_LANDMARK_VISIBILITY
-from schemas import PoseAnalysis
+from config import (
+    DATA_DIR,
+    MIN_BODY_SHAPE_CONFIDENCE,
+    MIN_FULL_BODY_SCORE,
+    MIN_LANDMARK_VISIBILITY,
+)
+from schemas import (
+    SHAPE_INVERTED_TRIANGLE,
+    SHAPE_RECTANGLE,
+    SHAPE_TRIANGLE,
+    SHAPE_UNAVAILABLE,
+    SHAPE_UNCERTAIN,
+    PoseAnalysis,
+)
+
+
+def _load_body_shape_reference() -> tuple[float, float]:
+    """체형 분류 경계를 기준 분포에서 읽는다.
+
+    `shoulder_hip_ratio`는 어깨 관절과 골반 관절 사이의 간격 비율이다. 골반 관절은
+    엉덩이 바깥 폭보다 훨씬 좁아서 이 값은 사람마다 대략 1.4~2.2에 분포한다.
+    반면 예전 경계값 0.90/1.12는 신체 표면 치수(어깨너비÷엉덩이너비) 기준이라
+    거의 모든 사람이 '역삼각체형'으로 분류됐다.
+
+    그래서 절대값 대신 기준 분포의 백분위를 쓴다. 기준표를 한국인 표본으로
+    교체하면 코드 수정 없이 경계가 갱신된다.
+    """
+    import json
+
+    # 모듈은 src/ 아래에 있고 데이터는 그 상위 폴더에 있다. 경로는 config에서만 만든다.
+    path = DATA_DIR / "body_shape_reference.json"
+    if not path.is_file():
+        # 기준표가 없으면 관찰된 분포의 3분위로 대체한다.
+        return 1.7286, 1.8547
+    percentiles = json.loads(path.read_text(encoding="utf-8"))["percentiles"]
+    return float(percentiles["33"]), float(percentiles["67"])
+
+
+LOWER_BODY_RATIO, UPPER_BODY_RATIO = _load_body_shape_reference()
 
 
 POSE_EDGES = (
@@ -38,8 +75,42 @@ def _to_rgb_array(image: str | Path | Image.Image | np.ndarray) -> np.ndarray:
     return array.astype(np.uint8)
 
 
-def _distance(a: tuple[float, float], b: tuple[float, float]) -> float:
-    return math.hypot(a[0] - b[0], a[1] - b[1])
+def _distance(a: tuple[float, ...], b: tuple[float, ...]) -> float:
+    """2D 화면 좌표와 3D world 좌표를 모두 처리한다."""
+    return math.dist(a[: len(b)], b[: len(a)])
+
+
+def silhouette_and_landmarks(image: str | Path | Image.Image | np.ndarray, threshold: float = 0.5):
+    """인물 실루엣 마스크와 그 사진의 관절 좌표를 함께 돌려준다.
+
+    마스크와 관절은 **같은 사진**에서 나와야 한다. 체형용 사진을 따로 받으면
+    코디 사진의 관절 좌표는 위치가 어긋나기 때문이다. 그래서 한 번의 호출로 둘 다 만든다.
+
+    기본 PoseAnalyzer는 분할을 꺼서 돌린다. 매 분석마다 계산하면 느려지는데
+    체형 추정은 사진 한 장에 한 번만 필요하기 때문이다.
+    """
+    rgb = _to_rgb_array(image)
+    with mp.solutions.pose.Pose(
+        static_image_mode=True,
+        model_complexity=1,
+        enable_segmentation=True,
+        min_detection_confidence=0.45,
+    ) as pose:
+        result = pose.process(rgb)
+    if result.segmentation_mask is None or not result.pose_landmarks:
+        return None, None
+    landmark = mp.solutions.pose.PoseLandmark
+    raw = result.pose_landmarks.landmark
+    landmarks = {
+        name: (raw[index].x, raw[index].y, raw[index].visibility)
+        for name, index in {
+            "left_shoulder": landmark.LEFT_SHOULDER, "right_shoulder": landmark.RIGHT_SHOULDER,
+            "left_elbow": landmark.LEFT_ELBOW, "right_elbow": landmark.RIGHT_ELBOW,
+            "left_wrist": landmark.LEFT_WRIST, "right_wrist": landmark.RIGHT_WRIST,
+            "left_hip": landmark.LEFT_HIP, "right_hip": landmark.RIGHT_HIP,
+        }.items()
+    }
+    return result.segmentation_mask > threshold, landmarks
 
 
 class PoseAnalyzer:
@@ -73,7 +144,7 @@ class PoseAnalyzer:
             return PoseAnalysis(
                 valid=False,
                 full_body_score=0.0,
-                body_shape="분석 불가",
+                body_shape=SHAPE_UNAVAILABLE,
                 shoulder_hip_ratio=0.0,
                 upper_lower_ratio=0.0,
                 leg_ratio=0.0,
@@ -106,6 +177,21 @@ class PoseAnalyzer:
             name: (raw[index].x, raw[index].y, raw[index].visibility)
             for name, index in names.items()
         }
+        # 체형 비율은 3D world 좌표로 잰다. 정규화 2D 좌표는 원근과 몸의 회전에 휘둘려
+        # 골반이 정면으로 겹쳐 보이면 간격이 0에 가까워지고 비율이 폭발한다.
+        # 같은 표본 1,409장에서 변동계수가 2D 3.80 vs world 0.18로 차이가 컸다.
+        world = (
+            {
+                name: (
+                    result.pose_world_landmarks.landmark[index].x,
+                    result.pose_world_landmarks.landmark[index].y,
+                    result.pose_world_landmarks.landmark[index].z,
+                )
+                for name, index in names.items()
+            }
+            if result.pose_world_landmarks
+            else None
+        )
 
         required = list(landmarks.values())
         mean_visibility = float(np.mean([point[2] for point in required]))
@@ -128,9 +214,25 @@ class PoseAnalyzer:
         leg_length = max(_distance(hip_mid, ankle_mid), 1e-6)
         body_span = max(ankle_mid[1] - max(0.0, landmarks["nose"][1] - torso_length * 0.45), 1e-6)
 
-        shoulder_hip_ratio = shoulder_width / hip_width
-        upper_lower_ratio = torso_length / leg_length
-        leg_ratio = leg_length / body_span
+        if world is not None:
+            def midpoint(first: str, second: str) -> tuple[float, float, float]:
+                a, b = world[first], world[second]
+                return tuple((a[axis] + b[axis]) / 2 for axis in range(3))
+
+            world_shoulder_mid = midpoint("left_shoulder", "right_shoulder")
+            world_hip_mid = midpoint("left_hip", "right_hip")
+            world_ankle_mid = midpoint("left_ankle", "right_ankle")
+            world_shoulder_width = _distance(world["left_shoulder"], world["right_shoulder"])
+            world_hip_width = max(_distance(world["left_hip"], world["right_hip"]), 1e-6)
+            world_torso = _distance(world_shoulder_mid, world_hip_mid)
+            world_leg = max(_distance(world_hip_mid, world_ankle_mid), 1e-6)
+            shoulder_hip_ratio = world_shoulder_width / world_hip_width
+            upper_lower_ratio = world_torso / world_leg
+            leg_ratio = world_leg / max(world_torso + world_leg, 1e-6)
+        else:
+            shoulder_hip_ratio = shoulder_width / hip_width
+            upper_lower_ratio = torso_length / leg_length
+            leg_ratio = leg_length / body_span
 
         shoulder_tilt = abs(left_shoulder[1] - right_shoulder[1])
         torso_tilt = abs(shoulder_mid[0] - hip_mid[0])
@@ -143,10 +245,15 @@ class PoseAnalyzer:
         # 관절 간격 비율은 실제 신체 폭이 아니므로 자세·가시성·경계 근접도를
         # 함께 보고 신뢰도가 낮으면 체형 라벨을 만들지 않는다.
         front_score = float(np.clip(1.0 - max(shoulder_tilt / 0.12, torso_tilt / 0.16), 0.0, 1.0))
-        if 0.90 < shoulder_hip_ratio < 1.12:
-            boundary_margin = min(shoulder_hip_ratio - 0.90, 1.12 - shoulder_hip_ratio) / 0.11
+        band = max(UPPER_BODY_RATIO - LOWER_BODY_RATIO, 1e-6)
+        if LOWER_BODY_RATIO < shoulder_hip_ratio < UPPER_BODY_RATIO:
+            boundary_margin = min(
+                shoulder_hip_ratio - LOWER_BODY_RATIO, UPPER_BODY_RATIO - shoulder_hip_ratio
+            ) / (band / 2)
         else:
-            boundary_margin = min(abs(shoulder_hip_ratio - 0.90), abs(shoulder_hip_ratio - 1.12)) / 0.12
+            boundary_margin = min(
+                abs(shoulder_hip_ratio - LOWER_BODY_RATIO), abs(shoulder_hip_ratio - UPPER_BODY_RATIO)
+            ) / band
         margin_score = float(np.clip(boundary_margin, 0.0, 1.0))
         body_shape_confidence = (
             0.45 * mean_visibility
@@ -156,13 +263,13 @@ class PoseAnalyzer:
         )
 
         if body_shape_confidence < MIN_BODY_SHAPE_CONFIDENCE:
-            body_shape = "분석 불확실"
-        elif shoulder_hip_ratio >= 1.12:
-            body_shape = "상체 강조형"
-        elif shoulder_hip_ratio <= 0.90:
-            body_shape = "하체 강조형"
+            body_shape = SHAPE_UNCERTAIN
+        elif shoulder_hip_ratio >= UPPER_BODY_RATIO:
+            body_shape = SHAPE_INVERTED_TRIANGLE
+        elif shoulder_hip_ratio <= LOWER_BODY_RATIO:
+            body_shape = SHAPE_TRIANGLE
         else:
-            body_shape = "균형형"
+            body_shape = SHAPE_RECTANGLE
 
         warnings: list[str] = []
         if not feet_inside:
@@ -171,7 +278,7 @@ class PoseAnalyzer:
             warnings.append("정면 자세가 아니어서 가로 비율의 오차가 커질 수 있습니다.")
         if mean_visibility < 0.75:
             warnings.append("일부 관절이 옷이나 물체에 가려졌습니다.")
-        if body_shape == "분석 불확실":
+        if body_shape == SHAPE_UNCERTAIN:
             warnings.append("촬영 자세 또는 경계에 가까운 비율 때문에 체형 분류를 보류했습니다.")
         warnings.append("어깨·골반 값은 관절 간격 기반 상대 추정치이며 실제 신체 치수가 아닙니다.")
 

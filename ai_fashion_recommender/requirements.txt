@@ -15,3 +15,8 @@ gradio
 # Notebook 실행 환경
 jupyter
 ipykernel
+
+# 웹 실행 환경
+fastapi
+uvicorn
+python-multipart

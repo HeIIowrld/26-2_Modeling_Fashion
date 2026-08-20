@@ -1,7 +1,10 @@
-# Python
+# 저장소 어디서든 생기는 파이썬 산출물.
+# ai_fashion_recommender/.gitignore 는 그 폴더 안에서만 적용되므로
+# web/ 처럼 루트 바로 아래 폴더는 여기서 막는다.
 __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
+.pytest_cache/
 
 # Claude Code 로컬 세션 설정
 .claude/

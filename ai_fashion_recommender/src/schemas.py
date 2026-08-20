@@ -4,6 +4,63 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 
+# 체형 이름은 Size Korea 『한국인의 표준체형』의 상반신 분류를 따른다.
+# 그 문서는 Rasband(1994)의 8분류를 쓰되, 가슴·허리·엉덩이 '둘레'가 필요한
+# 모래시계·마름모꼴·둥근·튜브형은 "추가적인 분석이 필요하다"며 실제로는
+# 역삼각·삼각·사각 세 가지로 운용했다(20대 여성: 역삼각 28.8%, 삼각 19.3%, 사각 25.0%).
+# 사진에서는 둘레를 잴 수 없으므로 이 세 가지만 사용한다.
+#
+# 판정 기준도 문서를 따른다. "어깨 폭이 크다면 역삼각형, 어깨 폭에 비해
+# 허리가 크다면 삼각체형"이며, 크기는 "표준체형과 비교한 상대값"으로 본다.
+# 허리둘레 대신 사진에서 잴 수 있는 골반 폭을 쓴다.
+SHAPE_INVERTED_TRIANGLE = "역삼각체형"   # 어깨가 골반보다 넓다
+SHAPE_RECTANGLE = "사각체형"             # 어깨와 골반이 비슷하다
+SHAPE_TRIANGLE = "삼각체형"              # 골반이 어깨보다 넓다
+SHAPE_UNCERTAIN = "분석 불확실"
+SHAPE_UNAVAILABLE = "분석 불가"
+
+# 사진으로 판정할 수 있는 세 가지. 사진에는 둘레 정보가 없다.
+BODY_SHAPES = (SHAPE_INVERTED_TRIANGLE, SHAPE_RECTANGLE, SHAPE_TRIANGLE)
+
+# 사용자가 가슴·허리·엉덩이 둘레를 입력하면 추가로 판정할 수 있는 체형.
+# Size Korea 문서가 "둘레 항목이 필요해 추가 분석이 필요하다"고 미룬 부분이다.
+SHAPE_HOURGLASS = "모래시계체형"         # 가슴≈엉덩이, 허리가 뚜렷하게 가늘다
+SHAPE_DIAMOND = "마름모꼴체형"           # 허리가 가슴·엉덩이보다 크다
+SHAPE_ROUND = "둥근체형"                 # 허리 구분이 거의 없다
+
+CIRCUMFERENCE_SHAPES = (SHAPE_HOURGLASS, SHAPE_DIAMOND, SHAPE_ROUND)
+ALL_BODY_SHAPES = BODY_SHAPES + CIRCUMFERENCE_SHAPES
+
+# 체형을 무엇으로 판정했는지. 화면에 근거를 함께 보여주기 위해 쓴다.
+BASIS_PHOTO = "사진 추정"          # 어깨·골반 폭만으로 세 가지 구분
+BASIS_MEASUREMENT = "입력한 둘레"   # 사용자가 줄자로 잰 값
+BASIS_ESTIMATE = "사진에서 추정한 둘레"  # 3D 체형 복원. 오차가 크므로 구분해 표시한다
+
+# 체형 분석을 추천 점수에 반영할지 정하는 선택지.
+# 사용자가 목표를 고를 때만 체형 규칙(R-BOD-*)을 적용한다는 R-KOR-02를 따른다.
+GOAL_NONE = "반영 안 함"
+GOAL_BALANCE = "상·하체 균형 맞추기"
+GOAL_LONGER_LEGS = "다리가 길어 보이게"
+GOAL_WAISTLINE = "허리선 강조하기"
+GOAL_UPPER_FOCUS = "상체에 시선 모으기"
+GOAL_LOWER_FOCUS = "하체에 시선 모으기"
+
+# 화면에 보여줄 순서와, 선택지마다 덧붙일 설명.
+SILHOUETTE_GOAL_CHOICES = [
+    (GOAL_NONE, "반영 안 함 (목적·취향만 고려)"),
+    (GOAL_BALANCE, GOAL_BALANCE),
+    (GOAL_LONGER_LEGS, GOAL_LONGER_LEGS),
+    (GOAL_WAISTLINE, GOAL_WAISTLINE),
+    (GOAL_UPPER_FOCUS, GOAL_UPPER_FOCUS),
+    (GOAL_LOWER_FOCUS, GOAL_LOWER_FOCUS),
+]
+SILHOUETTE_GOALS = [value for value, _ in SILHOUETTE_GOAL_CHOICES]
+
+# 체형 규칙을 실제로 켜는 목표들.
+BODY_SHAPE_GOALS = {GOAL_BALANCE, GOAL_UPPER_FOCUS, GOAL_LOWER_FOCUS}
+PROPORTION_GOALS = {GOAL_LONGER_LEGS, GOAL_WAISTLINE}
+
+
 @dataclass
 class WardrobeItem:
     """보유 옷 활용도를 계산하기 위한 최소 메타데이터."""
@@ -27,8 +84,12 @@ class UserProfile:
     change_scope: str = "전체 변경"
     height_cm: float | None = None
     weight_kg: float | None = None
+    # 둘레를 입력하면 사진으로는 판정할 수 없는 체형까지 분류한다.
+    chest_cm: float | None = None
+    waist_cm: float | None = None
+    hip_cm: float | None = None
     season: str = "사계절"
-    silhouette_goal: str = "자동 보정 안 함"
+    silhouette_goal: str = GOAL_NONE
     dress_code: str = "자동"
     activity_level: str = "보통"
     preferred_colors: list[str] = field(default_factory=list)
@@ -43,6 +104,11 @@ class UserProfile:
     uv_index: float | None = None
     owned_items: list[WardrobeItem] = field(default_factory=list)
     gender: str = ""  # "남성"/"여성", 빈 값이면 성별 무관
+
+    @property
+    def has_circumferences(self) -> bool:
+        """세 둘레가 모두 있어야 체형을 판정할 수 있다."""
+        return None not in (self.chest_cm, self.waist_cm, self.hip_cm)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

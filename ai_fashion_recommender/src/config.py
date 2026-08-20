@@ -38,6 +38,9 @@ def garment_image_path(image_name: str) -> Path:
 ENABLE_FASHN_PARSER = True
 ENABLE_FASHION_SIGLIP = True
 ENABLE_VTON = False
+# 쓰리사이즈를 입력하지 않았을 때 사진 실루엣으로 체형을 추정할지 여부.
+# MediaPipe 분할 마스크만 쓰므로 추가 모델이나 라이선스 동의가 필요 없다.
+ENABLE_BODY_MEASUREMENT = True
 
 FASHN_PARSER_MODEL_ID = "fashn-ai/fashn-human-parser"
 FASHION_SIGLIP_MODEL_ID = "Marqo/marqo-fashionSigLIP"

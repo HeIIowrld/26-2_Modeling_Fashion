@@ -1,104 +1,562 @@
-# ai_fashion_recommender
+# 체형·목적 기반 AI 코디 추천 1단계
 
-전신사진 한 장으로 체형과 착장을 읽고, 규칙으로 상품을 고르고, 실제로 입혀본
-합성 사진까지 만드는 코드. `main.ipynb`가 전체 흐름을 순서대로 보여주고
-기능별 모듈은 `src/`에 있다.
+전신사진 한 장에서 체형과 현재 착장을 분석하고, 패션 규칙에 따라 코디를 추천합니다.
+`main.ipynb`(Notebook)와 `web/run_web.py`(웹)가 **같은 파이프라인 모듈**을 호출합니다.
 
-## 구조
+## 처음 실행하는 팀원용 3단계
 
-```
-├── main.ipynb                  전체 파이프라인 단계별 실행
-├── app.py                      Gradio 웹 앱
-├── FASHION_RULES_MASTER.md     추천 엔진이 런타임에 읽는 R-* 규칙
-├── src/                        런타임 모듈
-├── scripts/                    수집·전처리·학습·검증 스크립트
-├── docs/                       규칙 연구 노트, 설치·구조 문서
-├── tests/                      단위·회귀 테스트
-├── experiments/                지난 학습 실험 기록
-├── data/                       카탈로그 CSV, 학습 주석, 규칙 JSON
-├── models/                     학습된 속성 헤드 체크포인트
-├── reports/                    실험 리포트
-└── outputs/                    실행 산출물 (git 제외)
+아래 명령은 모두 **저장소 루트**에서 실행합니다.
+
+```bash
+# 1. 파이썬 3.9 ~ 3.12 환경에서 (3.13은 mediapipe 미지원)
+python --version
+
+# 2. 패키지 설치
+pip install -r ai_fashion_recommender/requirements.txt
+
+# 3. 웹 실행 — 브라우저가 자동으로 열립니다
+python web/run_web.py
 ```
 
-`src/`가 `sys.path`에 등록되므로 모듈끼리는 `from config import ...`처럼 평면 임포트를
-쓴다. Notebook은 0번 셀에서, `app.py`와 `scripts/*.py`는 파일 상단에서 이 경로를 잡는다.
+`web/run_web.py`는 켜기 전에 파이썬 버전·패키지·데이터 파일을 점검하고, 문제가 있으면
+무엇을 고쳐야 하는지 알려줍니다. 서버를 켜지 않고 점검만 하려면 `python web/run_web.py --check`.
+
+| 상황 | 명령 |
+|---|---|
+| 8000번 포트가 이미 사용 중 | 자동으로 비어 있는 포트를 찾습니다 (`--port 9000`으로 지정도 가능) |
+| 발표용으로 다른 기기에서 접속 | `python web/run_web.py --lan` |
+| 환경만 점검 | `python web/run_web.py --check` |
+
+첫 분석은 FASHN Parser와 FashionSigLIP 체크포인트를 내려받느라 1분 이상 걸리고 인터넷이 필요합니다.
+이후에는 로컬 캐시를 쓰고, 모델은 프로세스당 한 번만 메모리에 올라가 재사용됩니다.
+MediaPipe와 SegFormer 세션이 동시 호출에 안전하지 않아 분석은 한 번에 하나씩 처리합니다.
+
+### 업로드한 사진은 어떻게 다루나
+
+전신사진은 개인정보라서 프로젝트 폴더에 남기지 않습니다.
+
+- 저장 위치는 **OS 임시 폴더**(`%TEMP%/fitta_web_sessions/`)입니다. 프로젝트가 OneDrive·Dropbox 같은
+  동기화 폴더 안에 있어도 사진이 클라우드로 올라가지 않게 하기 위해서입니다.
+  바꾸려면 `FASHION_WEB_SESSION_DIR` 환경변수를 지정하세요.
+- 분석 후 **30분이 지나면 자동 삭제**됩니다. 최대 20건까지만 보관하고, 결과 화면의
+  **지금 사진 삭제** 버튼으로 즉시 지울 수도 있습니다.
+- 품질 검사나 분석에 실패하면 보여줄 결과가 없으므로 그 즉시 삭제합니다.
+- 사진을 프로젝트 안에 저장하던 이전 버전을 쓴 적이 있으면, 서버를 켤 때
+  `outputs/web_sessions/`에 남은 사진을 찾아서 함께 지웁니다.
+
+피드백만 Notebook과 같은 `outputs/feedback.jsonl`에 남습니다(사진이나 이미지는 포함하지 않습니다).
+
+## 폴더 구조
+
+웹 화면·서버 코드는 저장소 루트의 `web/`에, 체형·의류 분석과 추천 규칙은
+Notebook과 공용이라 `ai_fashion_recommender/`에 있습니다. 런타임 모듈은 그 안의
+`src/`에 모여 있고, `src/`가 `sys.path`에 등록되므로 모듈끼리는
+`from config import ...`처럼 평면 임포트를 씁니다.
+
+```
+26-2_Modeling_Fashion/
+├── web/                        웹 애플리케이션 (여기만 웹 전용)
+│   ├── run_web.py              실행 진입점 (환경 점검 + 서버 기동)
+│   ├── app.py                  FastAPI 라우트
+│   ├── pipeline.py             Notebook과 같은 순서의 실행 래퍼
+│   └── static/                 화면 (HTML·CSS·JS·config.js)
+│
+├── datasets/                   이미지 자산 (재배포 금지, git 제외)
+│   ├── people/                 합성 대상 인물 사진
+│   └── garments/               합성 타겟 상품 이미지 (raw·clean)
+│
+└── ai_fashion_recommender/     분석·추천 (웹과 Notebook 공용)
+    ├── main.ipynb                  Notebook 파이프라인
+    ├── app.py                      Gradio 앱 (웹과 별개 진입점)
+    ├── FASHION_RULES_MASTER.md     추천 엔진이 실제로 읽는 통합 규칙
+    │
+    ├── src/                        런타임 모듈 (sys.path에 등록)
+    │   ├── config.py                       경로·모델 스위치·임계값
+    │   ├── schemas.py                      사용자·분석·상품·추천 데이터 구조
+    │   │
+    │   ├── 분석
+    │   │   ├── pose_analyzer.py                MediaPipe 체형·자세 참고 비율
+    │   │   ├── quality_checker.py              입력 사진 품질 검사
+    │   │   ├── clothing_parser.py              FASHN Human Parser 의류 마스크
+    │   │   ├── garment_attribute_analyzer.py   마스크+관절로 기장·핏 추정
+    │   │   ├── fashion_model.py                FashionSigLIP 추론 래퍼
+    │   │   ├── fashion_prompts.py              제로샷 프롬프트 후보
+    │   │   ├── outfit_analyzer.py              착장 분석 결과 통합
+    │   │   ├── body_shape.py                   체형 분류 (둘레·사진)
+    │   │   └── body_measure.py                 사진에서 둘레 추정
+    │   │
+    │   ├── 속성 헤드
+    │   │   ├── fashion_attribute_schema.py     17개 속성 · 124개 라벨 정의
+    │   │   ├── fashion_attribute_model.py      분류 헤드와 추론
+    │   │   ├── fashion_attribute_dataset.py    학습 CSV·Fashionpedia 변환
+    │   │   └── fashion_attribute_training.py   임베딩 캐시·학습·평가
+    │   │
+    │   ├── 추천
+    │   │   ├── fashion_rules.py                규칙 Markdown 로딩
+    │   │   ├── recommendation_engine.py        필터·점수·설명 생성
+    │   │   ├── product_catalog.py              상품 CSV 로딩
+    │   │   └── feedback_store.py               피드백 JSONL 저장
+    │   │
+    │   └── 가상 피팅
+    │       ├── virtual_tryon.py                VTON 인터페이스와 추천 보드
+    │       └── catvton_tryon.py                CatVTON 어댑터 (FASHN 마스크)
+    │
+    ├── scripts/                    데이터 준비·학습·검증 (평소에는 실행하지 않음)
+    │   ├── test_tryon.py                   수집 사진으로 추천~합성 전후 비교
+    │   ├── musinsa_crawler.py              상품 메타데이터·전면샷 수집
+    │   ├── prepare_fashionpedia_seed.py
+    │   ├── prepare_fashion200k_supplement.py
+    │   ├── prepare_fashion200k_bottoms.py
+    │   └── train_fashion_attribute_heads.py
+    │
+    ├── docs/                       문서
+    │   ├── MAIN_IPYNB_STRUCTURE.md         Notebook 셀별 설명
+    │   ├── FASHION_RULES_RESEARCH.md       규칙 조사 원본
+    │   └── AMD_ROCM_SETUP.md                AMD GPU 가속 설치 절차
+    │
+    ├── data/                       상품 CSV·학습 데이터셋
+    ├── models/                     배포 체크포인트
+    ├── experiments/                지난 학습 실험 기록
+    ├── reports/                    실험 리포트
+    ├── outputs/                    실행 결과 (재생성 가능·공유 불필요)
+    └── tests/                      단위 테스트
+```
+
 이미지 자산은 코드 밖 `../datasets/`에 있고 `config.py`의 `PEOPLE_DIR`,
-`GARMENT_RAW_DIR`, `GARMENT_CLEAN_DIR`로만 접근한다.
+`GARMENT_RAW_DIR`, `GARMENT_CLEAN_DIR`로만 접근합니다. 경로를 직접 조립하지 마세요.
 
-### src/
-
-| 모듈 | 역할 |
-| --- | --- |
-| `config.py` | 경로·임계값. `PROJECT_DIR`은 `src/`의 상위 |
-| `schemas.py` | 사용자·분석·상품·추천 데이터 구조 |
-| `pose_analyzer.py` | MediaPipe Pose 기반 체형·자세 비율 |
-| `clothing_parser.py` | FASHN Human Parser로 의류 픽셀 마스크 생성 |
-| `garment_attribute_analyzer.py` | 마스크 끝점과 관절로 소매·기장·핏 측정 |
-| `outfit_analyzer.py` | 색상과 속성 분석 결과 통합 |
-| `quality_checker.py` | 입력·합성 결과 품질 검사 |
-| `fashion_model.py` | FashionSigLIP + 학습된 속성 헤드 추론 |
-| `fashion_prompts.py` | zero-shot용 패턴·소재·네크라인 후보 |
-| `fashion_attribute_schema.py` | 속성별 라벨과 단일·복수 분류 정의 |
-| `fashion_attribute_model.py` | 고정 특징 위의 속성별 분류 헤드 |
-| `fashion_attribute_dataset.py` | 학습 CSV 로딩, Fashionpedia 주석 변환 |
-| `fashion_attribute_training.py` | 특징 캐시, 학습, 평가, 임계값 선택 |
-| `fashion_rules.py` | 규칙 문서에서 R-* ID와 메타데이터 로딩 |
-| `recommendation_engine.py` | 규칙 기반 필터·점수·설명 생성 |
-| `product_catalog.py` | 카탈로그 로딩, 카테고리·성별 필터 |
-| `virtual_tryon.py` | VTON 인터페이스와 비합성 추천 보드 |
-| `catvton_tryon.py` | CatVTON 어댑터 (FASHN 마스크 사용) |
-| `deepfashion_dataset.py` | DeepFashion 라벨 로딩과 정확도 평가 |
-| `feedback_store.py` | 피드백 JSONL 저장 |
-
-### scripts/
-
-- `test_tryon.py` — 수집 사진으로 추천~합성 전후 비교
-- `musinsa_crawler.py` — 상품 메타데이터·전면샷 수집 (연구용 소규모)
-- `prepare_fashionpedia_seed.py` — Fashionpedia 주석·이미지 추출
-- `prepare_fashion200k_supplement.py` — 셔츠·블라우스·폴로·소재 보완 샘플
-- `prepare_fashion200k_bottoms.py` — 하의 종류·다리 모양·기장·디테일 보완 샘플
-- `train_fashion_attribute_heads.py` — 속성 헤드 학습 CLI
-
-## 실행
+테스트는 프로젝트 폴더에서 실행합니다.
 
 ```bash
-pip install -r requirements.txt
-python scripts/test_tryon.py --vton --count 2    # 수집 사진으로 바로 확인
-python app.py                                    # 웹 앱 (localhost:7860)
-python app.py --light                            # 무거운 모델 없이 UI 흐름만
+python -m unittest discover -s tests -t .
 ```
 
-Notebook을 쓰려면 `main.ipynb`를 열고 맨 위 경로 셀만 고치면 된다.
-Python이 여러 개 깔린 PC라면 커널을 먼저 등록해 둔다.
+## Notebook으로 실행
 
-```bash
-python -m ipykernel install --user --name ai-fashion --display-name "AI Fashion"
-```
+1. 팀원은 `ai_fashion_recommender` 폴더 전체를 자신의 PC로 복사합니다.
+2. `pip install -r requirements.txt`로 필요한 패키지를 설치합니다.
+3. 여러 Python이 설치된 PC라면 `python -m ipykernel install --user --name ai-fashion --display-name "AI Fashion"`을 실행하고 Notebook 커널을 **AI Fashion**으로 선택합니다.
+4. `main.ipynb`를 열고 맨 위의 **팀원별 로컬 경로 설정** 셀을 확인합니다. 기본값 그대로도 동작합니다.
+5. 사용 조건을 입력한 뒤 Notebook을 위에서 아래로 실행합니다.
 
-### 경로 설정
+자신의 전신사진으로 분석하려면 `data/input_person.jpg`를 덮어쓰거나 `IMAGE_PATH_INPUT`을 바꿉니다.
+
+### 로컬 경로 설정
+
+Notebook에서는 다음 경로 값을 수정하면 됩니다.
 
 ```python
-PROJECT_DIR_INPUT = r''                                        # 비우면 자동 탐색
+PROJECT_DIR_INPUT = r''
 IMAGE_PATH_INPUT = r'data/input_person.jpg'
 DATA_DIR_INPUT = r''
 RULES_PATH_INPUT = r'FASHION_RULES_MASTER.md'
 ATTRIBUTE_HEADS_PATH_INPUT = r'models/fashion_attribute_heads.pt'
 OUTPUT_DIR_INPUT = r''
-FONT_PATH_INPUT = r''                                          # 한글 깨질 때만
+FONT_PATH_INPUT = r''
 ```
 
-상대경로는 프로젝트 폴더 기준이라 팀 공유에는 `data/input_person.jpg` 형태가 편하다.
-자동 탐색에 실패할 때만 `PROJECT_DIR_INPUT`에 절대경로를 넣는다.
-규칙 문서는 `## R-...` 형식만 규칙으로 인식한다. 속성 체크포인트가 없으면
-zero-shot 분석으로 자동 대체된다.
+- 빈 `PROJECT_DIR_INPUT`은 현재 작업 폴더와 그 아래 `ai_fashion_recommender`를 자동 탐색합니다.
+- 상대경로는 프로젝트 폴더를 기준으로 처리하므로 팀 공유에는 `data/input_person.jpg` 같은 형식을 권장합니다.
+- 프로젝트를 자동으로 찾지 못할 때만 `PROJECT_DIR_INPUT`에 각자 프로젝트 절대경로를 입력합니다.
+- `DATA_DIR_INPUT`과 `OUTPUT_DIR_INPUT`은 비워두면 각각 프로젝트 내부 `data`, `outputs`를 사용합니다.
+- `RULES_PATH_INPUT`은 추천 엔진이 직접 읽는 패션 규칙 Markdown입니다. 문서의 `## R-...` 형식만 규칙으로 인식됩니다.
+- `ATTRIBUTE_HEADS_PATH_INPUT`에 학습 체크포인트가 있으면 세부 카테고리·소매·기장·넥라인·칼라·핏·패턴·소재·디테일 분류를 사용하고, 없으면 기존 FashionSigLIP 제로샷 분석으로 자동 대체합니다.
+- 통합 규칙 50개 중 43개가 구현되어 있습니다. 이 중 31개는 후보 필터·순위 점수에, 나머지는 분석 신뢰도 안전장치와 신발·액세서리 스타일링 안내에 사용됩니다. 상세 날씨와 보유 옷처럼 선택 입력이 필요한 규칙은 값이 있을 때만 실제 추천에 적용됩니다.
+- 한글이 깨지는 환경에서는 `FONT_PATH_INPUT`에 설치된 한글 `.ttf` 또는 `.ttc` 파일을 지정합니다.
 
-Notebook 밖에서는 `FASHION_DATA_DIR`, `FASHION_OUTPUT_DIR`, `FASHION_DATASETS_DIR`,
-`FASHION_FONT_PATH`, `FASHION_ATTRIBUTE_HEADS_PATH` 환경변수로 같은 경로를 바꿀 수 있다.
+Notebook 밖에서 모듈만 사용할 때는 `FASHION_DATA_DIR`, `FASHION_OUTPUT_DIR`, `FASHION_FONT_PATH`, `FASHION_ATTRIBUTE_HEADS_PATH` 환경변수로 같은 경로를 변경할 수 있습니다. 별도 설정이 없으면 모든 경로는 `config.py`가 있는 프로젝트 폴더를 기준으로 결정됩니다.
 
-첫 실행은 체크포인트를 받느라 오래 걸리고 이후에는 로컬 캐시를 쓴다. CPU에서도 돌지만
-FashionSigLIP 분석에 수십 초가 걸린다. FASHN 결과가 있어야 상·하의 영역과 기장을
-분석한다. 포즈 기반 대체 마스크는 모델 연결을 확인하는 디버깅용이고 정식 결과가 아니다.
+기본 설정은 FASHN Human Parser와 FashionSigLIP을 모두 사용합니다. 첫 실행에서는 체크포인트를 내려받기 때문에 시간이 오래 걸릴 수 있고, 이후에는 로컬 캐시를 사용합니다. CPU에서도 실행할 수 있지만 FashionSigLIP 분석은 수십 초가 걸릴 수 있습니다.
+
+FASHN 결과가 있어야 상·하의 영역과 옷 길이를 분석합니다. 포즈 기반 대체 마스크는 모델 연결 문제를 확인하기 위한 디버깅 수단이며 정식 결과로 취급하지 않습니다.
+
+## FashionSigLIP 다중 속성 헤드 학습
+
+### 체형 분석 개선 (2026-08-20)
+
+### 3D world 좌표 사용
+
+MediaPipe는 정규화 2D 좌표(`pose_landmarks`)와 **3D 미터 좌표**(`pose_world_landmarks`)를
+모두 내주는데, 예전에는 2D만 썼습니다. 2D는 몸이 정면을 향해 골반이 겹쳐 보이면 간격이
+0에 가까워져 비율이 폭발합니다. 같은 표본 1,409장에서 측정한 결과입니다.
+
+| 지표 | 중앙값 | 변동계수 |
+|---|---:|---:|
+| 정규화 2D 비율 (이전) | 1.78 | **3.80** |
+| **3D world 비율 (현재)** | **1.45** | **0.18** |
+
+변동계수가 21배 안정적입니다. 어깨·골반·다리 비율을 모두 world 좌표로 계산하고,
+world 좌표가 없을 때만 2D로 대체합니다. 화면에 관절을 그리는 것과 "발이 잘렸는지",
+"정면인지" 판정은 화면 좌표가 맞으므로 그대로 둡니다.
+
+`segmentation_mask`는 체형 추정(`body_measure.py`)에서 씁니다. `.z`는 아직 쓰지 않습니다.
+
+### Size Korea 체형 분류 채택
+
+체형 이름을 자체 용어(`상체 강조형`·`균형형`·`하체 강조형`)에서
+Size Korea 『한국인의 표준체형』의 상반신 분류로 바꿨습니다.
+
+| 라벨 | 뜻 |
+|---|---|
+| **역삼각체형** | 어깨가 골반보다 넓다 |
+| **사각체형** | 어깨와 골반이 비슷하다 |
+| **삼각체형** | 골반이 어깨보다 넓다 |
+
+판정 기준도 문서를 따릅니다 — "어깨 폭이 크다면 역삼각형, 어깨 폭에 비해 허리가 크다면
+삼각체형"이고, 크기는 "표준체형과 비교한 상대값"으로 봅니다.
+
+**사진만으로는 이 세 가지가 한계입니다.** 나머지 체형은 가슴·허리·엉덩이 **둘레**가 있어야
+하는데 사진으로는 둘레를 잴 수 없습니다. Size Korea 문서도 같은 이유로 "모래시계형~튜브체형에
+이르는 상세한 분류는 추가적인 분석을 필요로 한다"며 실제 조사에서는 역삼각·삼각·사각으로
+운용했습니다(20대 여성: 역삼각 28.8%, 삼각 19.3%, 사각 25.0%).
+
+**둘레를 입력하면 세 가지가 더 열립니다.** 조건 입력의 `쓰리사이즈`에서 가슴·허리·엉덩이를
+모두 넣으면 `body_shape.py`가 **모래시계체형·마름모꼴체형·둥근체형**까지 판정합니다.
+줄자로 잰 값이 사진 추정보다 정확하므로 입력값이 우선하고, 결과 화면에 판정 근거
+(`입력한 둘레` / `사진에서 추정한 둘레` / `사진 추정`)를 함께 보여줍니다.
+
+판정 순서와 임계값은 `data/body_shape_reference.json`의 `circumference_rules`에 있습니다.
+**잠정값입니다** — Rasband의 분류는 서술적 정의라 출처마다 수치가 다르고, Size Korea 문서도
+임계값을 주지 않습니다. 실측 데이터로 보정해야 합니다.
+
+`튜브체형`과 `이상체형(표준체형)`은 여전히 미구현입니다. "전체적으로 가늘다", "평균적이다"처럼
+**인구 분포 대비 크기**가 필요한데 한국인 둘레 기준 분포가 없기 때문입니다.
+
+추천 엔진에서는 모래시계체형을 사각체형과 같은 R-BOD-03(볼륨을 한쪽씩 배치)로 다룹니다.
+어깨와 엉덩이가 비슷하다는 점이 같기 때문입니다. 마름모꼴·둥근체형은 허리가 중심이라
+대응하는 규칙이 아직 문서에 없어 체형 규칙이 적용되지 않습니다.
+
+### 체형 판정 순서
+
+근거가 확실한 것부터 시도하고, 무엇으로 판정했는지 화면에 함께 표시합니다.
+
+| 순서 | 근거 | 구분 가능한 체형 |
+|---|---|---|
+| 1 | **입력한 둘레** — 줄자로 잰 값 | 6가지 전부 |
+| 2 | **사진에서 추정한 둘레** — 실루엣 폭 (체형 사진 우선) | 6가지 전부 |
+| 3 | **사진 추정** — 어깨·골반 폭 | 역삼각·사각·삼각 |
+
+### 사진으로 체형 추정하기 (`body_measure.py`)
+
+**SMPL 계열 모델을 쓰지 않았습니다.** 모델 파일이 사이트 가입과 라이선스 동의를 요구하고
+연구용 비상업 조건이라, 제3자가 대신 받을 수 없기 때문입니다. 대신 이미 쓰고 있는
+**MediaPipe(Apache 2.0)의 인물 분할 마스크**만으로 구현했습니다. 추가 다운로드가 없습니다.
+
+동작 방식은 이렇습니다.
+
+1. 사진에서 인물 실루엣과 관절을 **같은 호출로** 얻습니다. 체형용 사진을 따로 받을 때
+   코디 사진의 관절 좌표를 쓰면 위치가 어긋나기 때문입니다.
+2. 어깨-팔꿈치-손목 선을 따라 **팔 픽셀을 지웁니다.** 팔이 붙어 있으면 허리가 가슴보다
+   넓게 측정됩니다(실측: 팔 제거 전 허리 287px → 제거 후 216px).
+3. 어깨~골반 구간의 25%·65%·100% 높이에서 **몸 중심을 포함하는 연속 구간**의 폭을 잽니다.
+4. 세 폭의 **비율**로 체형을 판정합니다.
+
+**둘레가 아니라 폭을 쓰는 이유**가 있습니다. 정면 사진에는 두께(깊이) 정보가 없어 둘레를
+정확히 낼 수 없습니다. 그런데 체형 분류는 세 부위의 **비율**로 갈리므로, 같은 방식으로 잰
+폭만으로도 판정할 수 있습니다. 가정이 하나 줄어드는 셈입니다. cm 환산값은 키를 입력했을 때만
+타원 근사로 계산하며 **참고용**입니다.
+
+**한계는 분명합니다.**
+
+- **옷 두께가 그대로 폭에 더해집니다.** 관절 위치는 옷을 뚫고 추정되지만(개인차의 6%),
+  실루엣은 그렇지 않습니다. 그래서 1단계에 **체형 파악용 사진**을 선택 입력으로 두었습니다.
+  넣으면 그 사진으로, 없으면 코디 사진으로 추정합니다.
+- **정확도를 검증하지 못했습니다.** 줄자로 잰 실측값이 없기 때문입니다. 지금 확인한 것은
+  샘플 사진에서 관절 기반 판정과 실루엣 기반 판정이 **일치한다**는 것뿐입니다.
+  실제로 쓰기 전에 몇 명의 실측값과 비교해 보시길 권합니다.
+- 그래서 결과는 항상 `사진에서 추정한 둘레`로 표시해 입력값과 구분합니다.
+
+참고로 SMPL 계열을 쓰더라도 정확도는 크게 다르지 않습니다. PIFuHD는 허리둘레가 약 10%
+(70cm 기준 ±7cm) 어긋나고, 2025년 최신 기법도 가슴 MAE가 3.3cm입니다.
+
+한 가지 차이는 명시해 둡니다. Size Korea는 **어깨 폭과 허리둘레**를 비교하지만, 사진에서는
+허리둘레를 잴 수 없어 **골반 폭**으로 대신합니다. 근거와 한계는 `data/body_shape_reference.json`의
+`classification` 항목에 함께 기록했습니다.
+
+### 분류 경계 보정
+
+`shoulder_hip_ratio`는 **어깨 관절과 골반 관절 사이 간격**의 비율입니다. 골반 관절은 엉덩이
+바깥 폭보다 좁아서 world 좌표 기준으로 대략 **1.3~1.6**에 분포합니다.
+
+그런데 예전 분류 경계 `0.90 / 1.12`는 **신체 표면 치수**(어깨너비 ÷ 엉덩이너비) 기준이었습니다.
+서로 다른 것을 재는 값이라, Fashionpedia 1,145장을 분석했더니 이렇게 쏠렸습니다.
+
+| | 보정 전 | 보정 후 |
+|---|---:|---:|
+| 역삼각체형 (어깨 넓음) | **89%** | 33% |
+| 사각체형 | 0.5% | 26% |
+| 삼각체형 (골반 넓음) | 2% | 28% |
+| 분석 불확실 | 9% | 13% |
+
+거의 모든 사용자가 같은 라벨을 받고 있었으므로, 체형 반영 기능이 사실상 동작하지 않았습니다.
+
+경계는 이제 `data/body_shape_reference.json`의 **33/67 백분위**에서 읽습니다.
+규칙 문서 R-KOR-01의 "사진값은 상대적인 구간으로만 사용한다"를 따른 것입니다.
+
+**Size Korea 데이터로 교체할 때 주의할 점:** 값을 그대로 경계에 넣으면 안 됩니다.
+Size Korea의 어깨사이길이·엉덩이너비는 신체 표면 치수라 지금 지표와 재는 대상이 다릅니다
+(표면 기준 비율 ≈ 1.0~1.2, 관절 기준 ≈ 1.78). 올바른 방법은 **백분위 매핑**입니다.
+Size Korea로 "인구의 몇 %가 각 체형인가"를 정하고, 그 비율을 한국인 표본에서 측정한
+`shoulder_hip_ratio` 분포에 대응시켜 기준표의 백분위만 갱신하면 코드 수정 없이 반영됩니다.
+
+현재 기준표는 Fashionpedia 이미지 720장(전신·정면·고품질)으로 만든 임시값이며,
+패션 모델 사진이라 일반 인구를 대표하지 않습니다. 파일의 `caveats`에 함께 적어 두었습니다.
+
+## 체형 분석에 별도 사진이 필요한가 (2026-08-20)
+
+옷이 체형 추정을 흔드는지 측정했습니다. 부피가 큰 상의(코트·재킷·블레이저)와 몸에 붙는
+상의(탑·티셔츠·셔츠)를 입은 사진에서 같은 지표를 비교한 결과입니다.
+
+| | 표본 | 어깨/골반 비율 중앙값 |
+|---|---:|---:|
+| 부피 큰 상의 | 78장 | 1.839 |
+| 몸에 붙는 상의 | 219장 | 1.772 |
+
+**옷에 의한 차이는 0.067로, 사람 간 개인차(표준편차 1.112)의 6%에 그칩니다.**
+MediaPipe는 옷의 외곽선이 아니라 관절 위치를 추정하므로 코트를 입어도 크게 흔들리지 않습니다.
+따라서 **체형 파악용 사진을 따로 받지 않아도 됩니다.**
+
+훨씬 중요한 변수는 사진의 구도였습니다. 전신 인식 성공률이 상품 클로즈업에서는 3~41%,
+전신 모델컷에서는 86~96%였습니다. 안내는 "몸이 드러나는 옷"보다
+**"전신이 다 나오게, 정면으로"**가 효과적입니다.
+
+## 의류 종류별 데이터 점검 (2026-08-20)
+
+배포 모델(22,341 crop)과 보강 전 데이터(5,984 crop)로 학습한 모델을 같은 검증셋에서 비교했습니다.
+보강 데이터의 출처는 크롤링이 아니라 **Fashionpedia train split**입니다
+(`models/fashion_attribute_heads.metrics.json`의 `training.composition` 참조).
+
+**보강으로 해결된 의류**
+
+| 의류 | 학습 표본 | 배수 | F1 |
+|---|---|---:|---|
+| 후드티 | 6 → 183 | 30x | 0.000 → 0.667 |
+| 점프수트 | 16 → 484 | 30x | 0.667 → 0.833 |
+| 스커트 | 142 → 1,277 | 9x | 0.684 → 0.810 |
+| 블레이저 | 50 → 345 | 7x | 0.703 → 0.765 |
+
+**아직 판단할 수 없는 의류 — 검증 표본이 없어서입니다**
+
+| 의류 | 학습 표본 | 배수 | F1 | 검증 표본 |
+|---|---|---:|---|---:|
+| 가디건 | 11 → 569 | 52x | 0.000 → 0.000 | **1개** |
+| 니트 | 17 → 713 | 42x | 0.857 → 0.500 | **4개** |
+| 베스트 | 20 → 387 | 19x | 0.500 → 0.500 | **2개** |
+
+이 세 의류는 **학습 데이터가 이미 충분히 늘어난 상태**입니다(569·713·387개).
+문제는 검증 표본이 1~4개라 좋아졌는지 나빠졌는지 **측정 자체가 불가능**하다는 것입니다.
+가디건 `F1 0.000`은 단 1개 표본을 코트로 예측한 결과이고, 니트의 하락도 4개 중 1개 차이입니다.
+
+**따라서 이 의류들은 학습 데이터를 더 넣기 전에 검증 표본부터 확보해야 합니다.**
+그렇지 않으면 무엇을 해도 효과를 확인할 수 없습니다. 목표는 의류당 검증 30개 이상입니다.
+
+혼동 방향도 참고하세요. 가디건 → 코트, 후드티 → 탑, 니트 → 티셔츠, 청바지 → 팬츠로
+잘못 예측됩니다. 모두 형태가 비슷한 이웃 라벨이라, 표본을 모을 때 이 쌍을 함께 늘리는 것이 좋습니다.
+
+**추론에서 아예 차단된 라벨**(학습 5개 미만): `collar/세일러 칼라`(0개),
+`detail/디테일 없음`(0개), `pattern/컬러 블록`(1개), `silhouette/O라인`(3개).
+스키마에는 있지만 절대 출력되지 않습니다.
+
+### 하이브리드 전처리로 재학습하는 방법
+
+현재 배포 체크포인트는 예전 방식(`squash`)으로 학습된 것입니다. 위 A/B에서 검증한 하이브리드로
+바꾸려면 **전처리별로 임베딩 캐시를 각각 만든 뒤 사전으로 넘겨** 학습합니다.
+
+```python
+from fashion_attribute_model import PREPROCESS_LETTERBOX, PREPROCESS_SQUASH
+from fashion_attribute_training import prepare_embedding_caches, train_attribute_heads
+
+for mode in (PREPROCESS_SQUASH, PREPROCESS_LETTERBOX):
+    prepare_embedding_caches(csv, image_root, f"train_{mode}.pt", f"val_{mode}.pt",
+                             preprocessing=mode)
+
+train_attribute_heads(
+    {PREPROCESS_SQUASH: "train_squash.pt", PREPROCESS_LETTERBOX: "train_letterbox.pt"},
+    {PREPROCESS_SQUASH: "val_squash.pt",   PREPROCESS_LETTERBOX: "val_letterbox.pt"},
+    "models/fashion_attribute_heads.pt",
+)
+```
+
+속성별 배정은 `fashion_attribute_model.TASK_PREPROCESSING`에 있고, 학습된 체크포인트가 그
+배정을 그대로 담고 있어 추론에서 자동으로 재현됩니다.
+
+**주의: 지금 이 저장소의 데이터(5,984 crop)로 재학습하면 배포 모델보다 나빠집니다.**
+배포 모델은 22,341 crop으로 학습됐는데 그중 Fashionpedia train split 이미지가 로컬에 없습니다.
+교체하려면 `scripts/prepare_fashionpedia_seed.py`로 해당 split을 다시 받아 22k를 복원한 뒤
+위 절차를 따르세요. 그때 위 A/B를 다시 돌려 이득이 유지되는지 확인하는 것을 권합니다.
+
+평소 추천 기능만 쓸 때는 이 절을 실행할 필요가 없습니다. 재학습이 필요할 때만
+`train_fashion_attribute_heads.ipynb`(또는 `scripts/train_fashion_attribute_heads.py`)를 위에서부터 실행하면
+다음 순서로 학습합니다.
+
+1. 제공된 Fashionpedia + Fashion200K 통합 CSV를 사용하거나 같은 형식의 자체 CSV를 불러옵니다.
+2. 고정된 FashionSigLIP으로 의류 이미지를 한 번만 임베딩하고 캐시합니다.
+3. 카테고리·소매·기장·넥라인·칼라·핏·실루엣은 단일 분류, 패턴·소재·디테일은 복수 분류 헤드로 학습합니다.
+4. 검증 세트 정확도와 micro-F1을 계산하고 복수 분류 임계값을 검증 데이터에서 선택합니다.
+5. 결과를 `models/fashion_attribute_heads.pt`에 저장하면 `main.ipynb`가 자동으로 사용합니다.
+
+빈 라벨은 `없음`이 아니라 **미주석**으로 처리해 해당 속성의 손실 계산에서 제외합니다. 학습 표본이 5장 미만인 라벨은 추론 시 자동으로 차단합니다. 현재 데이터는 Fashionpedia의 전문가 세부 속성 주석을 중심으로 하고, Fashion200K의 상품 분류 메타데이터로 셔츠·블라우스·폴로 셔츠·시각적 소재와 하의 세부 종류를 보완했습니다. [FashionSigLIP 모델 카드](https://huggingface.co/Marqo/marqo-fashionSigLIP), [Fashionpedia 공식 저장소](https://github.com/cvdfoundation/fashionpedia), [Fashion200K 데이터셋 카드](https://huggingface.co/datasets/Marqo/fashion200k)
+
+Fashionpedia 이미지가 `이미지루트/train`, `이미지루트/val`처럼 나뉘어 있으면 변환 Notebook의 `TRAIN_IMAGE_PREFIX`, `VAL_IMAGE_PREFIX`에 폴더명을 입력합니다. 한 폴더에 합쳐져 있으면 두 값을 비워 둡니다.
+
+현재 학습 스키마는 17개 헤드, 총 124개 라벨입니다. 하의는 한 개의 이름으로 억지로 합치지 않고 네 축으로 나눕니다. 종류는 `슬랙스·치노 팬츠·청바지·카고 팬츠·조거/스웨트팬츠·트랙팬츠·레깅스·하렘 팬츠·요가 팬츠·세일러 팬츠` 10종, 다리 모양은 `스키니·스트레이트·테이퍼드·페그·부츠컷·플레어·와이드·팔라초` 8종, 바지 전용 기장은 `카프리/7부·크롭/앵클·풀렝스` 3종입니다. 5포켓·카고 포켓·플리츠/턱·드로스트링·밴딩 허리·사이드 스트라이프·밑단 커프·스터럽도 복수 디테일로 분류합니다. 따라서 `팬츠 → 카고 팬츠 + 와이드 + 풀렝스 + 카고 포켓`처럼 조합됩니다.
+
+현재 배포 중인 `models/fashion_attribute_heads.pt`는 의류 crop **22,341개**로 학습한 데이터 보강 버전입니다.
+이전 버전(crop 4,789개)은 `models/archive/fashion_attribute_heads_v1_baseline.pt`에 보관되어 있습니다.
+
+| 검증 세트 | 지표 | 이전 버전 | **현재 배포** |
+|---|---|---:|---:|
+| 기존 검증 1,195 crop | mean macro-F1 | 0.6054 | **0.6726** |
+| 기존 검증 1,195 crop | mean score | 0.7482 | **0.7641** |
+| 신규 검증 1,716 crop | mean macro-F1 | 0.5337 | **0.6785** |
+| 신규 검증 1,716 crop | mean score | 0.7090 | **0.7651** |
+
+학습·검증 이미지 누수는 0건으로 확인했습니다. 실험 과정과 한계는 [docs/ATTRIBUTE_MODEL_REPORT.md](docs/ATTRIBUTE_MODEL_REPORT.md)에 정리했습니다.
+같은 공개 데이터 출처의 약지도 분할 결과이므로 실제 사용자 전신사진 성능을 보장하지 않으며, 신뢰도가 낮으면 세부 결과를 `분석 보류`로 남깁니다.
+
+임베딩 캐시는 배치마다 중간 저장되므로 CPU에서 시간이 오래 걸려도 마지막 완료 배치부터 재개합니다. `cache --reuse-caches ...` 옵션을 주면 같은 이미지의 기존 FashionSigLIP 특징도 다시 계산하지 않습니다. 헤드는 속성별 검증 손실이 가장 낮았던 시점을 각각 저장합니다.
+
+학습 체크포인트를 찾지 못하면 zero-shot fallback이 상의·원피스 14종과 하의 5종을 비교합니다. 다만 이 값은 전용 속성 헤드보다 거친 상대점수이므로 임시 분석으로 취급합니다.
+
+라벨 스키마가 변경됐으므로 이전 스키마로 만든 `fashion_attribute_heads.pt`는 재학습해야 합니다. 로더는 라벨 순서가 다른 체크포인트를 오류로 차단합니다.
+
+## DeepFashion으로 분석기 평가하기
+
+DeepFashion 이미지는 프로젝트에 포함하지 않습니다. 공식 사용 동의 절차를 거쳐 `DeepFashion-MultiModal`을 받은 뒤 `deepfashion_evaluation.ipynb`의 경로 셀에서 다음 파일 위치를 지정합니다.
+
+- 이미지 폴더
+- shape 라벨 파일
+- fabric 라벨 파일
+- color/pattern 라벨 파일
+
+평가 Notebook은 소매 길이, 하의 길이, 패턴, 소재, 네크라인의 응답률, 선택 정확도, 전체 정확도, macro F1과 대표 오답을 `outputs/deepfashion_evaluation.json`에 저장합니다. CPU에서는 `MAX_SAMPLES=20`처럼 작은 수로 먼저 확인하는 것을 권장합니다.
+
+## 속성 분석에서 crop을 다루는 방법
+
+FashionSigLIP 전처리는 crop을 `Resize(224, 224)`로 **정사각형으로 눌러** 종횡비를 없앱니다.
+그래서 임베딩만으로는 스키니와 와이드를 구분할 수 없습니다. 실제로 같은 옷을 가로·세로로
+2배 늘려도 임베딩 코사인 유사도가 0.997 이상이고 예측이 완전히 같습니다.
+핏·다리 모양·기장처럼 비율이 핵심인 속성이 가장 약한 이유가 이것입니다.
+
+그래서 두 가지를 맞춰 두었습니다.
+
+1. **기하 특징 경로 (현재 기본값은 꺼짐).** `geometry_vector()`가 crop의 종횡비와 "옷에 딱 맞게
+   잘랐는지" 여부를 만들어 임베딩 옆에 붙일 수 있습니다. 임베딩만 LayerNorm한 뒤 이어 붙여서
+   768차원에 묻히지 않게 합니다. **다만 지금 데이터로는 효과가 없어 기본값은 꺼져 있습니다**
+   (아래 참조).
+2. **학습과 추론의 crop 방식을 통일했습니다.** 학습 표본은 배경이 남은 bbox crop이므로
+   추론도 `_garment_crop()`으로 같게 자릅니다. 예전처럼 배경을 흰색으로 지우면 같은 옷의
+   임베딩이 크게 달라져(코사인 0.81) 신뢰도가 무너지고 `분석 보류`가 늘어납니다.
+   배경을 지우는 `_masked_crop()`은 색 분석에만 씁니다.
+
+3. **속성마다 다른 crop 처리를 씁니다 (`TASK_PREPROCESSING`).** 비율이 답을 정하는 속성은
+   종횡비를 보존한 `letterbox`, 넥라인·패턴처럼 국소 디테일이 답을 정하는 속성은 기존 `squash`를
+   씁니다. 레터박스는 여백만큼 옷이 작아져 세부 해상도가 떨어지기 때문입니다.
+   추론에서는 필요한 임베딩만 계산하므로, 두 방식을 모두 쓰는 체크포인트일 때만 crop당 2회
+   인코딩합니다.
+
+**학습과 추론이 기하 특징을 다르게 계산하면 효과가 사라집니다.** `tests/test_geometry_features.py`가
+같은 옷 영역에 대해 두 경로가 같은 값을 내는지 검사하므로, 한쪽만 고치면 테스트가 깨집니다.
+
+체크포인트는 두 버전을 모두 읽습니다. 버전 1(기하 특징 없음)은 예전 구조 그대로 로드하고,
+버전 2는 기하 특징을 받습니다. 그래서 배포 중인 모델을 바꾸지 않고도 새 코드를 쓸 수 있습니다.
+
+### crop 처리 A/B 결과 — 하이브리드 채택 (2026-08-20)
+
+같은 5,984 crop, 같은 설정으로 **시드 3개**(42/1337/2024)를 돌려 평균한 macro-F1입니다.
+단일 시드로는 판단할 수 없습니다 — 같은 조건 안에서도 표준편차가 ±0.021입니다.
+
+| 그룹 | squash | letterbox | **하이브리드** | vs squash |
+|---|---:|---:|---:|---:|
+| letterbox 배정 8개 | 0.639 | 0.650 | **0.650** | **+0.012** |
+| squash 배정 9개 | 0.583 | 0.571 | **0.583** | ±0.000 |
+| 전체 17개 | 0.609 | 0.608 | **0.615** | **+0.006** |
+
+레터박스만 쓰면 비율 속성이 오르는 대신 디테일 속성이 같은 폭으로 떨어져 전체는 제자리입니다
+(0.609 → 0.608). 속성별로 나누면 **좋은 쪽만 남습니다.**
+
+속성별로 보면 기장과 핏이 확실히 올랐습니다.
+
+| 속성 | squash | 하이브리드 | 변화 |
+|---|---:|---:|---:|
+| pant_length | 0.696 | 0.747 | **+0.051** |
+| lower_length | 0.765 | 0.803 | **+0.038** |
+| upper_length | 0.753 | 0.772 | +0.020 |
+| upper_fit | 0.448 | 0.469 | +0.020 |
+| pant_leg_shape | 0.553 | 0.529 | −0.023 |
+
+`upper_fit`은 가장 약한 헤드이고 추천 규칙 R-SIL-01이 직접 쓰는 값이라 의미가 큽니다.
+반대로 `pant_leg_shape`는 letterbox로 배정했지만 손해였습니다. 배정을 바꾸려면 검증셋에
+맞추는 것이 되므로, 별도 test set으로 확인한 뒤에 옮겨야 합니다.
+
+### 기하 특징 A/B 결과 — 효과 없음 (2026-08-20)
+
+같은 5,984 crop, 같은 설정(seed 42)으로 baseline과 +geometry를 학습해 검증 1,195 crop으로 비교했습니다.
+
+| | baseline | +geometry | 변화 |
+|---|---:|---:|---:|
+| 전체 평균 macro-F1 (17개 속성) | 0.603 | 0.610 | +0.006 |
+| **기하 의존 속성 8개** | **0.642** | **0.637** | **-0.005** |
+| 그 외 9개 | 0.569 | 0.585 | +0.016 |
+
+**목표한 속성이 오히려 소폭 나빠졌습니다.** 원인은 두 가지이고, 둘 다 종횡비라는 특징 선택 자체의 한계입니다.
+
+**(1) 바지 속성은 crop이 옷 단위가 아니다**
+
+| 속성 | 라벨 있는 표본 | 옷 단위 crop 비율 | 종횡비 표준편차 |
+|---|---:|---:|---:|
+| pant_leg_shape | 1,472 | **0%** | 0.107 |
+| pant_length | 948 | **0%** | 0.102 |
+
+전부 Fashion200K 상품 사진 **전체**를 crop으로 쓰기 때문에 종횡비가 옷이 아니라 카탈로그
+사진 규격을 나타냅니다. 헤드가 무시하도록 학습되는 것이 정상입니다.
+
+**(2) 상의는 crop이 옷 단위인데도 종횡비가 핏을 구분하지 못한다**
+
+`upper_fit`은 tight crop 비율이 97%인데도 나아지지 않았습니다. 라벨별 종횡비를 재보면 이유가 보입니다.
+
+| 라벨 | 표본 | 종횡비 평균 |
+|---|---:|---:|
+| 슬림핏 | 232 | −0.191 |
+| 레귤러핏 | 385 | −0.265 |
+| 오버핏 | 17 | **−0.372** |
+
+오버핏이 슬림핏보다 더 좁고 길쭉하게 나옵니다. 방향이 거꾸로입니다. **옷에 딱 맞춘 bbox의
+종횡비는 핏이 아니라 기장에 지배되기 때문입니다** — 오버핏 상의는 대개 더 길어서 bbox가
+세로로 늘어납니다. 네 속성 모두 라벨 간 평균의 폭이 라벨 내 표준편차보다 작아
+(upper_fit 0.180 < 0.262, silhouette 0.074 < 0.282, lower_fit 0.127 < 0.206,
+pant_leg_shape 0.089 < 0.106) 구분 신호가 없습니다.
+
+핏의 정의는 "옷이 **몸에 비해** 얼마나 넓은가"인데 종횡비는 "옷이 **자기 키에 비해** 얼마나
+넓은가"입니다. 올바른 값은 이미 `garment_attribute_analyzer._upper_fit`이 계산합니다
+(`옷 폭 ÷ 어깨너비`). 다만 학습 표본에는 몸 기준점이 없어 같은 값을 만들 수 없습니다.
+
+**다시 시도하려면 학습 표본에 몸 기준점을 붙이는 것이 전제입니다.**
+Fashionpedia 이미지에 MediaPipe Pose를 돌려 어깨·골반 좌표를 뽑고, 추론과 같은 정의의
+특징(`옷 폭 ÷ 어깨너비`)을 만들어야 합니다. 하의는 여기에 더해 옷 단위 bbox도 필요합니다.
+그 전까지 `TrainingConfig(use_geometry=True)`는 켜지 마세요. 그 뒤에도 단일 시드 비교는
+±0.02 수준의 노이즈가 있으므로 여러 시드로 확인해야 합니다.
+
+## 예상 착장샷 (생성 모델 연결 지점)
+
+추천 코디를 입은 모습을 생성 모델로 만들어 보여주는 자리를 웹에 미리 만들어 두었습니다.
+웹 기본값은 꺼져 있어 **"준비 중"** 안내가 나옵니다. 생성 모델 자체는 이미 붙어 있고
+(`src/catvton_tryon.py`, 아래 "가상 피팅 (CatVTON)" 참고), 웹에 연결하려면 다음 두 가지를 하면 됩니다.
+
+1. `web/pipeline.py`의 `VirtualTryOnAdapter(enabled=False)`를 `CatVTONTryOn()`으로 바꿉니다.
+   `synthesize()`는 `generate()`로 넘기므로 `generate()`를 재정의한 구현체가 그대로 동작합니다.
+2. `config.py`의 `ENABLE_VTON = True`로 바꿉니다.
+
+화면·API는 고칠 필요가 없습니다.
+
+| 경로 | 동작 |
+|---|---|
+| `GET /api/tryon` | 생성 가능 여부와 불가능한 사유 |
+| `POST /api/jobs/<요청 ID>/tryon/<순위>` | 해당 순위 코디의 착장샷 생성 (같은 순위는 한 번만 생성하고 재사용) |
+
+모델이 없을 때 `synthesize()`는 **추천 보드로 몰래 대체하지 않고** `TryOnNotReady`를 올립니다.
+합성하지 않은 이미지를 착장샷처럼 보여주면 사용자가 오해하기 때문입니다.
+Notebook이 쓰는 `generate()`는 예전처럼 추천 보드를 만듭니다.
 
 ## 가상 피팅 (CatVTON)
 
@@ -168,60 +626,40 @@ contrast 단독(흰옷인데 정상), 흰 배경에 묻힘(회색 매트로도 �
 - 세로로 긴 사진은 `pad_to_aspect`로 여백을 덧대 잘림을 막는다. 새 소스를 넣을 때는
   종횡비부터 확인할 것. 인스타 수집본은 중앙값이 약 1:2였다.
 
-## 속성 헤드 학습
+## 상품 데이터 (`data/products.csv`)
 
-`train_fashion_attribute_heads.ipynb`를 위에서부터 실행하면 된다.
+상의 40개 + 하의 40개, 총 80개입니다. 나중에 쇼핑몰 API로 교체할 때 **어댑터가 이 칼럼들을 채워주면
+추천 엔진은 그대로 동작합니다.** 지금 데이터는 규칙 43개가 전부 발동될 수 있도록 값을 일부러 흩어 놓았습니다.
 
-1. Fashionpedia + Fashion200K 통합 CSV를 쓰거나 같은 형식의 자체 CSV를 넣는다.
-2. 고정된 FashionSigLIP으로 의류 이미지를 한 번만 임베딩해 캐시한다.
-3. 카테고리·소매·기장·넥라인·칼라·핏·실루엣은 단일 분류, 패턴·소재·디테일은 복수 분류로 학습한다.
-4. 검증 정확도와 micro-F1을 계산하고 복수 분류 임계값을 검증 데이터에서 고른다.
-5. `models/fashion_attribute_heads.pt`에 저장하면 `main.ipynb`가 자동으로 쓴다.
+| 칼럼 | 쓰이는 곳 | 채워야 하는 이유 |
+|---|---|---|
+| `purposes` `season` `stock` `price` | 후보 필터 | 비면 그 상품이 후보에서 빠집니다 |
+| `formality` (1~5) | R-CTX-02 | 목적별 격식 범위와 비교합니다 |
+| `pattern` `pattern_scale` `pattern_contrast` | R-PAT-01·03·04 | 패턴이 있는데 scale이 비면 충돌 규칙이 잠듭니다 |
+| `material` | R-COL-02·11, R-MAT-02 | 같은 색일 때 소재 차이로 깊이를 만듭니다 |
+| `warmth` `breathability` `water_resistant` | R-WEA-02·03·04 | 상세 날씨를 입력해야만 쓰입니다 |
+| `activity_tags` | R-CAT-02 | `보행·여행·운동`이 활동성 점수에 들어갑니다 |
+| `visual_weight` `detail_level` | R-SIL-05, R-CMP-01 | 시각적 무게와 복잡도 균형 |
+| `waistline` `length` | R-SIL-03·06, R-ACC-05 | 실루엣 목표를 골랐을 때 분할점 계산 |
+| `neckline` (상의만) | R-ACC-04 | `V넥`·`터틀`·`하이넥`·`칼라`로 목걸이 안내가 갈립니다 |
 
-빈 라벨은 "없음"이 아니라 미주석으로 처리해 손실 계산에서 뺀다. 학습 표본이
-5장 미만인 라벨은 추론에서 자동 차단한다. 데이터는 Fashionpedia의 전문가 주석이
-중심이고, Fashion200K 상품 메타데이터로 셔츠·블라우스·폴로와 하의 세부 종류를 채웠다.
-([FashionSigLIP](https://huggingface.co/Marqo/marqo-fashionSigLIP) ·
-[Fashionpedia](https://github.com/cvdfoundation/fashionpedia) ·
-[Fashion200K](https://huggingface.co/datasets/Marqo/fashion200k))
+`color`는 `outfit_analyzer.COLOR_PALETTE`의 15색 중 하나여야 하고, `style`은
+`캐주얼·미니멀·포멀·스포티·스트리트·로맨틱` 중 하나여야 합니다. 벗어나면 색상 조화와 격식 계산이
+기본값으로 뭉개집니다. `tests/test_product_catalog_coverage.py`가 이 조건들을 검사하므로
+데이터를 바꾼 뒤 테스트를 돌리면 빠진 부분을 알려줍니다.
 
-스키마는 17개 헤드, 124개 라벨이다. 하의는 한 이름으로 뭉치지 않고 네 축으로 나눈다.
-종류 10종(슬랙스·치노·청바지·카고·조거·트랙·레깅스·하렘·요가·세일러), 다리 모양 8종
-(스키니·스트레이트·테이퍼드·페그·부츠컷·플레어·와이드·팔라초), 바지 기장 3종
-(카프리/7부·크롭/앵클·풀렝스), 그리고 구조 디테일을 복수로 붙인다. 그래서
-`팬츠 → 카고 팬츠 + 와이드 + 풀렝스 + 카고 포켓`처럼 조합된다.
+## 현재 한계
 
-현재 체크포인트는 의류 crop 5,984개(학습 4,789 / 검증 1,195)로 학습했다.
-전체 정확도는 대분류 87.0%, 하의 종류 70.6%, 다리 모양 57.0%, 바지 기장 74.3%,
-하의 디테일 micro-F1 88.1%. 신뢰도로 거른 결과만 보면 하의 종류 80.3%(응답률 72.6%),
-다리 모양 85.0%(32.1%), 바지 기장 81.9%(72.1%)다. 같은 출처의 약지도 분할이라
-실제 사용자 사진 성능을 보장하지 않고, 신뢰도가 낮으면 `분석 보류`로 남긴다.
-
-임베딩 캐시는 배치마다 저장되므로 CPU에서 오래 걸려도 마지막 배치부터 재개된다.
-`cache --reuse-caches`를 주면 기존 특징도 재계산하지 않는다. 라벨 스키마가 바뀌면
-이전 체크포인트는 재학습해야 한다. 로더가 라벨 순서가 다른 체크포인트를 막는다.
-
-## DeepFashion 평가
-
-DeepFashion 이미지는 저장소에 없다. 공식 동의 절차를 거쳐 `DeepFashion-MultiModal`을
-받은 뒤 `deepfashion_evaluation.ipynb`의 경로 셀에서 이미지 폴더와 shape / fabric /
-color-pattern 라벨 파일 위치를 지정한다. 소매 길이, 하의 길이, 패턴, 소재, 네크라인의
-응답률·선택 정확도·전체 정확도·macro F1과 대표 오답을
-`outputs/deepfashion_evaluation.json`에 남긴다. CPU라면 `MAX_SAMPLES=20`처럼
-작게 잡고 먼저 확인하는 편이 낫다.
-
-## 한계
-
-- 사진에서 계산한 체형 비율은 실제 신체 치수가 아니다.
-- 패션 규칙은 엔진에 연결돼 있지만 전문가 합의와 사용자 실험 전의 후보 규칙이다.
-- 추천 점수는 문서 100점 중 기본 80점을 쓴다. 보유 옷을 넣으면 활용도 5점이 붙고,
-  실측 사이즈 15점은 치수 데이터가 없어 빠진다. 미지원 규칙 7개는 실행 시 ID를 보여준다.
-- 속성 헤드는 클래스 불균형이 크다. 세일러 칼라·테이퍼드핏 같은 희소 라벨과
-  표본 5장 미만 라벨은 출력하지 않는다.
-- Fashion200K 보완 라벨은 사람이 재검수한 정답이 아니라 상품 메타데이터에서 만든
-  약지도 라벨이다. 한국 사용자 사진으로 외부 검증과 미세조정이 필요하다.
-- 슬랙스와 치노처럼 비슷한 하의는 원단·주름·허리가 가려지면 사진만으로 구분이 어렵다.
-- 상품 CSV는 추천 로직 검증용이며 실시간 재고를 반영하지 않는다.
-- 모델별 라이선스를 각각 확인해야 한다. FASHN Human Parser는 NVIDIA SegFormer,
-  FashionSigLIP은 Apache-2.0, CatVTON은 CC BY-NC-SA 4.0, DeepFashion 계열은
-  비상업 연구 전용이다.
+- 사진 기반 체형 비율은 실제 신체 치수가 아닙니다.
+- 패션 규칙 MD는 실제 엔진에 연결되어 있지만 아직 전문가 합의와 사용자 실험 전의 후보 규칙입니다.
+- 현재 추천 점수는 문서의 100점 중 기본 80점을 사용하고 보유 옷을 입력하면 활용도 5점이 추가됩니다. 실측 사이즈 15점은 사용자·상품 치수 데이터가 없어 제외합니다.
+- 미지원 규칙 7개는 실측 사이즈, 레이어 밑단, 추천 상품의 색 면적, 작은 액세서리 상품, 트렌드 데이터가 필요한 규칙이며 Notebook 실행 시 ID를 표시합니다.
+- 상품 CSV(80개)는 추천 로직 검증용으로 직접 만든 데이터이며 실제 쇼핑몰 상품이 아닙니다. `url` 칼럼은 비어 있습니다.
+- 현재 출력은 실제 가상 피팅이 아니라 명시적으로 표시된 추천 보드입니다.
+- IDM-VTON은 비상업 라이선스이므로 상용화 전 별도 모델·라이선스 검토가 필요합니다.
+- FASHN Human Parser는 NVIDIA SegFormer 라이선스, FashionSigLIP 체크포인트는 Apache-2.0 조건을 각각 확인해야 합니다.
+- DeepFashion 및 DeepFashion-MultiModal은 비상업 연구 전용이며 원본과 파생 데이터의 재배포가 제한됩니다.
+- 다중 속성 헤드는 실제 공개 데이터로 학습했지만 클래스 불균형이 큽니다. 세일러 칼라·테이퍼드핏·디테일 없음과 표본 5장 미만 라벨은 현재 체크포인트가 출력하지 않습니다.
+- Fashion200K 보완 라벨은 사람이 사진을 다시 검수한 정답이 아니라 상품 분류 메타데이터에서 만든 약지도 라벨입니다. 한국 사용자 전신사진으로 별도 외부 검증과 미세조정이 필요합니다.
+- 슬랙스와 치노처럼 외형이 비슷한 하의는 원단·주름·허리 구조가 가려지면 사진만으로 구분하기 어렵습니다. 종류·다리 모양·기장·디테일을 서로 다른 속성으로 해석해야 합니다.
+- 조드퍼·카펜터·스코트처럼 공개 표본이 부족하거나 점프수트처럼 전신 카테고리에 해당하는 이름은 이번 바지 세부 헤드에서 억지로 출력하지 않습니다.

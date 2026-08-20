@@ -6,6 +6,7 @@ import numpy as np
 from PIL import Image
 
 from config import FASHION_SIGLIP_MODEL_ID
+from fashion_attribute_model import PREPROCESS_SQUASH, apply_preprocess_mode
 
 
 class FashionClassifier:
@@ -65,13 +66,20 @@ class FashionClassifier:
             return {}
         return self.attribute_predictor.predict(image, tasks=tasks)
 
-    def _encode_image(self, image: str | Path | Image.Image):
+    def _encode_image(self, image: str | Path | Image.Image, mode: str = PREPROCESS_SQUASH):
         if not self.enabled or self.model is None or self.preprocess is None:
             return None
         pil = Image.open(image).convert("RGB") if isinstance(image, (str, Path)) else image.convert("RGB")
-        image_tensor = self.preprocess(pil).unsqueeze(0).to(self.device)
+        image_tensor = self.preprocess(apply_preprocess_mode(pil, mode)).unsqueeze(0).to(self.device)
         with self._torch.inference_mode():
             return self.model.encode_image(image_tensor, normalize=True).float()
+
+    @property
+    def head_preprocess_modes(self) -> list[str]:
+        """학습 헤드가 필요로 하는 crop 처리 방식들. zero-shot 프롬프트는 항상 기본 방식을 쓴다."""
+        if self.attribute_predictor is None:
+            return [PREPROCESS_SQUASH]
+        return list(self.attribute_predictor.required_modes)
 
     def _score_prompt_features(self, image_features, prompts: list[str]) -> np.ndarray:
         if image_features is None or self.model is None or self.tokenizer is None:
@@ -138,17 +146,29 @@ class FashionClassifier:
         tasks: list[str],
         prompt_groups: dict[str, dict[str, str]],
         fallback: str = "분석 보류",
+        geometry: list[float] | None = None,
     ):
         """한 번의 이미지 인코딩으로 학습 헤드와 zero-shot fallback을 모두 계산한다."""
         if not self.enabled:
             return {}, {group: (fallback, 0.0) for group in prompt_groups}
-        features = self._encode_image(image)
+        # zero-shot 프롬프트 점수는 FashionSigLIP 기본 전처리를 기준으로 만들어졌으므로
+        # 항상 기본 방식으로 인코딩하고, 학습 헤드가 요구하는 방식만 추가로 계산한다.
+        encoded = {PREPROCESS_SQUASH: self._encode_image(image, PREPROCESS_SQUASH)}
+        for mode in self.head_preprocess_modes:
+            if mode not in encoded:
+                encoded[mode] = self._encode_image(image, mode)
+        head_input = (
+            encoded[self.head_preprocess_modes[0]]
+            if len(self.head_preprocess_modes) == 1
+            else {mode: encoded[mode] for mode in self.head_preprocess_modes}
+        )
         learned = (
-            self.attribute_predictor.predict_features(features, tasks=tasks)
+            self.attribute_predictor.predict_features(head_input, tasks=tasks, geometry=geometry)
             if self.attribute_predictor is not None
             else {}
         )
-        zero_shot = self._best_mapped_labels_from_features(features, prompt_groups, fallback)
+        zero_shot_features = encoded[PREPROCESS_SQUASH]
+        zero_shot = self._best_mapped_labels_from_features(zero_shot_features, prompt_groups, fallback)
         return learned, zero_shot
 
     def best_label(self, image: str | Path | Image.Image, labels: list[str], fallback: str) -> str:

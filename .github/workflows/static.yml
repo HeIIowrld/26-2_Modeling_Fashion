@@ -1,0 +1,64 @@
+# 웹 화면(web/static)만 GitHub Pages에 배포한다.
+#
+# 주의: Pages는 정적 파일만 서빙한다. 분석·합성은 파이썬 서버(web/run_web.py)가 필요하므로
+# 여기 올라가는 것은 화면뿐이고, API는 별도로 띄운 서버가 담당한다. 그 주소는
+# 저장소 변수 FASHION_API_BASE로 넣으면 배포할 때 config.js에 새겨진다.
+#   Settings → Secrets and variables → Actions → Variables → New repository variable
+#   이름 FASHION_API_BASE / 값 예시 https://fashion-api.example.com
+# 값을 비워두면 화면은 뜨지만 "분석 서버에 연결하지 못했습니다" 안내가 표시된다.
+#
+# 서버 쪽에는 이 사이트 주소를 CORS 허용 목록에 넣어야 한다.
+#   FASHION_ALLOWED_ORIGINS="https://heiiowrld.github.io"
+#
+# 예전에는 path를 '.'로 두어 저장소 전체(모델 .pt, 학습 데이터, 패키지 zip까지)를
+# 배포했다. 사이트에서 쓰지도 않는 파일이라 web/static으로 좁혔다.
+name: Deploy static content to Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: 배포할 화면만 모으기
+        env:
+          API_BASE: ${{ vars.FASHION_API_BASE }}
+        run: |
+          mkdir -p _site
+          cp -r web/static/. _site/
+          # Jekyll 처리를 건너뛰게 한다.
+          touch _site/.nojekyll
+          # 정적 호스팅에는 API가 없다. 연산을 맡을 서버 주소를 새겨 넣는다.
+          printf 'window.FASHION_API_BASE = "%s";\n' "$API_BASE" > _site/config.js
+          echo "FASHION_API_BASE=${API_BASE:-(설정되지 않음)}"
+          ls -la _site
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

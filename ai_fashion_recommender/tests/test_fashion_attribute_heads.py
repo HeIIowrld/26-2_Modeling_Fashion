@@ -18,6 +18,7 @@ from fashion_attribute_dataset import (
     load_attribute_csv,
 )
 from fashion_attribute_model import (
+    GEOMETRY_DIM,
     AttributePrediction,
     FashionAttributePredictor,
     build_attribute_heads,
@@ -50,6 +51,7 @@ class FakeEncoder:
 
 class FakeBatchEncoder:
     model_id = "test-backbone"
+    preprocessing = "squash"
 
     def __init__(self):
         self.encoded_images = 0
@@ -261,9 +263,10 @@ class FashionAttributeHeadTests(unittest.TestCase):
                     valid[name] = torch.ones(count, dtype=torch.bool)
                 torch.save(
                     {
-                        "version": 1,
+                        "version": 2,
                         "backbone_model_id": "test-backbone",
                         "features": torch.randn((count, 8), generator=generator),
+                        "geometry": torch.randn((count, GEOMETRY_DIM), generator=generator),
                         "targets": targets,
                         "valid": valid,
                         "image_paths": [f"{index}.jpg" for index in range(count)],
