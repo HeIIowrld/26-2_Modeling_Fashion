@@ -1,0 +1,823 @@
+[
+  {
+    "image": "IMG_5455.png",
+    "gender": "남성",
+    "sharpness": 60.6,
+    "recognized": {
+      "상의": "블랙 티셔츠 (반팔)",
+      "하의": "블랙 하렘 팬츠 (와이드핏, 긴바지, 플리츠·턱)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6677115",
+        "category": "top",
+        "name": "소프트 헨리넥 반팔 티셔츠 [브라운]"
+      },
+      {
+        "id": "MS6639238",
+        "category": "bottom",
+        "name": "워시드 덕 코튼 페인터 팬츠 [로얄 블루]"
+      }
+    ],
+    "warnings": [],
+    "output": "IMG_5455_result.jpg",
+    "status": "완료",
+    "seconds": 81.8
+  },
+  {
+    "image": "IMG_5464.png",
+    "gender": "남성",
+    "sharpness": 376.5,
+    "recognized": {
+      "상의": "네이비 셔츠 (반팔)",
+      "하의": "네이비 청바지 (풀렝스, 포켓, 벨트)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6677115",
+        "category": "top",
+        "name": "소프트 헨리넥 반팔 티셔츠 [브라운]"
+      },
+      {
+        "id": "MS6639238",
+        "category": "bottom",
+        "name": "워시드 덕 코튼 페인터 팬츠 [로얄 블루]"
+      }
+    ],
+    "warnings": [],
+    "output": "IMG_5464_result.jpg",
+    "status": "완료",
+    "seconds": 48.1
+  },
+  {
+    "image": "IMG_5467.png",
+    "gender": "남성",
+    "sharpness": 286.1,
+    "recognized": {
+      "상의": "브라운 셔츠 (반팔)",
+      "하의": "블랙 하렘 팬츠 (와이드핏, 풀렝스, 플리츠)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6677115",
+        "category": "top",
+        "name": "소프트 헨리넥 반팔 티셔츠 [브라운]"
+      },
+      {
+        "id": "MS6639238",
+        "category": "bottom",
+        "name": "워시드 덕 코튼 페인터 팬츠 [로얄 블루]"
+      }
+    ],
+    "warnings": [],
+    "output": "IMG_5467_result.jpg",
+    "status": "완료",
+    "seconds": 48.3
+  },
+  {
+    "image": "IMG_5471.png",
+    "gender": "남성",
+    "sharpness": 378.5,
+    "recognized": {
+      "상의": "그레이 티셔츠 (반팔)",
+      "하의": "블랙 카고 팬츠 (풀렝스, 카고 포켓)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6677115",
+        "category": "top",
+        "name": "소프트 헨리넥 반팔 티셔츠 [브라운]"
+      },
+      {
+        "id": "MS6639238",
+        "category": "bottom",
+        "name": "워시드 덕 코튼 페인터 팬츠 [로얄 블루]"
+      }
+    ],
+    "warnings": [],
+    "output": "IMG_5471_result.jpg",
+    "status": "완료",
+    "seconds": 48.1
+  },
+  {
+    "image": "IMG_5483.jpeg",
+    "gender": "남성",
+    "sharpness": 807.1,
+    "recognized": {
+      "상의": "블랙 재킷 (긴팔)",
+      "하의": "브라운 청바지 (풀렝스, 포켓)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6677115",
+        "category": "top",
+        "name": "소프트 헨리넥 반팔 티셔츠 [브라운]"
+      },
+      {
+        "id": "MS6639238",
+        "category": "bottom",
+        "name": "워시드 덕 코튼 페인터 팬츠 [로얄 블루]"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5483_result.jpg",
+    "status": "완료",
+    "seconds": 48.2
+  },
+  {
+    "image": "IMG_5487.jpeg",
+    "gender": "남성",
+    "sharpness": 3642.8,
+    "recognized": {
+      "상의": "네이비 니트 (긴팔)",
+      "하의": "네이비 청바지 (와이드핏, 풀렝스, 카고 포켓)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6677115",
+        "category": "top",
+        "name": "소프트 헨리넥 반팔 티셔츠 [브라운]"
+      },
+      {
+        "id": "MS6639238",
+        "category": "bottom",
+        "name": "워시드 덕 코튼 페인터 팬츠 [로얄 블루]"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5487_result.jpg",
+    "status": "완료",
+    "seconds": 49.0
+  },
+  {
+    "image": "IMG_5491.jpeg",
+    "gender": "남성",
+    "sharpness": 1439.8,
+    "recognized": {
+      "상의": "화이트 셔츠 (긴팔)",
+      "하의": "블랙 카고 팬츠 (긴바지, 카고 포켓)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6677115",
+        "category": "top",
+        "name": "소프트 헨리넥 반팔 티셔츠 [브라운]"
+      },
+      {
+        "id": "MS6639238",
+        "category": "bottom",
+        "name": "워시드 덕 코튼 페인터 팬츠 [로얄 블루]"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5491_result.jpg",
+    "status": "완료",
+    "seconds": 48.2
+  },
+  {
+    "image": "IMG_5494.jpeg",
+    "gender": "남성",
+    "sharpness": 2862.0,
+    "recognized": {
+      "상의": "네이비 티셔츠 (긴팔)",
+      "하의": "블랙 하렘 팬츠 (풀렝스, 포켓)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6677115",
+        "category": "top",
+        "name": "소프트 헨리넥 반팔 티셔츠 [브라운]"
+      },
+      {
+        "id": "MS6639238",
+        "category": "bottom",
+        "name": "워시드 덕 코튼 페인터 팬츠 [로얄 블루]"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5494_result.jpg",
+    "status": "완료",
+    "seconds": 49.0
+  },
+  {
+    "image": "IMG_5497.jpeg",
+    "gender": "남성",
+    "sharpness": 2636.7,
+    "recognized": {
+      "상의": "버건디 티셔츠 (긴팔)",
+      "하의": "화이트 쇼츠 (풀렝스, 플리츠·턱)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6677115",
+        "category": "top",
+        "name": "소프트 헨리넥 반팔 티셔츠 [브라운]"
+      },
+      {
+        "id": "MS6639238",
+        "category": "bottom",
+        "name": "워시드 덕 코튼 페인터 팬츠 [로얄 블루]"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5497_result.jpg",
+    "status": "완료",
+    "seconds": 48.4
+  },
+  {
+    "image": "IMG_5507.jpeg",
+    "gender": "남성",
+    "sharpness": 673.9,
+    "recognized": {
+      "상의": "블랙 가디건 (긴팔)",
+      "하의": "브라운 팬츠 (긴바지, 포켓)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6677115",
+        "category": "top",
+        "name": "소프트 헨리넥 반팔 티셔츠 [브라운]"
+      },
+      {
+        "id": "MS6639238",
+        "category": "bottom",
+        "name": "워시드 덕 코튼 페인터 팬츠 [로얄 블루]"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5507_result.jpg",
+    "status": "완료",
+    "seconds": 48.3
+  },
+  {
+    "image": "IMG_5511.jpeg",
+    "gender": "남성",
+    "sharpness": 321.4,
+    "recognized": {
+      "상의": "블랙 재킷 (긴팔)",
+      "하의": "블랙 청바지 (풀렝스, 5포켓)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6677115",
+        "category": "top",
+        "name": "소프트 헨리넥 반팔 티셔츠 [브라운]"
+      },
+      {
+        "id": "MS6639238",
+        "category": "bottom",
+        "name": "워시드 덕 코튼 페인터 팬츠 [로얄 블루]"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5511_result.jpg",
+    "status": "완료",
+    "seconds": 47.4
+  },
+  {
+    "image": "IMG_5514.jpeg",
+    "gender": "남성",
+    "sharpness": 187.8,
+    "status": "포즈 실패",
+    "issues": [
+      "사람의 자세를 찾지 못했습니다."
+    ]
+  },
+  {
+    "image": "IMG_5518.jpeg",
+    "gender": "남성",
+    "sharpness": 268.1,
+    "recognized": {
+      "상의": "브라운 재킷 (긴팔)",
+      "하의": "블랙 청바지 (풀렝스, 5포켓, 카고 포켓)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6677115",
+        "category": "top",
+        "name": "소프트 헨리넥 반팔 티셔츠 [브라운]"
+      },
+      {
+        "id": "MS6639238",
+        "category": "bottom",
+        "name": "워시드 덕 코튼 페인터 팬츠 [로얄 블루]"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5518_result.jpg",
+    "status": "완료",
+    "seconds": 48.0
+  },
+  {
+    "image": "IMG_5521.jpeg",
+    "gender": "남성",
+    "sharpness": 513.7,
+    "recognized": {
+      "상의": "버건디 코트 (긴팔)",
+      "하의": "블랙 팬츠 (긴바지, 플리츠·턱)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6677115",
+        "category": "top",
+        "name": "소프트 헨리넥 반팔 티셔츠 [브라운]"
+      },
+      {
+        "id": "MS6639238",
+        "category": "bottom",
+        "name": "워시드 덕 코튼 페인터 팬츠 [로얄 블루]"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5521_result.jpg",
+    "status": "완료",
+    "seconds": 48.0
+  },
+  {
+    "image": "IMG_5524.jpeg",
+    "gender": "남성",
+    "sharpness": 659.4,
+    "recognized": {
+      "상의": "블랙 재킷 (긴팔)",
+      "하의": "블랙 청바지 (긴바지, 포켓, 벨트)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6677115",
+        "category": "top",
+        "name": "소프트 헨리넥 반팔 티셔츠 [브라운]"
+      },
+      {
+        "id": "MS6639238",
+        "category": "bottom",
+        "name": "워시드 덕 코튼 페인터 팬츠 [로얄 블루]"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5524_result.jpg",
+    "status": "완료",
+    "seconds": 47.4
+  },
+  {
+    "image": "IMG_5383.jpeg",
+    "gender": "여성",
+    "sharpness": 286.6,
+    "recognized": {
+      "상의": "블랙 탑 (긴팔)",
+      "하의": "블랙 청바지 (풀렝스, 5포켓)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6797005",
+        "category": "top",
+        "name": "Days Comfort Fit Shirt_White"
+      },
+      {
+        "id": "MS6928699",
+        "category": "bottom",
+        "name": "썸머 마이크로 미니 데님 쇼츠 (샌드블루)"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다.",
+      "하의 기장 차이가 큽니다(현재보다 3단계 짧음: → 쇼츠·미니 기장). 마스크가 원래 옷 모양이라 다리 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5383_result.jpg",
+    "status": "완료",
+    "seconds": 48.0
+  },
+  {
+    "image": "IMG_5387.jpeg",
+    "gender": "여성",
+    "sharpness": 198.1,
+    "recognized": {
+      "상의": "버건디 후드티 (긴팔)",
+      "하의": "그레이 카고 팬츠 (풀렝스, 카고 포켓)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6797005",
+        "category": "top",
+        "name": "Days Comfort Fit Shirt_White"
+      },
+      {
+        "id": "MS6928699",
+        "category": "bottom",
+        "name": "썸머 마이크로 미니 데님 쇼츠 (샌드블루)"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다.",
+      "하의 기장 차이가 큽니다(현재보다 3단계 짧음: → 쇼츠·미니 기장). 마스크가 원래 옷 모양이라 다리 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5387_result.jpg",
+    "status": "완료",
+    "seconds": 48.5
+  },
+  {
+    "image": "IMG_5390.jpeg",
+    "gender": "여성",
+    "sharpness": 231.0,
+    "recognized": {
+      "상의": "그레이 상의 (긴팔)",
+      "하의": "화이트 반바지 (긴바지, 프릴·러플, 벨트)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6797005",
+        "category": "top",
+        "name": "Days Comfort Fit Shirt_White"
+      },
+      {
+        "id": "MS6928699",
+        "category": "bottom",
+        "name": "썸머 마이크로 미니 데님 쇼츠 (샌드블루)"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다.",
+      "하의 기장 차이가 큽니다(현재보다 3단계 짧음: → 쇼츠·미니 기장). 마스크가 원래 옷 모양이라 다리 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5390_result.jpg",
+    "status": "완료",
+    "seconds": 48.5
+  },
+  {
+    "image": "IMG_5394.jpeg",
+    "gender": "여성",
+    "sharpness": 307.4,
+    "recognized": {
+      "상의": "카키 재킷 (긴팔)",
+      "하의": "블랙 팬츠 (긴바지, 벨트)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6797005",
+        "category": "top",
+        "name": "Days Comfort Fit Shirt_White"
+      },
+      {
+        "id": "MS6928699",
+        "category": "bottom",
+        "name": "썸머 마이크로 미니 데님 쇼츠 (샌드블루)"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다.",
+      "하의 기장 차이가 큽니다(현재보다 3단계 짧음: → 쇼츠·미니 기장). 마스크가 원래 옷 모양이라 다리 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5394_result.jpg",
+    "status": "완료",
+    "seconds": 48.8
+  },
+  {
+    "image": "IMG_5397.jpeg",
+    "gender": "여성",
+    "sharpness": 242.3,
+    "recognized": {
+      "상의": "블랙 탑 (민소매)",
+      "하의": "블랙 스커트 (롱·맥시 기장, 지퍼)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6797005",
+        "category": "top",
+        "name": "Days Comfort Fit Shirt_White"
+      },
+      {
+        "id": "MS6928699",
+        "category": "bottom",
+        "name": "썸머 마이크로 미니 데님 쇼츠 (샌드블루)"
+      }
+    ],
+    "warnings": [
+      "하의 기장 차이가 큽니다(현재보다 3단계 짧음: → 쇼츠·미니 기장). 마스크가 원래 옷 모양이라 다리 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5397_result.jpg",
+    "status": "완료",
+    "seconds": 48.7
+  },
+  {
+    "image": "IMG_5401.jpeg",
+    "gender": "여성",
+    "sharpness": 86.8,
+    "recognized": {
+      "상의": "블랙 베스트 (민소매)",
+      "하의": "그레이 하렘 팬츠 (와이드핏, 긴바지, 플리츠)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6797005",
+        "category": "top",
+        "name": "Days Comfort Fit Shirt_White"
+      },
+      {
+        "id": "MS6928699",
+        "category": "bottom",
+        "name": "썸머 마이크로 미니 데님 쇼츠 (샌드블루)"
+      }
+    ],
+    "warnings": [
+      "하의 기장 차이가 큽니다(현재보다 3단계 짧음: → 쇼츠·미니 기장). 마스크가 원래 옷 모양이라 다리 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5401_result.jpg",
+    "status": "완료",
+    "seconds": 48.5
+  },
+  {
+    "image": "IMG_5404.jpeg",
+    "gender": "여성",
+    "sharpness": 162.5,
+    "recognized": {
+      "상의": "블랙 블라우스 (반팔)",
+      "하의": "블랙 스커트 (롱·맥시 기장, 플리츠·턱)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6797005",
+        "category": "top",
+        "name": "Days Comfort Fit Shirt_White"
+      },
+      {
+        "id": "MS6928699",
+        "category": "bottom",
+        "name": "썸머 마이크로 미니 데님 쇼츠 (샌드블루)"
+      }
+    ],
+    "warnings": [
+      "하의 기장 차이가 큽니다(현재보다 3단계 짧음: → 쇼츠·미니 기장). 마스크가 원래 옷 모양이라 다리 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5404_result.jpg",
+    "status": "완료",
+    "seconds": 48.2
+  },
+  {
+    "image": "IMG_5410.jpeg",
+    "gender": "여성",
+    "sharpness": 1231.1,
+    "recognized": {
+      "상의": "그레이 티셔츠 (긴팔)",
+      "하의": "블랙 하렘 팬츠 (와이드핏, 풀렝스, 드로스트링)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6797005",
+        "category": "top",
+        "name": "Days Comfort Fit Shirt_White"
+      },
+      {
+        "id": "MS6928699",
+        "category": "bottom",
+        "name": "썸머 마이크로 미니 데님 쇼츠 (샌드블루)"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다.",
+      "하의 기장 차이가 큽니다(현재보다 3단계 짧음: → 쇼츠·미니 기장). 마스크가 원래 옷 모양이라 다리 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5410_result.jpg",
+    "status": "완료",
+    "seconds": 48.8
+  },
+  {
+    "image": "IMG_5413.jpeg",
+    "gender": "여성",
+    "sharpness": 152.7,
+    "recognized": {
+      "상의": "베이지 탑 (민소매)",
+      "하의": "네이비 스커트 (롱·맥시 기장, 플리츠·턱)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6797005",
+        "category": "top",
+        "name": "Days Comfort Fit Shirt_White"
+      },
+      {
+        "id": "MS6928699",
+        "category": "bottom",
+        "name": "썸머 마이크로 미니 데님 쇼츠 (샌드블루)"
+      }
+    ],
+    "warnings": [
+      "하의 기장 차이가 큽니다(현재보다 3단계 짧음: → 쇼츠·미니 기장). 마스크가 원래 옷 모양이라 다리 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5413_result.jpg",
+    "status": "완료",
+    "seconds": 49.0
+  },
+  {
+    "image": "IMG_5417.jpeg",
+    "gender": "여성",
+    "sharpness": 72.2,
+    "recognized": {
+      "상의": "베이지 원피스 (민소매)",
+      "하의": "베이지 원피스 (롱·맥시 기장)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6797005",
+        "category": "top",
+        "name": "Days Comfort Fit Shirt_White"
+      },
+      {
+        "id": "MS6928699",
+        "category": "bottom",
+        "name": "썸머 마이크로 미니 데님 쇼츠 (샌드블루)"
+      }
+    ],
+    "warnings": [
+      "하의 기장 차이가 큽니다(현재보다 3단계 짧음: → 쇼츠·미니 기장). 마스크가 원래 옷 모양이라 다리 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5417_result.jpg",
+    "status": "완료",
+    "seconds": 49.3
+  },
+  {
+    "image": "IMG_5420.jpeg",
+    "gender": "여성",
+    "sharpness": 120.5,
+    "recognized": {
+      "상의": "화이트 티셔츠 (민소매)",
+      "하의": "네이비 팬츠 (와이드핏, 풀렝스, 드로스트링)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6797005",
+        "category": "top",
+        "name": "Days Comfort Fit Shirt_White"
+      },
+      {
+        "id": "MS6928699",
+        "category": "bottom",
+        "name": "썸머 마이크로 미니 데님 쇼츠 (샌드블루)"
+      }
+    ],
+    "warnings": [
+      "하의 기장 차이가 큽니다(현재보다 3단계 짧음: → 쇼츠·미니 기장). 마스크가 원래 옷 모양이라 다리 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5420_result.jpg",
+    "status": "완료",
+    "seconds": 49.1
+  },
+  {
+    "image": "IMG_5424.jpeg",
+    "gender": "여성",
+    "sharpness": 319.2,
+    "recognized": {
+      "상의": "화이트 상의 (7부 소매)",
+      "하의": "블랙 반바지 (긴바지, 프릴·러플, 벨트)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6797005",
+        "category": "top",
+        "name": "Days Comfort Fit Shirt_White"
+      },
+      {
+        "id": "MS6928699",
+        "category": "bottom",
+        "name": "썸머 마이크로 미니 데님 쇼츠 (샌드블루)"
+      }
+    ],
+    "warnings": [
+      "하의 기장 차이가 큽니다(현재보다 3단계 짧음: → 쇼츠·미니 기장). 마스크가 원래 옷 모양이라 다리 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5424_result.jpg",
+    "status": "완료",
+    "seconds": 49.1
+  },
+  {
+    "image": "IMG_5527.jpeg",
+    "gender": "여성",
+    "sharpness": 716.6,
+    "recognized": {
+      "상의": "블랙 재킷 (긴팔)",
+      "하의": "블랙 하렘 팬츠 (긴바지, 플리츠·턱)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6797005",
+        "category": "top",
+        "name": "Days Comfort Fit Shirt_White"
+      },
+      {
+        "id": "MS6928699",
+        "category": "bottom",
+        "name": "썸머 마이크로 미니 데님 쇼츠 (샌드블루)"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다.",
+      "하의 기장 차이가 큽니다(현재보다 3단계 짧음: → 쇼츠·미니 기장). 마스크가 원래 옷 모양이라 다리 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5527_result.jpg",
+    "status": "완료",
+    "seconds": 49.3
+  },
+  {
+    "image": "IMG_5531.jpeg",
+    "gender": "여성",
+    "sharpness": 807.4,
+    "recognized": {
+      "상의": "블랙 재킷 (긴팔)",
+      "하의": "블랙 청바지 (긴바지, 포켓)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6797005",
+        "category": "top",
+        "name": "Days Comfort Fit Shirt_White"
+      },
+      {
+        "id": "MS6928699",
+        "category": "bottom",
+        "name": "썸머 마이크로 미니 데님 쇼츠 (샌드블루)"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다.",
+      "하의 기장 차이가 큽니다(현재보다 3단계 짧음: → 쇼츠·미니 기장). 마스크가 원래 옷 모양이라 다리 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5531_result.jpg",
+    "status": "완료",
+    "seconds": 48.2
+  },
+  {
+    "image": "IMG_5534.jpeg",
+    "gender": "여성",
+    "sharpness": 1225.3,
+    "recognized": {
+      "상의": "화이트 티셔츠 (긴팔)",
+      "하의": "베이지 청바지 (롱·맥시 기장, 5포켓, 플리츠·턱)"
+    },
+    "body_shape": "상체 강조형",
+    "products": [
+      {
+        "id": "MS6797005",
+        "category": "top",
+        "name": "Days Comfort Fit Shirt_White"
+      },
+      {
+        "id": "MS6928699",
+        "category": "bottom",
+        "name": "썸머 마이크로 미니 데님 쇼츠 (샌드블루)"
+      }
+    ],
+    "warnings": [
+      "소매 길이 차이가 큽니다(현재보다 2단계 짧음: → 반팔). 마스크가 원래 옷 모양이라 팔 영역이 옷 텍스처로 채워질 수 있습니다.",
+      "하의 기장 차이가 큽니다(현재보다 3단계 짧음: → 쇼츠·미니 기장). 마스크가 원래 옷 모양이라 다리 영역이 옷 텍스처로 채워질 수 있습니다."
+    ],
+    "output": "IMG_5534_result.jpg",
+    "status": "완료",
+    "seconds": 48.0
+  }
+]
