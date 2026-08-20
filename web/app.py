@@ -1,6 +1,6 @@
 """AI 코디 추천 웹 서버.
 
-저장소 루트에서 `python run_web.py`로 실행한다.
+저장소 루트에서 `python web/run_web.py`로 실행한다.
 직접 띄우려면 `python -m uvicorn app:app --reload --app-dir web`.
 """
 

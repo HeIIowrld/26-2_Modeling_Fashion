@@ -7,23 +7,23 @@
 저장소 루트에서 실행합니다.
 
 ```bash
-python run_web.py
+python web/run_web.py
 ```
 
 켜기 전에 파이썬 버전·패키지·데이터 파일을 점검하고, 문제가 있으면 무엇을 고쳐야 하는지 알려줍니다.
-서버를 켜지 않고 점검만 하려면 `python run_web.py --check`.
+서버를 켜지 않고 점검만 하려면 `python web/run_web.py --check`.
 
 | 상황 | 명령 |
 | --- | --- |
-| 포트 지정 | `python run_web.py --port 9000` |
-| 다른 기기에서 접속 | `python run_web.py --lan` |
-| 브라우저 자동 실행 끄기 | `python run_web.py --no-browser` |
+| 포트 지정 | `python web/run_web.py --port 9000` |
+| 다른 기기에서 접속 | `python web/run_web.py --lan` |
+| 브라우저 자동 실행 끄기 | `python web/run_web.py --no-browser` |
 
 ## 파일
 
 | 파일 | 하는 일 |
 | --- | --- |
-| `run_web.py` | 환경 점검 후 uvicorn 기동. 루트 `run_web.py`가 이리로 넘겨줍니다 |
+| `run_web.py` | 실행 진입점. 환경 점검 후 uvicorn 기동 |
 | `app.py` | FastAPI 라우트, 업로드 처리, 세션 사진 보관·삭제 |
 | `pipeline.py` | 분석 모듈을 Notebook과 같은 순서로 호출 |
 | `static/` | 화면 (`index.html`, `styles.css`, `app.js`) |
