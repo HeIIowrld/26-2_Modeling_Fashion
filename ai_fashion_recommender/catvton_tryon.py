@@ -22,6 +22,7 @@ CatVTON(비상업 CC BY-NC-SA 4.0)의 디퓨전 파이프라인으로 추천 상
   생성하고 더 선명한 쪽을 선택한다(README 7단계의 "기준 미달 시에만 재생성" 규칙).
 """
 
+import json
 import sys
 from pathlib import Path
 
@@ -46,6 +47,86 @@ GARMENT_TARGET_LABELS = {
 # 인페인팅 마스크에서 항상 제외해 원본을 보존하는 라벨:
 # 1=face, 2=hair, 8=bag, 9=hat, 11=glasses, 13=hands, 15=feet
 PROTECT_LABELS = (1, 2, 8, 9, 11, 13, 15)
+
+# 하의 기장 순서. VTON은 마스크 모양대로 옷을 그리는 경향이 강해서, 원래 옷보다
+# 짧은 하의를 입히면 마스크 하단(원래 바지가 있던 종아리)을 맨다리가 아니라
+# 옷 비슷한 것으로 채운다(퍼지 레그워머·니삭스 환각).
+BOTTOM_LENGTH_ORDER = {
+    "쇼츠·미니 기장": 0,
+    "미니 기장": 0,
+    "반바지": 0,
+    "무릎 기장": 1,
+    "무릎 기장 바지": 1,
+    "미디·7부 기장": 2,
+    "미디 기장": 2,
+    "크롭·7부 바지": 2,
+    "롱·긴바지 기장": 3,
+    "롱·맥시 기장": 3,
+    "긴바지": 3,
+}
+# 학습된 category 헤드는 상품 레퍼런스에서 신뢰도가 높다(쇼츠 0.92 / 팬츠 0.88).
+# 반면 pant_length 헤드는 상품 crop에서 거의 항상 보류라 기장 판정에 쓰지 않는다.
+SHORT_BOTTOM_CATEGORIES = {"쇼츠"}
+
+SLEEVE_LENGTH_ORDER = {"민소매": 0, "반팔": 1, "7부 소매": 2, "긴팔": 3}
+
+# 실측 기준(female_012 통제 실험): gap=1은 정상 합성, gap=3은 마스크 전체가
+# 옷 텍스처로 채워지는 실패. gap=2는 미검증이라 보수적으로 경고에 포함한다.
+UNRELIABLE_LENGTH_GAP = 2
+
+
+def _length_gap(order: dict[str, int], current: str, target: str) -> int | None:
+    first = order.get((current or "").replace(" 추정", ""))
+    second = order.get((target or "").replace(" 추정", ""))
+    if first is None or second is None:
+        return None
+    return first - second
+
+
+def bottom_length_gap(current_length: str, target_length: str) -> int | None:
+    """원래 하의 대비 새 하의가 몇 단계 짧은지 센다. 판정 불가면 None.
+
+    양수면 새 옷이 더 짧아 맨다리를 새로 그려야 하는 어려운 합성이다.
+    """
+    return _length_gap(BOTTOM_LENGTH_ORDER, current_length, target_length)
+
+
+def sleeve_length_gap(current_length: str, target_length: str) -> int | None:
+    """원래 상의 대비 새 상의 소매가 몇 단계 짧은지 센다.
+
+    하의와 같은 원리다. 마스크가 긴팔 모양이면 반팔 상품을 넣어도 모델이
+    소매를 채워 긴팔로 그린다(female_012 A안에서 확인).
+    """
+    return _length_gap(SLEEVE_LENGTH_ORDER, current_length, target_length)
+
+
+def classify_reference_bottom_length(classifier, image) -> str:
+    """상품 레퍼런스 이미지의 하의 기장을 학습된 속성 헤드로 추정한다.
+
+    상품 crop에서는 category 헤드가 가장 신뢰도가 높고(쇼츠 0.92), lower_length는
+    보조로만 쓴다. 판정하지 못하면 빈 문자열을 돌려 게이트를 건너뛴다.
+    """
+    if classifier is None or not getattr(classifier, "trained_attributes_enabled", False):
+        return ""
+    prediction = classifier.predict_trained_attributes(
+        image, tasks=["category", "lower_length"]
+    )
+    category = prediction.get("category")
+    if category and category.accepted and category.labels[0] in SHORT_BOTTOM_CATEGORIES:
+        return "쇼츠·미니 기장"
+    length = prediction.get("lower_length")
+    if length and length.accepted:
+        return length.labels[0]
+    return ""
+
+
+def classify_reference_sleeve_length(classifier, image) -> str:
+    """상품 레퍼런스의 소매 길이를 추정한다. 판정 불가면 빈 문자열."""
+    if classifier is None or not getattr(classifier, "trained_attributes_enabled", False):
+        return ""
+    prediction = classifier.predict_trained_attributes(image, tasks=["sleeve_length"])
+    sleeve = prediction.get("sleeve_length")
+    return sleeve.labels[0] if sleeve and sleeve.accepted else ""
 
 
 def _solidify_mask(mask: np.ndarray) -> np.ndarray:
@@ -121,6 +202,33 @@ def _paste_on_white(rgb: np.ndarray, mask: np.ndarray, padding: int = 16) -> Ima
     return Image.fromarray(np.clip(blended, 0, 255).astype(np.uint8))
 
 
+def evaluate_garment_reference(
+    rgb: np.ndarray, mask: np.ndarray, *, target_pixels: int
+) -> dict[str, float]:
+    """레퍼런스 의류 조각이 합성에 쓸 만한지 수치화한다.
+
+    CatVTON은 이 조각을 조건 입력 해상도로 리사이즈하므로, 원본에 실제로 존재하는
+    의류 픽셀 수가 조건 해상도에 크게 못 미치면 업스케일된 흐린 텍스처가 들어가고
+    결과가 뭉개지거나 시스루로 렌더링된다. 전신 착용컷에서 잘라낸 작은 상의 조각이
+    대표적이다(MS6797005: coverage 0.15 → 여성 10장 전원 시스루).
+
+    - coverage: 의류 픽셀 수 / 조건 입력 픽셀 수. 1.0 이상이면 축소, 낮을수록 확대.
+    - fill: 바운딩 박스 대비 의류 비율. 낮으면 구겨지거나 팔이 벌어진 착용 자세다.
+    - contrast: 흰 배경과의 밝기 차. 낮으면 흰 옷이 배경에 묻혀 실루엣이 흐려진다.
+    """
+    pixels = int(mask.sum())
+    if pixels == 0:
+        return {"garment_pixels": 0.0, "coverage": 0.0, "fill": 0.0, "contrast": 0.0}
+    ys, xs = np.where(mask)
+    bbox = float((ys.max() - ys.min() + 1) * (xs.max() - xs.min() + 1))
+    return {
+        "garment_pixels": float(pixels),
+        "coverage": pixels / float(target_pixels),
+        "fill": pixels / bbox,
+        "contrast": float(255.0 - rgb[mask].astype(np.float32).mean()),
+    }
+
+
 def _odd_blur_radius(height: int, divisor: int = 50) -> int:
     """CatVTON inference.py의 repaint()와 동일한 규칙: 세로 길이에 비례한 홀수 반경."""
     radius = max(3, height // divisor)
@@ -145,6 +253,7 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         min_sharpness: float = 25.0,
         repaint_inset: bool = True,
         repaint_blur_divisor: int = 150,
+        min_reference_coverage: float = 0.25,
     ) -> None:
         super().__init__(enabled=True)
         self.num_inference_steps = num_inference_steps
@@ -162,6 +271,10 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         # (마스크 경계 중심의 대칭 블러, height//50 반경)을 그대로 쓴다.
         self.repaint_inset = repaint_inset
         self.repaint_blur_divisor = repaint_blur_divisor
+        self.min_reference_coverage = min_reference_coverage
+        self.reference_reports: dict[str, dict[str, float]] = {}
+        self.last_warnings: list[str] = []
+        self._quality_cache_data: dict[str, dict[str, float]] | None = None
         self._device_request = device
         self._pipeline = None
         self._garment_parser = None  # False면 사용 불가로 확정, None이면 미확인
@@ -227,6 +340,11 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             return original
         cache_path = self.garment_cache_dir / garment_path.name
         if cache_path.exists():
+            # 정제 결과를 재사용할 때도 품질 지표는 사이드카에서 복원해 게이트가 동작하게 한다.
+            cached_report = self._quality_cache().get(garment_path.name)
+            if cached_report:
+                self.reference_reports[garment_path.name] = cached_report
+                self._warn_low_coverage(garment_path.name, cached_report)
             return Image.open(cache_path).convert("RGB")
         parser = self._get_garment_parser()
         if parser is None or parser.backend != "fashn-human-parser":
@@ -245,13 +363,75 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             mask = np.logical_and(mask, ~occluders)
             if mask.sum() < 0.02 * mask.size:
                 return original
-            cleaned = _paste_on_white(np.array(original), mask)
+            rgb = np.array(original)
+            report = evaluate_garment_reference(
+                rgb, mask, target_pixels=self.width * self.height
+            )
+            self.reference_reports[garment_path.name] = report
+            self._warn_low_coverage(garment_path.name, report)
+            cleaned = _paste_on_white(rgb, mask)
         except Exception as exc:  # 정제 실패 시 원본으로 안전하게 대체한다.
             print(f"상품 이미지 정제 실패({garment_path.name}), 원본을 사용합니다: {exc}")
             return original
         self.garment_cache_dir.mkdir(parents=True, exist_ok=True)
         cleaned.save(cache_path, quality=95)
+        self._store_quality(garment_path.name, report)
         return cleaned
+
+    def _quality_cache(self) -> dict[str, dict[str, float]]:
+        if self._quality_cache_data is None:
+            path = self.garment_cache_dir / "_reference_quality.json"
+            try:
+                self._quality_cache_data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                self._quality_cache_data = {}
+        return self._quality_cache_data
+
+    def _store_quality(self, name: str, report: dict[str, float]) -> None:
+        cache = self._quality_cache()
+        cache[name] = report
+        path = self.garment_cache_dir / "_reference_quality.json"
+        try:
+            path.write_text(json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf-8")
+        except OSError as exc:  # 캐시 저장 실패가 합성을 막아서는 안 된다.
+            print(f"레퍼런스 품질 캐시 저장 실패: {exc}")
+
+    def _warn_low_coverage(self, name: str, report: dict[str, float]) -> None:
+        if report.get("coverage", 1.0) < self.min_reference_coverage:
+            self._add_warning(
+                f"레퍼런스 해상도 부족({name}): coverage={report['coverage']:.2f} < "
+                f"{self.min_reference_coverage} — 전신 착용컷에서 잘라낸 조각일 가능성이 큽니다. "
+                "시스루·뭉개짐이 나올 수 있습니다."
+            )
+
+    def _add_warning(self, message: str) -> None:
+        self.last_warnings.append(message)
+        print(message)
+
+    def _check_length_gap(self, garment: Image.Image, category: str, context: dict) -> None:
+        """새 옷이 원래 옷보다 짧으면 마스크 모양 프라이어로 합성이 깨진다는 것을 알린다.
+
+        마스크는 원래 옷 기준으로 만들어지므로, 더 짧은 옷을 넣으면 모델이 남는
+        마스크 영역을 맨살이 아니라 옷 텍스처로 채운다(긴바지→쇼츠에서 다리 전체가
+        니트로 덮이는 실패를 통제 실험으로 확인).
+        """
+        classifier = context.get("classifier")
+        outfit = context.get("outfit")
+        if classifier is None or outfit is None:
+            return
+        if category == "bottom":
+            target = classify_reference_bottom_length(classifier, garment)
+            gap = bottom_length_gap(getattr(outfit, "bottom_length", ""), target)
+            label, unit = "하의 기장", "다리"
+        else:
+            target = classify_reference_sleeve_length(classifier, garment)
+            gap = sleeve_length_gap(getattr(outfit, "sleeve_length", ""), target)
+            label, unit = "소매 길이", "팔"
+        if gap is not None and gap >= UNRELIABLE_LENGTH_GAP:
+            self._add_warning(
+                f"{label} 차이가 큽니다(현재보다 {gap}단계 짧음: → {target}). "
+                f"마스크가 원래 옷 모양이라 {unit} 영역이 옷 텍스처로 채워질 수 있습니다."
+            )
 
     def _blur_mask(self, mask: Image.Image, radius: int) -> Image.Image:
         return mask.filter(ImageFilter.GaussianBlur(radius)) if radius > 0 else mask
@@ -337,8 +517,13 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         upper/lower_style_mask가 함께 오면 그것을 우선 사용한다(원래 옷 실루엣
         잔류와 소매·기장 변경 문제를 막는다). "segmentation"이 함께 오면
         얼굴·헤어·손·발·가방 영역을 마스크에서 제외해 원본을 보존한다.
+
+        "outfit"(OutfitAnalysis)과 "classifier"(FashionClassifier)를 함께 넘기면
+        합성 신뢰도를 점검해 `last_warnings`에 사유를 남긴다. 결과 이미지 옆에
+        이 경고를 함께 보여주면 사용자가 깨진 합성을 사실로 오해하지 않는다.
         """
         context = context or {}
+        self.last_warnings = []
         person = Image.open(person_image).convert("RGB")
 
         jobs = []  # (garment 이미지 경로, 원본 크기 마스크, 카테고리)
@@ -371,6 +556,7 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         result = resize_and_crop(person, (self.width, self.height))
         for garment_path, raw_mask, category in jobs:
             garment = self._prepare_garment_reference(garment_path, category)
+            self._check_length_gap(garment, category, context)
             mask_np = _dilate_mask(_solidify_mask(raw_mask))
             if protect is not None:
                 mask_np[protect] = 0

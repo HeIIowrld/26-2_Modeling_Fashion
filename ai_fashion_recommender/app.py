@@ -155,8 +155,12 @@ def recommend_outfits(image_path, purpose, style, budget, scope, season):
             "upper_style_mask": parsed.get("upper_style_mask"),
             "lower_style_mask": parsed.get("lower_style_mask"),
             "segmentation": parsed.get("segmentation"),
+            # 합성 신뢰도 점검(레퍼런스 해상도·기장 차이)에 필요한 재료
+            "outfit": outfit,
+            "classifier": pipeline["outfit"].classifier,
         },
     )
+    tryon_warnings = getattr(pipeline["vton"], "last_warnings", [])
 
     gallery = []
     for rec in recommendations:
@@ -165,10 +169,15 @@ def recommend_outfits(image_path, purpose, style, budget, scope, season):
             if image:
                 gallery.append((image, f"{rec.rank}위 · {product.name} · {product.price:,}원"))
 
+    analysis = _analysis_markdown(quality, pose, outfit)
+    if tryon_warnings:
+        analysis += "\n\n#### 합성 결과 주의\n" + "\n".join(
+            f"- ⚠️ {warning}" for warning in tryon_warnings
+        )
     return (
         str(board_path),
         gallery,
-        _analysis_markdown(quality, pose, outfit),
+        analysis,
         _recommendations_markdown(recommendations),
     )
 
