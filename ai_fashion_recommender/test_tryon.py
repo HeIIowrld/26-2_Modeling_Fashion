@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-"""collect/ 파이프라인으로 모은 유튜브 룩북 프레임으로 추천~합성 파이프라인을 검증한다.
+"""인스타 수집 전신사진으로 추천~합성 파이프라인을 검증한다.
 
-개인 전신사진 없이도 `../data/images/{male,female}`의 정면 전신 프레임을 테스트
-인물로 바로 써볼 수 있다. README가 밝히듯 이 이미지들은 "1·2단계 개발과 검증"
-용도이므로, 카탈로그를 새로 크롤링하거나 CatVTON 합성 디테일 로직(마스크
-블러+repaint, 상품 이미지 정제, 선명도 재생성)을 바꿀 때마다 여기서 빠르게
-전후를 비교한다.
+개인 전신사진 없이도 `../모델링_인스타/{남자,여자}`의 정면 전신 사진을 테스트
+인물로 바로 써볼 수 있다. 이 이미지들은 "1·2단계 개발과 검증" 용도이므로,
+카탈로그를 새로 크롤링하거나 CatVTON 합성 디테일 로직(마스크 블러+repaint,
+상품 이미지 정제, 선명도 재생성)을 바꿀 때마다 여기서 빠르게 전후를 비교한다.
+
+주의: 인스타 스크린샷에는 오른쪽 UI(좋아요·댓글)와 옷 위에 겹친 텍스트
+오버레이가 있다. 오버레이가 의류 마스크에 섞이면 합성 결과에 글자가 남을 수
+있으므로, 결과가 이상하면 원본에 텍스트가 겹쳤는지 먼저 확인한다.
 
 사용법:
     python test_tryon.py                  # 경량 모드: 추천 보드만 생성(무거운 모델 불필요)
@@ -16,7 +19,6 @@ from __future__ import annotations
 """
 
 import argparse
-import re
 from pathlib import Path
 
 from config import DATA_DIR, FASHION_ATTRIBUTE_HEADS_PATH, OUTPUT_DIR, PROJECT_DIR
@@ -29,36 +31,35 @@ from quality_checker import QualityChecker
 from recommendation_engine import RecommendationEngine
 from schemas import UserProfile
 
-SAMPLE_ROOT = PROJECT_DIR.parent / "data" / "images"
-
-
-def _spread_by_video(files: list[Path], count: int) -> list[Path]:
-    """같은 영상의 프레임만 몰아 뽑지 않도록 영상별로 돌아가며 하나씩 고른다.
-
-    파일명 형식: {gender}_{번호}_{유튜브영상ID}_{프레임}.jpg — 영상 ID에는 '-'와
-    '_'가 들어갈 수 있어 앞뒤 고정 패턴으로 가운데를 통째로 잡는다.
-    """
-    groups: dict[str, list[Path]] = {}
-    for file in files:
-        match = re.match(r"^(?:male|female)_\d+_(.+)_\d+$", file.stem)
-        groups.setdefault(match.group(1) if match else file.stem, []).append(file)
-    queues = [groups[key] for key in sorted(groups)]
-    picked: list[Path] = []
-    while len(picked) < count and any(queues):
-        for queue in queues:
-            if queue and len(picked) < count:
-                picked.append(queue.pop(0))
-    return picked
+SAMPLE_ROOT = PROJECT_DIR.parent / "모델링_인스타"
+# 인스타 수집본은 성별별 한글 폴더에 들어 있고 확장자가 섞여 있다.
+GENDER_FOLDERS = {"male": "남자", "female": "여자"}
+IMAGE_SUFFIXES = (".jpg", ".jpeg", ".png")
 
 
 def _sample_images(gender: str, count: int) -> list[Path]:
+    """성별 폴더에서 파일명 순으로 앞에서부터 count장씩 고른다.
+
+    인스타 수집본은 게시물별로 IMG 번호가 이어져 있어, 같은 게시물의 여러 장이
+    연달아 뽑히지 않도록 폴더 전체에 고르게 퍼뜨려 고른다.
+    """
     genders = ["male", "female"] if gender == "all" else [gender]
     images: list[Path] = []
     for name in genders:
-        folder = SAMPLE_ROOT / name
+        folder = SAMPLE_ROOT / GENDER_FOLDERS[name]
         if not folder.exists():
             continue
-        images.extend(_spread_by_video(sorted(folder.glob("*.jpg")), count))
+        found = sorted(
+            path for path in folder.iterdir()
+            if path.suffix.lower() in IMAGE_SUFFIXES
+        )
+        if not found:
+            continue
+        if count >= len(found):
+            images.extend(found)
+            continue
+        stride = len(found) / count
+        images.extend(found[int(index * stride)] for index in range(count))
     return images
 
 
@@ -110,12 +111,12 @@ def main() -> None:
 
     out_dir = OUTPUT_DIR / "tryon_tests"
     out_dir.mkdir(parents=True, exist_ok=True)
-    gender_labels = {"male": "남성", "female": "여성"}
+    gender_labels = {"남자": "남성", "여자": "여성"}
 
     for image_path in images:
         if args.skip_existing and (out_dir / f"{image_path.stem}_result.jpg").exists():
             continue
-        # 폴더 이름(male/female)으로 성별을 정해 반대 성별 상품이 추천되지 않게 한다.
+        # 폴더 이름(남자/여자)으로 성별을 정해 반대 성별 상품이 추천되지 않게 한다.
         profile = UserProfile(gender=gender_labels.get(image_path.parent.name, ""))
         print(f"\n=== {image_path.name} ({profile.gender or '성별 무관'}) ===")
         pose = pose_analyzer.analyze(image_path)
@@ -141,11 +142,16 @@ def main() -> None:
                 "upper_style_mask": parsed.get("upper_style_mask"),
                 "lower_style_mask": parsed.get("lower_style_mask"),
                 "segmentation": parsed.get("segmentation"),
+                # 합성 신뢰도 점검(레퍼런스 해상도·기장 차이)에 필요한 재료
+                "outfit": outfit,
+                "classifier": classifier,
             },
         )
         print(f"  체형 {pose.body_shape} / 선명도 {report['sharpness']:.1f}")
         for product in recommendations[0].products:
             print(f"  추천: {product.name} ({product.color}, {product.price:,}원)")
+        for warning in getattr(vton, "last_warnings", []):
+            print(f"  ⚠️ {warning}")
         print(f"  결과 저장: {result_path}")
 
 

@@ -14,11 +14,15 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from PIL import Image
+
 from catvton_tryon import (
     UNRELIABLE_LENGTH_GAP,
     bottom_length_gap,
     evaluate_garment_reference,
+    pad_to_aspect,
     sleeve_length_gap,
+    unpad_result,
 )
 
 
@@ -73,6 +77,44 @@ class ReferenceQualityTests(unittest.TestCase):
         report = evaluate_garment_reference(rgb, np.zeros((10, 10), bool), target_pixels=100)
         self.assertEqual(report["coverage"], 0.0)
         self.assertEqual(report["garment_pixels"], 0.0)
+
+
+class AspectPaddingTests(unittest.TestCase):
+    """세로로 긴 인스타 수집본(중앙값 약 1:2)이 잘리지 않는지 고정한다."""
+
+    TARGET = (768, 1024)
+
+    def test_tall_image_is_padded_not_cropped(self):
+        image = Image.new("RGB", (465, 1433), "red")
+        padded, box = pad_to_aspect(image, self.TARGET, (0, 0, 0))
+        # 목표 비율 0.75에 맞춰 좌우로만 넓어지고 세로는 그대로여야 한다.
+        self.assertEqual(padded.height, 1433)
+        self.assertAlmostEqual(padded.width / padded.height, 0.75, places=2)
+        self.assertGreater(padded.width, image.width)
+        self.assertEqual(box[2] - box[0], 465)
+        self.assertEqual(box[3] - box[1], 1433)
+
+    def test_matching_aspect_is_untouched(self):
+        image = Image.new("RGB", (768, 1024), "red")
+        padded, box = pad_to_aspect(image, self.TARGET, (0, 0, 0))
+        self.assertIs(padded, image)
+        self.assertEqual(box, (0, 0, 768, 1024))
+
+    def test_content_is_centered_and_recoverable(self):
+        image = Image.new("RGB", (400, 1200), "red")
+        padded, box = pad_to_aspect(image, self.TARGET, (0, 0, 0))
+        # 원본 영역만 빨강, 여백은 검정이어야 한다.
+        self.assertEqual(padded.getpixel(((box[0] + box[2]) // 2, 600)), (255, 0, 0))
+        self.assertEqual(padded.getpixel((1, 600)), (0, 0, 0))
+        # 렌더 크기로 줄인 결과에서 여백을 걷어내면 원본 크기로 돌아와야 한다.
+        rendered = padded.resize(self.TARGET, Image.LANCZOS)
+        restored = unpad_result(rendered, box, padded.size, image.size)
+        self.assertEqual(restored.size, image.size)
+
+    def test_unpad_is_noop_without_padding(self):
+        rendered = Image.new("RGB", self.TARGET, "blue")
+        restored = unpad_result(rendered, (0, 0, 768, 1024), self.TARGET, self.TARGET)
+        self.assertIs(restored, rendered)
 
 
 if __name__ == "__main__":

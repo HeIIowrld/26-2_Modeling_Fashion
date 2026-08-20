@@ -229,6 +229,54 @@ def evaluate_garment_reference(
     }
 
 
+def _border_color(image: Image.Image) -> tuple[int, int, int]:
+    """가장자리 픽셀의 중앙값. 레터박스 여백을 배경과 비슷하게 채운다."""
+    rgb = np.asarray(image.convert("RGB"))
+    edges = np.concatenate([rgb[0], rgb[-1], rgb[:, 0], rgb[:, -1]])
+    return tuple(int(value) for value in np.median(edges, axis=0))
+
+
+def pad_to_aspect(
+    image: Image.Image, size: tuple[int, int], fill
+) -> tuple[Image.Image, tuple[int, int, int, int]]:
+    """대상 종횡비에 맞게 여백을 덧대고, 원본이 놓인 영역을 함께 돌려준다.
+
+    CatVTON의 `resize_and_crop`은 대상 비율에 맞춰 **가운데를 잘라낸다**. 인스타
+    수집본처럼 세로로 긴 사진(중앙값 약 1:2)을 그대로 넣으면 머리와 발이 잘리고
+    허리 근처만 남는다. 먼저 비율을 맞춰 두면 잘림 없이 전신이 보존된다.
+    """
+    width, height = image.size
+    target_ratio = size[0] / size[1]
+    if width / height < target_ratio:
+        new_width, new_height = max(width, round(height * target_ratio)), height
+    else:
+        new_width, new_height = width, max(height, round(width / target_ratio))
+    if (new_width, new_height) == (width, height):
+        return image, (0, 0, width, height)
+    offset_x, offset_y = (new_width - width) // 2, (new_height - height) // 2
+    canvas = Image.new(image.mode, (new_width, new_height), fill)
+    canvas.paste(image, (offset_x, offset_y))
+    return canvas, (offset_x, offset_y, offset_x + width, offset_y + height)
+
+
+def unpad_result(
+    result: Image.Image,
+    content_box: tuple[int, int, int, int],
+    padded_size: tuple[int, int],
+    original_size: tuple[int, int],
+) -> Image.Image:
+    """레터박스로 덧댄 여백을 걷어내고 원본 크기로 되돌린다."""
+    if content_box[:2] == (0, 0) and content_box[2:] == padded_size:
+        return result
+    scale_x = result.width / padded_size[0]
+    scale_y = result.height / padded_size[1]
+    box = (
+        round(content_box[0] * scale_x), round(content_box[1] * scale_y),
+        round(content_box[2] * scale_x), round(content_box[3] * scale_y),
+    )
+    return result.crop(box).resize(original_size, Image.LANCZOS)
+
+
 def _odd_blur_radius(height: int, divisor: int = 50) -> int:
     """CatVTON inference.py의 repaint()와 동일한 규칙: 세로 길이에 비례한 홀수 반경."""
     radius = max(3, height // divisor)
@@ -552,19 +600,25 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         protect = (
             np.isin(segmentation, PROTECT_LABELS) if segmentation is not None else None
         )
-        # CatVTON 입력 규격에 맞춰 사람/마스크를 같은 방식으로 잘라 크기를 통일한다.
+        # CatVTON 입력 규격에 맞춰 사람/마스크를 같은 방식으로 맞춘다. 세로로 긴 사진은
+        # 먼저 여백을 덧대 비율을 맞춰야 전신이 잘리지 않는다(인스타 수집본은 약 1:2).
         from utils import resize_and_crop  # CatVTON 저장소의 유틸 (sys.path는 _load_pipeline에서 등록)
-        result = resize_and_crop(person, (self.width, self.height))
+        target = (self.width, self.height)
+        person_padded, content_box = pad_to_aspect(person, target, _border_color(person))
+        padded_size = person_padded.size
+        result = resize_and_crop(person_padded, target)
         for garment_path, raw_mask, category in jobs:
             garment = self._prepare_garment_reference(garment_path, category)
             self._check_length_gap(garment, category, context)
             mask_np = _dilate_mask(_solidify_mask(raw_mask))
             if protect is not None:
                 mask_np[protect] = 0
-            mask = Image.fromarray(mask_np).convert("L")
-            mask = resize_and_crop(mask, (self.width, self.height))
+            # 여백은 합성 대상이 아니므로 마스크는 0으로 채운다.
+            mask_padded, _ = pad_to_aspect(Image.fromarray(mask_np).convert("L"), target, 0)
+            mask = resize_and_crop(mask_padded, target)
             result = self._tryon_once(result, garment, mask)
 
+        result = unpad_result(result, content_box, padded_size, person.size)
         output = Path(output_path)
         output.parent.mkdir(parents=True, exist_ok=True)
         result.save(output, quality=95)
