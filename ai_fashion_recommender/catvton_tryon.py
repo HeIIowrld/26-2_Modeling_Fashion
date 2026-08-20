@@ -399,9 +399,10 @@ class CatVTONTryOn(VirtualTryOnAdapter):
     def _warn_low_coverage(self, name: str, report: dict[str, float]) -> None:
         if report.get("coverage", 1.0) < self.min_reference_coverage:
             self._add_warning(
-                f"레퍼런스 해상도 부족({name}): coverage={report['coverage']:.2f} < "
-                f"{self.min_reference_coverage} — 전신 착용컷에서 잘라낸 조각일 가능성이 큽니다. "
-                "시스루·뭉개짐이 나올 수 있습니다."
+                f"레퍼런스 해상도 낮음({name}): coverage={report['coverage']:.2f} < "
+                f"{self.min_reference_coverage}. 조건 입력으로 확대되므로 텍스처가 뭉개지고 "
+                "레퍼런스와 다른 옷이 그려질 수 있습니다(참고 지표. 시스루 예측기로는 "
+                "검증되지 않았습니다)."
             )
 
     def _add_warning(self, message: str) -> None:
