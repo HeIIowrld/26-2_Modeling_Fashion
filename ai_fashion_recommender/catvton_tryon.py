@@ -64,9 +64,9 @@ def _solidify_mask(mask: np.ndarray) -> np.ndarray:
     return cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
 
 
-def _dilate_mask(mask: np.ndarray, ratio: float = 0.02) -> np.ndarray:
-    """마스크 경계에 약간의 여유를 준다. 팔/다리를 포함한 확장 마스크가 원래 옷을
-    이미 덮으므로 여유는 이음매용 최소한으로 유지한다(넓히면 경계에 흐린 베일이 생긴다)."""
+def _dilate_mask(mask: np.ndarray, ratio: float = 0.03) -> np.ndarray:
+    """마스크 경계에 여유를 준다. 인셋 repaint가 경계 블렌딩 밴드를 마스크 안쪽에
+    만들기 때문에, 원래 옷의 윤곽이 밴드보다 깊이 덮이도록 약간의 여유가 필요하다."""
     import cv2
 
     binary = (mask > 0).astype(np.uint8) * 255
@@ -143,6 +143,8 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         garment_cache_dir: str | Path = GARMENT_CACHE_DIR,
         max_retries: int = 1,
         min_sharpness: float = 25.0,
+        repaint_inset: bool = True,
+        repaint_blur_divisor: int = 150,
     ) -> None:
         super().__init__(enabled=True)
         self.num_inference_steps = num_inference_steps
@@ -155,6 +157,11 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         self.garment_cache_dir = Path(garment_cache_dir)
         self.max_retries = max_retries
         self.min_sharpness = min_sharpness
+        # repaint_inset: 경계 블렌딩 밴드를 마스크 안쪽으로 침식시켜 마스크 밖으로
+        # 새 옷이 반투명하게 번지는 halo를 없앤다. False면 CatVTON 공식 방식
+        # (마스크 경계 중심의 대칭 블러, height//50 반경)을 그대로 쓴다.
+        self.repaint_inset = repaint_inset
+        self.repaint_blur_divisor = repaint_blur_divisor
         self._device_request = device
         self._pipeline = None
         self._garment_parser = None  # False면 사용 불가로 확정, None이면 미확인
@@ -232,6 +239,12 @@ class CatVTONTryOn(VirtualTryOnAdapter):
                 return original
             mask = _largest_component(mask)
             mask = _refine_garment_mask(mask)
+            # 닫힘 연산이 옷 위를 가로지르는 가방끈·머리카락·팔 픽셀을 다시 포함시켜
+            # 검은 줄무늬 아티팩트로 남는 것을 막는다 (착용컷 레퍼런스에서 흔함).
+            occluders = np.isin(segmentation, (1, 2, 8, 9, 11, 12, 13, 17))
+            mask = np.logical_and(mask, ~occluders)
+            if mask.sum() < 0.02 * mask.size:
+                return original
             cleaned = _paste_on_white(np.array(original), mask)
         except Exception as exc:  # 정제 실패 시 원본으로 안전하게 대체한다.
             print(f"상품 이미지 정제 실패({garment_path.name}), 원본을 사용합니다: {exc}")
@@ -244,11 +257,29 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         return mask.filter(ImageFilter.GaussianBlur(radius)) if radius > 0 else mask
 
     def _repaint(self, person: Image.Image, mask: Image.Image, result: Image.Image, radius: int) -> Image.Image:
-        """CatVTON 공식 inference.py의 repaint()와 동일한 방식: 마스크 밖 픽셀은 원본을
-        그대로 유지해 VAE 왕복으로 인한 얼굴·배경 디테일 손실을 막고 경계를 부드럽게 만든다."""
-        blurred = self._blur_mask(mask, radius)
+        """마스크 밖 픽셀은 원본을 유지해 VAE 왕복으로 인한 얼굴·배경 디테일 손실을 막는다.
+
+        repaint_inset=True면 마스크를 반경만큼 침식한 뒤 작은 블러를 적용해 블렌딩
+        밴드를 마스크 '안쪽'에 만든다. 공식 방식(경계 중심 대칭 블러)은 밴드가 마스크
+        밖 배경까지 걸쳐 새 옷의 반투명 잔상(halo·베일)을 남기는데, 밴드를 안쪽으로
+        옮기면 마스크 밖은 100% 원본이 유지된다. 마스크는 원래 옷보다 dilate 여유가
+        있어 침식해도 원래 옷 윤곽이 다시 드러나지 않는다."""
         person_np = np.asarray(person, dtype=np.float32)
         result_np = np.asarray(result, dtype=np.float32)
+        if self.repaint_inset and radius > 0:
+            import cv2
+
+            binary = (np.asarray(mask) > 127).astype(np.uint8)
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * radius + 1, 2 * radius + 1))
+            eroded = cv2.erode(binary, kernel)
+            if eroded.any():
+                sigma = max(radius * 0.6, 1.0)
+                alpha = cv2.GaussianBlur(eroded.astype(np.float32), (0, 0), sigma)[..., None]
+                alpha = np.clip(alpha, 0.0, 1.0)
+                blended = person_np * (1 - alpha) + result_np * alpha
+                return Image.fromarray(np.clip(blended, 0, 255).astype(np.uint8))
+            # 침식으로 마스크가 사라질 만큼 얇으면 공식 방식으로 대체한다.
+        blurred = self._blur_mask(mask, radius)
         alpha = np.asarray(blurred, dtype=np.float32)[..., None] / 255.0
         blended = person_np * (1 - alpha) + result_np * alpha
         return Image.fromarray(np.clip(blended, 0, 255).astype(np.uint8))
@@ -267,7 +298,9 @@ class CatVTONTryOn(VirtualTryOnAdapter):
 
         pipeline = self._load_pipeline()
         pipeline_mask = self._blur_mask(mask, self.pipeline_mask_blur)
-        repaint_radius = _odd_blur_radius(person.size[1])
+        repaint_radius = _odd_blur_radius(
+            person.size[1], self.repaint_blur_divisor if self.repaint_inset else 50
+        )
 
         best_result, best_score = None, -1.0
         for attempt in range(self.max_retries + 1):
