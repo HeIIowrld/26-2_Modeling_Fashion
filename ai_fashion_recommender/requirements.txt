@@ -1,0 +1,14 @@
+numpy
+Pillow
+opencv-python
+mediapipe==0.10.14
+torch
+transformers
+fashn-human-parser==0.1.1
+open-clip-torch==3.3.0
+ftfy==6.3.1
+pyarrow
+
+# Notebook 실행 환경
+jupyter
+ipykernel

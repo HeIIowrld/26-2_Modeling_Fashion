@@ -1,0 +1,31 @@
+{
+  "dataset": "Fashionpedia official TRAIN split, stratified subset for rare labels",
+  "annotation_source": "https://s3.amazonaws.com/ifashionist-dataset/annotations/instances_attributes_train2020.json",
+  "image_parquet_source": "https://huggingface.co/datasets/detection-datasets/fashionpedia (refs/convert/parquet, default/train/0000-0001)",
+  "license_note": "Fashionpedia annotations/ontology are CC BY 4.0. Image copyrights remain with original sources.",
+  "selection": "greedy set cover targeting 1500 samples per label",
+  "selection_target": 1500,
+  "min_image_id": null,
+  "shards_used": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "seed": 45,
+  "validation_ratio": 0.0,
+  "images": 6000,
+  "conversion": {
+    "written": 10030,
+    "skipped_category": 34012,
+    "category_only": 51,
+    "associated_parts": 20620
+  },
+  "csv_rows": 10030,
+  "split_counts": {
+    "train": 10030
+  }
+}

@@ -1,0 +1,537 @@
+{
+  "recipes": {
+    "R0_replica": {
+      "name": "R0_replica",
+      "dropout": 0.3,
+      "weight_decay": 0.0001,
+      "learning_rate": 0.0005,
+      "epochs": 100,
+      "batch_size": 256,
+      "label_smoothing": 0.0,
+      "noise_sigma": 0.0,
+      "mixup_alpha": 0.0,
+      "focal_gamma": 0.0,
+      "class_weight_power": 0.5,
+      "cosine_schedule": false,
+      "seeds": [
+        0,
+        1,
+        2
+      ]
+    },
+    "R1_strongreg": {
+      "name": "R1_strongreg",
+      "dropout": 0.5,
+      "weight_decay": 0.01,
+      "learning_rate": 0.0005,
+      "epochs": 100,
+      "batch_size": 256,
+      "label_smoothing": 0.0,
+      "noise_sigma": 0.05,
+      "mixup_alpha": 0.0,
+      "focal_gamma": 0.0,
+      "class_weight_power": 0.5,
+      "cosine_schedule": true,
+      "seeds": [
+        0,
+        1,
+        2
+      ]
+    },
+    "R2_mixup": {
+      "name": "R2_mixup",
+      "dropout": 0.4,
+      "weight_decay": 0.001,
+      "learning_rate": 0.0005,
+      "epochs": 100,
+      "batch_size": 256,
+      "label_smoothing": 0.0,
+      "noise_sigma": 0.0,
+      "mixup_alpha": 0.4,
+      "focal_gamma": 0.0,
+      "class_weight_power": 0.5,
+      "cosine_schedule": true,
+      "seeds": [
+        0,
+        1,
+        2
+      ]
+    },
+    "R3_heavy": {
+      "name": "R3_heavy",
+      "dropout": 0.6,
+      "weight_decay": 0.05,
+      "learning_rate": 0.0005,
+      "epochs": 100,
+      "batch_size": 256,
+      "label_smoothing": 0.1,
+      "noise_sigma": 0.08,
+      "mixup_alpha": 0.0,
+      "focal_gamma": 0.0,
+      "class_weight_power": 0.5,
+      "cosine_schedule": true,
+      "seeds": [
+        0,
+        1,
+        2
+      ]
+    },
+    "R4_rare": {
+      "name": "R4_rare",
+      "dropout": 0.4,
+      "weight_decay": 0.01,
+      "learning_rate": 0.0005,
+      "epochs": 100,
+      "batch_size": 256,
+      "label_smoothing": 0.05,
+      "noise_sigma": 0.0,
+      "mixup_alpha": 0.2,
+      "focal_gamma": 1.5,
+      "class_weight_power": 0.85,
+      "cosine_schedule": true,
+      "seeds": [
+        0,
+        1,
+        2
+      ]
+    },
+    "R5_slow": {
+      "name": "R5_slow",
+      "dropout": 0.5,
+      "weight_decay": 0.02,
+      "learning_rate": 0.0003,
+      "epochs": 150,
+      "batch_size": 256,
+      "label_smoothing": 0.05,
+      "noise_sigma": 0.05,
+      "mixup_alpha": 0.2,
+      "focal_gamma": 0.0,
+      "class_weight_power": 0.5,
+      "cosine_schedule": true,
+      "seeds": [
+        0,
+        1,
+        2
+      ]
+    }
+  },
+  "selection": {
+    "category": {
+      "recipe": "R1_strongreg",
+      "seed": 2,
+      "dev_epoch": 14,
+      "dev_selection": 0.7748,
+      "recipe_means": {
+        "R0_replica": 0.7536,
+        "R1_strongreg": 0.7617,
+        "R2_mixup": 0.7559,
+        "R3_heavy": 0.7412,
+        "R4_rare": 0.7092,
+        "R5_slow": 0.7386
+      }
+    },
+    "lower_subtype": {
+      "recipe": "R2_mixup",
+      "seed": 2,
+      "dev_epoch": 35,
+      "dev_selection": 0.72,
+      "recipe_means": {
+        "R0_replica": 0.7082,
+        "R1_strongreg": 0.7089,
+        "R2_mixup": 0.7126,
+        "R3_heavy": 0.6855,
+        "R4_rare": 0.7108,
+        "R5_slow": 0.7066
+      }
+    },
+    "pant_leg_shape": {
+      "recipe": "R1_strongreg",
+      "seed": 2,
+      "dev_epoch": 25,
+      "dev_selection": 0.5947,
+      "recipe_means": {
+        "R0_replica": 0.5874,
+        "R1_strongreg": 0.5929,
+        "R2_mixup": 0.5871,
+        "R3_heavy": 0.5867,
+        "R4_rare": 0.5598,
+        "R5_slow": 0.5907
+      }
+    },
+    "pant_length": {
+      "recipe": "R1_strongreg",
+      "seed": 1,
+      "dev_epoch": 43,
+      "dev_selection": 0.853,
+      "recipe_means": {
+        "R0_replica": 0.835,
+        "R1_strongreg": 0.8505,
+        "R2_mixup": 0.8479,
+        "R3_heavy": 0.8501,
+        "R4_rare": 0.8402,
+        "R5_slow": 0.8462
+      }
+    },
+    "lower_detail": {
+      "recipe": "R2_mixup",
+      "seed": 2,
+      "dev_epoch": 31,
+      "dev_selection": 0.7266,
+      "recipe_means": {
+        "R0_replica": 0.7072,
+        "R1_strongreg": 0.6634,
+        "R2_mixup": 0.7193,
+        "R3_heavy": 0.6235,
+        "R4_rare": 0.7138,
+        "R5_slow": 0.675
+      }
+    },
+    "sleeve_length": {
+      "recipe": "R2_mixup",
+      "seed": 1,
+      "dev_epoch": 28,
+      "dev_selection": 0.8269,
+      "recipe_means": {
+        "R0_replica": 0.8072,
+        "R1_strongreg": 0.7939,
+        "R2_mixup": 0.8204,
+        "R3_heavy": 0.7897,
+        "R4_rare": 0.8071,
+        "R5_slow": 0.7863
+      }
+    },
+    "sleeve_shape": {
+      "recipe": "R1_strongreg",
+      "seed": 0,
+      "dev_epoch": 14,
+      "dev_selection": 0.6382,
+      "recipe_means": {
+        "R0_replica": 0.5969,
+        "R1_strongreg": 0.6336,
+        "R2_mixup": 0.6161,
+        "R3_heavy": 0.6329,
+        "R4_rare": 0.553,
+        "R5_slow": 0.614
+      }
+    },
+    "upper_length": {
+      "recipe": "R5_slow",
+      "seed": 0,
+      "dev_epoch": 5,
+      "dev_selection": 0.8212,
+      "recipe_means": {
+        "R0_replica": 0.8019,
+        "R1_strongreg": 0.8084,
+        "R2_mixup": 0.8122,
+        "R3_heavy": 0.8032,
+        "R4_rare": 0.7774,
+        "R5_slow": 0.816
+      }
+    },
+    "lower_length": {
+      "recipe": "R5_slow",
+      "seed": 2,
+      "dev_epoch": 12,
+      "dev_selection": 0.8711,
+      "recipe_means": {
+        "R0_replica": 0.8481,
+        "R1_strongreg": 0.8585,
+        "R2_mixup": 0.8547,
+        "R3_heavy": 0.8523,
+        "R4_rare": 0.8383,
+        "R5_slow": 0.867
+      }
+    },
+    "neckline": {
+      "recipe": "R2_mixup",
+      "seed": 2,
+      "dev_epoch": 33,
+      "dev_selection": 0.7384,
+      "recipe_means": {
+        "R0_replica": 0.6484,
+        "R1_strongreg": 0.6046,
+        "R2_mixup": 0.7378,
+        "R3_heavy": 0.6131,
+        "R4_rare": 0.702,
+        "R5_slow": 0.655
+      }
+    },
+    "collar": {
+      "recipe": "R2_mixup",
+      "seed": 0,
+      "dev_epoch": 21,
+      "dev_selection": 0.7534,
+      "recipe_means": {
+        "R0_replica": 0.7364,
+        "R1_strongreg": 0.6457,
+        "R2_mixup": 0.7481,
+        "R3_heavy": 0.6624,
+        "R4_rare": 0.7401,
+        "R5_slow": 0.6934
+      }
+    },
+    "upper_fit": {
+      "recipe": "R1_strongreg",
+      "seed": 1,
+      "dev_epoch": 63,
+      "dev_selection": 0.7935,
+      "recipe_means": {
+        "R0_replica": 0.7468,
+        "R1_strongreg": 0.789,
+        "R2_mixup": 0.7465,
+        "R3_heavy": 0.7223,
+        "R4_rare": 0.672,
+        "R5_slow": 0.7428
+      }
+    },
+    "lower_fit": {
+      "recipe": "R0_replica",
+      "seed": 2,
+      "dev_epoch": 15,
+      "dev_selection": 0.7172,
+      "recipe_means": {
+        "R0_replica": 0.7151,
+        "R1_strongreg": 0.7086,
+        "R2_mixup": 0.715,
+        "R3_heavy": 0.6839,
+        "R4_rare": 0.7059,
+        "R5_slow": 0.711
+      }
+    },
+    "silhouette": {
+      "recipe": "R1_strongreg",
+      "seed": 2,
+      "dev_epoch": 17,
+      "dev_selection": 0.8033,
+      "recipe_means": {
+        "R0_replica": 0.7691,
+        "R1_strongreg": 0.7825,
+        "R2_mixup": 0.7573,
+        "R3_heavy": 0.7785,
+        "R4_rare": 0.7002,
+        "R5_slow": 0.7487
+      }
+    },
+    "pattern": {
+      "recipe": "R4_rare",
+      "seed": 2,
+      "dev_epoch": 52,
+      "dev_selection": 0.7778,
+      "recipe_means": {
+        "R0_replica": 0.7648,
+        "R1_strongreg": 0.7536,
+        "R2_mixup": 0.7696,
+        "R3_heavy": 0.7122,
+        "R4_rare": 0.7735,
+        "R5_slow": 0.7273
+      }
+    },
+    "material": {
+      "recipe": "R4_rare",
+      "seed": 1,
+      "dev_epoch": 68,
+      "dev_selection": 0.7436,
+      "recipe_means": {
+        "R0_replica": 0.6993,
+        "R1_strongreg": 0.6597,
+        "R2_mixup": 0.7264,
+        "R3_heavy": 0.5853,
+        "R4_rare": 0.7301,
+        "R5_slow": 0.6113
+      }
+    },
+    "detail": {
+      "recipe": "R0_replica",
+      "seed": 2,
+      "dev_epoch": 95,
+      "dev_selection": 0.6798,
+      "recipe_means": {
+        "R0_replica": 0.6735,
+        "R1_strongreg": 0.6161,
+        "R2_mixup": 0.6686,
+        "R3_heavy": 0.5638,
+        "R4_rare": 0.6651,
+        "R5_slow": 0.6107
+      }
+    }
+  },
+  "thresholds": {
+    "category": 0.45,
+    "lower_subtype": 0.7,
+    "pant_leg_shape": 0.8,
+    "pant_length": 0.5,
+    "lower_detail": 0.7,
+    "sleeve_length": 0.5,
+    "sleeve_shape": 0.5,
+    "upper_length": 0.5,
+    "lower_length": 0.5,
+    "neckline": 0.52,
+    "collar": 0.52,
+    "upper_fit": 0.5,
+    "lower_fit": 0.5,
+    "silhouette": 0.5,
+    "pattern": 0.65,
+    "material": 0.65,
+    "detail": 0.6
+  },
+  "label_support_train_fit": {
+    "category": {
+      "티셔츠": 168,
+      "폴로 셔츠": 67,
+      "셔츠": 173,
+      "블라우스": 243,
+      "니트": 16,
+      "가디건": 10,
+      "후드티": 4,
+      "재킷": 80,
+      "블레이저": 43,
+      "코트": 72,
+      "베스트": 18,
+      "탑": 305,
+      "팬츠": 2186,
+      "청바지": 140,
+      "쇼츠": 73,
+      "스커트": 123,
+      "원피스": 338,
+      "점프수트": 12
+    },
+    "lower_subtype": {
+      "슬랙스": 57,
+      "치노 팬츠": 65,
+      "청바지": 76,
+      "카고 팬츠": 56,
+      "조거·스웨트팬츠": 137,
+      "트랙팬츠": 80,
+      "레깅스": 255,
+      "하렘 팬츠": 163,
+      "요가 팬츠": 25,
+      "세일러 팬츠": 16
+    },
+    "pant_leg_shape": {
+      "스키니": 238,
+      "스트레이트": 276,
+      "테이퍼드": 143,
+      "페그": 41,
+      "부츠컷": 66,
+      "플레어": 150,
+      "와이드": 257,
+      "팔라초": 79
+    },
+    "pant_length": {
+      "카프리·7부": 144,
+      "크롭·앵클": 288,
+      "풀렝스": 370
+    },
+    "lower_detail": {
+      "5포켓": 27,
+      "카고 포켓": 56,
+      "플리츠·턱": 139,
+      "드로스트링": 97,
+      "밴딩 허리": 11,
+      "사이드 스트라이프": 21,
+      "밑단 커프": 22,
+      "스터럽": 9
+    },
+    "sleeve_length": {
+      "민소매": 16,
+      "반팔": 203,
+      "7부 소매": 56,
+      "긴팔": 435
+    },
+    "sleeve_shape": {
+      "기본 소매": 307,
+      "퍼프 소매": 20,
+      "벌룬 소매": 8,
+      "벨 소매": 19,
+      "래글런 소매": 12,
+      "캡 소매": 41
+    },
+    "upper_length": {
+      "크롭 기장": 378,
+      "기본 기장": 79,
+      "롱 기장": 20
+    },
+    "lower_length": {
+      "쇼츠·미니 기장": 307,
+      "무릎 기장": 61,
+      "미디·7부 기장": 475,
+      "롱·긴바지 기장": 613
+    },
+    "neckline": {
+      "라운드넥": 153,
+      "V넥": 71,
+      "스퀘어넥": 10,
+      "보트넥": 39,
+      "오프숄더": 13,
+      "홀터넥": 10,
+      "터틀넥": 22
+    },
+    "collar": {
+      "칼라 없음": 7,
+      "폴로 칼라": 66,
+      "셔츠 칼라": 78,
+      "스탠드 칼라": 19,
+      "라펠 칼라": 82,
+      "피터팬 칼라": 3,
+      "세일러 칼라": 0
+    },
+    "upper_fit": {
+      "슬림핏": 203,
+      "레귤러핏": 324,
+      "여유핏": 95,
+      "오버핏": 16
+    },
+    "lower_fit": {
+      "슬림핏": 337,
+      "스트레이트핏": 356,
+      "테이퍼드핏": 184,
+      "와이드핏": 352,
+      "플레어핏": 226
+    },
+    "silhouette": {
+      "H라인": 149,
+      "A라인": 69,
+      "X라인": 33,
+      "O라인": 3,
+      "비대칭": 43
+    },
+    "pattern": {
+      "무지": 1064,
+      "스트라이프": 88,
+      "체크": 39,
+      "도트": 31,
+      "플로럴": 106,
+      "그래픽": 20,
+      "애니멀": 11,
+      "카모": 4,
+      "컬러 블록": 1
+    },
+    "material": {
+      "코튼": 46,
+      "데님": 176,
+      "니트": 69,
+      "울": 27,
+      "가죽": 18,
+      "스웨이드": 14,
+      "시폰": 41,
+      "실크·새틴": 105,
+      "퍼·플리스": 27,
+      "메시": 22,
+      "레이스": 55
+    },
+    "detail": {
+      "디테일 없음": 0,
+      "포켓": 216,
+      "프릴·러플": 62,
+      "지퍼": 360,
+      "벨트": 107,
+      "단추": 170,
+      "리본": 53,
+      "레이스": 55,
+      "플리츠": 61,
+      "자수": 26,
+      "스팽글": 9,
+      "후드": 17
+    }
+  }
+}

@@ -1,0 +1,280 @@
+{
+  "target_subdir": "ai_fashion_recommender",
+  "totals": {
+    "files": 11636,
+    "bytes": 1005658779
+  },
+  "include": {
+    "files": 139,
+    "bytes": 41332185,
+    "by_group": {
+      "(루트)": {
+        "files": 32,
+        "bytes": 1147697
+      },
+      "data": {
+        "files": 23,
+        "bytes": 6354445
+      },
+      "experiments": {
+        "files": 33,
+        "bytes": 272713
+      },
+      "models": {
+        "files": 7,
+        "bytes": 27407139
+      },
+      "reports": {
+        "files": 36,
+        "bytes": 6106088
+      },
+      "tests": {
+        "files": 8,
+        "bytes": 44103
+      }
+    },
+    "paths": [
+      ".gitignore",
+      "FASHION_RULES_MASTER.md",
+      "FASHION_RULES_NOTION.md",
+      "FASHION_RULES_RESEARCH.md",
+      "MAIN_IPYNB_STRUCTURE.md",
+      "README.md",
+      "config.py",
+      "data/README.md",
+      "data/fashion200k_bottoms/fashion_attribute_annotations.csv",
+      "data/fashion200k_bottoms/manifest.json",
+      "data/fashion200k_supplement/fashion_attribute_annotations.csv",
+      "data/fashion200k_supplement/manifest.json",
+      "data/fashion_attribute_annotations.csv",
+      "data/fashion_attribute_annotations_template.csv",
+      "data/fashion_rules.json",
+      "data/fashion_rules_ko_candidates.json",
+      "data/fashionpedia_seed/fashion_attribute_annotations.csv",
+      "data/fashionpedia_seed/manifest.json",
+      "data/fashionpedia_train/fashion_attribute_annotations.csv",
+      "data/fashionpedia_train/fashion_attribute_annotations_r2.csv",
+      "data/fashionpedia_train/manifest.json",
+      "data/fashionpedia_train/manifest_r2.json",
+      "data/fashionpedia_train/manifest_r2_corrected.json",
+      "data/fashionpedia_train/selection.json",
+      "data/fashionpedia_train/selection_r2.json",
+      "data/fashionpedia_train_r3/fashion_attribute_annotations.csv",
+      "data/fashionpedia_train_r3/manifest.json",
+      "data/fashionpedia_train_r3/selection_r3.json",
+      "data/products.csv",
+      "data/provenance/fashionpedia/shard_index.json",
+      "deepfashion_dataset.py",
+      "deepfashion_evaluation.ipynb",
+      "experiments/ambiguity_headroom.py",
+      "experiments/assemble_and_evaluate.py",
+      "experiments/build_detailnone_checkpoint.py",
+      "experiments/build_provenance_manifests.py",
+      "experiments/build_train_csv.py",
+      "experiments/compare_variants.py",
+      "experiments/copy_to_repo.py",
+      "experiments/diagnose_baseline.py",
+      "experiments/embed_round3.py",
+      "experiments/embed_train_subset.py",
+      "experiments/eval_lib.py",
+      "experiments/evaluate_relabel.py",
+      "experiments/evaluate_round3.py",
+      "experiments/extract_train_images.py",
+      "experiments/final_comparison.py",
+      "experiments/final_comparison_newval.py",
+      "experiments/finalize_model.py",
+      "experiments/finetune.py",
+      "experiments/image_level_split.py",
+      "experiments/plan_repo_migration.py",
+      "experiments/predict_image.py",
+      "experiments/preflight_commit_check.py",
+      "experiments/recount_migration.py",
+      "experiments/refit_full.py",
+      "experiments/relabel_caches.py",
+      "experiments/run_relabel_experiment.py",
+      "experiments/scan_fashionpedia_train.py",
+      "experiments/select_round2.py",
+      "experiments/select_round3.py",
+      "experiments/train_round3.py",
+      "experiments/train_with_train_split.py",
+      "experiments/verify_provenance_manifests.py",
+      "experiments/verify_split_integrity.py",
+      "fashion_attribute_dataset.py",
+      "fashion_attribute_model.py",
+      "fashion_attribute_schema.py",
+      "fashion_attribute_training.py",
+      "fashion_model.py",
+      "fashion_prompts.py",
+      "fashion_rules.py",
+      "feedback_store.py",
+      "garment_attribute_analyzer.py",
+      "main.ipynb",
+      "models/CHECKSUMS.json",
+      "models/fashion_attribute_heads.metrics.json",
+      "models/fashion_attribute_heads.pt",
+      "models/fashion_attribute_heads_augmented.metrics.json",
+      "models/fashion_attribute_heads_augmented.pt",
+      "models/fashion_attribute_heads_augmented_r3.metrics.json",
+      "models/fashion_attribute_heads_fashionpedia_seed.metrics.json",
+      "outfit_analyzer.py",
+      "pose_analyzer.py",
+      "prepare_fashion200k_bottoms.py",
+      "prepare_fashion200k_supplement.py",
+      "prepare_fashionpedia_seed.py",
+      "product_catalog.py",
+      "quality_checker.py",
+      "recommendation_engine.py",
+      "reports/00_repo_overview.md",
+      "reports/01_baseline_diagnosis.json",
+      "reports/03_finetune_selection.json",
+      "reports/04_comparison.json",
+      "reports/05_refit_comparison.json",
+      "reports/06_variant_comparison.json",
+      "reports/07_ambiguity_headroom.json",
+      "reports/08_relabel_summary.json",
+      "reports/09_relabel_results.json",
+      "reports/10_detailnone_checkpoint.json",
+      "reports/11_train_split_results.json",
+      "reports/12_train_split_round2.json",
+      "reports/13_split_integrity.json",
+      "reports/14_final_comparison.json",
+      "reports/15_final_comparison_newval.json",
+      "reports/16_real_photo_test.md",
+      "reports/16_round3_selection.json",
+      "reports/17_round3_extraction_issues.json",
+      "reports/17_round3_split_integrity.json",
+      "reports/18_round3_comparison_oldval.json",
+      "reports/19_round3_comparison_newval.json",
+      "reports/20_preflight_commit_check.json",
+      "reports/21_migration_plan.json",
+      "reports/COMMIT_PLAN.md",
+      "reports/FINAL_REPORT.md",
+      "reports/PRESENTATION_SUMMARY.md",
+      "reports/ROUND3_FINAL_REPORT.md",
+      "reports/manifests/README.md",
+      "reports/manifests/fashion200k_images.csv",
+      "reports/manifests/fashionpedia_train_excluded_image_ids.json",
+      "reports/manifests/fashionpedia_train_r1_images.csv",
+      "reports/manifests/fashionpedia_train_r2_images.csv",
+      "reports/manifests/fashionpedia_train_r3_images.csv",
+      "reports/manifests/fashionpedia_val_seed_images.csv",
+      "reports/manifests/sources.json",
+      "reports/manifests/used_image_manifest.csv",
+      "requirements.txt",
+      "schemas.py",
+      "tests/test_deepfashion_dataset.py",
+      "tests/test_efficiency.py",
+      "tests/test_fashion_attribute_heads.py",
+      "tests/test_fashion_rules.py",
+      "tests/test_garment_attributes.py",
+      "tests/test_outfit_summary.py",
+      "tests/test_paths.py",
+      "tests/test_recommendation.py",
+      "train_fashion_attribute_heads.ipynb",
+      "train_fashion_attribute_heads.py",
+      "virtual_tryon.py"
+    ]
+  },
+  "exclude": {
+    "files": 11497,
+    "bytes": 964326594,
+    "by_reason": {
+      "디렉터리 .pytest_cache/": {
+        "files": 5,
+        "bytes": 5850
+      },
+      "디렉터리 __pycache__/": {
+        "files": 77,
+        "bytes": 961349
+      },
+      "디렉터리 cache/": {
+        "files": 16,
+        "bytes": 230468311
+      },
+      "디렉터리 images/": {
+        "files": 11363,
+        "bytes": 595811503
+      },
+      "디렉터리 outputs/": {
+        "files": 2,
+        "bytes": 65406
+      },
+      "미채택 모델": {
+        "files": 6,
+        "bytes": 82016626
+      },
+      "패턴 *.jpg": {
+        "files": 2,
+        "bytes": 193918
+      },
+      "패턴 *.log": {
+        "files": 19,
+        "bytes": 10573
+      },
+      "패턴 *_round3_inputs.json": {
+        "files": 1,
+        "bytes": 9441
+      },
+      "패턴 *instances_subset.json": {
+        "files": 4,
+        "bytes": 22550948
+      },
+      "패턴 *train2020*.json": {
+        "files": 1,
+        "bytes": 17699194
+      },
+      "패턴 *val2020*.json": {
+        "files": 1,
+        "bytes": 14533475
+      }
+    }
+  },
+  "unclassified": [],
+  "checks": [
+    {
+      "name": "included ∩ excluded = 0",
+      "passed": true,
+      "detail": "0건"
+    },
+    {
+      "name": "included ∪ excluded ∪ unclassified = 전체",
+      "passed": true,
+      "detail": "11,636 / 전체 11,636"
+    },
+    {
+      "name": "unclassified = 0",
+      "passed": true,
+      "detail": "0건"
+    },
+    {
+      "name": "개수 합계 = 전체",
+      "passed": true,
+      "detail": "139 + 11,497 + 0 = 11,636 / 11,636"
+    },
+    {
+      "name": "byte 합계 = 전체",
+      "passed": true,
+      "detail": "1,005,658,779 / 1,005,658,779 bytes"
+    },
+    {
+      "name": "배포 모델 정확히 1회 — fashion_attribute_heads.pt",
+      "passed": true,
+      "detail": "1회"
+    },
+    {
+      "name": "배포 모델 정확히 1회 — fashion_attribute_heads_augmented.pt",
+      "passed": true,
+      "detail": "1회"
+    },
+    {
+      "name": "포함 그룹 합계 = 포함 전체",
+      "passed": true,
+      "detail": "139 / 139, 41,332,185 / 41,332,185"
+    },
+    {
+      "name": "제외 사유 합계 = 제외 전체",
+      "passed": true,
+      "detail": "11497 / 11497, 964,326,594 / 964,326,594"
+    }
+  ]
+}

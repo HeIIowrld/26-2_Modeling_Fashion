@@ -1,0 +1,48 @@
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# 실행 시 다시 생성되는 결과물
+outputs/
+
+# 팀원마다 자신의 전신사진을 사용한다.
+data/input_person.jpg
+
+# 원본 데이터셋과 모델 캐시는 저장소에 포함하지 않는다.
+datasets/
+deepfashion_data/
+DeepFashion*/
+
+# 공개 데이터셋 원본 이미지와 재생성 가능한 FashionSigLIP 임베딩
+data/fashionpedia_seed/raw/
+data/fashionpedia_seed/images/
+data/fashionpedia_seed/cache/
+data/fashion200k_supplement/raw/
+data/fashion200k_supplement/images/
+data/fashion200k_supplement/cache/
+data/fashion200k_bottoms/raw/
+data/fashion200k_bottoms/images/
+data/fashion200k_bottoms/cache/
+data/cache/
+
+# 실험 중간 가중치는 재생성 가능하다. 리포트(md/json)는 저장소에 포함한다.
+reports/runs/
+reports/*_assembled_states.pt
+
+# Fashionpedia train split 보강분 (재생성 가능)
+data/fashionpedia_train/images/
+
+# 재현용 원본 주석 (로컬 보존, GitHub 업로드 금지)
+data/provenance/fashionpedia/**/instances_subset.json
+data/provenance/fashionpedia/**/*train2020*.json
+data/provenance/fashionpedia/**/*val2020*.json
+
+# 3차 보강 (재생성 가능)
+data/fashionpedia_train_r3/images/
+data/fashionpedia_train_r3/instances_subset.json
+
+# 3차 실험 체크포인트 — 미채택. 로컬 보존, GitHub 제외.
+# (기존 모델을 가리지 않도록 models/*.pt 규칙은 쓰지 않는다)
+models/fashion_attribute_heads_augmented_r3*.pt
+models/fashion_attribute_heads_detailnone.pt
+models/fashion_attribute_heads_finetuned.pt

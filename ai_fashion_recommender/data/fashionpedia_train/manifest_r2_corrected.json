@@ -1,0 +1,36 @@
+{
+  "dataset": "Fashionpedia official TRAIN split, stratified subset for rare labels",
+  "annotation_source": "https://s3.amazonaws.com/ifashionist-dataset/annotations/instances_attributes_train2020.json",
+  "image_parquet_source": "https://huggingface.co/datasets/detection-datasets/fashionpedia (refs/convert/parquet, default/train/0000-0001)",
+  "license_note": "Fashionpedia annotations/ontology are CC BY 4.0. Image copyrights remain with original sources.",
+  "selection": "greedy set cover targeting 800 samples per label with current train support < 800, restricted to image_id >= 15131 and excluding round-1 selection",
+  "shards_used": [
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "seed": 45,
+  "validation_ratio": 0.0,
+  "images": 6000,
+  "conversion": {
+    "written": 10755,
+    "skipped_category": 37167,
+    "category_only": 79,
+    "associated_parts": 24133
+  },
+  "csv_rows": 10755,
+  "split_counts": {
+    "train": 10755
+  },
+  "selection_target": 800,
+  "min_image_id": 15131,
+  "corrected_from": "manifest_r2.json",
+  "correction_note": "원본은 build_train_csv.py 가 shards_used=[0,1] 과 selection 문구를 하드코딩해 2차 실행에도 1차 값이 그대로 기록됐다. shard 목록은 data/provenance/fashionpedia/shard_index.json 의 image_id→shard 색인으로 재계산했다.",
+  "evidence": {
+    "selection_json": "data/fashionpedia_train/selection_r2.json",
+    "csv": "data/fashionpedia_train/fashion_attribute_annotations_r2.csv",
+    "shard_index": "data/provenance/fashionpedia/shard_index.json"
+  }
+}

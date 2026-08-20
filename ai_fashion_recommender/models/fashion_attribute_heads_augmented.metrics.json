@@ -1,0 +1,205 @@
+{
+  "checkpoint": "fashion_attribute_heads_augmented.pt",
+  "sha256": "3c560c9db0ade6a62d3ead1fc61edc56ff6a935083ee7393858a3a757431765d",
+  "created": "2026-08-18T17:38:03+09:00",
+  "backbone_model_id": "Marqo/marqo-fashionSigLIP",
+  "head_parameters": 3404668,
+  "hidden_dim": 256,
+  "minimum_label_examples": 5,
+  "thresholds": {
+    "category": 0.45,
+    "lower_subtype": 0.6,
+    "pant_leg_shape": 0.45,
+    "pant_length": 0.5,
+    "lower_detail": 0.6,
+    "sleeve_length": 0.5,
+    "sleeve_shape": 0.5,
+    "upper_length": 0.5,
+    "lower_length": 0.5,
+    "neckline": 0.52,
+    "collar": 0.52,
+    "upper_fit": 0.5,
+    "lower_fit": 0.5,
+    "silhouette": 0.5,
+    "pattern": 0.7,
+    "material": 0.7,
+    "detail": 0.65
+  },
+  "training": {
+    "recipe": "R2_mixup (dropout 0.4, weight_decay 1e-3, lr 5e-4 cosine, mixup alpha 0.4, batch 256, 100 epoch)",
+    "seeds": 3,
+    "train_crops_total": 22341,
+    "composition": {
+      "original": 4789,
+      "fashionpedia_train_round1": 6797,
+      "fashionpedia_train_round2": 10755
+    },
+    "fit_crops": 18990,
+    "dev_crops": 3351,
+    "dev_usage": "early stopping, 레시피/에폭 선택, 임계값 선택 (성능 보고에는 사용하지 않음)"
+  },
+  "evaluation": {
+    "existing_val_1195": {
+      "usage": "validation set — 최종 성능 보고용. 2차 보강 모델의 학습·선택에는 사용하지 않음.",
+      "caveat": "배포 모델은 원본 학습 코드에서 이 셋으로 early stopping과 임계값을 선택했으므로 배포 모델에 유리한 비교다.",
+      "baseline": {
+        "tasks": 17,
+        "mean_score": 0.7482,
+        "sample_weighted_score": 0.7735,
+        "mean_macro_f1": 0.6054
+      },
+      "augmented": {
+        "tasks": 17,
+        "mean_score": 0.7641,
+        "sample_weighted_score": 0.7826,
+        "mean_macro_f1": 0.6726
+      }
+    },
+    "new_val_1716": {
+      "usage": "validation set — Fashionpedia train split의 20%. 두 모델 모두 학습에 사용하지 않음.",
+      "caveat": "2차 보강 설계 시 1차 결과를 참고했으므로 완전 독립 test set이 아니다.",
+      "baseline": {
+        "tasks": 13,
+        "mean_score": 0.709,
+        "sample_weighted_score": 0.729,
+        "mean_macro_f1": 0.5337
+      },
+      "augmented": {
+        "tasks": 13,
+        "mean_score": 0.7651,
+        "sample_weighted_score": 0.7717,
+        "mean_macro_f1": 0.6785
+      }
+    }
+  },
+  "split_integrity": {
+    "train_eval_image_leak": 0,
+    "verdict": "PASS",
+    "fit_dev_note": "fit/dev 는 crop 단위로 나뉘어 같은 이미지가 양쪽에 걸쳐 있다 (dev crop의 60%). dev 는 선택에만 쓰였고 보고 성능에는 쓰이지 않았다."
+  },
+  "per_task_existing_val": {
+    "neckline": {
+      "baseline_score": 0.6353,
+      "augmented_score": 0.7059,
+      "baseline_macro_f1": 0.5837,
+      "augmented_macro_f1": 0.7249,
+      "samples": 85
+    },
+    "silhouette": {
+      "baseline_score": 0.703,
+      "augmented_score": 0.7723,
+      "baseline_macro_f1": 0.518,
+      "augmented_macro_f1": 0.6959,
+      "samples": 101
+    },
+    "collar": {
+      "baseline_score": 0.7356,
+      "augmented_score": 0.8046,
+      "baseline_macro_f1": 0.447,
+      "augmented_macro_f1": 0.6989,
+      "samples": 87
+    },
+    "upper_length": {
+      "baseline_score": 0.7424,
+      "augmented_score": 0.8106,
+      "baseline_macro_f1": 0.7386,
+      "augmented_macro_f1": 0.7917,
+      "samples": 132
+    },
+    "pant_leg_shape": {
+      "baseline_score": 0.5695,
+      "augmented_score": 0.6096,
+      "baseline_macro_f1": 0.503,
+      "augmented_macro_f1": 0.5785,
+      "samples": 374
+    },
+    "sleeve_shape": {
+      "baseline_score": 0.7951,
+      "augmented_score": 0.8279,
+      "baseline_macro_f1": 0.4661,
+      "augmented_macro_f1": 0.6032,
+      "samples": 122
+    },
+    "lower_fit": {
+      "baseline_score": 0.6697,
+      "augmented_score": 0.6968,
+      "baseline_macro_f1": 0.6602,
+      "augmented_macro_f1": 0.6815,
+      "samples": 442
+    },
+    "lower_subtype": {
+      "baseline_score": 0.7063,
+      "augmented_score": 0.7302,
+      "baseline_macro_f1": 0.6399,
+      "augmented_macro_f1": 0.689,
+      "samples": 252
+    },
+    "category": {
+      "baseline_score": 0.8703,
+      "augmented_score": 0.8795,
+      "baseline_macro_f1": 0.6376,
+      "augmented_macro_f1": 0.7011,
+      "samples": 1195
+    },
+    "detail": {
+      "baseline_score": 0.7203,
+      "augmented_score": 0.7226,
+      "baseline_macro_f1": 0.5343,
+      "augmented_macro_f1": 0.5722,
+      "samples": 262
+    },
+    "upper_fit": {
+      "baseline_score": 0.6404,
+      "augmented_score": 0.6404,
+      "baseline_macro_f1": 0.4574,
+      "augmented_macro_f1": 0.5014,
+      "samples": 178
+    },
+    "material": {
+      "baseline_score": 0.7059,
+      "augmented_score": 0.7003,
+      "baseline_macro_f1": 0.5909,
+      "augmented_macro_f1": 0.6429,
+      "samples": 156
+    },
+    "pattern": {
+      "baseline_score": 0.8841,
+      "augmented_score": 0.8732,
+      "baseline_macro_f1": 0.5612,
+      "augmented_macro_f1": 0.6956,
+      "samples": 389
+    },
+    "pant_length": {
+      "baseline_score": 0.7432,
+      "augmented_score": 0.7252,
+      "baseline_macro_f1": 0.7314,
+      "augmented_macro_f1": 0.7268,
+      "samples": 222
+    },
+    "sleeve_length": {
+      "baseline_score": 0.8925,
+      "augmented_score": 0.8738,
+      "baseline_macro_f1": 0.7235,
+      "augmented_macro_f1": 0.7744,
+      "samples": 214
+    },
+    "lower_length": {
+      "baseline_score": 0.8246,
+      "augmented_score": 0.7915,
+      "baseline_macro_f1": 0.7711,
+      "augmented_macro_f1": 0.7357,
+      "samples": 422
+    },
+    "lower_detail": {
+      "baseline_score": 0.8807,
+      "augmented_score": 0.8246,
+      "baseline_macro_f1": 0.7275,
+      "augmented_macro_f1": 0.6204,
+      "samples": 110
+    }
+  },
+  "blocked_labels": [
+    "pattern|컬러 블록",
+    "detail|디테일 없음"
+  ]
+}

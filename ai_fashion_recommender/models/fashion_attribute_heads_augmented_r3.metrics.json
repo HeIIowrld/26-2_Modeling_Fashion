@@ -1,0 +1,254 @@
+{
+  "round": 3,
+  "recipe": {
+    "name": "R2_mixup",
+    "dropout": 0.4,
+    "weight_decay": 0.001,
+    "learning_rate": 0.0005,
+    "epochs": 100,
+    "batch_size": 256,
+    "hidden_dim": 256,
+    "label_smoothing": 0.0,
+    "noise_sigma": 0.0,
+    "mixup_alpha": 0.4,
+    "focal_gamma": 0.0,
+    "class_weight_power": 0.5,
+    "cosine_schedule": true,
+    "seeds": [
+      0,
+      1,
+      2
+    ]
+  },
+  "train_crops": 32371,
+  "cache_sizes": [
+    4789,
+    6797,
+    10755,
+    10030
+  ],
+  "split": {
+    "dev_fraction": 0.15,
+    "seed": 20260819,
+    "total_crops": 32371,
+    "total_images": 19678,
+    "fit_crops": 27463,
+    "dev_crops": 4908,
+    "fit_images": 16726,
+    "dev_images": 2952,
+    "group_counts": {
+      "fashion200k_bottoms": 2508,
+      "fashion200k_supplement": 656,
+      "fashionpedia_r1": 3597,
+      "fashionpedia_r2": 5993,
+      "fashionpedia_r3": 5998,
+      "fashionpedia_seed": 926
+    },
+    "unmapped_crops": 0
+  },
+  "split_checks": [
+    {
+      "name": "캐시 crop 중 manifest 매핑 실패",
+      "passed": true,
+      "detail": "0건"
+    },
+    {
+      "name": "하나의 crop이 복수 이미지에 매핑",
+      "passed": true,
+      "detail": "0건"
+    },
+    {
+      "name": "fit image key ∩ dev image key",
+      "passed": true,
+      "detail": "0건"
+    },
+    {
+      "name": "fit/dev crop 합계 == 전체 train crop",
+      "passed": true,
+      "detail": "27,463 + 4,908 = 32,371 / 32,371"
+    },
+    {
+      "name": "fit ∩ old validation",
+      "passed": true,
+      "detail": "0건"
+    },
+    {
+      "name": "dev ∩ old validation",
+      "passed": true,
+      "detail": "0건"
+    },
+    {
+      "name": "fit ∩ new validation",
+      "passed": true,
+      "detail": "0건"
+    },
+    {
+      "name": "dev ∩ new validation",
+      "passed": true,
+      "detail": "0건"
+    }
+  ],
+  "legacy_crop_level_comparison": {
+    "crop_level_shared_images": 2767,
+    "crop_level_dev_crops": 4855,
+    "crop_level_contaminated_dev_crops": 2977,
+    "crop_level_contaminated_ratio": 0.6132
+  },
+  "seed_results": {
+    "0": {
+      "dev_composite": 0.758296,
+      "dev_selection": {
+        "category": 0.8008,
+        "lower_subtype": 0.7401,
+        "pant_leg_shape": 0.6124,
+        "pant_length": 0.8416,
+        "lower_detail": 0.8104,
+        "sleeve_length": 0.7827,
+        "sleeve_shape": 0.7101,
+        "upper_length": 0.775,
+        "lower_length": 0.8062,
+        "neckline": 0.7604,
+        "collar": 0.7278,
+        "upper_fit": 0.6188,
+        "lower_fit": 0.8121,
+        "silhouette": 0.7085,
+        "pattern": 0.8296,
+        "material": 0.8282,
+        "detail": 0.7262
+      },
+      "best_epoch": {
+        "category": 47,
+        "lower_subtype": 3,
+        "pant_leg_shape": 9,
+        "pant_length": 9,
+        "lower_detail": 32,
+        "sleeve_length": 17,
+        "sleeve_shape": 18,
+        "upper_length": 18,
+        "lower_length": 10,
+        "neckline": 16,
+        "collar": 29,
+        "upper_fit": 7,
+        "lower_fit": 37,
+        "silhouette": 11,
+        "pattern": 65,
+        "material": 59,
+        "detail": 22
+      },
+      "seconds": 1908
+    },
+    "1": {
+      "dev_composite": 0.758774,
+      "dev_selection": {
+        "category": 0.8017,
+        "lower_subtype": 0.747,
+        "pant_leg_shape": 0.6043,
+        "pant_length": 0.8351,
+        "lower_detail": 0.797,
+        "sleeve_length": 0.7865,
+        "sleeve_shape": 0.7075,
+        "upper_length": 0.7805,
+        "lower_length": 0.8141,
+        "neckline": 0.7664,
+        "collar": 0.7176,
+        "upper_fit": 0.6155,
+        "lower_fit": 0.8196,
+        "silhouette": 0.7026,
+        "pattern": 0.8302,
+        "material": 0.8396,
+        "detail": 0.734
+      },
+      "best_epoch": {
+        "category": 27,
+        "lower_subtype": 50,
+        "pant_leg_shape": 2,
+        "pant_length": 12,
+        "lower_detail": 65,
+        "sleeve_length": 36,
+        "sleeve_shape": 85,
+        "upper_length": 1,
+        "lower_length": 53,
+        "neckline": 13,
+        "collar": 19,
+        "upper_fit": 13,
+        "lower_fit": 37,
+        "silhouette": 3,
+        "pattern": 74,
+        "material": 38,
+        "detail": 54
+      },
+      "seconds": 2130
+    },
+    "2": {
+      "dev_composite": 0.758,
+      "dev_selection": {
+        "category": 0.8024,
+        "lower_subtype": 0.7591,
+        "pant_leg_shape": 0.6023,
+        "pant_length": 0.847,
+        "lower_detail": 0.7979,
+        "sleeve_length": 0.7814,
+        "sleeve_shape": 0.7116,
+        "upper_length": 0.769,
+        "lower_length": 0.8088,
+        "neckline": 0.7621,
+        "collar": 0.7169,
+        "upper_fit": 0.6105,
+        "lower_fit": 0.8094,
+        "silhouette": 0.7016,
+        "pattern": 0.83,
+        "material": 0.839,
+        "detail": 0.737
+      },
+      "best_epoch": {
+        "category": 52,
+        "lower_subtype": 2,
+        "pant_leg_shape": 35,
+        "pant_length": 12,
+        "lower_detail": 29,
+        "sleeve_length": 5,
+        "sleeve_shape": 9,
+        "upper_length": 27,
+        "lower_length": 59,
+        "neckline": 41,
+        "collar": 17,
+        "upper_fit": 1,
+        "lower_fit": 36,
+        "silhouette": 6,
+        "pattern": 61,
+        "material": 50,
+        "detail": 51
+      },
+      "seconds": 1870
+    }
+  },
+  "selected_seed": 1,
+  "thresholds": {
+    "category": 0.45,
+    "lower_subtype": 0.5,
+    "pant_leg_shape": 0.65,
+    "pant_length": 0.5,
+    "lower_detail": 0.65,
+    "sleeve_length": 0.5,
+    "sleeve_shape": 0.5,
+    "upper_length": 0.5,
+    "lower_length": 0.5,
+    "neckline": 0.52,
+    "collar": 0.52,
+    "upper_fit": 0.5,
+    "lower_fit": 0.5,
+    "silhouette": 0.5,
+    "pattern": 0.7,
+    "material": 0.6,
+    "detail": 0.6
+  },
+  "baseline_r2_sha256_before": "3c560c9db0ade6a62d3ead1fc61edc56ff6a935083ee7393858a3a757431765d",
+  "baseline_r2_sha256_after": "3c560c9db0ade6a62d3ead1fc61edc56ff6a935083ee7393858a3a757431765d",
+  "final_checkpoint_sha256": "399c65242147ffcdbe83d5aef09edf05f81e4cfab334ebcbd6de4d772480a947",
+  "seed_checkpoint_sha256": {
+    "0": "076aa2c49cd64fd9ba54d92e63a601a62727cade58da9369df58da8a1325838c",
+    "1": "a821cd8849c64c3e33b879466f031ce78033e7d197becff4b804375b1bab2c55",
+    "2": "78b66b0b15cbfb5715f1ae6667ec4d02a58a5ab88ac267608d8c89e842861c4b"
+  },
+  "elapsed_seconds": 5914
+}
