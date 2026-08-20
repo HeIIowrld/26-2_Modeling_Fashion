@@ -31,10 +31,17 @@ class VirtualTryOnAdapter:
     def __init__(self, enabled: bool = False) -> None:
         self.enabled = enabled
 
-    def generate(self, person_image: str | Path, recommendation: Recommendation, output_path: str | Path) -> Path:
+    def generate(
+        self,
+        person_image: str | Path,
+        recommendation: Recommendation,
+        output_path: str | Path,
+        context: dict | None = None,
+    ) -> Path:
+        """context에는 구현체가 사용할 부가 정보(FASHN 마스크 등)를 담는다."""
         if self.enabled:
             raise NotImplementedError(
-                "IDM-VTON 또는 다중 의류 VTON 체크포인트를 연결한 뒤 generate()를 구현해야 합니다."
+                "VTON 구현체(catvton_tryon.CatVTONTryOn 등)를 사용해야 합니다."
             )
         return self._make_preview(person_image, recommendation, output_path)
 

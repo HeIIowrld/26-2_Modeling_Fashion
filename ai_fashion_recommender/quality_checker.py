@@ -10,10 +10,6 @@ from pose_analyzer import PoseAnalyzer, _to_rgb_array
 from schemas import PoseAnalysis
 
 
-MIN_INPUT_SHORT_SIDE = 320
-MIN_INPUT_SHARPNESS = 25.0
-
-
 class QualityChecker:
     """입력 또는 VTON 결과의 기본 품질을 수치로 확인한다."""
 
@@ -28,18 +24,12 @@ class QualityChecker:
         pose = pose or self.pose_analyzer.analyze(rgb)
         height, width = rgb.shape[:2]
         issues = list(pose.warnings)
-        if min(width, height) < MIN_INPUT_SHORT_SIDE:
-            issues.append(
-                f"짧은 변이 {MIN_INPUT_SHORT_SIDE}px보다 작아 세부 의류 분석이 불안정할 수 있습니다."
-            )
-        if sharpness < MIN_INPUT_SHARPNESS:
+        if min(width, height) < 500:
+            issues.append("짧은 변이 500px보다 작아 세부 의류 분석이 불안정할 수 있습니다.")
+        if sharpness < 60:
             issues.append("사진이 흐릿할 가능성이 있습니다.")
         return {
-            "passed": (
-                pose.valid
-                and min(width, height) >= MIN_INPUT_SHORT_SIDE
-                and sharpness >= MIN_INPUT_SHARPNESS
-            ),
+            "passed": pose.valid and min(width, height) >= 500 and sharpness >= 60,
             "resolution": [width, height],
             "sharpness": round(sharpness, 2),
             "full_body_score": pose.full_body_score,

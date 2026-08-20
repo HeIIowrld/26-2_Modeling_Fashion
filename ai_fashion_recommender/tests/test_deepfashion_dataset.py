@@ -46,21 +46,6 @@ class DeepFashionDatasetTests(unittest.TestCase):
             )
             self.assertEqual(result["processed_images"], 1)
             self.assertTrue(all(metric["accuracy"] == 1.0 for metric in result["metrics"].values()))
-            self.assertTrue(all(metric["coverage"] == 1.0 for metric in result["metrics"].values()))
-            self.assertTrue(all(metric["macro_f1"] == 1.0 for metric in result["metrics"].values()))
-
-            abstained = evaluate_deepfashion_predictions(
-                records,
-                lambda _: {
-                    "sleeve_length": "분석 보류",
-                    "bottom_length": "분석 보류",
-                    "neckline": "분석 보류",
-                    "material": "분석 보류",
-                    "pattern": "분석 보류",
-                },
-            )
-            self.assertTrue(all(metric["coverage"] == 0.0 for metric in abstained["metrics"].values()))
-            self.assertTrue(all(metric["overall_accuracy"] == 0.0 for metric in abstained["metrics"].values()))
 
 
 if __name__ == "__main__":

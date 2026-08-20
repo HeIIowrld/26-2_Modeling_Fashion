@@ -1,4 +1,4 @@
-"""학습 속성 헤드가 없거나 보류될 때 사용하는 FashionSigLIP zero-shot 후보군."""
+"""DeepFashion-MultiModal 라벨에 맞춘 FashionSigLIP zero-shot 후보군."""
 
 STYLE_PROMPTS = {
     "캐주얼": "a casual everyday outfit",
@@ -7,31 +7,6 @@ STYLE_PROMPTS = {
     "스트리트": "a streetwear outfit",
     "로맨틱": "a romantic outfit",
     "스포티": "a sporty outfit",
-}
-
-UPPER_TYPE_PROMPTS = {
-    "티셔츠": "a basic collarless t-shirt",
-    "폴로 셔츠": "a polo shirt with a ribbed polo collar and placket",
-    "셔츠": "a button-up shirt",
-    "블라우스": "a blouse",
-    "니트": "a knit sweater",
-    "가디건": "a button-front knitted cardigan",
-    "후드티": "a hoodie",
-    "재킷": "a casual jacket",
-    "블레이저": "a structured tailored blazer",
-    "코트": "a long outerwear coat",
-    "베스트": "a sleeveless vest worn as an outer layer",
-    "탑": "a fitted sleeveless fashion top",
-    "원피스": "a one-piece dress",
-    "점프수트": "a one-piece jumpsuit with trouser legs",
-}
-
-LOWER_TYPE_PROMPTS = {
-    "청바지": "a pair of denim jeans",
-    "슬랙스·팬츠": "a pair of tailored trousers or pants",
-    "조거팬츠": "a pair of jogger pants",
-    "반바지": "a pair of shorts",
-    "스커트": "a skirt",
 }
 
 PATTERN_PROMPTS = {

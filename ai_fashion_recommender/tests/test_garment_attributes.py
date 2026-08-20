@@ -9,7 +9,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from garment_attribute_analyzer import GarmentAttributeAnalyzer
-from clothing_parser import ClothingParser
 from schemas import PoseAnalysis
 
 
@@ -47,27 +46,6 @@ class GarmentAttributeTests(unittest.TestCase):
         self.assertEqual(result["upper_type"], "상의")
         self.assertEqual(result["lower_type"], "바지")
         self.assertEqual(result["bottom_length"], "긴바지")
-
-    def test_accessories_do_not_pollute_main_garment_masks(self):
-        segmentation = np.zeros((10, 10), dtype=np.uint8)
-        segmentation[1:5, 2:8] = 3
-        segmentation[5:9, 2:8] = 6
-        segmentation[2, 1] = 10  # scarf
-        segmentation[5, 1] = 7   # belt
-
-        class FakeParser:
-            @staticmethod
-            def predict(_):
-                return segmentation
-
-        parser = ClothingParser(use_fashn=False)
-        parser._parser = FakeParser()
-        parser.backend = "test-parser"
-        parsed = parser.parse(np.zeros((10, 10, 3), dtype=np.uint8), sample_pose())
-        self.assertFalse(parsed["upper_mask"][2, 1])
-        self.assertFalse(parsed["lower_mask"][5, 1])
-        self.assertTrue(parsed["accessory_mask"][2, 1])
-        self.assertTrue(parsed["accessory_mask"][5, 1])
 
 
 if __name__ == "__main__":

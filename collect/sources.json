@@ -1,0 +1,117 @@
+﻿{
+    "_readme":  [
+                    "성별은 영상 단위로 결정한다. 룩북/코디 영상은 대부분 성별이 고정되어 있으므로,",
+                    "남성 룩북은 male, 여성 룩북은 female 목록에 넣으면 라벨이 자동으로 붙는다.",
+                    "type=search 는 유튜브 검색으로 상위 max_videos 개를 사용하고,",
+                    "type=url 은 지정한 영상/재생목록/채널을 그대로 사용한다.",
+                    "품질이 중요하므로 마음에 드는 채널을 찾았다면 type=url 로 직접 지정하는 편이 결과가 좋다."
+                ],
+    "male":  [
+                 {
+                     "type":  "url",
+                     "url":  "https://www.youtube.com/channel/UCJdZej-O_M69bB4M6aiiLcw/videos",
+                     "max_videos":  20,
+                     "channel":  "패션튜브삭형"
+                 },
+                 {
+                     "type":  "url",
+                     "url":  "https://www.youtube.com/channel/UCOykgC9r23cPofNj5pDIwcQ/videos",
+                     "max_videos":  20,
+                     "channel":  "Korean Gents"
+                 },
+                 {
+                     "type":  "url",
+                     "url":  "https://www.youtube.com/channel/UCLKsaXXS1lTPiwId0GtbGaA/videos",
+                     "max_videos":  20,
+                     "channel":  "Veiled 베일드"
+                 },
+                 {
+                     "type":  "url",
+                     "url":  "https://www.youtube.com/channel/UCWgkZKlOeBTlO9H1y5tb-PQ/videos",
+                     "max_videos":  20,
+                     "channel":  "너드킹 Nerd King"
+                 },
+                 {
+                     "type":  "url",
+                     "url":  "https://www.youtube.com/channel/UC8a6z7i9qypp9PqJ_0HhBrw/videos",
+                     "max_videos":  20,
+                     "channel":  "깡스타일리스트"
+                 },
+                 {
+                     "type":  "search",
+                     "query":  "남자 룩북 데일리룩 코디",
+                     "max_videos":  6
+                 },
+                 {
+                     "type":  "search",
+                     "query":  "남자 캐주얼 룩북 lookbook",
+                     "max_videos":  6
+                 },
+                 {
+                     "type":  "search",
+                     "query":  "남성 스트릿 패션 코디 추천",
+                     "max_videos":  5
+                 },
+                 {
+                     "type":  "search",
+                     "query":  "men lookbook korean street fashion",
+                     "max_videos":  5
+                 },
+                 {
+                     "type":  "search",
+                     "query":  "mens outfit lookbook full body",
+                     "max_videos":  5
+                 }
+             ],
+    "female":  [
+                   {
+                       "type":  "url",
+                       "url":  "https://www.youtube.com/channel/UC_gkwRB-p1JrOzzJk7PBKDQ/videos",
+                       "max_videos":  20,
+                       "channel":  "소신사장 SoshinTV"
+                   },
+                   {
+                       "type":  "url",
+                       "url":  "https://www.youtube.com/channel/UCb3RcfZTXh4_ZMZy-sLaLPw/videos",
+                       "max_videos":  20,
+                       "channel":  "에이프롬 ÁFROM"
+                   },
+                   {
+                       "type":  "url",
+                       "url":  "https://www.youtube.com/channel/UCQJxyBF_ywKohBzQ_bvawnQ/videos",
+                       "max_videos":  20,
+                       "channel":  "틴즈 Tintz"
+                   },
+                   {
+                       "type":  "url",
+                       "url":  "https://www.youtube.com/channel/UCN7aGesO7kZlA58tVmWTzBA/videos",
+                       "max_videos":  20,
+                       "channel":  "윤비누YOONSOAP"
+                   },
+                   {
+                       "type":  "search",
+                       "query":  "여자 룩북 데일리룩 코디",
+                       "max_videos":  6
+                   },
+                   {
+                       "type":  "search",
+                       "query":  "여자 캐주얼 룩북 lookbook",
+                       "max_videos":  6
+                   },
+                   {
+                       "type":  "search",
+                       "query":  "여성 오피스룩 코디 추천",
+                       "max_videos":  5
+                   },
+                   {
+                       "type":  "search",
+                       "query":  "women lookbook korean street fashion",
+                       "max_videos":  5
+                   },
+                   {
+                       "type":  "search",
+                       "query":  "womens outfit lookbook full body",
+                       "max_videos":  5
+                   }
+               ]
+}

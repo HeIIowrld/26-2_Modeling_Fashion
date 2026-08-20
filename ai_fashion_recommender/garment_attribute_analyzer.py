@@ -59,7 +59,6 @@ class GarmentAttributeAnalyzer:
         upper_length = self._upper_length(upper_mask, pose)
         bottom_length = self._bottom_length(lower_mask, pose, lower_type)
         fit = self._upper_fit(upper_mask, pose)
-        lower_fit = self._lower_fit(lower_mask, pose, lower_type)
 
         visible = [value[2] for value in pose.landmarks.values()]
         mask_ok = min(1.0, (areas["top"] + areas["dress"] + areas["skirt"] + areas["pants"]) / max(height * width * 0.10, 1))
@@ -68,14 +67,10 @@ class GarmentAttributeAnalyzer:
         return {
             "upper_type": upper_type,
             "lower_type": lower_type,
-            "lower_subtype": "분석 보류",
-            "pant_leg_shape": "분석 보류",
-            "pant_length": "분석 보류",
             "sleeve_length": sleeve_length,
             "upper_length": upper_length,
             "bottom_length": bottom_length,
             "fit": fit,
-            "lower_fit": lower_fit,
             "pattern": "분석 보류",
             "material": "분석 보류",
             "attribute_confidence": round(float(np.clip(confidence, 0, 1)), 3),
@@ -188,38 +183,11 @@ class GarmentAttributeAnalyzer:
         return "여유핏·오버핏 추정"
 
     @staticmethod
-    def _lower_fit(mask: np.ndarray, pose: PoseAnalysis, garment_type: str) -> str:
-        if garment_type not in {"바지", "치마", "원피스"}:
-            return "분석 불가"
-        height, width = mask.shape
-        hip_width = abs(pose.landmarks["left_hip"][0] - pose.landmarks["right_hip"][0]) * width
-        hip_y = np.mean([pose.landmarks["left_hip"][1], pose.landmarks["right_hip"][1]]) * height
-        knee_y = np.mean([pose.landmarks["left_knee"][1], pose.landmarks["right_knee"][1]]) * height
-        y1, y2 = int(hip_y), int(max(knee_y, hip_y + 1))
-        row_widths = []
-        for row in mask[max(0, y1):min(height, y2)]:
-            xs = np.where(row > 0)[0]
-            if xs.size:
-                row_widths.append(xs.max() - xs.min() + 1)
-        if not row_widths or hip_width <= 1:
-            return "분석 불가"
-        ratio = float(np.percentile(row_widths, 70) / hip_width)
-        if garment_type in {"치마", "원피스"}:
-            return "플레어핏 추정" if ratio >= 1.35 else "스트레이트핏 추정"
-        if ratio < 0.88:
-            return "슬림핏 추정"
-        if ratio < 1.28:
-            return "스트레이트핏 추정"
-        return "와이드핏 추정"
-
-    @staticmethod
     def _empty(reason: str) -> dict:
         return {
-            "upper_type": "분석 불가", "lower_type": "분석 불가", "lower_subtype": "분석 보류",
-            "pant_leg_shape": "분석 보류", "pant_length": "분석 보류",
+            "upper_type": "분석 불가", "lower_type": "분석 불가",
             "sleeve_length": "분석 불가", "upper_length": "분석 불가",
             "bottom_length": "분석 불가", "fit": "분석 불가",
-            "lower_fit": "분석 불가",
             "pattern": "분석 보류", "material": "분석 보류",
             "attribute_confidence": 0.0, "measurements": {}, "reason": reason,
         }

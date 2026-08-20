@@ -9,7 +9,7 @@ import mediapipe as mp
 import numpy as np
 from PIL import Image
 
-from config import MIN_BODY_SHAPE_CONFIDENCE, MIN_FULL_BODY_SCORE, MIN_LANDMARK_VISIBILITY
+from config import MIN_FULL_BODY_SCORE, MIN_LANDMARK_VISIBILITY
 from schemas import PoseAnalysis
 
 
@@ -50,7 +50,7 @@ class PoseAnalyzer:
             static_image_mode=True,
             model_complexity=model_complexity,
             enable_segmentation=False,
-            min_detection_confidence=0.45,
+            min_detection_confidence=0.55,
         )
         self._pose_landmark = mp.solutions.pose.PoseLandmark
         self._closed = False
@@ -70,17 +70,7 @@ class PoseAnalyzer:
         rgb = _to_rgb_array(image)
         result = self._pose.process(rgb)
         if not result.pose_landmarks:
-            return PoseAnalysis(
-                valid=False,
-                full_body_score=0.0,
-                body_shape="분석 불가",
-                shoulder_hip_ratio=0.0,
-                upper_lower_ratio=0.0,
-                leg_ratio=0.0,
-                posture="분석 불가",
-                body_shape_confidence=0.0,
-                warnings=["사람의 자세를 찾지 못했습니다."],
-            )
+            return PoseAnalysis(False, 0.0, "분석 불가", 0.0, 0.0, 0.0, "분석 불가", ["사람의 자세를 찾지 못했습니다."])
 
         raw = result.pose_landmarks.landmark
         names = {
@@ -132,6 +122,13 @@ class PoseAnalyzer:
         upper_lower_ratio = torso_length / leg_length
         leg_ratio = leg_length / body_span
 
+        if shoulder_hip_ratio >= 1.12:
+            body_shape = "상체 강조형"
+        elif shoulder_hip_ratio <= 0.90:
+            body_shape = "하체 강조형"
+        else:
+            body_shape = "균형형"
+
         shoulder_tilt = abs(left_shoulder[1] - right_shoulder[1])
         torso_tilt = abs(shoulder_mid[0] - hip_mid[0])
         posture = "정면에 가까움" if shoulder_tilt < 0.06 and torso_tilt < 0.08 else "기울어짐 또는 측면 자세"
@@ -140,30 +137,6 @@ class PoseAnalyzer:
         head_inside = landmarks["nose"][1] > 0.03
         full_body_score = 0.50 * visible_fraction + 0.30 * mean_visibility + 0.10 * float(feet_inside) + 0.10 * float(head_inside)
 
-        # 관절 간격 비율은 실제 신체 폭이 아니므로 자세·가시성·경계 근접도를
-        # 함께 보고 신뢰도가 낮으면 체형 라벨을 만들지 않는다.
-        front_score = float(np.clip(1.0 - max(shoulder_tilt / 0.12, torso_tilt / 0.16), 0.0, 1.0))
-        if 0.90 < shoulder_hip_ratio < 1.12:
-            boundary_margin = min(shoulder_hip_ratio - 0.90, 1.12 - shoulder_hip_ratio) / 0.11
-        else:
-            boundary_margin = min(abs(shoulder_hip_ratio - 0.90), abs(shoulder_hip_ratio - 1.12)) / 0.12
-        margin_score = float(np.clip(boundary_margin, 0.0, 1.0))
-        body_shape_confidence = (
-            0.45 * mean_visibility
-            + 0.25 * front_score
-            + 0.20 * full_body_score
-            + 0.10 * margin_score
-        )
-
-        if body_shape_confidence < MIN_BODY_SHAPE_CONFIDENCE:
-            body_shape = "분석 불확실"
-        elif shoulder_hip_ratio >= 1.12:
-            body_shape = "상체 강조형"
-        elif shoulder_hip_ratio <= 0.90:
-            body_shape = "하체 강조형"
-        else:
-            body_shape = "균형형"
-
         warnings: list[str] = []
         if not feet_inside:
             warnings.append("발끝이 사진 밖으로 잘렸을 가능성이 있습니다.")
@@ -171,9 +144,6 @@ class PoseAnalyzer:
             warnings.append("정면 자세가 아니어서 가로 비율의 오차가 커질 수 있습니다.")
         if mean_visibility < 0.75:
             warnings.append("일부 관절이 옷이나 물체에 가려졌습니다.")
-        if body_shape == "분석 불확실":
-            warnings.append("촬영 자세 또는 경계에 가까운 비율 때문에 체형 분류를 보류했습니다.")
-        warnings.append("어깨·골반 값은 관절 간격 기반 상대 추정치이며 실제 신체 치수가 아닙니다.")
 
         return PoseAnalysis(
             valid=full_body_score >= MIN_FULL_BODY_SCORE,
@@ -183,7 +153,6 @@ class PoseAnalyzer:
             upper_lower_ratio=round(upper_lower_ratio, 4),
             leg_ratio=round(leg_ratio, 4),
             posture=posture,
-            body_shape_confidence=round(float(np.clip(body_shape_confidence, 0, 1)), 4),
             warnings=warnings,
             landmarks=landmarks,
         )

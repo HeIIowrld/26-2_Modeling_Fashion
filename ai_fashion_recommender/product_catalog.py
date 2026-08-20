@@ -14,13 +14,6 @@ class ProductCatalog:
         self.products = self._load()
 
     def _load(self) -> list[Product]:
-        def split_values(value: str | None) -> list[str]:
-            return [item.strip() for item in (value or "").split("|") if item.strip()]
-
-        def integer(row: dict[str, str], key: str, default: int) -> int:
-            value = (row.get(key) or "").strip()
-            return int(value) if value else default
-
         with self.csv_path.open(encoding="utf-8-sig", newline="") as handle:
             rows = csv.DictReader(handle)
             return [
@@ -30,35 +23,27 @@ class ProductCatalog:
                     category=row["category"],
                     color=row["color"],
                     style=row["style"],
-                    purposes=split_values(row["purposes"]),
-                    body_shapes=split_values(row["body_shapes"]),
+                    purposes=row["purposes"].split("|"),
+                    body_shapes=row["body_shapes"].split("|"),
                     price=int(row["price"]),
                     season=row["season"],
                     stock=row["stock"].lower() == "true",
-                    url=row.get("url", ""),
-                    item_type=row.get("item_type", ""),
-                    fit=row.get("fit", ""),
-                    length=row.get("length", ""),
-                    pattern=row.get("pattern", "무지") or "무지",
-                    material=row.get("material", ""),
-                    neckline=row.get("neckline", ""),
-                    formality=integer(row, "formality", 3),
-                    activity_tags=split_values(row.get("activity_tags")),
-                    warmth=integer(row, "warmth", 3),
-                    breathability=integer(row, "breathability", 3),
-                    water_resistant=(row.get("water_resistant") or "false").lower() == "true",
-                    visual_weight=integer(row, "visual_weight", 3),
-                    detail_level=integer(row, "detail_level", 1),
-                    waistline=row.get("waistline", ""),
-                    pattern_scale=row.get("pattern_scale", ""),
-                    pattern_contrast=integer(row, "pattern_contrast", 0),
+                    url=row.get("url") or "",
+                    brand=row.get("brand") or "",
+                    gender=row.get("gender") or "",
+                    image_url=row.get("image_url") or "",
+                    image_path=row.get("image_path") or "",
                 )
                 for row in rows
             ]
 
-    def available(self, category: str | None = None) -> list[Product]:
+    def available(self, category: str | None = None, gender: str = "") -> list[Product]:
+        """재고가 있는 상품을 카테고리·성별로 거른다. gender가 빈 값이면 성별 무관,
+        지정하면 해당 성별과 공용(성별 미표기 포함) 상품만 남긴다."""
         return [
             product
             for product in self.products
-            if product.stock and (category is None or product.category == category)
+            if product.stock
+            and (category is None or product.category == category)
+            and (not gender or product.gender in ("", "공용", gender))
         ]

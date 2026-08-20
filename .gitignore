@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Claude Code 로컬 세션 설정
+.claude/
+
+# 대용량 원본·외부 저장소는 커밋하지 않는다
+/모델링_인스타.zip
+/third_party/
+
+# 영상 수집 파이프라인 산출물 (대용량, 재수집 가능) — 코드는 collect/에 커밋한다
+/data/
+collect/*.log
+
+# 실행 도구 바이너리 (ffmpeg, mediapipe 모델) — setup.py가 내려받는다
+collect/tools/
