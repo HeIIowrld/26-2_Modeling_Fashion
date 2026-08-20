@@ -16,7 +16,7 @@ from pathlib import Path
 
 import gradio as gr
 
-from config import DATA_DIR, OUTPUT_DIR, PROJECT_DIR
+from config import DATA_DIR, FASHION_ATTRIBUTE_HEADS_PATH, OUTPUT_DIR, PROJECT_DIR
 from clothing_parser import ClothingParser
 from fashion_model import FashionClassifier
 from outfit_analyzer import OutfitAnalyzer
@@ -48,7 +48,15 @@ def get_pipeline() -> dict:
     if _pipeline is None:
         pose = PoseAnalyzer()
         parser = ClothingParser(use_fashn=not _light_mode)
-        classifier = FashionClassifier(enabled=not _light_mode)
+        # 학습된 의류 속성 헤드(models/fashion_attribute_heads.pt)가 있으면
+        # FashionSigLIP 특징 위에 얹어 옷 종류·속성 인식에 사용한다.
+        heads = FASHION_ATTRIBUTE_HEADS_PATH if FASHION_ATTRIBUTE_HEADS_PATH.is_file() else None
+        if not _light_mode and heads is None:
+            print(f"학습된 속성 헤드가 없어 zero-shot 분류만 사용합니다: {FASHION_ATTRIBUTE_HEADS_PATH}")
+        classifier = FashionClassifier(
+            enabled=not _light_mode,
+            attribute_checkpoint=None if _light_mode else heads,
+        )
         if _use_vton:
             from catvton_tryon import CatVTONTryOn
 
@@ -59,7 +67,9 @@ def get_pipeline() -> dict:
             "pose": pose,
             "quality": QualityChecker(pose),
             "outfit": OutfitAnalyzer(parser, classifier),
-            "engine": RecommendationEngine(DATA_DIR / "fashion_rules.json", ProductCatalog(catalog_path())),
+            "engine": RecommendationEngine(
+                PROJECT_DIR / "FASHION_RULES_MASTER.md", ProductCatalog(catalog_path())
+            ),
             "vton": vton,
         }
     return _pipeline
@@ -139,7 +149,13 @@ def recommend_outfits(image_path, purpose, style, budget, scope, season):
         image_path,
         recommendations[0],
         OUTPUT_DIR / "web_result.jpg",
-        context={"upper_mask": parsed.get("upper_mask"), "lower_mask": parsed.get("lower_mask")},
+        context={
+            "upper_mask": parsed.get("upper_mask"),
+            "lower_mask": parsed.get("lower_mask"),
+            "upper_style_mask": parsed.get("upper_style_mask"),
+            "lower_style_mask": parsed.get("lower_style_mask"),
+            "segmentation": parsed.get("segmentation"),
+        },
     )
 
     gallery = []

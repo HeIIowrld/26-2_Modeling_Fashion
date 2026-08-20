@@ -19,7 +19,7 @@ import argparse
 import re
 from pathlib import Path
 
-from config import DATA_DIR, OUTPUT_DIR, PROJECT_DIR
+from config import DATA_DIR, FASHION_ATTRIBUTE_HEADS_PATH, OUTPUT_DIR, PROJECT_DIR
 from clothing_parser import ClothingParser
 from fashion_model import FashionClassifier
 from outfit_analyzer import OutfitAnalyzer
@@ -90,9 +90,14 @@ def main() -> None:
     pose_analyzer = PoseAnalyzer()
     quality = QualityChecker(pose_analyzer)
     clothing_parser = ClothingParser(use_fashn=not args.light)
-    classifier = FashionClassifier(enabled=not args.light)
+    # 학습된 의류 속성 헤드가 있으면 옷 종류·속성 인식에 사용한다.
+    heads = FASHION_ATTRIBUTE_HEADS_PATH if FASHION_ATTRIBUTE_HEADS_PATH.is_file() else None
+    classifier = FashionClassifier(
+        enabled=not args.light,
+        attribute_checkpoint=None if args.light else heads,
+    )
     outfit_analyzer = OutfitAnalyzer(clothing_parser, classifier)
-    engine = RecommendationEngine(DATA_DIR / "fashion_rules.json", ProductCatalog(catalog_path()))
+    engine = RecommendationEngine(PROJECT_DIR / "FASHION_RULES_MASTER.md", ProductCatalog(catalog_path()))
 
     if args.vton:
         from catvton_tryon import CatVTONTryOn

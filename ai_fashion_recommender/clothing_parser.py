@@ -83,8 +83,11 @@ class ClothingParser:
 
         if self._parser is not None:
             segmentation = np.asarray(self._parser.predict(rgb), dtype=np.uint8)
-            upper_mask = np.isin(segmentation, [3, 4, 10]).astype(np.uint8)
-            lower_mask = np.isin(segmentation, [4, 5, 6, 7]).astype(np.uint8)
+            # 색상·속성 분석용 순수 의류 마스크. 스카프·벨트 같은 액세서리는
+            # 상의 색이나 학습 속성 분류를 오염시키므로 별도 마스크로 분리한다.
+            upper_mask = np.isin(segmentation, [3, 4]).astype(np.uint8)
+            lower_mask = np.isin(segmentation, [4, 5, 6]).astype(np.uint8)
+            accessory_mask = np.isin(segmentation, [7, 8, 9, 10, 11, 17]).astype(np.uint8)
             # VTON용 확장 마스크: 팔/다리까지 포함해야(CatVTON AutoMasker 방식) 원래
             # 옷의 실루엣이 남지 않고 소매·기장이 다른 옷으로도 바꿀 수 있다.
             # 색상 분석 등에는 순수 의류 마스크(upper/lower_mask)를 그대로 쓴다.
@@ -112,6 +115,7 @@ class ClothingParser:
             cv2.fillConvexPoly(upper_mask, upper_polygon, 1)
             cv2.fillPoly(lower_mask, [lower_polygon], 1)
             upper_style_mask, lower_style_mask = upper_mask, lower_mask
+            accessory_mask = np.zeros((height, width), dtype=np.uint8)
             present = ["top-region", "bottom-region"]
             segmentation = upper_mask * 3 + lower_mask * 6
 
@@ -122,6 +126,7 @@ class ClothingParser:
             "lower_mask": lower_mask.astype(bool),
             "upper_style_mask": upper_style_mask.astype(bool),
             "lower_style_mask": lower_style_mask.astype(bool),
+            "accessory_mask": accessory_mask.astype(bool),
             "present_labels": present,
         }
 

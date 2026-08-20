@@ -116,8 +116,10 @@ def evaluate_deepfashion_predictions(
         "material": "upper_material",
         "pattern": "upper_pattern",
     }
-    totals = {field: 0 for field in fields}
+    ground_truth = {field: 0 for field in fields}
+    accepted = {field: 0 for field in fields}
     correct = {field: 0 for field in fields}
+    pairs: dict[str, list[tuple[str, str]]] = {field: [] for field in fields}
     mismatches = []
     processed = 0
     for record in records:
@@ -128,22 +130,48 @@ def evaluate_deepfashion_predictions(
         for predicted_field, truth_field in fields.items():
             expected = getattr(record, truth_field)
             predicted = prediction.get(predicted_field)
-            if expected is None or not predicted or "불확실" in predicted or "보류" in predicted or "불가" in predicted:
+            if expected is None:
                 continue
-            totals[predicted_field] += 1
+            ground_truth[predicted_field] += 1
+            if not predicted or "불확실" in predicted or "보류" in predicted or "불가" in predicted:
+                pairs[predicted_field].append((expected, "__abstain__"))
+                if len(mismatches) < 30:
+                    mismatches.append(
+                        {"image": record.image_name, "field": predicted_field, "expected": expected, "predicted": predicted or "미응답"}
+                    )
+                continue
+            accepted[predicted_field] += 1
             normalized = _normalize_prediction(predicted_field, predicted)
+            pairs[predicted_field].append((expected, normalized))
             if normalized == expected:
                 correct[predicted_field] += 1
             elif len(mismatches) < 30:
                 mismatches.append(
                     {"image": record.image_name, "field": predicted_field, "expected": expected, "predicted": predicted}
                 )
-    metrics = {
-        field: {
-            "accuracy": round(correct[field] / totals[field], 4) if totals[field] else None,
-            "evaluated": totals[field],
+    metrics = {}
+    for field in fields:
+        labels = sorted({expected for expected, _ in pairs[field]})
+        f1_values = []
+        for label in labels:
+            true_positive = sum(expected == label and predicted == label for expected, predicted in pairs[field])
+            false_positive = sum(expected != label and predicted == label for expected, predicted in pairs[field])
+            false_negative = sum(expected == label and predicted != label for expected, predicted in pairs[field])
+            precision = true_positive / (true_positive + false_positive) if true_positive + false_positive else 0.0
+            recall = true_positive / (true_positive + false_negative) if true_positive + false_negative else 0.0
+            f1_values.append(2 * precision * recall / (precision + recall) if precision + recall else 0.0)
+        selective_accuracy = correct[field] / accepted[field] if accepted[field] else None
+        total = ground_truth[field]
+        metrics[field] = {
+            # 기존 키는 호환성을 위해 유지하되, 선택적으로 응답한 표본의 정확도임을 함께 명시한다.
+            "accuracy": round(selective_accuracy, 4) if selective_accuracy is not None else None,
+            "selective_accuracy": round(selective_accuracy, 4) if selective_accuracy is not None else None,
+            "overall_accuracy": round(correct[field] / total, 4) if total else None,
+            "coverage": round(accepted[field] / total, 4) if total else None,
+            "macro_f1": round(sum(f1_values) / len(f1_values), 4) if f1_values else None,
+            "ground_truth": total,
+            "evaluated": accepted[field],
+            "abstained": total - accepted[field],
             "correct": correct[field],
         }
-        for field in fields
-    }
     return {"processed_images": processed, "metrics": metrics, "mismatches": mismatches}
