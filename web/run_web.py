@@ -2,10 +2,10 @@
 
 어느 폴더에서 실행해도 동작한다.
 
-    python run_web.py                # http://127.0.0.1:8000
-    python run_web.py --port 9000    # 포트 지정
-    python run_web.py --lan          # 같은 와이파이의 다른 기기에서도 접속 허용
-    python run_web.py --check        # 서버를 켜지 않고 환경만 점검
+    python web/run_web.py                # http://127.0.0.1:8000
+    python web/run_web.py --port 9000    # 포트 지정
+    python web/run_web.py --lan          # 같은 와이파이의 다른 기기에서도 접속 허용
+    python web/run_web.py --check        # 서버를 켜지 않고 환경만 점검
 
 실행 전에 파이썬 버전·패키지·데이터 파일을 먼저 점검하고, 문제가 있으면
 무엇을 어떻게 고쳐야 하는지 한국어로 알려준다.
@@ -138,7 +138,7 @@ def main() -> int:
     try:
         run_checks()
         if args.check:
-            print("\n환경 점검을 통과했습니다. `python run_web.py` 로 서버를 켤 수 있습니다.")
+            print("\n환경 점검을 통과했습니다. `python web/run_web.py` 로 서버를 켤 수 있습니다.")
             return 0
         port = find_free_port(args.port)
     except CheckFailed as error:

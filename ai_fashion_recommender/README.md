@@ -1,29 +1,31 @@
 # 체형·목적 기반 AI 코디 추천 1단계
 
 전신사진 한 장에서 체형과 현재 착장을 분석하고, 패션 규칙에 따라 코디를 추천합니다.
-`main.ipynb`(Notebook)와 `run_web.py`(웹)가 **같은 파이프라인 모듈**을 호출합니다.
+`main.ipynb`(Notebook)와 `web/run_web.py`(웹)가 **같은 파이프라인 모듈**을 호출합니다.
 
 ## 처음 실행하는 팀원용 3단계
+
+아래 명령은 모두 **저장소 루트**에서 실행합니다.
 
 ```bash
 # 1. 파이썬 3.9 ~ 3.12 환경에서 (3.13은 mediapipe 미지원)
 python --version
 
 # 2. 패키지 설치
-pip install -r requirements.txt
+pip install -r ai_fashion_recommender/requirements.txt
 
 # 3. 웹 실행 — 브라우저가 자동으로 열립니다
-python run_web.py
+python web/run_web.py
 ```
 
-`run_web.py`는 켜기 전에 파이썬 버전·패키지·데이터 파일을 점검하고, 문제가 있으면
-무엇을 고쳐야 하는지 알려줍니다. 서버를 켜지 않고 점검만 하려면 `python run_web.py --check`.
+`web/run_web.py`는 켜기 전에 파이썬 버전·패키지·데이터 파일을 점검하고, 문제가 있으면
+무엇을 고쳐야 하는지 알려줍니다. 서버를 켜지 않고 점검만 하려면 `python web/run_web.py --check`.
 
 | 상황 | 명령 |
 |---|---|
 | 8000번 포트가 이미 사용 중 | 자동으로 비어 있는 포트를 찾습니다 (`--port 9000`으로 지정도 가능) |
-| 발표용으로 다른 기기에서 접속 | `python run_web.py --lan` |
-| 환경만 점검 | `python run_web.py --check` |
+| 발표용으로 다른 기기에서 접속 | `python web/run_web.py --lan` |
+| 환경만 점검 | `python web/run_web.py --check` |
 
 첫 분석은 FASHN Parser와 FashionSigLIP 체크포인트를 내려받느라 1분 이상 걸리고 인터넷이 필요합니다.
 이후에는 로컬 캐시를 쓰고, 모델은 프로세스당 한 번만 메모리에 올라가 재사용됩니다.
@@ -51,10 +53,8 @@ Notebook과 공용이라 `ai_fashion_recommender/`에 있습니다.
 
 ```
 26-2_Modeling_Fashion/
-├── run_web.py                  웹 실행 진입점 (web/run_web.py로 넘겨줌)
-│
 ├── web/                        웹 애플리케이션 (여기만 웹 전용)
-│   ├── run_web.py              환경 점검 + 서버 기동
+│   ├── run_web.py              실행 진입점 (환경 점검 + 서버 기동)
 │   ├── app.py                  FastAPI 라우트
 │   ├── pipeline.py             Notebook과 같은 순서의 실행 래퍼
 │   └── static/                 화면 (HTML·CSS·JS)
