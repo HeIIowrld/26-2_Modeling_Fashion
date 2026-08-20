@@ -1,6 +1,7 @@
 """AI 코디 추천 웹 서버.
 
-`python -m uvicorn web.app:app --reload` 또는 `python web/app.py`로 실행한다.
+저장소 루트에서 `python run_web.py`로 실행한다.
+직접 띄우려면 `python -m uvicorn app:app --reload --app-dir web`.
 """
 
 from __future__ import annotations
@@ -50,7 +51,7 @@ SESSION_ROOT = Path(
 )
 
 # 사진을 프로젝트 안에 저장하던 이전 버전이 남긴 폴더. 시작할 때 비운다.
-LEGACY_SESSION_ROOT = WEB_DIR.parent / "outputs" / "web_sessions"
+LEGACY_SESSION_ROOT = WEB_DIR.parent / "ai_fashion_recommender" / "outputs" / "web_sessions"
 
 MAX_UPLOAD_BYTES = 12 * 1024 * 1024
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}

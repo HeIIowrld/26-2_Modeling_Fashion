@@ -20,7 +20,9 @@ import sys
 import webbrowser
 from pathlib import Path
 
-PROJECT_DIR = Path(__file__).resolve().parent
+WEB_DIR = Path(__file__).resolve().parent
+# 분석·규칙·모델은 웹 전용이 아니라 Notebook과 공용이라 별도 폴더에 둔다.
+CORE_DIR = WEB_DIR.parent / "ai_fashion_recommender"
 
 # mediapipe 0.10.x 휠이 제공되는 범위. 이 밖의 버전에서는 설치 자체가 실패한다.
 MIN_PYTHON = (3, 9)
@@ -41,11 +43,11 @@ REQUIRED_PACKAGES = [
 ]
 
 REQUIRED_FILES = [
-    (PROJECT_DIR / "data" / "products.csv", "상품 카탈로그"),
-    (PROJECT_DIR / "FASHION_RULES_MASTER.md", "패션 규칙 문서"),
+    (CORE_DIR / "data" / "products.csv", "상품 카탈로그"),
+    (CORE_DIR / "FASHION_RULES_MASTER.md", "패션 규칙 문서"),
 ]
 
-MODEL_PATH = PROJECT_DIR / "models" / "fashion_attribute_heads.pt"
+MODEL_PATH = CORE_DIR / "models" / "fashion_attribute_heads.pt"
 
 
 class CheckFailed(Exception):
@@ -74,7 +76,7 @@ def check_packages() -> str:
         raise CheckFailed(
             "필요한 패키지가 설치되어 있지 않습니다: " + ", ".join(missing) + "\n"
             "  아래 명령으로 한 번에 설치하세요.\n"
-            f'    "{sys.executable}" -m pip install -r "{PROJECT_DIR / "requirements.txt"}"'
+            f'    "{sys.executable}" -m pip install -r "{CORE_DIR / "requirements.txt"}"'
         )
     return f"필수 패키지 {len(REQUIRED_PACKAGES)}종"
 
@@ -95,7 +97,7 @@ def check_model() -> str:
         return f"학습된 속성 헤드 ({size_mb:.0f}MB)"
     return (
         "학습된 속성 헤드 없음 → FashionSigLIP 제로샷으로 자동 대체\n"
-        f"     (정확한 세부 분석을 하려면 {MODEL_PATH.relative_to(PROJECT_DIR)} 를 받아 넣으세요)"
+        f"     (정확한 세부 분석을 하려면 {MODEL_PATH.relative_to(CORE_DIR.parent)} 를 받아 넣으세요)"
     )
 
 
@@ -154,7 +156,7 @@ def main() -> int:
     print("  첫 분석은 모델을 내려받고 메모리에 올리느라 1분 이상 걸릴 수 있습니다.")
     print("  종료하려면 Ctrl+C 를 누르세요.\n")
 
-    for path in (PROJECT_DIR, PROJECT_DIR / "web"):
+    for path in (CORE_DIR, WEB_DIR):
         if str(path) not in sys.path:
             sys.path.insert(0, str(path))
 
