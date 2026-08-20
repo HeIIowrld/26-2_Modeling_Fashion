@@ -4,6 +4,11 @@ import argparse
 import json
 from pathlib import Path
 
+import sys
+
+# 런타임 모듈은 src/에 있다. 임포트 전에 경로를 등록한다.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
 from config import FASHION_SIGLIP_MODEL_ID
 from fashion_attribute_dataset import convert_fashionpedia_instances
 from fashion_attribute_training import (

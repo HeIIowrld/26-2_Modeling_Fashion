@@ -2,7 +2,8 @@ import os
 from pathlib import Path
 
 
-PROJECT_DIR = Path(__file__).resolve().parent
+# 모듈은 src/ 아래에 있고 data·models·outputs는 그 상위(프로젝트 폴더)에 있다.
+PROJECT_DIR = Path(__file__).resolve().parent.parent
 
 
 def resolve_path(value: str | Path | None, default: str | Path, base_dir: str | Path = PROJECT_DIR) -> Path:
@@ -18,6 +19,20 @@ def resolve_path(value: str | Path | None, default: str | Path, base_dir: str | 
 DATA_DIR = resolve_path(os.environ.get("FASHION_DATA_DIR"), "data")
 OUTPUT_DIR = resolve_path(os.environ.get("FASHION_OUTPUT_DIR"), "outputs")
 FONT_PATH = os.environ.get("FASHION_FONT_PATH", "").strip()
+
+# 이미지 자산은 코드 밖 datasets/에 역할별로 나눠 둔다.
+#   people   : 옷을 갈아입힐 사람 사진 (합성 대상)
+#   garments : 입힐 상품 이미지 (합성 타겟). clean은 파서로 옷만 남긴 정제본이다.
+REPO_DIR = PROJECT_DIR.parent
+DATASETS_DIR = resolve_path(os.environ.get("FASHION_DATASETS_DIR"), "datasets", REPO_DIR)
+PEOPLE_DIR = DATASETS_DIR / "people"
+GARMENT_RAW_DIR = DATASETS_DIR / "garments" / "raw"
+GARMENT_CLEAN_DIR = DATASETS_DIR / "garments" / "clean"
+
+
+def garment_image_path(image_name: str) -> Path:
+    """카탈로그 CSV의 image_path(파일명)를 실제 상품 이미지 경로로 바꾼다."""
+    return GARMENT_RAW_DIR / Path(image_name).name
 
 # 정식 분석 경로는 두 모델을 모두 사용한다. 메모리·네트워크 점검 때만 False로 바꾼다.
 ENABLE_FASHN_PARSER = True

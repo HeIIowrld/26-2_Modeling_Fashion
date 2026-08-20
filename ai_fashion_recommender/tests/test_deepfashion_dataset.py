@@ -7,7 +7,7 @@ from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "src"))
 
 from deepfashion_dataset import evaluate_deepfashion_predictions, load_deepfashion_multimodal
 

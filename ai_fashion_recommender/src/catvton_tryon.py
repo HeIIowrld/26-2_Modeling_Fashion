@@ -29,14 +29,14 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageFilter
 
-from config import PROJECT_DIR
+from config import GARMENT_CLEAN_DIR, PROJECT_DIR, garment_image_path
 from schemas import Recommendation
 from virtual_tryon import VirtualTryOnAdapter
 
 CATVTON_REPO = PROJECT_DIR.parent / "third_party" / "CatVTON"
 BASE_CKPT = "booksforcharlie/stable-diffusion-inpainting"
 ATTN_CKPT = "zhengchong/CatVTON"
-GARMENT_CACHE_DIR = PROJECT_DIR / "data" / "musinsa_images_clean"
+GARMENT_CACHE_DIR = GARMENT_CLEAN_DIR
 
 # clothing_parser.LABELS 기준: 3=top, 4=dress, 5=skirt, 6=pants, 7=belt, 10=scarf
 GARMENT_TARGET_LABELS = {
@@ -577,7 +577,7 @@ class CatVTONTryOn(VirtualTryOnAdapter):
 
         jobs = []  # (garment 이미지 경로, 원본 크기 마스크, 카테고리)
         for product in recommendation.products:
-            garment_path = PROJECT_DIR / product.image_path if product.image_path else None
+            garment_path = garment_image_path(product.image_path) if product.image_path else None
             if garment_path is None or not garment_path.exists():
                 continue
             mask_keys = (

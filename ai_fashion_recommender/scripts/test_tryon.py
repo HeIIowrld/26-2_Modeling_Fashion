@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """인스타 수집 전신사진으로 추천~합성 파이프라인을 검증한다.
 
-개인 전신사진 없이도 `../모델링_인스타/{남자,여자}`의 정면 전신 사진을 테스트
+개인 전신사진 없이도 `../datasets/people/{men,women}`의 정면 전신 사진을 테스트
 인물로 바로 써볼 수 있다. 이 이미지들은 "1·2단계 개발과 검증" 용도이므로,
 카탈로그를 새로 크롤링하거나 CatVTON 합성 디테일 로직(마스크 블러+repaint,
 상품 이미지 정제, 선명도 재생성)을 바꿀 때마다 여기서 빠르게 전후를 비교한다.
@@ -21,7 +21,12 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from config import DATA_DIR, FASHION_ATTRIBUTE_HEADS_PATH, OUTPUT_DIR, PROJECT_DIR
+import sys
+
+# 런타임 모듈은 src/에 있다. 임포트 전에 경로를 등록한다.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from config import DATA_DIR, FASHION_ATTRIBUTE_HEADS_PATH, OUTPUT_DIR, PEOPLE_DIR, PROJECT_DIR
 from clothing_parser import ClothingParser
 from fashion_model import FashionClassifier
 from outfit_analyzer import OutfitAnalyzer
@@ -31,9 +36,9 @@ from quality_checker import QualityChecker
 from recommendation_engine import RecommendationEngine
 from schemas import UserProfile
 
-SAMPLE_ROOT = PROJECT_DIR.parent / "모델링_인스타"
-# 인스타 수집본은 성별별 한글 폴더에 들어 있고 확장자가 섞여 있다.
-GENDER_FOLDERS = {"male": "남자", "female": "여자"}
+SAMPLE_ROOT = PEOPLE_DIR
+# 수집본은 확장자가 섞여 있다(jpeg/png).
+GENDER_FOLDERS = {"male": "men", "female": "women"}
 IMAGE_SUFFIXES = (".jpg", ".jpeg", ".png")
 
 
@@ -111,12 +116,12 @@ def main() -> None:
 
     out_dir = OUTPUT_DIR / "tryon_tests"
     out_dir.mkdir(parents=True, exist_ok=True)
-    gender_labels = {"남자": "남성", "여자": "여성"}
+    gender_labels = {"men": "남성", "women": "여성"}
 
     for image_path in images:
         if args.skip_existing and (out_dir / f"{image_path.stem}_result.jpg").exists():
             continue
-        # 폴더 이름(남자/여자)으로 성별을 정해 반대 성별 상품이 추천되지 않게 한다.
+        # 폴더 이름(men/women)으로 성별을 정해 반대 성별 상품이 추천되지 않게 한다.
         profile = UserProfile(gender=gender_labels.get(image_path.parent.name, ""))
         print(f"\n=== {image_path.name} ({profile.gender or '성별 무관'}) ===")
         pose = pose_analyzer.analyze(image_path)

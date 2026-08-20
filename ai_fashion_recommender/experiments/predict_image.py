@@ -25,7 +25,7 @@ from PIL import Image
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 if str(PROJECT_DIR) not in sys.path:
-    sys.path.insert(0, str(PROJECT_DIR))
+    sys.path.insert(0, str(PROJECT_DIR / "src"))
 
 from config import FASHION_SIGLIP_MODEL_ID  # noqa: E402
 from fashion_attribute_model import FashionAttributePredictor  # noqa: E402

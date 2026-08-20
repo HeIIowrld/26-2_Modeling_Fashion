@@ -12,11 +12,15 @@ main.ipynb의 파이프라인을 Gradio UI로 감싼 것이다.
 
 import argparse
 import html
+import sys
 from pathlib import Path
 
 import gradio as gr
 
-from config import DATA_DIR, FASHION_ATTRIBUTE_HEADS_PATH, OUTPUT_DIR, PROJECT_DIR
+# 런타임 모듈은 src/에 있다. 임포트 전에 경로를 등록한다.
+sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
+
+from config import DATA_DIR, FASHION_ATTRIBUTE_HEADS_PATH, OUTPUT_DIR, PROJECT_DIR, garment_image_path
 from clothing_parser import ClothingParser
 from fashion_model import FashionClassifier
 from outfit_analyzer import OutfitAnalyzer
@@ -77,7 +81,7 @@ def get_pipeline() -> dict:
 
 def _product_image(product) -> str | None:
     if product.image_path:
-        path = PROJECT_DIR / product.image_path
+        path = garment_image_path(product.image_path)
         if path.exists():
             return str(path)
     return None

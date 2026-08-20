@@ -47,7 +47,5 @@ models/fashion_attribute_heads_augmented_r3*.pt
 models/fashion_attribute_heads_detailnone.pt
 models/fashion_attribute_heads_finetuned.pt
 
-# 무신사 크롤링 산출물 — 재배포 금지, 로컬에만 보존
-data/musinsa_images/
-data/musinsa_images_clean/
+# 무신사 카탈로그 CSV — 재배포 금지, 로컬에만 보존 (이미지는 ../datasets/garments/)
 data/products_musinsa.csv

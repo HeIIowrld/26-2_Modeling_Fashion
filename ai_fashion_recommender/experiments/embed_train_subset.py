@@ -18,7 +18,7 @@ import torch
 from PIL import Image
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_DIR))
+sys.path.insert(0, str(PROJECT_DIR / "src"))
 from fashion_attribute_dataset import load_attribute_csv, encode_record_targets  # noqa: E402
 from fashion_attribute_schema import ATTRIBUTE_TASKS  # noqa: E402
 from fashion_attribute_training import FrozenFashionSigLIPEncoder  # noqa: E402

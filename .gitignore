@@ -10,8 +10,9 @@ __pycache__/
 /모델링_인스타.zip
 /third_party/
 
-# 인스타 수집 전신사진 (검증용 소스, 재배포 금지) — 코드만 커밋한다
-/모델링_인스타/
+# 이미지 자산은 재배포 금지 — 코드와 메타데이터(CSV)만 커밋한다
+/datasets/people/
+/datasets/garments/
 
 # 영상 수집 파이프라인 산출물 (대용량, 재수집 가능) — 코드는 collect/에 커밋한다
 /data/

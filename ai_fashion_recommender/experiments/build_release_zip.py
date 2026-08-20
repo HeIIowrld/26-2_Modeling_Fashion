@@ -136,7 +136,7 @@ def main() -> None:
           f"main.ipynb 절대경로 {abs_in_nb}건, config.py 프로젝트 기준 경로 {config_relative}, "
           f"경로 설정 셀 마커 {len(rel_markers)}개")
 
-    sys.path.insert(0, str(EXTRACT_ROOT / PROJECT))
+    sys.path.insert(0, str(EXTRACT_ROOT / PROJECT / "src"))
     import torch
     torch.set_num_threads(2)
     from fashion_attribute_model import load_attribute_heads

@@ -14,7 +14,7 @@ from pathlib import Path
 import ijson
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_DIR))
+sys.path.insert(0, str(PROJECT_DIR / "src"))
 
 from fashion_attribute_dataset import (  # noqa: E402
     ATTRIBUTE_KEYWORDS,

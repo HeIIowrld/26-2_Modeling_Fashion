@@ -23,7 +23,12 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
-from config import DATA_DIR
+import sys
+
+# 런타임 모듈은 src/에 있다. 임포트 전에 경로를 등록한다.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from config import DATA_DIR, GARMENT_RAW_DIR
 
 API_URL = "https://api.musinsa.com/api2/dp/v2/plp/goods"
 # size=100이 1페이지에서 허용하는 최대치다(그 이상은 400 Bad Request).
@@ -303,7 +308,7 @@ def main() -> None:
 
     products = crawl(args.per_category, args.delay, args.max_price)
     if not args.skip_images:
-        image_dir = DATA_DIR / "musinsa_images"
+        image_dir = GARMENT_RAW_DIR
         image_dir.mkdir(parents=True, exist_ok=True)
         for index, product in enumerate(products, start=1):
             try:

@@ -9,7 +9,8 @@ from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "scripts"))  # 전처리 스크립트의 헬퍼도 검증한다
 
 from fashion_attribute_dataset import (
     convert_fashionpedia_instances,

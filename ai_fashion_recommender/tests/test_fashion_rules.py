@@ -5,14 +5,14 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "src"))
 
 from fashion_rules import FashionRuleBook
 
 
 class FashionRuleBookTests(unittest.TestCase):
     def test_loads_rule_metadata_from_markdown(self):
-        book = FashionRuleBook.from_markdown(ROOT / "FASHION_RULES_RESEARCH.md")
+        book = FashionRuleBook.from_markdown(ROOT / "docs" / "FASHION_RULES_RESEARCH.md")
         self.assertGreaterEqual(len(book.rules), 20)
         self.assertEqual(book.rules["R-SIL-01"].confidence, "높음")
         self.assertEqual(book.rules["R-KOR-01"].evidence, "A + D")

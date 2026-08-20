@@ -14,7 +14,7 @@ from typing import Any
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 if str(PROJECT_DIR) not in sys.path:
-    sys.path.insert(0, str(PROJECT_DIR))
+    sys.path.insert(0, str(PROJECT_DIR / "src"))
 
 from fashion_attribute_schema import ATTRIBUTE_TASKS  # noqa: E402
 

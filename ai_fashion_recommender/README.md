@@ -1,213 +1,227 @@
-# 체형·목적 기반 AI 코디 추천 1단계
+# ai_fashion_recommender
 
-`main.ipynb`가 전체 실행 순서를 담당하고 각 기능은 같은 폴더의 Python 모듈로 분리되어 있습니다.
+전신사진 한 장으로 체형과 착장을 읽고, 규칙으로 상품을 고르고, 실제로 입혀본
+합성 사진까지 만드는 코드. `main.ipynb`가 전체 흐름을 순서대로 보여주고
+기능별 모듈은 `src/`에 있다.
 
 ## 구조
 
-- `main.ipynb`: 사용자 입력부터 추천 결과까지 단계별 실행
-- `pose_analyzer.py`: MediaPipe Pose 기반 체형·자세 참고 비율
-- `clothing_parser.py`: FASHN Human Parser로 의류 종류별 픽셀 마스크 생성
-- `garment_attribute_analyzer.py`: 의류 마스크와 관절 위치를 결합해 소매·상의·하의 길이 및 핏 추정
-- `fashion_model.py`: FashionSigLIP과 학습된 다중 속성 헤드 추론
-- `fashion_attribute_schema.py`: 속성별 라벨과 단일·복수 분류 방식 정의
-- `fashion_attribute_dataset.py`: 학습 CSV 로딩과 Fashionpedia 주석 변환
-- `prepare_fashionpedia_seed.py`: Fashionpedia 공식 세부 속성 주석과 이미지 추출
-- `prepare_fashion200k_supplement.py`: Fashion200K 상품 메타데이터에서 셔츠·블라우스·폴로·소재 보완 샘플 구성
-- `prepare_fashion200k_bottoms.py`: Fashion200K 상품명에서 하의 종류·다리 모양·기장·구조 디테일 보완 샘플 구성
-- `fashion_attribute_model.py`: 고정 FashionSigLIP 특징 위의 속성별 분류 헤드
-- `fashion_attribute_training.py`: 특징 캐시, 헤드 학습, 평가, 임계값 선택
-- `train_fashion_attribute_heads.ipynb`: 데이터 준비부터 체크포인트 생성까지 단계별 학습
-- `fashion_prompts.py`: DeepFashion-MultiModal 라벨에 맞춘 패턴·소재·네크라인 후보
-- `outfit_analyzer.py`: 의류 색상과 세부 속성 분석 결과 통합
-- `deepfashion_dataset.py`: 공식 MultiModal 텍스트 라벨 로딩과 현재 모델 정확도 평가
-- `deepfashion_evaluation.ipynb`: DeepFashion 데이터 경로 설정부터 평가 보고서 저장까지 단계별 실행
-- `fashion_rules.py`: `FASHION_RULES_MASTER.md`의 R-* 규칙 ID와 메타데이터 로딩
-- `recommendation_engine.py`: 활성 패션 규칙 기반 후보 필터링·점수 계산·설명 생성
-- `product_catalog.py`: 로컬 샘플 상품 카탈로그
-- `virtual_tryon.py`: VTON 교체용 인터페이스와 비합성 추천 보드
-- `catvton_tryon.py`: CatVTON 디퓨전 기반 실제 가상 피팅 어댑터 (FASHN 마스크 사용)
-- `quality_checker.py`: 입력·합성 결과 품질 검사
-- `feedback_store.py`: 사용자 피드백 JSONL 저장
-- `musinsa_crawler.py`: 무신사 상품 메타데이터·전면샷 수집기 (연구용 소규모)
-- `app.py`: 사진 업로드 → 분석 → 무신사 추천을 제공하는 Gradio 웹 앱
-
-## 웹 앱 실행
-
-```bash
-python musinsa_crawler.py --per-category 60   # 카탈로그 수집 (data/products_musinsa.csv)
-python app.py                                 # 웹 앱 실행 (http://localhost:7860)
-python app.py --light                         # 무거운 모델 없이 UI 흐름만 확인
-python app.py --share                         # 팀원용 임시 공개 링크
+```
+├── main.ipynb                  전체 파이프라인 단계별 실행
+├── app.py                      Gradio 웹 앱
+├── FASHION_RULES_MASTER.md     추천 엔진이 런타임에 읽는 R-* 규칙
+├── src/                        런타임 모듈
+├── scripts/                    수집·전처리·학습·검증 스크립트
+├── docs/                       규칙 연구 노트, 설치·구조 문서
+├── tests/                      단위·회귀 테스트
+├── experiments/                지난 학습 실험 기록
+├── data/                       카탈로그 CSV, 학습 주석, 규칙 JSON
+├── models/                     학습된 속성 헤드 체크포인트
+├── reports/                    실험 리포트
+└── outputs/                    실행 산출물 (git 제외)
 ```
 
-- `data/products_musinsa.csv`가 있으면 자동으로 무신사 카탈로그를 사용하고, 없으면 `data/products.csv` 샘플을 사용합니다.
-- 크롤링은 연구·학습용 소규모로만 사용하고 수집한 이미지는 재배포하지 않습니다.
-- `models/fashion_attribute_heads.pt`가 있으면 학습된 속성 헤드로 옷 종류·속성을 인식하고, 없으면 zero-shot 분류로 자동 대체합니다.
+`src/`가 `sys.path`에 등록되므로 모듈끼리는 `from config import ...`처럼 평면 임포트를
+쓴다. Notebook은 0번 셀에서, `app.py`와 `scripts/*.py`는 파일 상단에서 이 경로를 잡는다.
+이미지 자산은 코드 밖 `../datasets/`에 있고 `config.py`의 `PEOPLE_DIR`,
+`GARMENT_RAW_DIR`, `GARMENT_CLEAN_DIR`로만 접근한다.
 
-## 실제 가상 피팅 (CatVTON)
+### src/
 
-`python app.py --vton`으로 실행하거나 `main.ipynb`에서 `USE_VTON = True`로 바꾸면 추천 보드 대신 CatVTON 디퓨전 모델이 추천 옷을 실제로 입힌 합성 사진을 생성합니다.
+| 모듈 | 역할 |
+| --- | --- |
+| `config.py` | 경로·임계값. `PROJECT_DIR`은 `src/`의 상위 |
+| `schemas.py` | 사용자·분석·상품·추천 데이터 구조 |
+| `pose_analyzer.py` | MediaPipe Pose 기반 체형·자세 비율 |
+| `clothing_parser.py` | FASHN Human Parser로 의류 픽셀 마스크 생성 |
+| `garment_attribute_analyzer.py` | 마스크 끝점과 관절로 소매·기장·핏 측정 |
+| `outfit_analyzer.py` | 색상과 속성 분석 결과 통합 |
+| `quality_checker.py` | 입력·합성 결과 품질 검사 |
+| `fashion_model.py` | FashionSigLIP + 학습된 속성 헤드 추론 |
+| `fashion_prompts.py` | zero-shot용 패턴·소재·네크라인 후보 |
+| `fashion_attribute_schema.py` | 속성별 라벨과 단일·복수 분류 정의 |
+| `fashion_attribute_model.py` | 고정 특징 위의 속성별 분류 헤드 |
+| `fashion_attribute_dataset.py` | 학습 CSV 로딩, Fashionpedia 주석 변환 |
+| `fashion_attribute_training.py` | 특징 캐시, 학습, 평가, 임계값 선택 |
+| `fashion_rules.py` | 규칙 문서에서 R-* ID와 메타데이터 로딩 |
+| `recommendation_engine.py` | 규칙 기반 필터·점수·설명 생성 |
+| `product_catalog.py` | 카탈로그 로딩, 카테고리·성별 필터 |
+| `virtual_tryon.py` | VTON 인터페이스와 비합성 추천 보드 |
+| `catvton_tryon.py` | CatVTON 어댑터 (FASHN 마스크 사용) |
+| `deepfashion_dataset.py` | DeepFashion 라벨 로딩과 정확도 평가 |
+| `feedback_store.py` | 피드백 JSONL 저장 |
 
-- 준비물: 프로젝트 상위 폴더에 `third_party/CatVTON` 클론
-  (`git clone https://github.com/Zheng-Chong/CatVTON.git`)
-- 마스크는 CatVTON의 AutoMasker(detectron2 필요) 대신 프로젝트의 FASHN 마스크를 사용하므로 Windows에서도 동작합니다.
-- 첫 실행 시 HuggingFace에서 체크포인트 약 5GB를 내려받습니다.
-- CPU에서는 장당 수 분 이상 걸리므로 GPU 환경을 권장합니다.
-- CatVTON 가중치는 CC BY-NC-SA 4.0(비상업) 라이선스입니다.
+### scripts/
 
-### AMD GPU (Windows) 환경
-
-RX 7000/9000 시리즈는 AMD의 Windows용 ROCm PyTorch 프리뷰로 GPU 가속이 가능합니다. **Python 3.12 전용**이므로 별도 가상환경을 만듭니다.
-
-```powershell
-py -3.12 -m venv C:\venvs\fashion-gpu
-C:\venvs\fashion-gpu\Scripts\python.exe -m pip install --no-cache-dir `
-    https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_core-7.2.1-py3-none-win_amd64.whl `
-    https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_devel-7.2.1-py3-none-win_amd64.whl `
-    https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_libraries_custom-7.2.1-py3-none-win_amd64.whl `
-    https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm-7.2.1.tar.gz
-C:\venvs\fashion-gpu\Scripts\python.exe -m pip install --no-cache-dir `
-    "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torch-2.9.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl" `
-    "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torchvision-0.24.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl"
-C:\venvs\fashion-gpu\Scripts\python.exe -m pip install "mediapipe==0.10.14" opencv-python `
-    "transformers==4.46.3" "fashn-human-parser==0.1.1" "open-clip-torch==3.3.0" "ftfy==6.3.1" `
-    "protobuf<5" "diffusers==0.31.0" accelerate gradio
-```
-
-ROCm 빌드는 `torch.cuda.is_available()`가 그대로 동작하므로 코드 수정 없이 NVIDIA 환경(Colab, HF Spaces)으로 이식됩니다.
-
-### 합성 품질: 확인된 실패 모드와 자동 점검
-
-같은 사람·같은 마스크·같은 시드에서 상품만 바꾼 통제 실험(2026-08-20, `female_012`)으로 두 가지 실패 원인을 분리해 확인했습니다. 둘 다 디퓨전 모델의 성능 문제가 아니라 **입력 조건** 문제입니다.
-
-**1. 레퍼런스 품질 → 시스루 (원인 미확정)**
-
-특정 레퍼런스(MS6797005)에서 옷이 반투명하게 렌더링됩니다. 원인을 좁히는 중이며 **아직 확정되지 않았습니다.**
-
-같은 사람·마스크·시드에 상의 레퍼런스만 5종 교체한 결과:
-
-| 레퍼런스 | coverage | contrast | 색 | 결과 |
-|---|---|---|---|---|
-| MS6677115 | 0.50 | 208 | 갈색 | 불투명 |
-| **MS6797005** | **0.15** | **56** | **흰색** | **시스루** |
-| MS6843814 | 0.06 | 230 | 검정 | 불투명 |
-| MS6162377 | 1.47 | 47 | 흰색 | 불투명·레퍼런스에 충실 |
-| MS6529592 | 0.30 | 228 | 검정 | 불투명 |
-
-- **coverage 단독은 원인이 아닙니다.** MS6843814는 coverage 0.06으로 가장 낮은데도 불투명하게 렌더링됩니다.
-- **contrast 단독도 원인이 아닙니다.** MS6162377은 contrast 47(흰옷)인데 정상입니다.
-- 둘 다 낮은 MS6797005만 실패했습니다. 상호작용이 의심되지만 **표본이 1건이라 단정할 수 없습니다.**
-
-`coverage`(조건 입력 픽셀 수 대비 원본의 실제 의류 픽셀 수)와 `contrast`(흰 배경과의 밝기 차)는 `evaluate_garment_reference`가 계산합니다. 카탈로그 전체에서 두 값은 무상관(r=0.062)입니다. 현재 `min_reference_coverage`(0.25) 경고는 **품질 참고용이며 시스루 예측기로 검증되지 않았습니다.**
-
-관찰된 부수 효과: coverage가 높을수록 레퍼런스를 충실히 재현하는 경향이 있습니다(MS6162377만 흰 티셔츠로 정확히 전이됨). 낮은 쪽은 마스크 모양에 맞춘 회색 니트류를 만들어내는 경우가 많았는데, 이는 아래 2번(마스크 모양 프라이어)과 얽혀 있어 분리 검증이 더 필요합니다.
-
-**2. 새 옷이 원래 옷보다 짧을 때 → 마스크가 옷 텍스처로 채워짐**
-
-마스크는 *원래 입고 있던 옷* 기준으로 만들어집니다. 더 짧은 옷을 넣으면 남는 마스크 영역(종아리·팔)을 모델이 맨살이 아니라 옷 비슷한 것으로 채웁니다.
-
-| 기장 차이 | 결과 |
-|---|---|
-| 긴바지 → 미디·7부 (gap=1) | 정상 |
-| 긴바지 → 쇼츠·미니 (gap=3) | 다리 전체가 니트 텍스처로 덮임 |
-
-소매도 같은 원리입니다(긴팔 마스크에 반팔 상품을 넣으면 긴팔로 그려짐). `bottom_length_gap` / `sleeve_length_gap`이 `UNRELIABLE_LENGTH_GAP`(2단계) 이상이면 경고합니다.
-
-**점검 결과 사용**
-
-`generate()`에 `context={"outfit": ..., "classifier": ...}`를 함께 넘기면 위 두 점검이 돌고 사유가 `tryon.last_warnings`에 쌓입니다. 웹 앱은 분석 패널에, Notebook은 결과 이미지 아래에 표시합니다. **경고가 있는 결과는 합성이 깨졌을 수 있으므로 그대로 신뢰하면 안 됩니다.**
-
-근본 해결은 카탈로그에 **상품 단독컷을 확보**하는 것입니다. 착용컷만 있는 상품은 VTON 렌더링 대상에서 제외하거나 단독컷을 다시 수집해야 합니다.
-
-**아직 해결되지 않은 것**
-
-- FASHN이 옷 위의 가방끈을 `top`으로 분류하는 경우가 있어(MS6797005: 어두운 픽셀 6.5k개) 세그멘테이션 기반 제거가 안 됩니다. 가방·머리카락·팔로 분류되는 가림 요소만 정제 단계에서 제외합니다.
-- 마스크 모양 프라이어 자체는 CatVTON 구조상 우회할 수 없습니다. 위 2번은 감지·안내만 하고 합성 자체를 고치지는 못합니다.
+- `test_tryon.py` — 수집 사진으로 추천~합성 전후 비교
+- `musinsa_crawler.py` — 상품 메타데이터·전면샷 수집 (연구용 소규모)
+- `prepare_fashionpedia_seed.py` — Fashionpedia 주석·이미지 추출
+- `prepare_fashion200k_supplement.py` — 셔츠·블라우스·폴로·소재 보완 샘플
+- `prepare_fashion200k_bottoms.py` — 하의 종류·다리 모양·기장·디테일 보완 샘플
+- `train_fashion_attribute_heads.py` — 속성 헤드 학습 CLI
 
 ## 실행
 
-1. 팀원은 `ai_fashion_recommender` 폴더 전체를 자신의 PC로 복사합니다.
-2. `pip install -r requirements.txt`로 필요한 패키지를 설치합니다.
-3. 여러 Python이 설치된 PC라면 `python -m ipykernel install --user --name ai-fashion --display-name "AI Fashion"`을 실행하고 Notebook 커널을 **AI Fashion**으로 선택합니다.
-4. `main.ipynb`를 열고 맨 위의 **팀원별 로컬 경로 설정** 셀을 수정합니다.
-5. 사용 조건을 입력한 뒤 Notebook을 위에서 아래로 실행합니다.
+```bash
+pip install -r requirements.txt
+python scripts/test_tryon.py --vton --count 2    # 수집 사진으로 바로 확인
+python app.py                                    # 웹 앱 (localhost:7860)
+python app.py --light                            # 무거운 모델 없이 UI 흐름만
+```
 
-### 로컬 경로 설정
+Notebook을 쓰려면 `main.ipynb`를 열고 맨 위 경로 셀만 고치면 된다.
+Python이 여러 개 깔린 PC라면 커널을 먼저 등록해 둔다.
 
-Notebook에서는 다음 경로 값을 수정하면 됩니다.
+```bash
+python -m ipykernel install --user --name ai-fashion --display-name "AI Fashion"
+```
+
+### 경로 설정
 
 ```python
-PROJECT_DIR_INPUT = r''
+PROJECT_DIR_INPUT = r''                                        # 비우면 자동 탐색
 IMAGE_PATH_INPUT = r'data/input_person.jpg'
 DATA_DIR_INPUT = r''
 RULES_PATH_INPUT = r'FASHION_RULES_MASTER.md'
 ATTRIBUTE_HEADS_PATH_INPUT = r'models/fashion_attribute_heads.pt'
 OUTPUT_DIR_INPUT = r''
-FONT_PATH_INPUT = r''
+FONT_PATH_INPUT = r''                                          # 한글 깨질 때만
 ```
 
-- 빈 `PROJECT_DIR_INPUT`은 현재 작업 폴더와 그 아래 `ai_fashion_recommender`를 자동 탐색합니다.
-- 상대경로는 프로젝트 폴더를 기준으로 처리하므로 팀 공유에는 `data/input_person.jpg` 같은 형식을 권장합니다.
-- 프로젝트를 자동으로 찾지 못할 때만 `PROJECT_DIR_INPUT`에 각자 프로젝트 절대경로를 입력합니다.
-- `DATA_DIR_INPUT`과 `OUTPUT_DIR_INPUT`은 비워두면 각각 프로젝트 내부 `data`, `outputs`를 사용합니다.
-- `RULES_PATH_INPUT`은 추천 엔진이 직접 읽는 패션 규칙 Markdown입니다. 문서의 `## R-...` 형식만 규칙으로 인식됩니다.
-- `ATTRIBUTE_HEADS_PATH_INPUT`에 학습 체크포인트가 있으면 세부 카테고리·소매·기장·넥라인·칼라·핏·패턴·소재·디테일 분류를 사용하고, 없으면 기존 FashionSigLIP 제로샷 분석으로 자동 대체합니다.
-- 통합 규칙 50개 중 43개가 구현되어 있습니다. 이 중 31개는 후보 필터·순위 점수에, 나머지는 분석 신뢰도 안전장치와 신발·액세서리 스타일링 안내에 사용됩니다. 상세 날씨와 보유 옷처럼 선택 입력이 필요한 규칙은 값이 있을 때만 실제 추천에 적용됩니다.
-- 한글이 깨지는 환경에서는 `FONT_PATH_INPUT`에 설치된 한글 `.ttf` 또는 `.ttc` 파일을 지정합니다.
+상대경로는 프로젝트 폴더 기준이라 팀 공유에는 `data/input_person.jpg` 형태가 편하다.
+자동 탐색에 실패할 때만 `PROJECT_DIR_INPUT`에 절대경로를 넣는다.
+규칙 문서는 `## R-...` 형식만 규칙으로 인식한다. 속성 체크포인트가 없으면
+zero-shot 분석으로 자동 대체된다.
 
-Notebook 밖에서 모듈만 사용할 때는 `FASHION_DATA_DIR`, `FASHION_OUTPUT_DIR`, `FASHION_FONT_PATH`, `FASHION_ATTRIBUTE_HEADS_PATH` 환경변수로 같은 경로를 변경할 수 있습니다. 별도 설정이 없으면 모든 경로는 `config.py`가 있는 프로젝트 폴더를 기준으로 결정됩니다.
+Notebook 밖에서는 `FASHION_DATA_DIR`, `FASHION_OUTPUT_DIR`, `FASHION_DATASETS_DIR`,
+`FASHION_FONT_PATH`, `FASHION_ATTRIBUTE_HEADS_PATH` 환경변수로 같은 경로를 바꿀 수 있다.
 
-기본 설정은 FASHN Human Parser와 FashionSigLIP을 모두 사용합니다. 첫 실행에서는 체크포인트를 내려받기 때문에 시간이 오래 걸릴 수 있고, 이후에는 로컬 캐시를 사용합니다. CPU에서도 실행할 수 있지만 FashionSigLIP 분석은 수십 초가 걸릴 수 있습니다.
+첫 실행은 체크포인트를 받느라 오래 걸리고 이후에는 로컬 캐시를 쓴다. CPU에서도 돌지만
+FashionSigLIP 분석에 수십 초가 걸린다. FASHN 결과가 있어야 상·하의 영역과 기장을
+분석한다. 포즈 기반 대체 마스크는 모델 연결을 확인하는 디버깅용이고 정식 결과가 아니다.
 
-FASHN 결과가 있어야 상·하의 영역과 옷 길이를 분석합니다. 포즈 기반 대체 마스크는 모델 연결 문제를 확인하기 위한 디버깅 수단이며 정식 결과로 취급하지 않습니다.
+## 가상 피팅 (CatVTON)
 
-## FashionSigLIP 다중 속성 헤드 학습
+`python app.py --vton` 또는 `main.ipynb`에서 `USE_VTON = True`로 바꾸면 추천 보드 대신
+실제로 옷을 입힌 합성 사진이 나온다.
 
-`train_fashion_attribute_heads.ipynb`를 위에서부터 실행하면 다음 순서로 학습합니다.
+- 상위 폴더에 저장소를 클론해 둔다.
+  `git clone https://github.com/Zheng-Chong/CatVTON.git third_party/CatVTON`
+- 마스크는 원본의 AutoMasker(detectron2 필요) 대신 FASHN 마스크를 쓴다.
+  덕분에 Windows에서도 돈다.
+- 첫 실행에 HuggingFace에서 약 5GB를 받는다.
+- CPU는 장당 수 분 이상 걸린다. GPU 권장.
+- 가중치는 CC BY-NC-SA 4.0(비상업)이다.
 
-1. 제공된 Fashionpedia + Fashion200K 통합 CSV를 사용하거나 같은 형식의 자체 CSV를 불러옵니다.
-2. 고정된 FashionSigLIP으로 의류 이미지를 한 번만 임베딩하고 캐시합니다.
-3. 카테고리·소매·기장·넥라인·칼라·핏·실루엣은 단일 분류, 패턴·소재·디테일은 복수 분류 헤드로 학습합니다.
-4. 검증 세트 정확도와 micro-F1을 계산하고 복수 분류 임계값을 검증 데이터에서 선택합니다.
-5. 결과를 `models/fashion_attribute_heads.pt`에 저장하면 `main.ipynb`가 자동으로 사용합니다.
+AMD RX 7000/9000 시리즈는 Windows용 ROCm PyTorch 프리뷰로 가속할 수 있다.
+설치 절차는 [docs/AMD_ROCM_SETUP.md](docs/AMD_ROCM_SETUP.md)에 정리해 뒀다.
 
-빈 라벨은 `없음`이 아니라 **미주석**으로 처리해 해당 속성의 손실 계산에서 제외합니다. 학습 표본이 5장 미만인 라벨은 추론 시 자동으로 차단합니다. 현재 데이터는 Fashionpedia의 전문가 세부 속성 주석을 중심으로 하고, Fashion200K의 상품 분류 메타데이터로 셔츠·블라우스·폴로 셔츠·시각적 소재와 하의 세부 종류를 보완했습니다. [FashionSigLIP 모델 카드](https://huggingface.co/Marqo/marqo-fashionSigLIP), [Fashionpedia 공식 저장소](https://github.com/cvdfoundation/fashionpedia), [Fashion200K 데이터셋 카드](https://huggingface.co/datasets/Marqo/fashion200k)
+## 합성 품질
 
-Fashionpedia 이미지가 `이미지루트/train`, `이미지루트/val`처럼 나뉘어 있으면 변환 Notebook의 `TRAIN_IMAGE_PREFIX`, `VAL_IMAGE_PREFIX`에 폴더명을 입력합니다. 한 폴더에 합쳐져 있으면 두 값을 비워 둡니다.
+같은 사람·마스크·시드에서 상품만 바꾼 통제 실험(2026-08-20)으로 확인한 내용이다.
+근거 이미지와 상세 기록은 [reports/vton_quality/](reports/vton_quality/)에 있다.
 
-현재 학습 스키마는 17개 헤드, 총 124개 라벨입니다. 하의는 한 개의 이름으로 억지로 합치지 않고 네 축으로 나눕니다. 종류는 `슬랙스·치노 팬츠·청바지·카고 팬츠·조거/스웨트팬츠·트랙팬츠·레깅스·하렘 팬츠·요가 팬츠·세일러 팬츠` 10종, 다리 모양은 `스키니·스트레이트·테이퍼드·페그·부츠컷·플레어·와이드·팔라초` 8종, 바지 전용 기장은 `카프리/7부·크롭/앵클·풀렝스` 3종입니다. 5포켓·카고 포켓·플리츠/턱·드로스트링·밴딩 허리·사이드 스트라이프·밑단 커프·스터럽도 복수 디테일로 분류합니다. 따라서 `팬츠 → 카고 팬츠 + 와이드 + 풀렝스 + 카고 포켓`처럼 조합됩니다.
+### 원래 옷보다 짧은 옷은 깨진다 (원인 확인됨)
 
-현재 체크포인트는 의류 crop 5,984개(학습 4,789 / 검증 1,195)로 실제 학습되어 있습니다. 통합 검증의 전체 정확도는 의류 대분류 87.0%, 하의 종류 70.6%, 바지 다리 모양 57.0%, 바지 전용 기장 74.3%이고, 하의 구조 디테일 micro-F1은 88.1%입니다. 검증셋으로 신뢰도를 보정한 결과만 출력할 때 하의 종류 정확도는 80.3%(응답률 72.6%), 다리 모양은 85.0%(응답률 32.1%), 바지 기장은 81.9%(응답률 72.1%)입니다. 같은 공개 데이터 출처의 약지도 분할 결과이므로 실제 사용자 전신사진 성능을 보장하지 않으며, 신뢰도가 낮으면 세부 결과를 `분석 보류`로 남깁니다.
+마스크는 지금 입고 있는 옷 기준으로 만들어진다. 더 짧은 옷을 넣으면 남는 마스크
+영역(종아리·팔)을 모델이 맨살이 아니라 옷 비슷한 것으로 채운다.
 
-임베딩 캐시는 배치마다 중간 저장되므로 CPU에서 시간이 오래 걸려도 마지막 완료 배치부터 재개합니다. `cache --reuse-caches ...` 옵션을 주면 같은 이미지의 기존 FashionSigLIP 특징도 다시 계산하지 않습니다. 헤드는 속성별 검증 손실이 가장 낮았던 시점을 각각 저장합니다.
+| 기장 차이 | 결과 |
+| --- | --- |
+| 긴바지 → 미디·7부 (gap 1) | 정상 |
+| 긴바지 → 쇼츠·미니 (gap 3) | 다리 전체가 니트 텍스처로 덮임 |
 
-학습 체크포인트를 찾지 못하면 zero-shot fallback이 상의·원피스 14종과 하의 5종을 비교합니다. 다만 이 값은 전용 속성 헤드보다 거친 상대점수이므로 임시 분석으로 취급합니다.
+소매도 같다. 긴팔 마스크에 반팔 상품을 넣으면 긴팔로 그려진다.
+`bottom_length_gap` / `sleeve_length_gap`이 2단계 이상 차이를 경고한다.
+gap 1은 정상, gap 3은 실패를 실측했고 gap 2는 미검증이라 보수적으로 포함했다.
 
-라벨 스키마가 변경됐으므로 이전 스키마로 만든 `fashion_attribute_heads.pt`는 재학습해야 합니다. 로더는 라벨 순서가 다른 체크포인트를 오류로 차단합니다.
+### 시스루 렌더링 (원인 미확정)
 
-## DeepFashion으로 분석기 평가하기
+특정 레퍼런스(MS6797005)에서 옷이 반투명하게 나온다. 상의 레퍼런스만 5종 교체한 결과:
 
-DeepFashion 이미지는 프로젝트에 포함하지 않습니다. 공식 사용 동의 절차를 거쳐 `DeepFashion-MultiModal`을 받은 뒤 `deepfashion_evaluation.ipynb`의 경로 셀에서 다음 파일 위치를 지정합니다.
+| 레퍼런스 | coverage | contrast | 색 | 결과 |
+| --- | --- | --- | --- | --- |
+| MS6677115 | 0.50 | 208 | 갈색 | 불투명 |
+| MS6797005 | 0.15 | 56 | 흰색 | 시스루 |
+| MS6843814 | 0.06 | 230 | 검정 | 불투명 |
+| MS6162377 | 1.47 | 47 | 흰색 | 불투명·충실 |
+| MS6529592 | 0.30 | 228 | 검정 | 불투명 |
 
-- 이미지 폴더
-- shape 라벨 파일
-- fabric 라벨 파일
-- color/pattern 라벨 파일
+기각한 가설이 다섯이다. 마스크 구멍(양쪽 0%), coverage 단독(0.06인데 정상),
+contrast 단독(흰옷인데 정상), 흰 배경에 묻힘(회색 매트로도 시스루 유지),
+레퍼런스 자체(같은 레퍼런스가 다른 사람에게는 최고 품질). 시드를 바꿔도 그대로다.
+즉 입력 지표만으로는 예측되지 않으며, `min_reference_coverage`(0.25) 경고는
+품질 참고용일 뿐 시스루 예측기로 검증된 값이 아니다.
 
-평가 Notebook은 소매 길이, 하의 길이, 패턴, 소재, 네크라인의 응답률, 선택 정확도, 전체 정확도, macro F1과 대표 오답을 `outputs/deepfashion_evaluation.json`에 저장합니다. CPU에서는 `MAX_SAMPLES=20`처럼 작은 수로 먼저 확인하는 것을 권장합니다.
+### 점검 결과 쓰기
 
-## 현재 한계
+`generate()`에 `context={"outfit": ..., "classifier": ...}`를 같이 넘기면 위 점검이 돌고
+사유가 `tryon.last_warnings`에 쌓인다. 웹 앱은 분석 패널에, Notebook과
+`scripts/test_tryon.py`는 결과 아래에 찍는다. 경고가 붙은 결과는 합성이 깨졌을 수
+있으니 그대로 믿으면 안 된다.
 
-- 사진 기반 체형 비율은 실제 신체 치수가 아닙니다.
-- 패션 규칙 MD는 실제 엔진에 연결되어 있지만 아직 전문가 합의와 사용자 실험 전의 후보 규칙입니다.
-- 현재 추천 점수는 문서의 100점 중 기본 80점을 사용하고 보유 옷을 입력하면 활용도 5점이 추가됩니다. 실측 사이즈 15점은 사용자·상품 치수 데이터가 없어 제외합니다.
-- 미지원 규칙 7개는 실측 사이즈, 레이어 밑단, 추천 상품의 색 면적, 작은 액세서리 상품, 트렌드 데이터가 필요한 규칙이며 Notebook 실행 시 ID를 표시합니다.
-- 상품 CSV는 추천 로직 검증용이며 실제 쇼핑몰 상품이 아닙니다.
-- 현재 출력은 실제 가상 피팅이 아니라 명시적으로 표시된 추천 보드입니다.
-- IDM-VTON은 비상업 라이선스이므로 상용화 전 별도 모델·라이선스 검토가 필요합니다.
-- FASHN Human Parser는 NVIDIA SegFormer 라이선스, FashionSigLIP 체크포인트는 Apache-2.0 조건을 각각 확인해야 합니다.
-- DeepFashion 및 DeepFashion-MultiModal은 비상업 연구 전용이며 원본과 파생 데이터의 재배포가 제한됩니다.
-- 다중 속성 헤드는 실제 공개 데이터로 학습했지만 클래스 불균형이 큽니다. 세일러 칼라·테이퍼드핏·디테일 없음과 표본 5장 미만 라벨은 현재 체크포인트가 출력하지 않습니다.
-- Fashion200K 보완 라벨은 사람이 사진을 다시 검수한 정답이 아니라 상품 분류 메타데이터에서 만든 약지도 라벨입니다. 한국 사용자 전신사진으로 별도 외부 검증과 미세조정이 필요합니다.
-- 슬랙스와 치노처럼 외형이 비슷한 하의는 원단·주름·허리 구조가 가려지면 사진만으로 구분하기 어렵습니다. 종류·다리 모양·기장·디테일을 서로 다른 속성으로 해석해야 합니다.
-- 조드퍼·카펜터·스코트처럼 공개 표본이 부족하거나 점프수트처럼 전신 카테고리에 해당하는 이름은 이번 바지 세부 헤드에서 억지로 출력하지 않습니다.
+### 아직 못 고친 것
+
+- FASHN이 옷 위의 가방끈을 `top`으로 분류하는 경우가 있어 세그멘테이션으로 못 지운다.
+  가방·머리카락·팔로 분류되는 가림 요소만 정제 단계에서 뺀다.
+- 마스크 모양 프라이어는 CatVTON 구조상 우회할 수 없다. 기장 문제는 감지·안내까지만 된다.
+- 세로로 긴 사진은 `pad_to_aspect`로 여백을 덧대 잘림을 막는다. 새 소스를 넣을 때는
+  종횡비부터 확인할 것. 인스타 수집본은 중앙값이 약 1:2였다.
+
+## 속성 헤드 학습
+
+`train_fashion_attribute_heads.ipynb`를 위에서부터 실행하면 된다.
+
+1. Fashionpedia + Fashion200K 통합 CSV를 쓰거나 같은 형식의 자체 CSV를 넣는다.
+2. 고정된 FashionSigLIP으로 의류 이미지를 한 번만 임베딩해 캐시한다.
+3. 카테고리·소매·기장·넥라인·칼라·핏·실루엣은 단일 분류, 패턴·소재·디테일은 복수 분류로 학습한다.
+4. 검증 정확도와 micro-F1을 계산하고 복수 분류 임계값을 검증 데이터에서 고른다.
+5. `models/fashion_attribute_heads.pt`에 저장하면 `main.ipynb`가 자동으로 쓴다.
+
+빈 라벨은 "없음"이 아니라 미주석으로 처리해 손실 계산에서 뺀다. 학습 표본이
+5장 미만인 라벨은 추론에서 자동 차단한다. 데이터는 Fashionpedia의 전문가 주석이
+중심이고, Fashion200K 상품 메타데이터로 셔츠·블라우스·폴로와 하의 세부 종류를 채웠다.
+([FashionSigLIP](https://huggingface.co/Marqo/marqo-fashionSigLIP) ·
+[Fashionpedia](https://github.com/cvdfoundation/fashionpedia) ·
+[Fashion200K](https://huggingface.co/datasets/Marqo/fashion200k))
+
+스키마는 17개 헤드, 124개 라벨이다. 하의는 한 이름으로 뭉치지 않고 네 축으로 나눈다.
+종류 10종(슬랙스·치노·청바지·카고·조거·트랙·레깅스·하렘·요가·세일러), 다리 모양 8종
+(스키니·스트레이트·테이퍼드·페그·부츠컷·플레어·와이드·팔라초), 바지 기장 3종
+(카프리/7부·크롭/앵클·풀렝스), 그리고 구조 디테일을 복수로 붙인다. 그래서
+`팬츠 → 카고 팬츠 + 와이드 + 풀렝스 + 카고 포켓`처럼 조합된다.
+
+현재 체크포인트는 의류 crop 5,984개(학습 4,789 / 검증 1,195)로 학습했다.
+전체 정확도는 대분류 87.0%, 하의 종류 70.6%, 다리 모양 57.0%, 바지 기장 74.3%,
+하의 디테일 micro-F1 88.1%. 신뢰도로 거른 결과만 보면 하의 종류 80.3%(응답률 72.6%),
+다리 모양 85.0%(32.1%), 바지 기장 81.9%(72.1%)다. 같은 출처의 약지도 분할이라
+실제 사용자 사진 성능을 보장하지 않고, 신뢰도가 낮으면 `분석 보류`로 남긴다.
+
+임베딩 캐시는 배치마다 저장되므로 CPU에서 오래 걸려도 마지막 배치부터 재개된다.
+`cache --reuse-caches`를 주면 기존 특징도 재계산하지 않는다. 라벨 스키마가 바뀌면
+이전 체크포인트는 재학습해야 한다. 로더가 라벨 순서가 다른 체크포인트를 막는다.
+
+## DeepFashion 평가
+
+DeepFashion 이미지는 저장소에 없다. 공식 동의 절차를 거쳐 `DeepFashion-MultiModal`을
+받은 뒤 `deepfashion_evaluation.ipynb`의 경로 셀에서 이미지 폴더와 shape / fabric /
+color-pattern 라벨 파일 위치를 지정한다. 소매 길이, 하의 길이, 패턴, 소재, 네크라인의
+응답률·선택 정확도·전체 정확도·macro F1과 대표 오답을
+`outputs/deepfashion_evaluation.json`에 남긴다. CPU라면 `MAX_SAMPLES=20`처럼
+작게 잡고 먼저 확인하는 편이 낫다.
+
+## 한계
+
+- 사진에서 계산한 체형 비율은 실제 신체 치수가 아니다.
+- 패션 규칙은 엔진에 연결돼 있지만 전문가 합의와 사용자 실험 전의 후보 규칙이다.
+- 추천 점수는 문서 100점 중 기본 80점을 쓴다. 보유 옷을 넣으면 활용도 5점이 붙고,
+  실측 사이즈 15점은 치수 데이터가 없어 빠진다. 미지원 규칙 7개는 실행 시 ID를 보여준다.
+- 속성 헤드는 클래스 불균형이 크다. 세일러 칼라·테이퍼드핏 같은 희소 라벨과
+  표본 5장 미만 라벨은 출력하지 않는다.
+- Fashion200K 보완 라벨은 사람이 재검수한 정답이 아니라 상품 메타데이터에서 만든
+  약지도 라벨이다. 한국 사용자 사진으로 외부 검증과 미세조정이 필요하다.
+- 슬랙스와 치노처럼 비슷한 하의는 원단·주름·허리가 가려지면 사진만으로 구분이 어렵다.
+- 상품 CSV는 추천 로직 검증용이며 실시간 재고를 반영하지 않는다.
+- 모델별 라이선스를 각각 확인해야 한다. FASHN Human Parser는 NVIDIA SegFormer,
+  FashionSigLIP은 Apache-2.0, CatVTON은 CC BY-NC-SA 4.0, DeepFashion 계열은
+  비상업 연구 전용이다.
