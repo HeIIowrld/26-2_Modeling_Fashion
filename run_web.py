@@ -1,9 +1,10 @@
-"""저장소 루트에서 실행해도 웹 앱이 켜지도록 실제 진입점으로 넘겨준다.
+"""웹 앱 실행 진입점. 저장소 루트에서 이 파일을 실행하면 된다.
 
-실제 구현은 `ai_fashion_recommender/run_web.py`에 있다. 상품 CSV와 패션 규칙 문서가
-그 폴더 기준 상대경로라, 루트에서 그대로 실행하면 파일을 찾지 못한다.
+    python run_web.py                # http://127.0.0.1:8000
+    python run_web.py --check        # 서버를 켜지 않고 환경만 점검
 
-    python run_web.py --check    # 옵션은 그대로 전달된다
+실제 구현은 `web/run_web.py`에 있다. 웹 화면과 서버 코드는 `web/`에,
+체형·의류 분석과 추천 규칙은 Notebook과 공용이라 `ai_fashion_recommender/`에 있다.
 """
 
 from __future__ import annotations
@@ -12,8 +13,8 @@ import runpy
 import sys
 from pathlib import Path
 
-PROJECT_DIR = Path(__file__).resolve().parent / "ai_fashion_recommender"
-ENTRY_POINT = PROJECT_DIR / "run_web.py"
+WEB_DIR = Path(__file__).resolve().parent / "web"
+ENTRY_POINT = WEB_DIR / "run_web.py"
 
 
 def main() -> int:
@@ -24,8 +25,8 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    if str(PROJECT_DIR) not in sys.path:
-        sys.path.insert(0, str(PROJECT_DIR))
+    if str(WEB_DIR) not in sys.path:
+        sys.path.insert(0, str(WEB_DIR))
     runpy.run_path(str(ENTRY_POINT), run_name="__main__")
     return 0
 

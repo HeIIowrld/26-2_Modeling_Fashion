@@ -46,55 +46,61 @@ MediaPipe와 SegFormer 세션이 동시 호출에 안전하지 않아 분석은 
 
 ## 폴더 구조
 
+웹 화면·서버 코드는 저장소 루트의 `web/`에, 체형·의류 분석과 추천 규칙은
+Notebook과 공용이라 `ai_fashion_recommender/`에 있습니다.
+
 ```
-ai_fashion_recommender/
-├── run_web.py                  웹 실행 진입점 (환경 점검 + 서버 기동)
-├── main.ipynb                  Notebook 파이프라인
-├── config.py                   경로·모델 스위치·임계값
-├── FASHION_RULES_MASTER.md     추천 엔진이 실제로 읽는 통합 규칙
+26-2_Modeling_Fashion/
+├── run_web.py                  웹 실행 진입점 (web/run_web.py로 넘겨줌)
 │
-├── 분석 모듈
-│   ├── pose_analyzer.py                MediaPipe 체형·자세 참고 비율
-│   ├── quality_checker.py              입력 사진 품질 검사
-│   ├── clothing_parser.py              FASHN Human Parser 의류 마스크
-│   ├── garment_attribute_analyzer.py   마스크+관절로 기장·핏 추정
-│   ├── fashion_model.py                FashionSigLIP 추론 래퍼
-│   ├── fashion_prompts.py              제로샷 프롬프트 후보
-│   └── outfit_analyzer.py              착장 분석 결과 통합
-│
-├── 속성 헤드
-│   ├── fashion_attribute_schema.py     17개 속성 · 124개 라벨 정의
-│   ├── fashion_attribute_model.py      분류 헤드와 추론
-│   ├── fashion_attribute_dataset.py    학습 CSV·Fashionpedia 변환
-│   └── fashion_attribute_training.py   임베딩 캐시·학습·평가
-│
-├── 추천
-│   ├── fashion_rules.py                규칙 Markdown 로딩
-│   ├── recommendation_engine.py        필터·점수·설명 생성
-│   ├── product_catalog.py              상품 CSV 로딩
-│   ├── virtual_tryon.py                VTON 연결 지점과 추천 보드
-│   └── feedback_store.py               피드백 JSONL 저장
-│
-├── web/                        웹 애플리케이션
+├── web/                        웹 애플리케이션 (여기만 웹 전용)
+│   ├── run_web.py              환경 점검 + 서버 기동
 │   ├── app.py                  FastAPI 라우트
 │   ├── pipeline.py             Notebook과 같은 순서의 실행 래퍼
 │   └── static/                 화면 (HTML·CSS·JS)
 │
-├── scripts/                    데이터 준비와 학습 (평소에는 실행하지 않음)
-│   ├── prepare_fashionpedia_seed.py
-│   ├── prepare_fashion200k_supplement.py
-│   ├── prepare_fashion200k_bottoms.py
-│   └── train_fashion_attribute_heads.py
-│
-├── docs/                       문서
-│   ├── MAIN_IPYNB_STRUCTURE.md         Notebook 셀별 설명
-│   ├── FASHION_RULES_RESEARCH.md       규칙 조사 원본
-│   └── ATTRIBUTE_MODEL_REPORT.md       속성 모델 개선 실험 기록
-│
-├── data/                       상품 CSV·학습 데이터셋
-├── models/                     배포 체크포인트 (archive/에 이전 버전)
-├── outputs/                    실행 결과 (재생성 가능·공유 불필요)
-└── tests/                      단위 테스트
+└── ai_fashion_recommender/     분석·추천 (웹과 Notebook 공용)
+    ├── main.ipynb                  Notebook 파이프라인
+    ├── config.py                   경로·모델 스위치·임계값
+    ├── FASHION_RULES_MASTER.md     추천 엔진이 실제로 읽는 통합 규칙
+    │
+    ├── 분석 모듈
+    │   ├── pose_analyzer.py                MediaPipe 체형·자세 참고 비율
+    │   ├── quality_checker.py              입력 사진 품질 검사
+    │   ├── clothing_parser.py              FASHN Human Parser 의류 마스크
+    │   ├── garment_attribute_analyzer.py   마스크+관절로 기장·핏 추정
+    │   ├── fashion_model.py                FashionSigLIP 추론 래퍼
+    │   ├── fashion_prompts.py              제로샷 프롬프트 후보
+    │   └── outfit_analyzer.py              착장 분석 결과 통합
+    │
+    ├── 속성 헤드
+    │   ├── fashion_attribute_schema.py     17개 속성 · 124개 라벨 정의
+    │   ├── fashion_attribute_model.py      분류 헤드와 추론
+    │   ├── fashion_attribute_dataset.py    학습 CSV·Fashionpedia 변환
+    │   └── fashion_attribute_training.py   임베딩 캐시·학습·평가
+    │
+    ├── 추천
+    │   ├── fashion_rules.py                규칙 Markdown 로딩
+    │   ├── recommendation_engine.py        필터·점수·설명 생성
+    │   ├── product_catalog.py              상품 CSV 로딩
+    │   ├── virtual_tryon.py                VTON 연결 지점과 추천 보드
+    │   └── feedback_store.py               피드백 JSONL 저장
+    │
+    ├── scripts/                    데이터 준비와 학습 (평소에는 실행하지 않음)
+    │   ├── prepare_fashionpedia_seed.py
+    │   ├── prepare_fashion200k_supplement.py
+    │   ├── prepare_fashion200k_bottoms.py
+    │   └── train_fashion_attribute_heads.py
+    │
+    ├── docs/                       문서
+    │   ├── MAIN_IPYNB_STRUCTURE.md         Notebook 셀별 설명
+    │   ├── FASHION_RULES_RESEARCH.md       규칙 조사 원본
+    │   └── ATTRIBUTE_MODEL_REPORT.md       속성 모델 개선 실험 기록
+    │
+    ├── data/                       상품 CSV·학습 데이터셋
+    ├── models/                     배포 체크포인트 (archive/에 이전 버전)
+    ├── outputs/                    실행 결과 (재생성 가능·공유 불필요)
+    └── tests/                      단위 테스트
 ```
 
 테스트는 프로젝트 폴더에서 실행합니다.

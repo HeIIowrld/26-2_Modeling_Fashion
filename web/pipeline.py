@@ -10,7 +10,7 @@ from typing import Callable
 
 from PIL import Image
 
-PROJECT_DIR = Path(__file__).resolve().parents[1]
+PROJECT_DIR = Path(__file__).resolve().parents[1] / "ai_fashion_recommender"
 if str(PROJECT_DIR) not in sys.path:
     sys.path.insert(0, str(PROJECT_DIR))
 
