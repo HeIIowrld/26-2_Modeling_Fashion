@@ -7,7 +7,23 @@ from pathlib import Path
 from fashion_rules import FashionRuleBook
 from outfit_analyzer import COLOR_PALETTE, NEUTRALS, color_harmony
 from product_catalog import ProductCatalog
-from schemas import OutfitAnalysis, PoseAnalysis, Product, Recommendation, UserProfile, WardrobeItem
+from schemas import (
+    SHAPE_HOURGLASS,
+    SHAPE_INVERTED_TRIANGLE,
+    SHAPE_RECTANGLE,
+    SHAPE_TRIANGLE,
+    SHAPE_UNCERTAIN,
+    GOAL_BALANCE,
+    GOAL_LOWER_FOCUS,
+    GOAL_UPPER_FOCUS,
+    PROPORTION_GOALS,
+    OutfitAnalysis,
+    PoseAnalysis,
+    Product,
+    Recommendation,
+    UserProfile,
+    WardrobeItem,
+)
 
 
 CHANGE_SCOPE_MAP = {
@@ -409,7 +425,7 @@ class RecommendationEngine:
 
         components = [(fit_score, 0.55), (weight_score, 0.45)]
         goal = profile.silhouette_goal
-        if goal in {"다리가 길어 보이게", "허리선 강조"}:
+        if goal in PROPORTION_GOALS:
             rules.extend(["R-SIL-03", "R-SIL-06"])
             length_score = {"크롭 기장": 1.0, "기본 기장": 0.78, "롱 기장": 0.45}.get(top["length"], 0.65)
             if bottom["waistline"] == "하이웨이스트":
@@ -417,28 +433,30 @@ class RecommendationEngine:
             components.append((length_score, 0.35))
             reasons.append("상의 기장과 하의 허리선이 만드는 분할점을 목표 실루엣에 맞춰 평가했습니다.")
 
-        body_confident = pose.valid and pose.body_shape_confidence >= 0.65 and pose.body_shape != "분석 불확실"
-        if goal == "균형감" and body_confident:
+        body_confident = pose.valid and pose.body_shape_confidence >= 0.65 and pose.body_shape != SHAPE_UNCERTAIN
+        if goal == GOAL_BALANCE and body_confident:
             body_score = 0.78
-            if pose.body_shape == "상체 강조형":
+            if pose.body_shape == SHAPE_INVERTED_TRIANGLE:
                 rules.append("R-BOD-02")
                 body_score = 1.0 if bottom_large or bottom_ordered else 0.62
-                reasons.append("균형감 목표에 맞춰 하의의 구조와 볼륨을 비교했습니다.")
-            elif pose.body_shape == "하체 강조형":
+                reasons.append("상·하체 균형 목표에 맞춰 하의의 구조와 볼륨을 비교했습니다.")
+            elif pose.body_shape == SHAPE_TRIANGLE:
                 rules.append("R-BOD-01")
                 top_focus = top["color"] in BRIGHT_COLORS or top["pattern"] not in {"", "무지", "패턴 불확실", "분석 보류"}
                 bottom_quiet = bottom["color"] in DARK_COLORS and bottom["pattern"] in {"", "무지"}
                 body_score = 1.0 if top_focus and bottom_quiet else 0.66
-                reasons.append("균형감 목표에 맞춰 상체로 시선을 옮기는 색·패턴 배치를 비교했습니다.")
-            elif pose.body_shape == "균형형":
+                reasons.append("상·하체 균형 목표에 맞춰 상체로 시선을 옮기는 색·패턴 배치를 비교했습니다.")
+            elif pose.body_shape in {SHAPE_RECTANGLE, SHAPE_HOURGLASS}:
+                # 모래시계체형도 어깨와 엉덩이가 비슷하므로 같은 규칙을 쓴다.
+                # 마름모꼴·둥근체형은 허리가 중심이라 대응하는 규칙이 문서에 아직 없다.
                 rules.append("R-BOD-03")
                 body_score = 0.96 if top_large != bottom_large else 0.80
                 reasons.append("상·하체 폭이 비슷한 경우 볼륨을 한쪽씩 배치했는지 확인했습니다.")
             components.append((self._shrink_to_neutral(body_score, pose.body_shape_confidence), 0.30))
-        elif goal in {"상체 강조", "하체 강조"}:
+        elif goal in {GOAL_UPPER_FOCUS, GOAL_LOWER_FOCUS}:
             rules.append("R-BOD-04")
-            target = top if goal == "상체 강조" else bottom
-            other = bottom if goal == "상체 강조" else top
+            target = top if goal == GOAL_UPPER_FOCUS else bottom
+            other = bottom if goal == GOAL_UPPER_FOCUS else top
             target_focus = self._is_bold_color(target["color"]) or target["pattern"] not in {"", "무지", "분석 보류", "패턴 불확실"}
             other_quiet = other["color"] in NEUTRALS and other["pattern"] in {"", "무지"}
             components.append((1.0 if target_focus and other_quiet else 0.62, 0.30))
@@ -682,7 +700,7 @@ class RecommendationEngine:
                 tips.append("넥라인의 빈 공간을 넘지 않는 크기의 목걸이를 우선하세요.")
             rules.append("R-ACC-04")
 
-        if profile.silhouette_goal in {"다리가 길어 보이게", "허리선 강조"} and top["length"] == "롱 기장":
+        if profile.silhouette_goal in PROPORTION_GOALS and top["length"] == "롱 기장":
             tips.append("긴 상의를 유지한다면 턱인이나 얇은 벨트로 허리 기준점을 만들 수 있어요.")
             rules.append("R-ACC-05")
 

@@ -25,18 +25,50 @@ def _load_korean_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont
     return ImageFont.load_default()
 
 
+class TryOnNotReady(RuntimeError):
+    """생성 모델이 아직 연결되지 않았을 때 사용자에게 그대로 보여줄 사유."""
+
+
 class VirtualTryOnAdapter:
-    """VTON 구현을 갈아 끼울 수 있는 공통 인터페이스."""
+    """VTON 구현을 갈아 끼울 수 있는 공통 인터페이스.
+
+    생성 모델을 붙이는 곳은 `_synthesize()` 한 곳이다. 여기에 체크포인트를
+    연결하고 `enabled=True`로 두면 웹의 '예상 착장샷' 화면이 바로 동작한다.
+    """
+
+    NOT_READY_REASON = (
+        "예상 착장샷을 만드는 생성 모델이 아직 연결되지 않았습니다. "
+        "모델이 준비되면 이 자리에 추천 코디를 입은 이미지가 표시됩니다."
+    )
 
     def __init__(self, enabled: bool = False) -> None:
         self.enabled = enabled
 
+    @property
+    def available(self) -> bool:
+        return self.enabled
+
     def generate(self, person_image: str | Path, recommendation: Recommendation, output_path: str | Path) -> Path:
         if self.enabled:
-            raise NotImplementedError(
-                "IDM-VTON 또는 다중 의류 VTON 체크포인트를 연결한 뒤 generate()를 구현해야 합니다."
-            )
+            return self._synthesize(person_image, recommendation, output_path)
         return self._make_preview(person_image, recommendation, output_path)
+
+    def synthesize(self, person_image: str | Path, recommendation: Recommendation, output_path: str | Path) -> Path:
+        """예상 착장샷을 만든다. 모델이 없으면 추천 보드로 대체하지 않고 사유를 알린다."""
+        if not self.enabled:
+            raise TryOnNotReady(self.NOT_READY_REASON)
+        return self._synthesize(person_image, recommendation, output_path)
+
+    @staticmethod
+    def _synthesize(person_image: str | Path, recommendation: Recommendation, output_path: str | Path) -> Path:
+        # TODO: 학습·선정한 VTON 체크포인트를 여기에 연결한다.
+        #   1. recommendation.products의 상의·하의 이미지를 준비한다.
+        #   2. person_image와 함께 모델에 넣어 합성 결과를 받는다.
+        #   3. output_path에 저장하고 그 경로를 돌려준다.
+        # 반환 규약만 지키면 웹·Notebook 양쪽이 수정 없이 동작한다.
+        raise TryOnNotReady(
+            "VTON 체크포인트를 연결한 뒤 VirtualTryOnAdapter._synthesize()를 구현해야 합니다."
+        )
 
     @staticmethod
     def _make_preview(person_image: str | Path, recommendation: Recommendation, output_path: str | Path) -> Path:
