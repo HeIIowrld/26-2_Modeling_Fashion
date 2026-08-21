@@ -300,7 +300,7 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         max_retries: int = 1,
         min_sharpness: float = 25.0,
         repaint_inset: bool = True,
-        repaint_blur_divisor: int = 150,
+        repaint_blur_divisor: int = 300,
         min_reference_coverage: float = 0.25,
     ) -> None:
         super().__init__(enabled=True)
@@ -318,6 +318,10 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         # 새 옷이 반투명하게 번지는 halo를 없앤다. False면 CatVTON 공식 방식
         # (마스크 경계 중심의 대칭 블러, height//50 반경)을 그대로 쓴다.
         self.repaint_inset = repaint_inset
+        # 블렌딩 반경은 height // divisor다. divisor가 클수록 밴드가 좁고 원래 옷 색이
+        # 덜 번진다. 2026-08-21 A/B에서 원래 옷 색 잔류가 75→21.1% / 150→10.7% /
+        # 300→9.5%였고 다른 파라미터는 전부 10.6% 부근이었다. halo는 이 값에만 반응한다.
+        # 300에서 시간 비용은 없다. reports/vton_quality/param_tuning_2026-08-21.md 참고.
         self.repaint_blur_divisor = repaint_blur_divisor
         self.min_reference_coverage = min_reference_coverage
         self.reference_reports: dict[str, dict[str, float]] = {}
@@ -331,6 +335,19 @@ class CatVTONTryOn(VirtualTryOnAdapter):
     def high_detail(cls, **overrides) -> "CatVTONTryOn":
         """텍스처·패턴이 더 잘 보이도록 해상도와 스텝을 올린 프리셋. GPU 메모리를 더 쓴다."""
         params = dict(width=832, height=1152, num_inference_steps=50, guidance_scale=2.5)
+        params.update(overrides)
+        return cls(**params)
+
+    @classmethod
+    def fast(cls, **overrides) -> "CatVTONTryOn":
+        """스텝을 줄여 반복 평가용으로 빠르게 돌리는 프리셋.
+
+        2026-08-21 A/B에서 25스텝은 장당 24.5초로 기본값 50스텝(44.0초)의 절반이고
+        육안 차이는 청바지 질감이 약간 평평해지는 정도였다. 75스텝(65.4초)은 50과
+        구분되지 않아 값을 못 한다. 전후 비교나 배치 평가처럼 여러 번 돌리는
+        작업에 쓰고, 데모용 최종본은 기본값(50)으로 다시 뽑는다.
+        """
+        params = dict(num_inference_steps=25)
         params.update(overrides)
         return cls(**params)
 

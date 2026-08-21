@@ -17,6 +17,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from PIL import Image
 
 from catvton_tryon import (
+    CatVTONTryOn,
     UNRELIABLE_LENGTH_GAP,
     bottom_length_gap,
     evaluate_garment_reference,
@@ -24,6 +25,29 @@ from catvton_tryon import (
     sleeve_length_gap,
     unpad_result,
 )
+
+
+class TunedDefaultTests(unittest.TestCase):
+    """2026-08-21 A/B로 정한 값을 고정한다.
+
+    근거는 reports/vton_quality/param_tuning_2026-08-21.md에 있다. 바꿀 거라면
+    같은 사진·같은 시드로 다시 재고 리포트를 갱신할 것.
+    """
+
+    def test_repaint_band_stays_narrow(self):
+        # 블렌딩 반경은 height // divisor다. 밴드가 넓으면 원래 옷 색이 번진다.
+        # 150에서 300으로 좁혀 halo를 줄였다.
+        self.assertEqual(CatVTONTryOn().repaint_blur_divisor, 300)
+
+    def test_fast_preset_halves_the_steps(self):
+        preset = CatVTONTryOn.fast()
+        self.assertEqual(preset.num_inference_steps, 25)
+        # 프리셋은 스텝만 건드린다. 나머지는 기본값이어야 비교가 성립한다.
+        self.assertEqual(preset.guidance_scale, CatVTONTryOn().guidance_scale)
+        self.assertEqual(preset.repaint_blur_divisor, CatVTONTryOn().repaint_blur_divisor)
+
+    def test_fast_preset_accepts_overrides(self):
+        self.assertEqual(CatVTONTryOn.fast(num_inference_steps=10).num_inference_steps, 10)
 
 
 class LengthGapTests(unittest.TestCase):
