@@ -49,6 +49,50 @@ class RecommendationTests(unittest.TestCase):
         self.assertEqual(recommendations[0].score_coverage, 80.0)
         self.assertIn("R-CTX-01", recommendations[0].applied_rules)
 
+    def test_tied_candidates_are_split_between_people(self):
+        """최고점 동점이 수백~수천 개라 동점 처리가 곧 추천 결과를 정한다.
+
+        카탈로그 행 순서로 자르면 모든 사람이 같은 조합을 받는다(2026-08-21 실측).
+        사진마다 다른 씨앗으로 갈라야 한다.
+        """
+        profile = UserProfile(purpose="데일리", budget=180_000, change_scope="전체 변경")
+        chosen = set()
+        for index in range(6):
+            pose = PoseAnalysis(
+                True, 0.9, "사각체형", 1.0 + index * 0.01, 0.5, 0.55, "정면에 가까움"
+            )
+            recommendation = self.engine.recommend(profile, pose, self.outfit, top_k=1)[0]
+            chosen.add(tuple(product.product_id for product in recommendation.products))
+        self.assertGreater(len(chosen), 1)
+
+    def test_same_pose_always_gets_the_same_recommendation(self):
+        """같은 사람은 매번 같은 결과를 받아야 한다. 실행마다 흔들리면 안 된다."""
+        profile = UserProfile(purpose="데일리", budget=180_000, change_scope="전체 변경")
+        first, second = (
+            [
+                tuple(product.product_id for product in recommendation.products)
+                for recommendation in self.engine.recommend(
+                    profile, self.pose, self.outfit, top_k=3
+                )
+            ]
+            for _ in range(2)
+        )
+        self.assertEqual(first, second)
+
+    def test_tie_break_does_not_lower_the_score(self):
+        """동점끼리만 섞는다. 최고점 자체는 그대로여야 한다."""
+        profile = UserProfile(purpose="데일리", budget=180_000, change_scope="전체 변경")
+        scores = [
+            self.engine.recommend(
+                profile,
+                PoseAnalysis(True, 0.9, "사각체형", 1.0 + index * 0.01, 0.5, 0.55, "정면에 가까움"),
+                self.outfit,
+                top_k=1,
+            )[0].total_score
+            for index in range(4)
+        ]
+        self.assertEqual(len(set(scores)), 1)
+
     def test_scope_changes_only_top(self):
         profile = UserProfile(change_scope="상의만 변경")
         recommendation = self.engine.recommend(profile, self.pose, self.outfit, top_k=1)[0]

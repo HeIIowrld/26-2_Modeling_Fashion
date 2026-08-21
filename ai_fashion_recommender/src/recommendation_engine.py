@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import colorsys
+import hashlib
 import itertools
 from pathlib import Path
 
@@ -73,6 +74,33 @@ ORDERED_BOTTOM_FITS = {"스트레이트핏", "테이퍼드핏", "슬림핏", "�
 BRIGHT_COLORS = {"화이트", "베이지", "옐로", "핑크", "오렌지"}
 DARK_COLORS = {"블랙", "네이비", "브라운", "그레이", "카키", "버건디"}
 MAXIMAL_STYLES = {"스트리트", "맥시멀", "페스티벌", "힙합"}
+
+
+def _tie_seed(pose: PoseAnalysis) -> str:
+    """같은 사진이면 항상 같고, 사람이 다르면 달라지는 문자열을 만든다.
+
+    동점 후보 중 무엇을 고를지 정하는 데만 쓴다. 점수에는 영향을 주지 않는다.
+    관절 좌표가 있으면 그것을 쓰고, 없으면(테스트의 합성 포즈 등) 비율로 대신한다.
+    """
+    landmarks = getattr(pose, "landmarks", None) or {}
+    if landmarks:
+        return "|".join(
+            f"{name}:{values[0]:.4f},{values[1]:.4f}"
+            for name, values in sorted(landmarks.items())
+        )
+    return "|".join(
+        f"{value:.4f}"
+        for value in (
+            pose.shoulder_hip_ratio, pose.upper_lower_ratio,
+            pose.leg_ratio, pose.full_body_score,
+        )
+    )
+
+
+def _tie_rank(seed: str, products: list) -> str:
+    """동점자 사이의 순서. 파이썬의 hash()는 실행마다 달라져 쓸 수 없다."""
+    key = seed + "#" + "+".join(product.product_id for product in products)
+    return hashlib.blake2b(key.encode("utf-8"), digest_size=8).hexdigest()
 
 
 class RecommendationEngine:
@@ -819,7 +847,13 @@ class RecommendationEngine:
                 "예산, 계절, 제외 목록 또는 변경 범위를 조정하세요."
             )
 
-        candidates.sort(key=lambda item: item[0], reverse=True)
+        # 점수가 정확히 같은 후보가 매우 많다. 실측(2026-08-21)에서 최고점 동점이
+        # 남성 777개(71종 상의) / 여성 2,833개(98종 상의)였다. 안정 정렬에 맡기면
+        # 카탈로그 CSV 행 순서가 승자를 정해 모든 사람에게 같은 조합이 나간다.
+        # 동점끼리는 사진에서 뽑은 씨앗으로 섞어, 같은 사람은 같은 결과를 받되
+        # 사람이 다르면 다른 조합을 받게 한다. 점수 자체는 건드리지 않는다.
+        seed = _tie_seed(pose)
+        candidates.sort(key=lambda item: (-item[0], _tie_rank(seed, item[1])))
         return [
             Recommendation(
                 rank=index,
