@@ -47,7 +47,7 @@ from test_tryon import IMAGE_SUFFIXES, _sample_images
 # 한 번에 하나씩만 바꾼다. "baseline"은 그때그때의 현재 기본값이라 고정된 값이 아니다.
 # 2026-08-21에 repaint_blur_divisor 기본값이 150에서 300으로 바뀌었으므로,
 # 옛 기본값과 비교하려면 repaint150을 쓴다.
-VARIANTS: dict[str, dict[str, float | int]] = {
+VARIANTS: dict[str, dict[str, object]] = {
     "baseline": {},
     "cfg1.5": {"guidance_scale": 1.5},
     "cfg3.5": {"guidance_scale": 3.5},
@@ -59,9 +59,35 @@ VARIANTS: dict[str, dict[str, float | int]] = {
     "repaint75": {"repaint_blur_divisor": 75},
     "repaint150": {"repaint_blur_divisor": 150},   # 2026-08-21 이전 기본값
     "repaint300": {"repaint_blur_divisor": 300},
+    # 스케줄러 교체(2026-08-22): 현재 DDIM은 eta=1.0(사실상 DDPM급 확률 샘플링)이라
+    # 저스텝 열화가 크다. 결정론 2차 솔버는 20~30스텝에서 50스텝급 수렴을 노린다.
+    "eta0_steps25": {"eta": 0.0, "num_inference_steps": 25},
+    "dpm25": {"scheduler": "dpmpp_2m_karras", "num_inference_steps": 25},
+    "dpm30": {"scheduler": "dpmpp_2m_karras", "num_inference_steps": 30},
+    "unipc25": {"scheduler": "unipc", "num_inference_steps": 25},
+    # 보호 영역 끝단 강제(가방·모자·손 파괴 대응)
+    "acc_restore": {"protect_restore": True},
+    "acc_full": {"protect_restore": True, "pipeline_recarve": True},
+    # 스커트 시스루 선택적 guidance 하향
+    "skirtgs1.5": {"skirt_guidance_scale": 1.5},
+    "skirtgs1.75": {"skirt_guidance_scale": 1.75},
+    "skirtgs2.0": {"skirt_guidance_scale": 2.0},
+    # 아우터 마스크 수술(힙 아래 오버행을 하의 패스로 재배정)
+    "outer_reassign": {"outerwear_policy": "reassign"},
+    # 2026-08-22에 reassign/protect_restore/skirtgs1.5가 기본값으로 승격됨.
+    # 아래는 그 이전 동작과 비교하기 위한 오프스위치.
+    "outer_warn": {"outerwear_policy": "warn"},
+    "no_protect": {"protect_restore": False},
+    "no_skirtgs": {"skirt_guidance_scale": None},
 }
 
-TUNABLE = ("num_inference_steps", "guidance_scale", "pipeline_mask_blur", "repaint_blur_divisor")
+# VARIANTS에 새 인스턴스 속성을 쓰면 반드시 여기에도 추가할 것 — 없으면 기본값
+# 스냅샷·복원에서 빠져 값이 다음 변종으로 새고 records의 params에도 안 남는다.
+TUNABLE = (
+    "num_inference_steps", "guidance_scale", "pipeline_mask_blur", "repaint_blur_divisor",
+    "scheduler", "eta", "outerwear_policy", "protect_restore", "pipeline_recarve",
+    "skirt_guidance_scale",
+)
 GENDER_LABEL = {"men": "남성", "women": "여성"}
 CONTEXT_KEYS = ("upper_mask", "lower_mask", "upper_style_mask", "lower_style_mask", "segmentation")
 ROW_HEIGHT = 520
@@ -175,6 +201,7 @@ def main() -> None:
                 **{key: parsed.get(key) for key in CONTEXT_KEYS},
                 "outfit": outfit,
                 "classifier": classifier,
+                "pose": pose,  # outerwear_policy="reassign" 마스크 수술에 필요
             },
         })
         print(f"준비: {image_path.name} → {'+'.join(prepared[-1]['products'])}", flush=True)

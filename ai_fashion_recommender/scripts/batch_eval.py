@@ -46,6 +46,10 @@ arguments.add_argument("--fast", action="store_true",
                        help="CatVTONTryOn.fast() 프리셋(25스텝). 장당 시간이 절반이다")
 arguments.add_argument("--out", default="batch_eval",
                        help="outputs/ 아래 저장 폴더명. 전후 비교할 때 갈라 둔다")
+arguments.add_argument("--scheduler", default="",
+                       help="디노이징 스케줄러 교체(ddim|dpmpp_2m_karras|unipc)")
+arguments.add_argument("--outer-policy", default="",
+                       help="아우터 정책 덮어쓰기(warn|skip|reassign)")
 options = arguments.parse_args()
 PER_GENDER = options.per_gender
 OUT_DIR = OUTPUT_DIR / options.out
@@ -64,6 +68,10 @@ analyzer = OutfitAnalyzer(parser, classifier)
 catalog_csv = DATA_DIR / "products_musinsa.csv"
 engine = RecommendationEngine(PROJECT_DIR / "FASHION_RULES_MASTER.md", ProductCatalog(catalog_csv))
 vton = CatVTONTryOn.fast(max_retries=0) if options.fast else CatVTONTryOn(max_retries=0)
+if options.scheduler:
+    vton.scheduler = options.scheduler
+if options.outer_policy:
+    vton.outerwear_policy = options.outer_policy
 vton._garment_parser = parser
 
 GENDER_LABEL = {"men": "남성", "women": "여성"}
@@ -130,6 +138,7 @@ for index, image_path in enumerate(images, 1):
                     "lower_style_mask", "segmentation")},
                 "outfit": outfit,
                 "classifier": classifier,
+                "pose": pose,  # outerwear_policy="reassign" 마스크 수술에 필요
             },
         )
         record["warnings"] = list(vton.last_warnings)

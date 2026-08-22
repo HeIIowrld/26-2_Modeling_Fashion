@@ -48,6 +48,21 @@ GARMENT_TARGET_LABELS = {
 # 1=face, 2=hair, 8=bag, 9=hat, 11=glasses, 13=hands, 15=feet
 PROTECT_LABELS = (1, 2, 8, 9, 11, 13, 15)
 
+# protect_restore가 최종 결과에서 원본 픽셀로 되돌리는 라벨(+17=jewelry).
+# 마스크 차감만으로는 파이프라인 입력 블러와 라텐트 8배 축소에서 가는 끈 구멍이
+# 메워져 가방이 흰 덩어리·검은 띠로 재생성된다(30장 배치의 IMG_5491 에코백,
+# IMG_5387 크로스백). 벨트(7)·스카프(10)는 교체 대상 옷의 일부라 제외한다.
+RESTORE_LABELS = PROTECT_LABELS + (17,)
+
+# 아우터 상의 유형. 마스크가 원래 옷의 넓은 실루엣 기준으로 만들어져 코트·재킷
+# 착용 사진은 그 실루엣 전체가 새 상의 텍스처로 채워진다(배치 실패·부분실패
+# 15장 중 8장, 추론 파라미터 10개 변종 전부에서 동일 — 구조 문제다).
+# 하드셋 {코트, 재킷}은 30장 배치 인식 라벨 재판독에서 아우터 실패 8장 중 7장
+# 적중, 비아우터 21장 오탐 0. 가디건은 성공작(IMG_5424)에도 있어 소프트셋
+# (경고만)에 둔다. reports/vton_quality/ 참고.
+OUTERWEAR_HARD_TYPES = ("코트", "재킷", "블레이저")
+OUTERWEAR_SOFT_TYPES = ("가디건", "베스트", "점퍼")
+
 # 하의 기장 순서. VTON은 마스크 모양대로 옷을 그리는 경향이 강해서, 원래 옷보다
 # 짧은 하의를 입히면 마스크 하단(원래 바지가 있던 종아리)을 맨다리가 아니라
 # 옷 비슷한 것으로 채운다(퍼지 레그워머·니삭스 환각).
@@ -67,6 +82,11 @@ BOTTOM_LENGTH_ORDER = {
 # 학습된 category 헤드는 상품 레퍼런스에서 신뢰도가 높다(쇼츠 0.92 / 팬츠 0.88).
 # 반면 pant_length 헤드는 상품 crop에서 거의 항상 보류라 기장 판정에 쓰지 않는다.
 SHORT_BOTTOM_CATEGORIES = {"쇼츠"}
+
+# 시스루는 guidance_scale에 단조 반응한다(param_tuning_2026-08-21: 1.5→5.0에서
+# 스커트 밝기 표준편차 38.4→45.8 단조 증가). 전역 하향은 텍스처 충실도와
+# 트레이드오프라 기각됐고, 시스루가 관측된 스커트 레퍼런스에만 선택 적용한다.
+SKIRT_CATEGORIES = {"스커트"}
 
 SLEEVE_LENGTH_ORDER = {"민소매": 0, "반팔": 1, "7부 소매": 2, "긴팔": 3}
 
@@ -127,6 +147,100 @@ def classify_reference_sleeve_length(classifier, image) -> str:
     prediction = classifier.predict_trained_attributes(image, tasks=["sleeve_length"])
     sleeve = prediction.get("sleeve_length")
     return sleeve.labels[0] if sleeve and sleeve.accepted else ""
+
+
+def outerwear_level(upper_type: str) -> str | None:
+    """상의 유형이 아우터면 'hard'(정책 발동)/'soft'(경고만)를 돌려준다."""
+    upper = (upper_type or "").replace(" 추정", "")
+    if any(word in upper for word in OUTERWEAR_HARD_TYPES):
+        return "hard"
+    if any(word in upper for word in OUTERWEAR_SOFT_TYPES):
+        return "soft"
+    return None
+
+
+def _landmark_pixel(
+    landmarks: dict, name: str, width: int, height: int, min_visibility: float = 0.3
+) -> tuple[int, int] | None:
+    """정규화 포즈 랜드마크를 픽셀 좌표로 바꾼다. 없거나 신뢰도가 낮으면 None."""
+    value = landmarks.get(name)
+    if value is None or value[2] < min_visibility:
+        return None
+    return int(round(value[0] * width)), int(round(value[1] * height))
+
+
+def split_outerwear_mask(
+    upper_mask: np.ndarray,
+    lower_mask: np.ndarray,
+    landmarks: dict,
+    *,
+    clip_margin: float = 0.30,
+    corridor_ratio: float = 0.30,
+) -> tuple[np.ndarray, np.ndarray] | None:
+    """아우터 마스크의 힙 아래 오버행을 잘라 하의 패스로 소유권을 넘긴다.
+
+    코트 오버행은 '새 상의가 채울 곳'이 아니라 '추천 하의(와 다리)가 채울 곳'이다.
+    실루엣을 축소하는 게 아니라(이전 arms/legs 확장 실험에서 축소는 불가 확인)
+    상의 마스크를 힙 라인 조금 아래에서 잘라 자연스러운 상의 실루엣만 남기고,
+    잘린 영역은 하의 마스크에 합쳐 하의 패스가 덮어 그리게 한다. 소매 회랑
+    (어깨→팔꿈치→손목)은 클립에서 제외해 아우터 소매 잔류가 재발하지 않게 한다.
+    랜드마크가 부족하거나 잘릴 영역이 없으면 None(수술 불가)을 돌려준다.
+    """
+    import cv2
+
+    height, width = upper_mask.shape[:2]
+    points = {
+        name: _landmark_pixel(landmarks, name, width, height)
+        for name in (
+            "left_shoulder", "right_shoulder", "left_hip", "right_hip",
+            "left_elbow", "right_elbow", "left_wrist", "right_wrist",
+        )
+    }
+    anchors = [points[name] for name in ("left_shoulder", "right_shoulder", "left_hip", "right_hip")]
+    if any(point is None for point in anchors):
+        return None
+    left_shoulder, right_shoulder, left_hip, right_hip = anchors
+    shoulder_y = (left_shoulder[1] + right_shoulder[1]) / 2.0
+    hip_y = (left_hip[1] + right_hip[1]) / 2.0
+    if hip_y <= shoulder_y:
+        return None
+    # 상의 밑단이 힙을 살짝 덮는 게 자연스러워 힙보다 약간 아래에서 자른다.
+    clip_y = int(round(hip_y + clip_margin * (hip_y - shoulder_y)))
+    corridor = np.zeros((height, width), dtype=np.uint8)
+    thickness = max(3, int(round(abs(left_shoulder[0] - right_shoulder[0]) * corridor_ratio)))
+    for side in ("left", "right"):
+        chain = [points[f"{side}_shoulder"], points[f"{side}_elbow"], points[f"{side}_wrist"]]
+        for start, end in zip(chain, chain[1:]):
+            if start is not None and end is not None:
+                cv2.line(corridor, start, end, 1, thickness)
+    rows = np.arange(height)[:, None]
+    overhang = upper_mask.astype(bool) & (rows > clip_y) & (corridor == 0)
+    if not overhang.any():
+        return None
+    return upper_mask.astype(bool) & ~overhang, lower_mask.astype(bool) | overhang
+
+
+def _restore_original_regions(
+    person: Image.Image, result: Image.Image, restore: np.ndarray
+) -> Image.Image:
+    """보호 라벨 영역의 최종 픽셀을 원본으로 되돌린다.
+
+    마스크 차감(protect)은 인페인트 대상에서 빼는 것까지만 보장한다. 파이프라인
+    입력 블러와 라텐트 8배 축소를 지나며 가는 끈·작은 소지품의 구멍이 메워지면
+    모델이 그 위를 칠해버리므로, 원본 해상도에서 한 번 더 강제한다. 1px 침식 후
+    페더를 써서 경계 halo가 '원래 소지품 색'이 아니라 '새 옷 색'이 되게 한다.
+    """
+    import cv2
+
+    binary = restore.astype(np.uint8)
+    eroded = cv2.erode(binary, np.ones((3, 3), np.uint8))
+    alpha = cv2.GaussianBlur((eroded if eroded.any() else binary).astype(np.float32), (0, 0), 2.0)
+    alpha = np.clip(alpha, 0.0, 1.0)[..., None]
+    person_np = np.asarray(person, dtype=np.float32)
+    result_np = np.asarray(result, dtype=np.float32)
+    blended = result_np * (1 - alpha) + person_np * alpha
+    # 반올림 없이 자르면 alpha=1.0-ε에서 원본과 1씩 어긋난다. '복원'은 정확해야 한다.
+    return Image.fromarray(np.clip(np.rint(blended), 0, 255).astype(np.uint8))
 
 
 def _solidify_mask(mask: np.ndarray) -> np.ndarray:
@@ -302,6 +416,12 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         repaint_inset: bool = True,
         repaint_blur_divisor: int = 300,
         min_reference_coverage: float = 0.25,
+        scheduler: str = "ddim",
+        eta: float = 1.0,
+        outerwear_policy: str = "reassign",
+        protect_restore: bool = True,
+        pipeline_recarve: bool = False,
+        skirt_guidance_scale: float | None = 1.5,
     ) -> None:
         super().__init__(enabled=True)
         self.num_inference_steps = num_inference_steps
@@ -324,12 +444,38 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         # 300에서 시간 비용은 없다. reports/vton_quality/param_tuning_2026-08-21.md 참고.
         self.repaint_blur_divisor = repaint_blur_divisor
         self.min_reference_coverage = min_reference_coverage
+        # 디노이징 스케줄러: "ddim"(CatVTON 공식) | "dpmpp_2m_karras" | "unipc".
+        # 뒤의 둘은 2차 결정론 솔버라 낮은 스텝에서 수렴이 빠르다. eta는 DDIM의
+        # 확률성(공식 기본 1.0 = 사실상 DDPM급 확률 샘플링)이고, eta를 받지 않는
+        # 스케줄러에는 파이프라인이 inspect로 걸러 전달하지 않는다.
+        self.scheduler = scheduler
+        self.eta = eta
+        # 아우터(코트·재킷) 착용 사진 정책: "warn"=경고만, "skip"=상의 합성 제외,
+        # "reassign"=힙 아래 오버행을 하의 패스로 넘기는 마스크 수술(context에 pose 필요,
+        # 없으면 자동으로 경고 폴백). 2026-08-22 A/B: 롱코트 4장 전부 개선
+        # (IMG_5521 통짜 니트 붕괴 해소, IMG_5531 상의 과다 기장 해소 등),
+        # 오버행 없는 짧은 재킷은 수술이 발동하지 않아 무해.
+        self.outerwear_policy = outerwear_policy
+        # 보호 라벨(가방·모자·손 등) 영역을 최종 결과에서 원본 픽셀로 강제 복원한다.
+        # 2026-08-22 A/B: IMG_5387 크로스백 끈·버클 복원, 부작용 없음. 한계: 파서가
+        # 가방을 top으로 오라벨하면(IMG_5455 검정 가방) 복원 대상 자체가 없다.
+        self.protect_restore = protect_restore
+        # 파이프라인 입력 블러 뒤에도 보호 영역을 다시 0으로 깎아, 라텐트 축소에서
+        # 가는 끈 구멍이 메워지는 것을 줄인다. (미검증 — 기본 꺼짐)
+        self.pipeline_recarve = pipeline_recarve
+        # 스커트 레퍼런스에만 적용할 guidance_scale (None=비활성). 시스루가 gs에 단조
+        # 반응한다는 발견의 선택적 적용. 2026-08-22 A/B(IMG_5383·IMG_5534 둘 다 단조
+        # 재현): 1.5에서 시스루 최소·실루엣 붕괴(치마 슬릿) 해소, 비용은 복잡한
+        # 패턴의 퇴색. 스커트가 아닌 하의에는 절대 발동하지 않는다.
+        self.skirt_guidance_scale = skirt_guidance_scale
         self.reference_reports: dict[str, dict[str, float]] = {}
         self.last_warnings: list[str] = []
         self._quality_cache_data: dict[str, dict[str, float]] | None = None
         self._device_request = device
         self._pipeline = None
         self._garment_parser = None  # False면 사용 불가로 확정, None이면 미확인
+        self._original_scheduler = None  # 파이프라인이 만든 DDIM을 복원용으로 보관
+        self._active_scheduler = "ddim"
 
     @classmethod
     def high_detail(cls, **overrides) -> "CatVTONTryOn":
@@ -340,14 +486,17 @@ class CatVTONTryOn(VirtualTryOnAdapter):
 
     @classmethod
     def fast(cls, **overrides) -> "CatVTONTryOn":
-        """스텝을 줄여 반복 평가용으로 빠르게 돌리는 프리셋.
+        """절반 시간(장당 44→22초)으로 돌리는 프리셋: DPM++ 2M Karras 25스텝.
 
-        2026-08-21 A/B에서 25스텝은 장당 24.5초로 기본값 50스텝(44.0초)의 절반이고
-        육안 차이는 청바지 질감이 약간 평평해지는 정도였다. 75스텝(65.4초)은 50과
-        구분되지 않아 값을 못 한다. 전후 비교나 배치 평가처럼 여러 번 돌리는
-        작업에 쓰고, 데모용 최종본은 기본값(50)으로 다시 뽑는다.
+        2026-08-21 A/B에서 DDIM 25스텝은 청바지 질감이 평평해지는 손실이 있었다.
+        2026-08-22 A/B(IMG_5455·5497·5383, 같은 시드)에서 DPM++ 2M Karras 25스텝은
+        의류 영역 라플라시안 분산이 세 장 모두 DDIM 50스텝보다 높았고(바지 9.3→18.8,
+        데님 200→283) 레퍼런스 색 충실도도 나았다(DDIM 50이 검정 티셔츠를 베이지
+        니트로 환각한 케이스를 재현하지 않음). 원인 추정: 어댑터가 eta를 안 넘겨
+        DDIM이 eta=1.0(DDPM급 확률 샘플링)으로 돌던 것 → 결정론 2차 솔버로 교체.
+        reports/vton_quality/ 2026-08-22 리포트 참고.
         """
-        params = dict(num_inference_steps=25)
+        params = dict(num_inference_steps=25, scheduler="dpmpp_2m_karras")
         params.update(overrides)
         return cls(**params)
 
@@ -379,6 +528,42 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         )
         self.device = device
         return self._pipeline
+
+    def _apply_scheduler(self, pipeline) -> None:
+        """인스턴스의 scheduler 설정을 파이프라인에 반영한다.
+
+        CatVTONPipeline은 생성자에서 DDIMScheduler를 고정 생성하지만, 디노이징
+        루프가 diffusers 공통 API(set_timesteps/scale_model_input/step)만 쓰고
+        스케줄러 전용 인자(eta 등)는 inspect로 걸러 넘기므로 속성 교체만으로
+        드롭인 전환이 된다. 매 호출 set_timesteps가 내부 상태를 리셋해 장 간
+        상태 누수도 없다.
+        """
+        if self._original_scheduler is None:
+            self._original_scheduler = pipeline.noise_scheduler
+        if self.scheduler == self._active_scheduler:
+            return
+        if self.scheduler == "ddim":
+            pipeline.noise_scheduler = self._original_scheduler
+        elif self.scheduler == "dpmpp_2m_karras":
+            from diffusers import DPMSolverMultistepScheduler
+
+            pipeline.noise_scheduler = DPMSolverMultistepScheduler.from_config(
+                self._original_scheduler.config,
+                algorithm_type="dpmsolver++",
+                solver_order=2,
+                use_karras_sigmas=True,
+            )
+        elif self.scheduler == "unipc":
+            from diffusers import UniPCMultistepScheduler
+
+            pipeline.noise_scheduler = UniPCMultistepScheduler.from_config(
+                self._original_scheduler.config
+            )
+        else:
+            raise ValueError(
+                f"모르는 스케줄러: {self.scheduler!r} (지원: ddim, dpmpp_2m_karras, unipc)"
+            )
+        self._active_scheduler = self.scheduler
 
     def _get_garment_parser(self):
         if self._garment_parser is False:
@@ -499,6 +684,74 @@ class CatVTONTryOn(VirtualTryOnAdapter):
                 f"마스크가 원래 옷 모양이라 {unit} 영역이 옷 텍스처로 채워질 수 있습니다."
             )
 
+    def _is_skirt_reference(self, garment: Image.Image, product, context: dict) -> bool:
+        """추천 하의 레퍼런스가 스커트인지 판정한다(상품명 → category 헤드).
+
+        카탈로그 상품명은 판매자가 붙인 사실상의 정답이라 먼저 본다. 영문 표기가
+        섞여 있어("cotton veil skirt ...") 한/영 둘 다 확인하고, 이름이 불명확할
+        때만 category 헤드로 판정한다.
+        """
+        name = (getattr(product, "name", "") or "").lower()
+        if "스커트" in name or "skirt" in name:
+            return True
+        classifier = context.get("classifier")
+        if classifier is not None and getattr(classifier, "trained_attributes_enabled", False):
+            prediction = classifier.predict_trained_attributes(garment, tasks=["category"])
+            category = prediction.get("category")
+            if category and category.accepted:
+                return category.labels[0] in SKIRT_CATEGORIES
+        return False
+
+    def _apply_outerwear_policy(self, jobs: list, context: dict) -> list:
+        """아우터 착용 사진에 정책(warn/skip/reassign)을 적용한 jobs를 돌려준다."""
+        outfit = context.get("outfit")
+        upper_type = getattr(outfit, "upper_type", "") if outfit is not None else ""
+        level = outerwear_level(upper_type)
+        has_top = any(job[2].category == "top" for job in jobs)
+        if level is None or not has_top:
+            return jobs
+        if level == "soft":
+            self._add_warning(
+                f"아우터 가능성({upper_type}): 마스크가 원래 옷 실루엣 기준이라 "
+                "합성이 깨질 수 있습니다."
+            )
+            return jobs
+        if self.outerwear_policy == "skip":
+            self._add_warning(
+                f"아우터 감지({upper_type}): 상의 합성을 건너뜁니다(outerwear_policy=skip)."
+            )
+            return [job for job in jobs if job[2].category != "top"]
+        if self.outerwear_policy == "reassign":
+            reassigned = self._reassign_outerwear_overhang(jobs, context)
+            if reassigned is not None:
+                self._add_warning(
+                    f"아우터 감지({upper_type}): 힙 아래 마스크를 하의 패스로 "
+                    "재배정했습니다(outerwear_policy=reassign)."
+                )
+                return reassigned
+        self._add_warning(
+            f"아우터 감지({upper_type}): 원래 옷의 넓은 실루엣이 새 상의 텍스처로 "
+            "채워질 수 있습니다."
+        )
+        return jobs
+
+    def _reassign_outerwear_overhang(self, jobs: list, context: dict) -> list | None:
+        """상의 마스크의 힙 아래 오버행을 하의 마스크로 넘긴다. 불가하면 None."""
+        landmarks = getattr(context.get("pose"), "landmarks", None)
+        top_index = next((i for i, job in enumerate(jobs) if job[2].category == "top"), None)
+        bottom_index = next((i for i, job in enumerate(jobs) if job[2].category != "top"), None)
+        if not landmarks or top_index is None or bottom_index is None:
+            return None
+        split = split_outerwear_mask(jobs[top_index][1], jobs[bottom_index][1], landmarks)
+        if split is None:
+            return None
+        reassigned = list(jobs)
+        reassigned[top_index] = (jobs[top_index][0], split[0], jobs[top_index][2])
+        reassigned[bottom_index] = (jobs[bottom_index][0], split[1], jobs[bottom_index][2])
+        # 상의를 먼저 합성해야 하의 패스가 재배정된 오버행을 마지막에 덮어 그린다.
+        reassigned.sort(key=lambda job: job[2].category != "top")
+        return reassigned
+
     def _blur_mask(self, mask: Image.Image, radius: int) -> Image.Image:
         return mask.filter(ImageFilter.GaussianBlur(radius)) if radius > 0 else mask
 
@@ -539,11 +792,24 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         gray = cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2GRAY)
         return float(cv2.Laplacian(gray, cv2.CV_64F)[mask_np].var())
 
-    def _tryon_once(self, person: Image.Image, garment: Image.Image, mask: Image.Image) -> Image.Image:
+    def _tryon_once(
+        self,
+        person: Image.Image,
+        garment: Image.Image,
+        mask: Image.Image,
+        guidance_scale: float | None = None,
+        protect_model: np.ndarray | None = None,
+    ) -> Image.Image:
         import torch
 
         pipeline = self._load_pipeline()
+        self._apply_scheduler(pipeline)
         pipeline_mask = self._blur_mask(mask, self.pipeline_mask_blur)
+        if protect_model is not None and protect_model.any():
+            # 블러가 보호 영역 위로 번진 만큼을 다시 깎는다(pipeline_recarve).
+            recarved = np.asarray(pipeline_mask).copy()
+            recarved[protect_model] = 0
+            pipeline_mask = Image.fromarray(recarved)
         repaint_radius = _odd_blur_radius(
             person.size[1], self.repaint_blur_divisor if self.repaint_inset else 50
         )
@@ -556,9 +822,10 @@ class CatVTONTryOn(VirtualTryOnAdapter):
                 condition_image=garment,
                 mask=pipeline_mask,
                 num_inference_steps=self.num_inference_steps,
-                guidance_scale=self.guidance_scale,
+                guidance_scale=self.guidance_scale if guidance_scale is None else guidance_scale,
                 width=self.width,
                 height=self.height,
+                eta=self.eta,
                 generator=generator,
             )[0]
             repainted = self._repaint(person, mask, raw, repaint_radius)
@@ -587,12 +854,14 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         "outfit"(OutfitAnalysis)과 "classifier"(FashionClassifier)를 함께 넘기면
         합성 신뢰도를 점검해 `last_warnings`에 사유를 남긴다. 결과 이미지 옆에
         이 경고를 함께 보여주면 사용자가 깨진 합성을 사실로 오해하지 않는다.
+        "pose"(PoseAnalysis)까지 넘기면 outerwear_policy="reassign"의 마스크
+        수술이 가능해진다.
         """
         context = context or {}
         self.last_warnings = []
         person = Image.open(person_image).convert("RGB")
 
-        jobs = []  # (garment 이미지 경로, 원본 크기 마스크, 카테고리)
+        jobs = []  # (garment 이미지 경로, 원본 크기 마스크, Product)
         for product in recommendation.products:
             garment_path = garment_image_path(product.image_path) if product.image_path else None
             if garment_path is None or not garment_path.exists():
@@ -605,8 +874,10 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             mask = next((context[key] for key in mask_keys if context.get(key) is not None), None)
             if mask is None or not np.any(mask):
                 continue
-            jobs.append((garment_path, mask, product.category))
+            jobs.append((garment_path, mask, product))
 
+        if jobs:
+            jobs = self._apply_outerwear_policy(jobs, context)
         if not jobs:
             # 합성 재료가 없으면 기존 추천 보드로 대체한다.
             return self._make_preview(person_image, recommendation, output_path)
@@ -623,19 +894,45 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         target = (self.width, self.height)
         person_padded, content_box = pad_to_aspect(person, target, _border_color(person))
         padded_size = person_padded.size
+        protect_model = None
+        if self.pipeline_recarve and protect is not None and protect.any():
+            # 보호 마스크를 사람/마스크와 같은 방식으로 모델 좌표에 맞춘다.
+            protect_padded, _ = pad_to_aspect(
+                Image.fromarray(protect.astype(np.uint8) * 255).convert("L"), target, 0
+            )
+            protect_model = np.asarray(resize_and_crop(protect_padded, target)) > 127
         result = resize_and_crop(person_padded, target)
-        for garment_path, raw_mask, category in jobs:
+        for garment_path, raw_mask, product in jobs:
+            category = product.category
             garment = self._prepare_garment_reference(garment_path, category)
             self._check_length_gap(garment, category, context)
+            guidance_override = None
+            if (
+                category == "bottom"
+                and self.skirt_guidance_scale is not None
+                and self._is_skirt_reference(garment, product, context)
+            ):
+                guidance_override = self.skirt_guidance_scale
+                self._add_warning(
+                    f"스커트 레퍼런스({product.product_id}): guidance_scale "
+                    f"{self.guidance_scale} → {guidance_override} (시스루 완화)"
+                )
             mask_np = _dilate_mask(_solidify_mask(raw_mask))
             if protect is not None:
                 mask_np[protect] = 0
             # 여백은 합성 대상이 아니므로 마스크는 0으로 채운다.
             mask_padded, _ = pad_to_aspect(Image.fromarray(mask_np).convert("L"), target, 0)
             mask = resize_and_crop(mask_padded, target)
-            result = self._tryon_once(result, garment, mask)
+            result = self._tryon_once(
+                result, garment, mask,
+                guidance_scale=guidance_override, protect_model=protect_model,
+            )
 
         result = unpad_result(result, content_box, padded_size, person.size)
+        if self.protect_restore and segmentation is not None:
+            restore = np.isin(segmentation, RESTORE_LABELS)
+            if restore.any():
+                result = _restore_original_regions(person, result, restore)
         output = Path(output_path)
         output.parent.mkdir(parents=True, exist_ok=True)
         result.save(output, quality=95)

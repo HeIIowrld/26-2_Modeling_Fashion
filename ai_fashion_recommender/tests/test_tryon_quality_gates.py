@@ -8,6 +8,7 @@ female_012 통제 실험(2026-08-20)에서 확인한 두 실패 모드를 고정
 import sys
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -19,10 +20,13 @@ from PIL import Image
 from catvton_tryon import (
     CatVTONTryOn,
     UNRELIABLE_LENGTH_GAP,
+    _restore_original_regions,
     bottom_length_gap,
     evaluate_garment_reference,
+    outerwear_level,
     pad_to_aspect,
     sleeve_length_gap,
+    split_outerwear_mask,
     unpad_result,
 )
 
@@ -39,15 +43,159 @@ class TunedDefaultTests(unittest.TestCase):
         # 150에서 300으로 좁혀 halo를 줄였다.
         self.assertEqual(CatVTONTryOn().repaint_blur_divisor, 300)
 
-    def test_fast_preset_halves_the_steps(self):
+    def test_fast_preset_uses_dpm_solver(self):
+        # 2026-08-22 A/B: DPM++ 2M Karras 25스텝이 DDIM 50스텝보다 의류 텍스처
+        # 지표가 높고 색 충실도도 나았다(3장 전부). 시간은 절반(장당 22초).
         preset = CatVTONTryOn.fast()
         self.assertEqual(preset.num_inference_steps, 25)
-        # 프리셋은 스텝만 건드린다. 나머지는 기본값이어야 비교가 성립한다.
+        self.assertEqual(preset.scheduler, "dpmpp_2m_karras")
+        # 나머지는 기본값이어야 비교가 성립한다.
         self.assertEqual(preset.guidance_scale, CatVTONTryOn().guidance_scale)
         self.assertEqual(preset.repaint_blur_divisor, CatVTONTryOn().repaint_blur_divisor)
 
     def test_fast_preset_accepts_overrides(self):
         self.assertEqual(CatVTONTryOn.fast(num_inference_steps=10).num_inference_steps, 10)
+
+    def test_tuned_defaults_2026_08_22(self):
+        # 2026-08-22 같은 시드 A/B로 승격한 기본값. 바꿀 거라면 그날 리포트와 같은
+        # 프로토콜(같은 사진·같은 시드, tune_vton.py)로 재고 근거를 남길 것.
+        tryon = CatVTONTryOn()
+        self.assertEqual(tryon.scheduler, "ddim")  # 기본 경로는 보수적으로 유지
+        self.assertEqual(tryon.eta, 1.0)  # CatVTON 공식 기본(확률 샘플링)
+        self.assertEqual(tryon.outerwear_policy, "reassign")  # 롱코트 4장 전부 개선
+        self.assertTrue(tryon.protect_restore)  # 가방 끈·버클 복원, 부작용 없음
+        self.assertFalse(tryon.pipeline_recarve)  # 미검증이라 꺼짐
+        self.assertEqual(tryon.skirt_guidance_scale, 1.5)  # 시스루·치마 슬릿 완화
+
+
+class SchedulerSwapTests(unittest.TestCase):
+    """스케줄러 드롭인 교체가 설정→적용→복원 왕복에서 안전한지 고정한다."""
+
+    def _dummy_pipeline(self):
+        from diffusers import DDIMScheduler
+
+        return SimpleNamespace(noise_scheduler=DDIMScheduler())
+
+    def test_dpm_swap_and_restore(self):
+        from diffusers import DPMSolverMultistepScheduler
+
+        tryon = CatVTONTryOn(scheduler="dpmpp_2m_karras")
+        pipeline = self._dummy_pipeline()
+        original = pipeline.noise_scheduler
+        tryon._apply_scheduler(pipeline)
+        self.assertIsInstance(pipeline.noise_scheduler, DPMSolverMultistepScheduler)
+        self.assertEqual(pipeline.noise_scheduler.config.algorithm_type, "dpmsolver++")
+        self.assertTrue(pipeline.noise_scheduler.config.use_karras_sigmas)
+        # ddim으로 되돌리면 원본 인스턴스가 그대로 돌아와야 한다.
+        tryon.scheduler = "ddim"
+        tryon._apply_scheduler(pipeline)
+        self.assertIs(pipeline.noise_scheduler, original)
+
+    def test_unipc_swap(self):
+        from diffusers import UniPCMultistepScheduler
+
+        tryon = CatVTONTryOn(scheduler="unipc")
+        pipeline = self._dummy_pipeline()
+        tryon._apply_scheduler(pipeline)
+        self.assertIsInstance(pipeline.noise_scheduler, UniPCMultistepScheduler)
+
+    def test_unknown_scheduler_raises(self):
+        tryon = CatVTONTryOn(scheduler="euler_a")
+        with self.assertRaises(ValueError):
+            tryon._apply_scheduler(self._dummy_pipeline())
+
+
+class OuterwearGateTests(unittest.TestCase):
+    """아우터 감지: 30장 배치 재판독에서 하드셋 7/8 적중·오탐 0인 기준을 고정한다."""
+
+    def test_hard_types(self):
+        for upper in ("코트", "재킷", "블레이저", "블랙 코트", "재킷 추정"):
+            self.assertEqual(outerwear_level(upper), "hard", upper)
+
+    def test_soft_types_warn_only(self):
+        # 가디건은 성공작(IMG_5424)에도 있어 정책 발동 대상이 아니다.
+        for upper in ("가디건", "베스트", "점퍼"):
+            self.assertEqual(outerwear_level(upper), "soft", upper)
+
+    def test_non_outerwear(self):
+        for upper in ("티셔츠", "셔츠", "니트", "탑", "", None):
+            self.assertIsNone(outerwear_level(upper), upper)
+
+    def test_skirt_reference_falls_back_to_product_name(self):
+        tryon = CatVTONTryOn(skirt_guidance_scale=2.0)
+        garment = Image.new("RGB", (10, 10), "white")
+        skirt = SimpleNamespace(name="플리츠 미디 스커트", category="bottom")
+        # 카탈로그에 영문명이 섞여 있다 — 실제 미발동 사례(MS7076570)를 고정한다.
+        skirt_en = SimpleNamespace(name="Cotton Veil Skirt pale blue", category="bottom")
+        pants = SimpleNamespace(name="와이드 데님 팬츠", category="bottom")
+        self.assertTrue(tryon._is_skirt_reference(garment, skirt, {}))
+        self.assertTrue(tryon._is_skirt_reference(garment, skirt_en, {}))
+        self.assertFalse(tryon._is_skirt_reference(garment, pants, {}))
+
+
+class OuterwearMaskSurgeryTests(unittest.TestCase):
+    """힙 클립+오버행 재배정의 기하를 합성 마스크로 고정한다."""
+
+    HEIGHT, WIDTH = 200, 100
+
+    def _landmarks(self):
+        # 어깨 y=0.2(40px), 힙 y=0.5(100px). 팔은 몸통 밖(x 0.05/0.95)으로 내린다.
+        return {
+            "left_shoulder": (0.30, 0.20, 1.0),
+            "right_shoulder": (0.70, 0.20, 1.0),
+            "left_hip": (0.40, 0.50, 1.0),
+            "right_hip": (0.60, 0.50, 1.0),
+            "left_elbow": (0.05, 0.40, 1.0),
+            "right_elbow": (0.95, 0.40, 1.0),
+            "left_wrist": (0.05, 0.60, 1.0),
+            "right_wrist": (0.95, 0.60, 1.0),
+        }
+
+    def _masks(self):
+        upper = np.zeros((self.HEIGHT, self.WIDTH), dtype=bool)
+        upper[30:170, 25:75] = True  # 롱코트: 힙(100px) 한참 아래까지 내려온다
+        lower = np.zeros((self.HEIGHT, self.WIDTH), dtype=bool)
+        lower[95:190, 30:70] = True
+        return upper, lower
+
+    def test_overhang_moves_from_upper_to_lower(self):
+        upper, lower = self._masks()
+        split = split_outerwear_mask(upper, lower, self._landmarks())
+        self.assertIsNotNone(split)
+        new_upper, new_lower = split
+        # clip_y = 100 + 0.3*(100-40) = 118. 그 아래 몸통 중앙(팔 회랑 밖)은
+        # 상의 마스크에서 빠지고 하의 마스크로 넘어가야 한다.
+        self.assertFalse(new_upper[130:170, 45:55].any())
+        self.assertTrue(new_lower[130:170, 45:55].all())
+        # 클립 위는 그대로다.
+        self.assertTrue(new_upper[30:110, 30:70].all())
+        # 마스크 합집합은 보존된다(영역을 잃지 않고 소유권만 이동).
+        np.testing.assert_array_equal(new_upper | new_lower, upper | lower)
+
+    def test_missing_landmarks_return_none(self):
+        upper, lower = self._masks()
+        landmarks = self._landmarks()
+        del landmarks["left_hip"]
+        self.assertIsNone(split_outerwear_mask(upper, lower, landmarks))
+
+    def test_no_overhang_returns_none(self):
+        upper = np.zeros((self.HEIGHT, self.WIDTH), dtype=bool)
+        upper[30:90, 25:75] = True  # 힙 위에서 끝나는 짧은 상의
+        lower = np.zeros((self.HEIGHT, self.WIDTH), dtype=bool)
+        lower[95:190, 30:70] = True
+        self.assertIsNone(split_outerwear_mask(upper, lower, self._landmarks()))
+
+
+class ProtectRestoreTests(unittest.TestCase):
+    def test_restore_forces_original_pixels(self):
+        person = Image.new("RGB", (60, 60), (255, 0, 0))
+        result = Image.new("RGB", (60, 60), (0, 0, 255))
+        restore = np.zeros((60, 60), dtype=bool)
+        restore[20:40, 20:40] = True
+        blended = _restore_original_regions(person, result, restore)
+        # 보호 영역 중심은 원본(빨강), 바깥은 합성 결과(파랑)여야 한다.
+        self.assertEqual(blended.getpixel((30, 30)), (255, 0, 0))
+        self.assertEqual(blended.getpixel((5, 5)), (0, 0, 255))
 
 
 class LengthGapTests(unittest.TestCase):
