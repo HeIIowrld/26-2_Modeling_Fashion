@@ -17,7 +17,7 @@ for _path in (PROJECT_DIR, PROJECT_DIR / "src"):
         sys.path.insert(0, str(_path))
 
 from clothing_parser import ClothingParser
-from config import DATA_DIR, OUTPUT_DIR
+from config import DATA_DIR, ENABLE_VTON, OUTPUT_DIR, resolve_catalog
 from fashion_model import FashionClassifier
 from feedback_store import FeedbackStore
 from outfit_analyzer import COLOR_PALETTE, OutfitAnalyzer
@@ -107,6 +107,24 @@ def get_engine() -> Engine:
         return _engine
 
 
+def _build_tryon() -> VirtualTryOnAdapter:
+    """생성 모델을 쓸 수 있으면 CatVTON을, 아니면 비활성 어댑터를 준다.
+
+    config.ENABLE_VTON 이 꺼져 있으면 아예 시도하지 않는다. 켜져 있어도 CatVTON
+    저장소나 GPU가 없는 환경이 있으므로, 실패하면 조용히 비활성으로 떨어지고
+    이유를 남긴다. 여기서 예외를 올리면 웹 서버 자체가 안 뜬다.
+    """
+    if not ENABLE_VTON:
+        return VirtualTryOnAdapter(enabled=False)
+    try:
+        from catvton_tryon import CatVTONTryOn
+
+        return CatVTONTryOn()
+    except Exception as error:  # 저장소 없음·의존성 없음·GPU 없음 모두 여기로 온다
+        print(f"[VTON] 생성 모델을 켜지 못해 비활성으로 실행합니다: {type(error).__name__}: {error}")
+        return VirtualTryOnAdapter(enabled=False)
+
+
 def _build_engine() -> Engine:
     pose_analyzer = PoseAnalyzer(model_complexity=1)
     clothing_parser = ClothingParser(use_fashn=True)
@@ -114,13 +132,16 @@ def _build_engine() -> Engine:
         enabled=True,
         attribute_checkpoint=ATTRIBUTE_HEADS_PATH if ATTRIBUTE_HEADS_PATH.is_file() else None,
     )
-    catalog = ProductCatalog(DATA_DIR / "products.csv")
+    # 어떤 CSV를 쓸지는 config.resolve_catalog 한 곳에서 정한다.
+    # 상품 사진이 있는 크롤링 카탈로그(products_musinsa_enriched.csv)가 있으면
+    # 그쪽을 쓰고, 없으면 손으로 만든 products.csv 로 떨어진다.
+    catalog = ProductCatalog(resolve_catalog(DATA_DIR))
     return Engine(
         pose_analyzer=pose_analyzer,
         quality_checker=QualityChecker(pose_analyzer),
         outfit_analyzer=OutfitAnalyzer(clothing_parser, classifier),
         recommender=RecommendationEngine(RULES_PATH, catalog),
-        tryon=VirtualTryOnAdapter(enabled=False),
+        tryon=_build_tryon(),
         device=classifier.device,
         trained_heads=classifier.trained_attributes_enabled,
         parser_backend=clothing_parser.backend,

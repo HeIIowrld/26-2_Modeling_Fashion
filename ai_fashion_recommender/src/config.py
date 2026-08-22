@@ -34,6 +34,36 @@ def garment_image_path(image_name: str) -> Path:
     """카탈로그 CSV의 image_path(파일명)를 실제 상품 이미지 경로로 바꾼다."""
     return GARMENT_RAW_DIR / Path(image_name).name
 
+
+# 상품 카탈로그. 웹·Notebook·스크립트가 서로 다른 CSV를 보면 추천 결과가 갈리므로
+# 고르는 규칙을 여기 한 곳에만 둔다.
+#
+#   1) 환경변수 FASHION_PRODUCTS_CSV — 명시 지정이 항상 이긴다
+#   2) products_musinsa_enriched.csv — 크롤링본에 속성을 채운 것 (상품 사진 있음)
+#   3) products.csv                  — 손으로 만든 기본 카탈로그 (사진 없음)
+#
+# musinsa_crawler.py 가 만드는 products_musinsa.csv 는 **일부러 뺐다.** 그 파일에는
+# fit·material·formality 등 16개 칼럼이 없어서, 그대로 쓰면 ProductCatalog 이 전부
+# 기본값으로 채우고 해당 속성을 보는 규칙이 조용히 잠든다. 크롤링본은 중간 산출물로
+# 두고 scripts/enrich_catalog.py 로 속성을 채운 뒤 쓴다.
+PRODUCTS_CSV_CANDIDATES = ("products_musinsa_enriched.csv", "products.csv")
+
+
+def resolve_catalog(data_dir: str | Path | None = None) -> Path:
+    """실제로 사용할 상품 카탈로그 CSV 경로를 고른다."""
+    base = Path(data_dir) if data_dir else DATA_DIR
+    override = os.environ.get("FASHION_PRODUCTS_CSV", "").strip()
+    if override:
+        return resolve_path(override, override, base)
+    for name in PRODUCTS_CSV_CANDIDATES:
+        candidate = base / name
+        if candidate.is_file():
+            return candidate
+    return base / PRODUCTS_CSV_CANDIDATES[-1]
+
+
+PRODUCTS_CSV = resolve_catalog()
+
 # 정식 분석 경로는 두 모델을 모두 사용한다. 메모리·네트워크 점검 때만 False로 바꾼다.
 ENABLE_FASHN_PARSER = True
 ENABLE_FASHION_SIGLIP = True

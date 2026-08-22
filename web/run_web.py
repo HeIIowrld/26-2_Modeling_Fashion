@@ -157,9 +157,17 @@ def main() -> int:
     print("  종료하려면 Ctrl+C 를 누르세요.\n")
 
     # 런타임 모듈은 CORE_DIR/src 에 있다. WEB_DIR은 app.py를 찾기 위해 필요하다.
+    #
+    # web/app.py(FastAPI)와 ai_fashion_recommender/app.py(Gradio)는 이름이 같다.
+    # 이 스크립트를 실행하면 파이썬이 WEB_DIR을 sys.path에 미리 넣어두기 때문에
+    # "없을 때만 추가" 방식으로는 WEB_DIR이 CORE_DIR보다 뒤로 밀려서
+    # `import app`이 Gradio 쪽을 잡는다. 이미 있어도 지웠다가 다시 넣어
+    # WEB_DIR이 반드시 맨 앞에 오도록 한다.
     for path in (CORE_DIR, CORE_DIR / "src", WEB_DIR):
-        if str(path) not in sys.path:
-            sys.path.insert(0, str(path))
+        entry = str(path)
+        if entry in sys.path:
+            sys.path.remove(entry)
+        sys.path.insert(0, entry)
 
     if not args.no_browser:
         webbrowser.open(address)

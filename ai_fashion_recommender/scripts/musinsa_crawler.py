@@ -28,7 +28,7 @@ import sys
 # 런타임 모듈은 src/에 있다. 임포트 전에 경로를 등록한다.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from config import DATA_DIR, GARMENT_RAW_DIR
+from config import DATA_DIR, GARMENT_RAW_DIR, REPO_DIR
 from schemas import BODY_SHAPES
 
 API_URL = "https://api.musinsa.com/api2/dp/v2/plp/goods"
@@ -56,6 +56,7 @@ HEADERS = {
 # top/bottom 2종만 지원하므로, 우선 상/하의 볼륨을 늘리는 데 집중한다.
 CATEGORY_MAP = {
     "001": "top",     # 상의
+    "002": "top",     # 아우터 (코트·재킷). 상의 슬롯의 "롱 기장"은 여기서만 나온다.
     "003": "bottom",  # 바지
     "100": "bottom",  # 스커트 (하의로 취급)
 }
@@ -214,11 +215,14 @@ def _image_url_candidates(thumbnail_url: str) -> list[str]:
 
 
 def download_image(product: CrawledProduct, image_dir: Path, delay: float, refresh: bool = False) -> None:
+    # image_path 는 REPO_DIR 기준이다. 이미지 자산이 ai_fashion_recommender/ 밖의
+    # ../datasets/garments/raw 로 옮겨졌기 때문에, DATA_DIR.parent 기준으로 계산하면
+    # relative_to 가 ValueError 를 낸다(사진은 이미 저장된 뒤라 파일만 남고 경로는 빈다).
     if not product.image_url:
         return
     target = image_dir / f"{product.product_id}.jpg"
     if target.exists() and not refresh:
-        product.image_path = str(target.relative_to(DATA_DIR.parent)).replace("\\", "/")
+        product.image_path = str(target.relative_to(REPO_DIR)).replace("\\", "/")
         return
     candidates = _image_url_candidates(product.image_url)
     last_error: Exception | None = None
@@ -230,7 +234,7 @@ def download_image(product: CrawledProduct, image_dir: Path, delay: float, refre
             last_error = exc
             continue
         target.write_bytes(data)
-        product.image_path = str(target.relative_to(DATA_DIR.parent)).replace("\\", "/")
+        product.image_path = str(target.relative_to(REPO_DIR)).replace("\\", "/")
         time.sleep(delay)
         return
     raise last_error or RuntimeError(f"이미지 다운로드 실패: {product.image_url}")

@@ -1,0 +1,240 @@
+{
+  "_note": "크롤링 카탈로그를 규칙 엔진이 쓸 수 있게 채울 때 참조하는 유도 표. 속성 모델이 사진에서 읽어주는 것(item_type·fit·length·pattern·material·neckline·detail)을 제외한 나머지 칼럼을 소재와 종류에서 추정한다.",
+  "_status": "잠정값 · 검수 필요",
+  "_why": "formality·warmth·breathability·water_resistant 는 사진만으로 판정할 수 없고 학습된 속성 태스크에도 없다. products.csv 80개를 손으로 채울 때 쓴 기준을 표로 옮긴 것이며, 실측이나 전문가 검수를 거치지 않았다. 값을 근거로 결론을 내리기 전에 검증할 것.",
+  "_scale": "warmth·breathability·visual_weight·formality 는 1~5, detail_level 은 1~5, pattern_contrast 는 0~5",
+  "material": {
+    "코튼": {
+      "warmth": 3,
+      "breathability": 4,
+      "formality": 3,
+      "water_resistant": false
+    },
+    "데님": {
+      "warmth": 3,
+      "breathability": 3,
+      "formality": 2,
+      "water_resistant": false
+    },
+    "니트": {
+      "warmth": 4,
+      "breathability": 2,
+      "formality": 3,
+      "water_resistant": false
+    },
+    "울": {
+      "warmth": 5,
+      "breathability": 2,
+      "formality": 4,
+      "water_resistant": false
+    },
+    "가죽": {
+      "warmth": 4,
+      "breathability": 1,
+      "formality": 3,
+      "water_resistant": true
+    },
+    "스웨이드": {
+      "warmth": 4,
+      "breathability": 2,
+      "formality": 3,
+      "water_resistant": false
+    },
+    "시폰": {
+      "warmth": 1,
+      "breathability": 5,
+      "formality": 4,
+      "water_resistant": false
+    },
+    "실크·새틴": {
+      "warmth": 2,
+      "breathability": 4,
+      "formality": 5,
+      "water_resistant": false
+    },
+    "퍼·플리스": {
+      "warmth": 5,
+      "breathability": 1,
+      "formality": 2,
+      "water_resistant": false
+    },
+    "메시": {
+      "warmth": 1,
+      "breathability": 5,
+      "formality": 1,
+      "water_resistant": false
+    },
+    "레이스": {
+      "warmth": 1,
+      "breathability": 4,
+      "formality": 4,
+      "water_resistant": false
+    }
+  },
+  "_item_formality_note": "종류가 소재보다 격식을 강하게 결정하는 경우만 덮어쓴다.",
+  "item_formality": {
+    "블레이저": 5,
+    "코트": 4,
+    "재킷": 4,
+    "셔츠": 4,
+    "블라우스": 4,
+    "원피스": 4,
+    "슬랙스": 4,
+    "폴로 셔츠": 3,
+    "니트": 3,
+    "가디건": 3,
+    "베스트": 3,
+    "치노 팬츠": 3,
+    "세일러 팬츠": 3,
+    "스커트": 3,
+    "점프수트": 3,
+    "티셔츠": 2,
+    "청바지": 2,
+    "탑": 2,
+    "카고 팬츠": 2,
+    "후드티": 1,
+    "쇼츠": 1,
+    "조거·스웨트팬츠": 1,
+    "트랙팬츠": 1,
+    "레깅스": 1,
+    "요가 팬츠": 1,
+    "하렘 팬츠": 1
+  },
+  "_activity_note": "운동 태그가 하나도 없으면 R-WEA 계열 규칙이 후보를 못 찾는다.",
+  "activity_tags": {
+    "조거·스웨트팬츠": [
+      "운동",
+      "일상"
+    ],
+    "트랙팬츠": [
+      "운동",
+      "일상"
+    ],
+    "레깅스": [
+      "운동"
+    ],
+    "요가 팬츠": [
+      "운동"
+    ],
+    "후드티": [
+      "운동",
+      "일상"
+    ],
+    "쇼츠": [
+      "운동",
+      "일상"
+    ],
+    "티셔츠": [
+      "일상"
+    ],
+    "셔츠": [
+      "업무"
+    ],
+    "블라우스": [
+      "업무"
+    ],
+    "블레이저": [
+      "업무"
+    ],
+    "슬랙스": [
+      "업무"
+    ]
+  },
+  "activity_by_material": {
+    "메시": [
+      "운동"
+    ],
+    "퍼·플리스": [
+      "운동"
+    ]
+  },
+  "_pattern_note": "pattern_scale 은 무늬 크기, pattern_contrast 는 배경과의 명도차(0=무지).",
+  "pattern": {
+    "무지": {
+      "scale": "",
+      "contrast": 0,
+      "visual_weight": 2
+    },
+    "스트라이프": {
+      "scale": "중간",
+      "contrast": 3,
+      "visual_weight": 3
+    },
+    "체크": {
+      "scale": "중간",
+      "contrast": 3,
+      "visual_weight": 4
+    },
+    "도트": {
+      "scale": "작은",
+      "contrast": 3,
+      "visual_weight": 3
+    },
+    "플로럴": {
+      "scale": "중간",
+      "contrast": 3,
+      "visual_weight": 4
+    },
+    "그래픽": {
+      "scale": "큰",
+      "contrast": 4,
+      "visual_weight": 5
+    },
+    "애니멀": {
+      "scale": "중간",
+      "contrast": 4,
+      "visual_weight": 5
+    },
+    "카모": {
+      "scale": "중간",
+      "contrast": 2,
+      "visual_weight": 4
+    },
+    "컬러 블록": {
+      "scale": "큰",
+      "contrast": 4,
+      "visual_weight": 5
+    }
+  },
+  "_waistline_note": "하의 디테일에서 허리선을 추정한다. 판단 못 하면 빈 값으로 두고 규칙이 건너뛰게 한다.",
+  "waistline": {
+    "밴딩 허리": "밴딩",
+    "드로스트링": "밴딩",
+    "플리츠·턱": "하이웨이스트",
+    "5포켓": "",
+    "카고 포켓": "",
+    "사이드 스트라이프": "",
+    "밑단 커프": "",
+    "스터럽": ""
+  },
+  "_detail_note": "detail_level 은 장식 정도. '디테일 없음'이면 1, 그 외에는 종류별로 올린다.",
+  "detail_level": {
+    "디테일 없음": 1,
+    "포켓": 2,
+    "지퍼": 2,
+    "단추": 2,
+    "밑단 커프": 2,
+    "벨트": 3,
+    "후드": 3,
+    "플리츠": 3,
+    "자수": 3,
+    "프릴·러플": 4,
+    "리본": 4,
+    "레이스": 4,
+    "스팽글": 5
+  },
+  "_normalize_note": "속성 모델의 스키마 라벨을 규칙 엔진이 비교하는 어휘로 옮긴다. recommendation_engine.py 가 {'긴바지','롱·맥시 기장'} 같은 손으로 만든 카탈로그의 표기로 비교하기 때문에, 모델 라벨을 그대로 넣으면 그 규칙이 조용히 빗나간다.",
+  "normalize_length": {
+    "롱·긴바지 기장": "긴바지",
+    "쇼츠·미니 기장": "반바지",
+    "미디·7부 기장": "미디 기장",
+    "무릎 기장": "무릎 기장",
+    "크롭 기장": "크롭 기장",
+    "기본 기장": "기본 기장",
+    "롱 기장": "롱 기장"
+  },
+  "_normalize_neckline_note": "'칼라 없음'은 넥라인이 아니라 칼라가 없다는 뜻이라 빈 값으로 둔다.",
+  "normalize_neckline": {
+    "칼라 없음": ""
+  }
+}

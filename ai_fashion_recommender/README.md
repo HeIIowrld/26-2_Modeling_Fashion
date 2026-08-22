@@ -648,6 +648,58 @@ contrast 단독(흰옷인데 정상), 흰 배경에 묻힘(회색 매트로도 �
 기본값으로 뭉개집니다. `tests/test_product_catalog_coverage.py`가 이 조건들을 검사하므로
 데이터를 바꾼 뒤 테스트를 돌리면 빠진 부분을 알려줍니다.
 
+## 크롤링 카탈로그로 갈아타기 (생성 모델 연결)
+
+`products.csv`에는 **상품 사진이 없습니다.** CatVTON 합성은 `product.image_path`로 옷 사진을
+찾으므로(`src/catvton_tryon.py`), 사진 없는 카탈로그로는 추천까지만 되고 합성 재료가 없습니다.
+`scripts/musinsa_crawler.py`가 사진과 함께 `data/products_musinsa.csv`를 만듭니다.
+
+### 크롤링 원본을 그대로 쓰면 안 되는 이유
+
+크롤러는 **15개 칼럼**만 씁니다. 위 표의 `fit` `material` `formality` `warmth` 등
+**16개가 비어 있고**, `ProductCatalog`은 없는 칼럼을 기본값으로 채웁니다. 그래서 로드는 되지만
+그 속성을 보는 규칙이 **조용히 잠듭니다.** 오류도 안 납니다.
+
+### 세 단계로 잇습니다
+
+```bash
+python scripts/musinsa_crawler.py                 # 1. 사진 + 15칼럼 원본
+python scripts/enrich_catalog.py                  # 2. 속성을 채워 31칼럼으로
+python scripts/enrich_catalog.py --report         # 3. 규칙이 발동 가능한지 점검
+```
+
+`enrich_catalog.py`가 채우는 방법은 두 가지입니다.
+
+| 방법 | 채우는 칼럼 |
+|---|---|
+| **상품 사진 → 학습된 속성 헤드** | `item_type` `fit` `length` `pattern` `material` `neckline` `detail_level` |
+| **소재·종류에서 유도** (`data/catalog_derivation.json`) | `formality` `warmth` `breathability` `water_resistant` `visual_weight` `activity_tags` `waistline` `pattern_scale` `pattern_contrast` |
+
+유도 표의 수치는 **잠정값입니다.** 사진으로 판정할 수 없고 학습된 속성 태스크에도 없어서,
+`products.csv` 80개를 손으로 채울 때 쓴 기준을 표로 옮긴 것입니다. 검수를 거치지 않았습니다.
+
+`--report`는 `tests/test_product_catalog_coverage.py`와 같은 기준으로 "이 카탈로그가 규칙을
+발동시킬 수 있는가"를 봅니다. **부족한 항목이 나오면 그 규칙은 후보를 못 찾습니다.**
+크롤링 범위를 넓히거나 유도 표를 손봐야 합니다.
+
+### 어떤 CSV를 쓰는지는 한 곳에서 정합니다
+
+`config.resolve_catalog()`가 우선순위로 고르고, 웹·Notebook·스크립트가 모두 이걸 씁니다.
+
+1. 환경변수 `FASHION_PRODUCTS_CSV` (명시 지정이 항상 이김)
+2. `products_musinsa_enriched.csv` (속성을 채운 크롤링본)
+3. `products.csv` (손으로 만든 기본 카탈로그)
+
+`products_musinsa.csv`(크롤링 원본)는 **일부러 후보에서 뺐습니다.** 위의 "조용히 잠드는" 문제를
+막기 위해서이고, `tests/test_catalog_pipeline.py`가 이 규칙을 지킵니다.
+
+### 아직 검증 안 된 것
+
+속성 헤드는 **사람이 입은 옷의 crop**으로 학습했습니다. 무신사 대표컷이 옷만 평면으로 찍은
+사진이면 학습 분포 밖이라 판정이 나빠질 수 있습니다. CatVTON 데모의 평면 상품컷 5장으로
+시험했을 때 패턴이 전부 `그래픽`으로, 기장이 전부 `크롭 기장`으로 나왔습니다.
+**실제 크롤링 이미지로 다시 재봐야 합니다.**
+
 ## 현재 한계
 
 - 사진 기반 체형 비율은 실제 신체 치수가 아닙니다.
