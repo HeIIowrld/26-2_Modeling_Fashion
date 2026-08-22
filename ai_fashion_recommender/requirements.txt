@@ -9,6 +9,12 @@ open-clip-torch==3.3.0
 ftfy==6.3.1
 pyarrow
 
+# 가상 피팅 (CatVTON)
+# src/catvton_tryon.py 가 diffusers 를 직접 import 한다(스케줄러 교체).
+# accelerate 는 third_party/CatVTON/model/pipeline.py 가 쓴다.
+diffusers
+accelerate
+
 # 웹 앱
 gradio
 
