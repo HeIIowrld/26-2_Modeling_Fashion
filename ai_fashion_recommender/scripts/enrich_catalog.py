@@ -134,9 +134,15 @@ def normalize(predicted: dict[str, str], table: dict) -> dict[str, str]:
     비교한다. 모델의 스키마 라벨("롱·긴바지 기장")을 그대로 넣으면 값이 채워져 있는데도
     조건에 안 걸려서, 규칙이 오류 없이 빗나간다.
     """
-    length = predicted.get("length", "")
-    if length:
-        predicted["length"] = table["normalize_length"].get(length, length)
+    # 종류가 기장을 확정하는 경우는 모델 판정보다 우선한다. 평면 상품컷에서는
+    # 몸 대비 기장을 볼 수 없어 upper_length 헤드가 "롱 기장"을 사실상 내지 않는다.
+    by_item = table.get("length_by_item_type", {}).get(predicted.get("item_type", ""))
+    if by_item:
+        predicted["length"] = by_item
+    else:
+        length = predicted.get("length", "")
+        if length:
+            predicted["length"] = table["normalize_length"].get(length, length)
     neckline = predicted.get("neckline", "")
     if neckline in table["normalize_neckline"]:
         predicted["neckline"] = table["normalize_neckline"][neckline]

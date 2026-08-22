@@ -187,6 +187,17 @@ class NormalizationTests(unittest.TestCase):
             with self.subTest(label=label):
                 self.assertEqual(self.norm(length=label)["length"], label)
 
+    def test_coat_length_comes_from_the_item_type(self):
+        """평면 상품컷에서는 upper_length 헤드가 "롱 기장"을 내지 못한다(실측 214개 중 0개).
+
+        스키마가 "재킷"과 "코트"를 나눠 두므로 코트만 종류에서 기장을 유도한다.
+        """
+        self.assertEqual(self.norm(item_type="코트", length="기본 기장")["length"], "롱 기장")
+
+    def test_jacket_length_is_left_alone(self):
+        """재킷은 실제로 짧으므로 덮어쓰지 않는다."""
+        self.assertEqual(self.norm(item_type="재킷", length="기본 기장")["length"], "기본 기장")
+
     def test_no_collar_is_not_a_neckline(self):
         self.assertEqual(self.norm(neckline="칼라 없음")["neckline"], "")
 
