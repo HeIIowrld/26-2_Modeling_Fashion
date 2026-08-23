@@ -47,7 +47,23 @@ REQUIRED_FILES = [
     (CORE_DIR / "FASHION_RULES_MASTER.md", "패션 규칙 문서"),
 ]
 
-MODEL_PATH = CORE_DIR / "models" / "fashion_attribute_heads.pt"
+def _model_path() -> Path:
+    """실제로 로드될 체크포인트를 config 에서 가져온다.
+
+    여기에 파일 이름을 하드코딩하면 config 의 기본값이 바뀌었을 때 점검이 엉뚱한
+    파일을 보게 된다(실제로 rollback 본을 검사하고 있었다). config 를 못 읽는
+    환경에서도 점검 자체는 돌아야 하므로 실패하면 배포 모델 이름으로 떨어진다.
+    """
+    try:
+        sys.path.insert(0, str(CORE_DIR / "src"))
+        from config import FASHION_ATTRIBUTE_HEADS_PATH
+
+        return Path(FASHION_ATTRIBUTE_HEADS_PATH)
+    except Exception:
+        return CORE_DIR / "models" / "fashion_attribute_heads_augmented.pt"
+
+
+MODEL_PATH = _model_path()
 
 
 class CheckFailed(Exception):

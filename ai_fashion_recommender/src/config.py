@@ -84,9 +84,18 @@ ENABLE_AUTO_BODY_SHAPE = True
 
 FASHN_PARSER_MODEL_ID = "fashn-ai/fashn-human-parser"
 FASHION_SIGLIP_MODEL_ID = "Marqo/marqo-fashionSigLIP"
+# 배포 모델은 2차 보강본(22,341 crop)이다. packages/PACKAGE_CHECKSUMS.json 이
+# 이 파일을 adopted_model("최종 채택 배포 모델")로, fashion_attribute_heads.pt 를
+# baseline_model("초기 baseline · rollback용")로 적고 있다.
+#
+# 예전에는 기본값이 baseline 쪽이라 문서와 코드가 서로 다른 말을 했다. 오류가 안 나고
+# 결과만 조용히 달라져서, 클론한 사람은 왜 결과가 다른지 알 방법이 없었다.
+#
+# baseline 으로 되돌리려면:
+#   FASHION_ATTRIBUTE_HEADS_PATH=models/fashion_attribute_heads.pt
 FASHION_ATTRIBUTE_HEADS_PATH = resolve_path(
     os.environ.get("FASHION_ATTRIBUTE_HEADS_PATH"),
-    "models/fashion_attribute_heads.pt",
+    "models/fashion_attribute_heads_augmented.pt",
 )
 # FashionSigLIP 점수는 후보 프롬프트 사이의 상대 점수다. 실제 확률로 해석하지 않는다.
 ATTRIBUTE_CONFIDENCE_THRESHOLDS = {
