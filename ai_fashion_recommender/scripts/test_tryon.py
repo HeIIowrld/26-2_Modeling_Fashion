@@ -26,7 +26,14 @@ import sys
 # 런타임 모듈은 src/에 있다. 임포트 전에 경로를 등록한다.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from config import DATA_DIR, FASHION_ATTRIBUTE_HEADS_PATH, OUTPUT_DIR, PEOPLE_DIR, PROJECT_DIR
+from config import (
+    DATA_DIR,
+    FASHION_ATTRIBUTE_HEADS_PATH,
+    OUTPUT_DIR,
+    PEOPLE_DIR,
+    PROJECT_DIR,
+    resolve_catalog,
+)
 from clothing_parser import ClothingParser
 from fashion_model import FashionClassifier
 from outfit_analyzer import OutfitAnalyzer
@@ -69,8 +76,8 @@ def _sample_images(gender: str, count: int) -> list[Path]:
 
 
 def catalog_path() -> Path:
-    musinsa = DATA_DIR / "products_musinsa.csv"
-    return musinsa if musinsa.exists() else DATA_DIR / "products.csv"
+    # 고르는 규칙은 config.resolve_catalog 한 곳에만 둔다(웹·Notebook과 동일).
+    return resolve_catalog(DATA_DIR)
 
 
 def main() -> None:

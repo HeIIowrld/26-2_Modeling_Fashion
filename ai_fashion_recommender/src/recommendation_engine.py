@@ -5,10 +5,13 @@ import hashlib
 import itertools
 from pathlib import Path
 
+from config import ENABLE_AUTO_BODY_SHAPE
 from fashion_rules import FashionRuleBook
 from outfit_analyzer import COLOR_PALETTE, NEUTRALS, color_harmony
 from product_catalog import ProductCatalog
 from schemas import (
+    FOCUS_LOWER,
+    FOCUS_UPPER,
     SHAPE_HOURGLASS,
     SHAPE_INVERTED_TRIANGLE,
     SHAPE_RECTANGLE,
@@ -16,6 +19,7 @@ from schemas import (
     SHAPE_UNCERTAIN,
     GOAL_BALANCE,
     GOAL_LOWER_FOCUS,
+    GOAL_NONE,
     GOAL_UPPER_FOCUS,
     PROPORTION_GOALS,
     OutfitAnalysis,
@@ -258,6 +262,8 @@ class RecommendationEngine:
                 "waistline": product.waistline,
                 "pattern_scale": product.pattern_scale,
                 "pattern_contrast": product.pattern_contrast,
+                # 상품이 밝힌 적합 실루엣. _catalog_shape_score 가 목표와 맞춰 본다.
+                "body_shapes": product.body_shapes,
                 "palette": [{"name": product.color, "proportion": 1.0}],
                 "confidence": 1.0,
                 "is_product": True,
@@ -287,6 +293,9 @@ class RecommendationEngine:
             "water_resistant": False,
             "visual_weight": self._derived_visual_weight(color, fit, pattern, material),
             "detail_level": 2 if pattern not in {"", "무지", "분석 보류", "패턴 불확실"} else 1,
+            # 지금 입고 있는 옷은 카탈로그 상품이 아니라 적합 실루엣 정보가 없다.
+            # 빈 값이면 _catalog_shape_score 가 None 을 돌려 점수에서 빠진다.
+            "body_shapes": [],
             "waistline": "",
             "pattern_scale": "",
             "pattern_contrast": 0,
@@ -422,6 +431,35 @@ class RecommendationEngine:
         saturation = colorsys.rgb_to_hsv(*(value / 255 for value in rgb))[1]
         return saturation >= 0.42
 
+    # 체형이 알려주는 "시선을 나눠 줄 쪽". 상품 카탈로그의 body_shapes 칼럼과 짝이 맞는다.
+    # 마름모꼴·둥근체형은 허리가 중심이라 대응하는 R-BOD 규칙이 문서에 아직 없어 비워 둔다.
+    BODY_SHAPE_FOCUS = {
+        SHAPE_INVERTED_TRIANGLE: FOCUS_LOWER,  # 어깨가 넓으니 하체로 시선을 나눈다
+        SHAPE_TRIANGLE: FOCUS_UPPER,           # 골반이 넓으니 상체로 시선을 나눈다
+        SHAPE_RECTANGLE: "",                     # 어느 쪽이든 한쪽에 볼륨을 두면 된다
+        SHAPE_HOURGLASS: "",
+    }
+
+    def _catalog_shape_score(self, top: dict, bottom: dict, focus: str) -> float | None:
+        """상품이 스스로 밝힌 body_shapes 가 목표와 맞는지 본다.
+
+        이 칼럼은 지금까지 ProductCatalog 이 읽어 Product 에 넣기만 하고 추천에서는
+        아무도 참조하지 않았다. 체형 판정이 화면 표시용으로만 남아 있던 이유 중 하나다.
+        """
+        if not focus:
+            return None
+        wanted = top if focus == FOCUS_UPPER else bottom
+        other = bottom if focus == FOCUS_UPPER else top
+        shapes = wanted.get("body_shapes") or []
+        other_shapes = other.get("body_shapes") or []
+        if not shapes:
+            return None
+        if focus in shapes:
+            # 시선을 모을 쪽이 맞고, 반대쪽이 조용하면 가장 좋다.
+            opposite = FOCUS_LOWER if focus == FOCUS_UPPER else FOCUS_UPPER
+            return 1.0 if opposite not in other_shapes else 0.86
+        return 0.66
+
     def _silhouette_score(
         self,
         top: dict,
@@ -459,6 +497,23 @@ class RecommendationEngine:
 
         components = [(fit_score, 0.55), (weight_score, 0.45)]
         goal = profile.silhouette_goal
+        body_confident = pose.valid and pose.body_shape_confidence >= 0.65 and pose.body_shape != SHAPE_UNCERTAIN
+
+        # 사용자가 목표를 고르지 않았어도 분석된 체형이 뚜렷하면 균형 목표로 본다.
+        # R-KOR-02 는 원래 "목표를 고른 경우에만" 이었지만, 그 기본값에서는 체형을
+        # 판정해 놓고 추천에 전혀 쓰지 않아 분석이 표시용으로만 남았다. 대신
+        # 가중치를 낮게 두고, 신뢰도가 낮으면 적용하지 않는다.
+        auto_body = False
+        if (goal == GOAL_NONE and body_confident and ENABLE_AUTO_BODY_SHAPE
+                and pose.body_shape in self.BODY_SHAPE_FOCUS):
+            goal = GOAL_BALANCE
+            auto_body = True
+            rules.append("R-KOR-02")
+            reasons.append(
+                f"고른 목표가 없어 분석한 체형({pose.body_shape})을 참고해 "
+                "상·하의 볼륨 배치를 비교했습니다."
+            )
+
         if goal in PROPORTION_GOALS:
             rules.extend(["R-SIL-03", "R-SIL-06"])
             length_score = {"크롭 기장": 1.0, "기본 기장": 0.78, "롱 기장": 0.45}.get(top["length"], 0.65)
@@ -467,7 +522,6 @@ class RecommendationEngine:
             components.append((length_score, 0.35))
             reasons.append("상의 기장과 하의 허리선이 만드는 분할점을 목표 실루엣에 맞춰 평가했습니다.")
 
-        body_confident = pose.valid and pose.body_shape_confidence >= 0.65 and pose.body_shape != SHAPE_UNCERTAIN
         if goal == GOAL_BALANCE and body_confident:
             body_score = 0.78
             if pose.body_shape == SHAPE_INVERTED_TRIANGLE:
@@ -486,7 +540,8 @@ class RecommendationEngine:
                 rules.append("R-BOD-03")
                 body_score = 0.96 if top_large != bottom_large else 0.80
                 reasons.append("상·하체 폭이 비슷한 경우 볼륨을 한쪽씩 배치했는지 확인했습니다.")
-            components.append((self._shrink_to_neutral(body_score, pose.body_shape_confidence), 0.30))
+            components.append((self._shrink_to_neutral(body_score, pose.body_shape_confidence),
+                               0.18 if auto_body else 0.30))
         elif goal in {GOAL_UPPER_FOCUS, GOAL_LOWER_FOCUS}:
             rules.append("R-BOD-04")
             target = top if goal == GOAL_UPPER_FOCUS else bottom
@@ -495,6 +550,23 @@ class RecommendationEngine:
             other_quiet = other["color"] in NEUTRALS and other["pattern"] in {"", "무지"}
             components.append((1.0 if target_focus and other_quiet else 0.62, 0.30))
             reasons.append(f"사용자가 선택한 '{goal}' 위치에 색이나 패턴의 시선 중심이 생기는지 확인했습니다.")
+
+        # 상품이 스스로 밝힌 body_shapes 를 목표와 맞춰 본다.
+        # 시선을 모을 쪽은 목표에서 정하고, 목표가 균형이면 체형이 정한다.
+        focus = ""
+        if goal == GOAL_UPPER_FOCUS:
+            focus = FOCUS_UPPER
+        elif goal == GOAL_LOWER_FOCUS:
+            focus = FOCUS_LOWER
+        elif goal == GOAL_BALANCE and body_confident:
+            focus = self.BODY_SHAPE_FOCUS.get(pose.body_shape, "")
+        catalog_score = self._catalog_shape_score(top, bottom, focus)
+        if catalog_score is not None:
+            rules.append("R-BOD-04")
+            components.append((catalog_score, 0.16 if auto_body else 0.22))
+            reasons.append(
+                f"상품이 밝힌 적합 실루엣('{focus}')이 목표와 맞는지 비교했습니다."
+            )
 
         total_weight = sum(weight for _, weight in components)
         score = sum(value * weight for value, weight in components) / total_weight

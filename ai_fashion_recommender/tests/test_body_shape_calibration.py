@@ -126,11 +126,29 @@ class SizeKoreaVocabularyTests(unittest.TestCase):
         for name in ("SHAPE_INVERTED_TRIANGLE", "SHAPE_TRIANGLE", "SHAPE_RECTANGLE"):
             with self.subTest(name=name):
                 self.assertIn(name, source)
+        # 카탈로그 어휘("상체 강조형" 등)를 엔진에 직접 써 넣으면 체형 라벨과
+        # 섞이기 쉽다. 상수로만 다루게 해서 두 축을 구분한다.
         self.assertNotIn('"상체 강조형"', source)
+        self.assertNotIn('"하체 강조형"', source)
         self.assertEqual(
             {SHAPE_INVERTED_TRIANGLE, SHAPE_RECTANGLE, SHAPE_TRIANGLE},
             {"역삼각체형", "사각체형", "삼각체형"},
         )
+
+    def test_catalog_focus_labels_are_a_separate_axis(self):
+        """체형 라벨과 카탈로그 body_shapes 어휘가 겹치면 비교가 영영 안 맞는다."""
+        from schemas import ALL_BODY_SHAPES, CATALOG_FOCUS_LABELS
+
+        self.assertEqual(set(ALL_BODY_SHAPES) & set(CATALOG_FOCUS_LABELS), set())
+
+    def test_engine_reads_the_catalog_focus_column(self):
+        """이 칼럼은 오랫동안 아무도 읽지 않는 죽은 데이터였다."""
+        import recommendation_engine
+
+        source = Path(recommendation_engine.__file__).read_text(encoding="utf-8")
+        self.assertIn("FOCUS_UPPER", source)
+        self.assertIn("FOCUS_LOWER", source)
+        self.assertIn('"body_shapes"', source)
 
 
 class ThresholdSanityTests(unittest.TestCase):

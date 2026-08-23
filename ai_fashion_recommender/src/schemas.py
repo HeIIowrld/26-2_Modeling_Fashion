@@ -29,6 +29,16 @@ SHAPE_DIAMOND = "마름모꼴체형"           # 허리가 가슴·엉덩이보�
 SHAPE_ROUND = "둥근체형"                 # 허리 구분이 거의 없다
 
 CIRCUMFERENCE_SHAPES = (SHAPE_HOURGLASS, SHAPE_DIAMOND, SHAPE_ROUND)
+
+# 상품 카탈로그 body_shapes 칼럼의 어휘. 위의 체형 라벨과 **다른 축**이다.
+#   체형 라벨  : 몸이 어떤 형태인가 (역삼각·사각·삼각…)
+#   아래 라벨  : 이 상품이 어느 쪽으로 시선을 모으는가
+# 둘을 섞어 비교하면 조건이 영영 안 맞아 규칙이 조용히 잠든다. 실제로 이 칼럼은
+# 오랫동안 아무도 읽지 않는 죽은 데이터였다.
+FOCUS_UPPER = "상체 강조형"
+FOCUS_LOWER = "하체 강조형"
+FOCUS_BALANCED = "균형형"
+CATALOG_FOCUS_LABELS = (FOCUS_UPPER, FOCUS_LOWER, FOCUS_BALANCED)
 ALL_BODY_SHAPES = BODY_SHAPES + CIRCUMFERENCE_SHAPES
 
 # 체형을 무엇으로 판정했는지. 화면에 근거를 함께 보여주기 위해 쓴다.

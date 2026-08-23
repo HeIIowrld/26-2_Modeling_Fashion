@@ -648,6 +648,77 @@ contrast 단독(흰옷인데 정상), 흰 배경에 묻힘(회색 매트로도 �
 기본값으로 뭉개집니다. `tests/test_product_catalog_coverage.py`가 이 조건들을 검사하므로
 데이터를 바꾼 뒤 테스트를 돌리면 빠진 부분을 알려줍니다.
 
+## 크롤링 카탈로그로 갈아타기 (생성 모델 연결)
+
+`products.csv`에는 **상품 사진이 없습니다.** CatVTON 합성은 `product.image_path`로 옷 사진을
+찾으므로(`src/catvton_tryon.py`), 사진 없는 카탈로그로는 추천까지만 되고 합성 재료가 없습니다.
+`scripts/musinsa_crawler.py`가 사진과 함께 `data/products_musinsa.csv`를 만듭니다.
+
+### 크롤링 원본을 그대로 쓰면 안 되는 이유
+
+크롤러는 **15개 칼럼**만 씁니다. 위 표의 `fit` `material` `formality` `warmth` 등
+**16개가 비어 있고**, `ProductCatalog`은 없는 칼럼을 기본값으로 채웁니다. 그래서 로드는 되지만
+그 속성을 보는 규칙이 **조용히 잠듭니다.** 오류도 안 납니다.
+
+### 세 단계로 잇습니다
+
+```bash
+python scripts/musinsa_crawler.py                 # 1. 사진 + 15칼럼 원본
+python scripts/enrich_catalog.py                  # 2. 속성을 채워 31칼럼으로
+python scripts/enrich_catalog.py --report         # 3. 규칙이 발동 가능한지 점검
+```
+
+`enrich_catalog.py`가 채우는 방법은 두 가지입니다.
+
+| 방법 | 채우는 칼럼 |
+|---|---|
+| **상품 사진 → 학습된 속성 헤드** | `item_type` `fit` `length` `pattern` `material` `neckline` `detail_level` |
+| **소재·종류에서 유도** (`data/catalog_derivation.json`) | `formality` `warmth` `breathability` `water_resistant` `visual_weight` `activity_tags` `waistline` `pattern_scale` `pattern_contrast` |
+
+유도 표의 수치는 **잠정값입니다.** 사진으로 판정할 수 없고 학습된 속성 태스크에도 없어서,
+`products.csv` 80개를 손으로 채울 때 쓴 기준을 표로 옮긴 것입니다. 검수를 거치지 않았습니다.
+
+`--report`는 `tests/test_product_catalog_coverage.py`와 같은 기준으로 "이 카탈로그가 규칙을
+발동시킬 수 있는가"를 봅니다. **부족한 항목이 나오면 그 규칙은 후보를 못 찾습니다.**
+크롤링 범위를 넓히거나 유도 표를 손봐야 합니다.
+
+### 어떤 CSV를 쓰는지는 한 곳에서 정합니다
+
+`config.resolve_catalog()`가 우선순위로 고르고, 웹·Notebook·스크립트가 모두 이걸 씁니다.
+
+1. 환경변수 `FASHION_PRODUCTS_CSV` (명시 지정이 항상 이김)
+2. `products_musinsa_enriched.csv` (속성을 채운 크롤링본)
+3. `products.csv` (손으로 만든 기본 카탈로그)
+
+`products_musinsa.csv`(크롤링 원본)는 **일부러 후보에서 뺐습니다.** 위의 "조용히 잠드는" 문제를
+막기 위해서이고, `tests/test_catalog_pipeline.py`가 이 규칙을 지킵니다.
+
+### 수집 결과 (2026-08-23)
+
+무신사에서 **480개**(상의 320·하의 160)를 수집해 속성을 채웠습니다. 이미지 480장, 실패 0건.
+속성 채우기는 CPU로 1분 18초. `--report` **12/12 통과**입니다.
+
+카테고리 코드는 `CATEGORY_MAP`에 있습니다. `001` 상의, `002` 아우터, `003` 바지, `100` 스커트에
+더해 **`002007`(코트)과 `002014`(무스탕·야상)를 따로 넣었습니다.** 8월 인기순으로는 `002` 상위에
+재킷만 걸려서 긴 옷이 하나도 안 들어오기 때문입니다.
+
+### 평면 상품컷의 한계 — `upper_length`는 믿을 수 없습니다
+
+속성 헤드는 **사람이 입은 옷의 crop**으로 학습했습니다. 무신사 대표컷은 옷만 평면으로 찍은
+사진이 많아 학습 분포 밖입니다. 실측한 것:
+
+- 코트로 판정된 **214개 중 190개가 `기본 기장`, `롱 기장`은 0개**였습니다.
+  평면 사진에는 몸이 없어 기장을 상대적으로 볼 수 없기 때문입니다.
+- 카테고리를 넓혀 코트를 160개 더 넣어도 `롱 기장`은 여전히 0개였습니다.
+  **데이터를 늘려서 해결되는 문제가 아닙니다.**
+
+그래서 스키마가 `재킷`과 `코트`를 나눠 둔 점을 이용해, **코트만 종류에서 기장을 유도**합니다
+(`length_by_item_type`). 재킷은 실제로 짧으므로 건드리지 않습니다.
+
+**종류 판정 자체는 쓸 만합니다** — 코트 114개, 재킷 100개, 티셔츠 44개로 갈렸습니다.
+다만 소재는 의심스럽습니다(`HELLO KITTY TEE`의 소재가 `울`). **속성별 정확도를 측정한 적이
+없습니다.** 착용샷 기준 검증 세트를 만들어 재야 합니다.
+
 ## 현재 한계
 
 - 사진 기반 체형 비율은 실제 신체 치수가 아닙니다.
