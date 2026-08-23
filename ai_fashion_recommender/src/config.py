@@ -71,6 +71,16 @@ ENABLE_VTON = False
 # 쓰리사이즈를 입력하지 않았을 때 사진 실루엣으로 체형을 추정할지 여부.
 # MediaPipe 분할 마스크만 쓰므로 추가 모델이나 라이선스 동의가 필요 없다.
 ENABLE_BODY_MEASUREMENT = True
+# 사용자가 실루엣 목표를 고르지 않아도 분석된 체형을 추천에 반영할지 여부.
+#
+# 원래 R-KOR-02 는 "목표를 선택한 경우에만 체형 규칙을 적용한다"였다. 사용자가
+# 원하지 않는데 체형을 지적하지 않으려는 규칙이다. 다만 그 기본값에서는 사진을
+# 분석해 체형을 판정해 놓고도 추천에 전혀 쓰지 않아, 체형 분석이 화면 표시용으로만
+# 남았다. 그래서 기본값을 켜되 두 가지를 지킨다.
+#   1) 판정 신뢰도가 낮으면 적용하지 않는다(_silhouette_score 의 body_confident).
+#   2) 가중치를 사용자가 직접 고른 목표보다 낮게 둔다.
+# 원래 동작으로 되돌리려면 이 값을 False 로 바꾼다.
+ENABLE_AUTO_BODY_SHAPE = True
 
 FASHN_PARSER_MODEL_ID = "fashn-ai/fashn-human-parser"
 FASHION_SIGLIP_MODEL_ID = "Marqo/marqo-fashionSigLIP"

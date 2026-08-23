@@ -37,7 +37,9 @@ PAGE_SIZE = 100
 # 2페이지 이상은 프론트엔드가 계산하는 서명(hmacId)이 있어야 접근 가능해 그대로
 # 요청하면 매번 403으로 막힌다. 서명을 역산하는 대신 요청당 최대치인 size=100으로
 # 1페이지만 받아 불필요한 403 재시도 대기를 없앤다.
-MAX_PAGES = 1
+# 카테고리·정렬당 받아올 최대 페이지 수(1페이지 = 최대 100개).
+# 깊게 파면 인기 없는 상품만 더 나오므로 카테고리를 넓히는 쪽을 먼저 쓴다.
+MAX_PAGES = 3
 
 HEADERS = {
     "User-Agent": (
@@ -55,14 +57,50 @@ HEADERS = {
 # 추천 엔진(recommendation_engine.py)과 VTON 마스크 매핑(catvton_tryon.py)은 아직
 # top/bottom 2종만 지원하므로, 우선 상/하의 볼륨을 늘리는 데 집중한다.
 CATEGORY_MAP = {
-    "001": "top",     # 상의
-    "002": "top",     # 아우터 (재킷 위주)
-    # 상의 슬롯의 "롱 기장"은 코트·야상에서만 나온다. 8월 인기순으로는 002 상위에
-    # 재킷만 걸려서 롱 기장이 0개가 되므로, 코트 하위 카테고리를 따로 넣는다.
-    "002007": "top",  # 코트 (발마칸·싱글 등)
-    "002014": "top",  # 무스탕·야상·파카
-    "003": "bottom",  # 바지
-    "100": "bottom",  # 스커트 (하의로 취급)
+    # 상의 — 종류를 넓게 잡아야 추천 후보가 다양해진다. 인기순 상위만 깊게 파면
+    # 같은 종류만 쌓이므로, 페이지를 깊게 파는 대신 카테고리를 넓힌다.
+    "001001": "top",  # 반팔 티셔츠
+    "001002": "top",  # 셔츠·블라우스
+    "001003": "top",  # 폴로·카라 티셔츠
+    "001004": "top",  # 맨투맨·스웨트
+    "001005": "top",  # 스포츠 상의
+    "001006": "top",  # 니트·스웨터
+    "001008": "top",  # 후드 티셔츠
+    "001010": "top",  # 긴소매 티셔츠
+    "001011": "top",  # 민소매
+    # 아우터 — 상의 슬롯의 "롱 기장"은 코트·야상 계열에서만 나온다.
+    "002001": "top",  # 블루종·MA-1
+    "002002": "top",  # 레더 재킷
+    "002003": "top",  # 블레이저·수트
+    "002004": "top",  # 스타디움·바시티
+    "002006": "top",  # 아노락·윈드브레이커
+    "002007": "top",  # 코트
+    "002008": "top",  # 트렌치
+    "002009": "top",  # 더플·하프 코트
+    "002012": "top",  # 나일론·경량 재킷
+    "002013": "top",  # 롱파카
+    "002014": "top",  # 무스탕·야상
+    "002015": "top",  # 워크 재킷
+    "002017": "top",  # 데님 재킷
+    "002018": "top",  # 트랙 재킷
+    "002019": "top",  # 패딩·웜업
+    "002020": "top",  # 가디건
+    "002021": "top",  # 베스트
+    "002022": "top",  # 후드 집업
+    "002023": "top",  # 플리스
+    "002024": "top",  # 울 더블 코트
+    "002025": "top",  # 무스탕 하프
+    # 하의
+    "003002": "bottom",  # 데님
+    "003004": "bottom",  # 트레이닝·조거
+    "003005": "bottom",  # 레깅스
+    "003006": "bottom",  # 밴딩·와이드
+    "003007": "bottom",  # 치노
+    "003008": "bottom",  # 슬랙스
+    "003009": "bottom",  # 쇼츠
+    "100": "bottom",     # 스커트
+    # 003010(점프수트·원피스)은 뺐다. 상/하의 2종만 지원하는 규칙·VTON 마스크에
+    # 원피스를 섞으면 어느 슬롯으로도 제대로 다루지 못한다.
 }
 
 # 인기순 상위만 반복 수집하면 매번 같은 상품만 쌓인다. 정렬 기준을 섞어 색상·스타일
@@ -122,6 +160,14 @@ class CrawledProduct:
     gender: str = ""
     image_url: str = ""
     image_path: str = ""
+    # 아래는 상세 API에서 받아오는 "무신사가 직접 표기한 값"이다. 상품명 키워드
+    # 추측과 달리 사실이므로, enrich_catalog.py 가 모델 판정보다 우선해서 쓴다.
+    detail_color: str = ""      # 옵션의 COLOR_CHIP
+    detail_season: str = ""     # 계절 태그
+    detail_fit: str = ""        # 핏 태그
+    detail_thickness: str = ""  # 두께 태그
+    detail_sheer: str = ""      # 비침 태그
+    detail_category: str = ""   # baseCategoryFullPath
 
 
 def _match_keyword(name: str, table: list[tuple[str, list[str]]], default: str) -> str:
@@ -244,6 +290,69 @@ def download_image(product: CrawledProduct, image_dir: Path, delay: float, refre
     raise last_error or RuntimeError(f"이미지 다운로드 실패: {product.image_url}")
 
 
+DETAIL_URL = "https://goods-detail.musinsa.com/api2/goods/{no}"
+OPTIONS_URL = "https://goods-detail.musinsa.com/api2/goods/{no}/options"
+
+# 무신사 핏 태그 → 우리 fit 어휘
+FIT_MAP = {
+    "스키니": "슬림핏", "슬림": "슬림핏", "레귤러": "레귤러핏",
+    "루즈": "여유핏", "오버|사이즈": "오버핏", "오버사이즈": "오버핏",
+}
+# 두께 태그 → warmth(1~5)
+THICKNESS_WARMTH = {
+    "얇음": 1, "약간|얇음": 2, "보통": 3, "약간|두꺼움": 4, "두꺼움": 5,
+}
+# 비침 태그 → breathability(1~5). 비칠수록 통기성이 좋다고 본다.
+SHEER_BREATHABILITY = {
+    "있음": 5, "약간 있음": 4, "보통": 3, "거의 없음": 2, "없음": 2,
+}
+
+
+def fetch_detail(goods_no: str) -> dict:
+    """상품 상세에서 **무신사가 직접 표기한** 값만 가져온다.
+
+    상품명 키워드 추측(색상 38%, 계절 85%가 기본값으로 떨어짐)을 사실로 바꾼다.
+
+    소재는 가져올 수 없다. specDesc 가 "상세페이지참조"이고 실제 혼용률 표기는
+    상세 **이미지** 안에 있어서 OCR 없이는 읽을 수 없다. 소재는 그대로 모델 추정이다.
+    """
+    out: dict = {}
+    number = goods_no[2:] if goods_no.startswith("MS") else goods_no
+    try:
+        request = urllib.request.Request(DETAIL_URL.format(no=number), headers=HEADERS)
+        data = json.loads(_open_with_retry(request, retries=2).decode("utf-8")).get("data", {})
+    except Exception:
+        return out
+
+    out["detail_category"] = data.get("baseCategoryFullPath") or ""
+    for group in (data.get("goodsMaterial") or {}).get("materials", []):
+        picked = [i["name"] for i in group.get("items", []) if i.get("isSelected")]
+        if not picked:
+            continue
+        name, value = group.get("name"), picked[0]
+        if name == "계절":
+            out["detail_season"] = value
+        elif name == "핏":
+            out["detail_fit"] = FIT_MAP.get(value, "")
+        elif name == "두께":
+            out["detail_thickness"] = value
+        elif name == "비침":
+            out["detail_sheer"] = value
+
+    try:
+        request = urllib.request.Request(OPTIONS_URL.format(no=number), headers=HEADERS)
+        options = json.loads(_open_with_retry(request, retries=2).decode("utf-8")).get("data", {})
+        for option in options.get("basic", []):
+            if option.get("displayType") == "COLOR_CHIP":
+                values = option.get("optionValues") or []
+                if values:
+                    out["detail_color"] = values[0].get("name") or ""
+                break
+    except Exception:
+        pass
+    return out
+
+
 def crawl(per_category: int, delay: float, max_price: int | None = None) -> list[CrawledProduct]:
     products: list[CrawledProduct] = []
     seen: set[str] = set()
@@ -275,7 +384,7 @@ def crawl(per_category: int, delay: float, max_price: int | None = None) -> list
                 page += 1
                 time.sleep(delay)
             category_collected += collected
-        print(f"카테고리 {code}({category}): {category_collected}개 수집 (정렬 {'/'.join(SORT_CODES)} 합산)")
+        print(f"카테고리 {code}({category}): {category_collected}개 수집 (정렬 {'/'.join(SORT_CODES)} 합산)", flush=True)
     return products
 
 
@@ -291,6 +400,9 @@ def save_csv(products: list[CrawledProduct], csv_path: Path) -> None:
         "product_id", "name", "category", "color", "style", "purposes",
         "body_shapes", "price", "season", "stock", "url",
         "brand", "gender", "image_url", "image_path",
+        # 무신사가 직접 표기한 값. 상품명 추측이 아니라 사실이다.
+        "detail_color", "detail_season", "detail_fit",
+        "detail_thickness", "detail_sheer", "detail_category",
     ]
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     with csv_path.open("w", encoding="utf-8-sig", newline="") as handle:
@@ -313,9 +425,30 @@ def main() -> None:
         help="이미 캐시된 이미지도 다시 받는다(기존 저해상도 _500 캐시를 _big으로 갱신할 때 사용)",
     )
     parser.add_argument("--output", default="", help="CSV 저장 경로 (기본: data/products_musinsa.csv)")
+    parser.add_argument(
+        "--skip-details", action="store_true",
+        help="상세 조회를 생략한다. 상세를 받으면 색상·계절·핏을 상품명 추측이 아니라 "
+             "무신사 표기값으로 채우지만, 상품당 요청이 2번 늘어난다",
+    )
+    parser.add_argument("--detail-delay", type=float, default=0.6, help="상세 조회 간격(초)")
     args = parser.parse_args()
 
     products = crawl(args.per_category, args.delay, args.max_price)
+
+    if not args.skip_details:
+        filled = 0
+        for index, product in enumerate(products, start=1):
+            detail = fetch_detail(product.product_id)
+            for key, value in detail.items():
+                if value:
+                    setattr(product, key, value)
+            if detail.get("detail_color"):
+                filled += 1
+            time.sleep(args.detail_delay)
+            if index % 25 == 0:
+                print(f"상세 {index}/{len(products)}", flush=True)
+        print(f"상세 조회 완료: 색상 확보 {filled}/{len(products)}")
+
     if not args.skip_images:
         image_dir = GARMENT_RAW_DIR
         image_dir.mkdir(parents=True, exist_ok=True)
@@ -323,9 +456,9 @@ def main() -> None:
             try:
                 download_image(product, image_dir, args.delay * 0.5, refresh=args.refresh_images)
             except Exception as exc:  # 이미지 한 장 실패로 전체를 멈추지 않는다.
-                print(f"이미지 실패 {product.product_id}: {exc}")
+                print(f"이미지 실패 {product.product_id}: {exc}", flush=True)
             if index % 20 == 0:
-                print(f"이미지 {index}/{len(products)}")
+                print(f"이미지 {index}/{len(products)}", flush=True)
 
     csv_path = Path(args.output) if args.output else DATA_DIR / "products_musinsa.csv"
     save_csv(products, csv_path)

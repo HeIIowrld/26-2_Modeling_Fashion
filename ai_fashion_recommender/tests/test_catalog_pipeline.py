@@ -220,6 +220,223 @@ class NormalizationTests(unittest.TestCase):
         self.assertEqual(set(self.table["normalize_length"].values()) - known, set())
 
 
+class MusinsaFactTests(unittest.TestCase):
+    """무신사가 직접 표기한 값이 모델 추측을 이겨야 한다.
+
+    상품명 키워드 추측은 실측에서 색상 38%·계절 85%가 기본값으로 떨어졌다.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.table = enrich_catalog.load_derivation()
+
+    def apply(self, row, out=None):
+        out = dict(out or {})
+        used = enrich_catalog.apply_musinsa_facts(row, out, self.table)
+        return out, used
+
+    def test_color_overrides_the_name_guess(self):
+        out, used = self.apply({"detail_color": "화이트"}, {"color": "그레이"})
+        self.assertEqual(out["color"], "화이트")
+        self.assertIn("color", used)
+
+    def test_color_synonyms_map_into_the_palette(self):
+        from outfit_analyzer import COLOR_PALETTE
+
+        palette = set(COLOR_PALETTE)
+        for musinsa, expected in (("아이보리", "화이트"), ("차콜", "블랙"),
+                                  ("올리브", "그린"), ("와인", "버건디")):
+            with self.subTest(musinsa=musinsa):
+                out, _ = self.apply({"detail_color": musinsa})
+                self.assertEqual(out["color"], expected)
+                self.assertIn(out["color"], palette)
+
+    def test_unknown_color_leaves_the_guess_alone(self):
+        out, used = self.apply({"detail_color": "형광 무지개"}, {"color": "그레이"})
+        self.assertEqual(out["color"], "그레이")
+        self.assertNotIn("color", used)
+
+    def test_season_comes_from_musinsa(self):
+        out, used = self.apply({"detail_season": "겨울"}, {"season": "사계절"})
+        self.assertEqual(out["season"], "겨울")
+        self.assertIn("season", used)
+
+    def test_fit_overrides_the_model(self):
+        out, _ = self.apply({"detail_fit": "오버핏"}, {"fit": "레귤러핏"})
+        self.assertEqual(out["fit"], "오버핏")
+
+    def test_thickness_sets_warmth(self):
+        thick, _ = self.apply({"detail_thickness": "두꺼움"})
+        thin, _ = self.apply({"detail_thickness": "얇음"})
+        self.assertGreater(thick["warmth"], thin["warmth"])
+        self.assertIn(thick["warmth"], range(1, 6))
+
+    def test_sheer_sets_breathability(self):
+        sheer, _ = self.apply({"detail_sheer": "있음"})
+        opaque, _ = self.apply({"detail_sheer": "없음"})
+        self.assertGreater(sheer["breathability"], opaque["breathability"])
+
+    def test_missing_detail_changes_nothing(self):
+        """상세를 못 받은 상품은 모델 추정을 그대로 쓴다."""
+        before = {"color": "그레이", "season": "사계절", "fit": "레귤러핏"}
+        out, used = self.apply({}, before)
+        self.assertEqual(out, before)
+        self.assertEqual(used, [])
+
+    def test_material_is_never_filled_from_musinsa(self):
+        """소재는 상세 이미지 안에 있어 API로 못 가져온다. 모델 추정으로 남는다."""
+        out, used = self.apply({"detail_color": "블랙", "detail_season": "겨울"},
+                               {"material": "코튼"})
+        self.assertEqual(out["material"], "코튼")
+        self.assertNotIn("material", used)
+
+
+class MusinsaItemTypeTests(unittest.TestCase):
+    """item_type 은 무신사 카테고리 경로에서 뽑는다.
+
+    모델 category 는 상의 248개 실측에서 72.2%였고 재킷을 코트로 43회 오판했다.
+    그 오판이 "코트면 롱 기장" 규칙까지 오염시켜, 짧은 재킷이 롱 기장이 된다.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.table = enrich_catalog.load_derivation()
+
+    def item_type(self, path):
+        return enrich_catalog.musinsa_item_type({"detail_category": path}, self.table)
+
+    def test_jacket_is_not_read_as_a_coat(self):
+        """실측에서 가장 많았던 오판 방향이다."""
+        self.assertEqual(self.item_type("Clothing > 재킷 > 블루종/MA-1"), "재킷")
+        self.assertEqual(self.item_type("Clothing > 아우터 > 레더 재킷"), "재킷")
+
+    def test_real_coats_still_map_to_coat(self):
+        self.assertEqual(self.item_type("Clothing > 코트 > 싱글 코트"), "코트")
+        self.assertEqual(self.item_type("Clothing > 코트 > 트렌치 코트"), "코트")
+
+    def test_specific_keywords_win_over_general_ones(self):
+        """'후드 집업'이 '후드'보다 먼저 검사돼야 한다."""
+        self.assertEqual(self.item_type("Clothing > 후드 집업"), "후드티")
+        self.assertEqual(self.item_type("Clothing > 티셔츠 > 반소매 티셔츠"), "티셔츠")
+
+    def test_bottoms_use_the_lower_subtype_vocabulary(self):
+        self.assertEqual(self.item_type("Clothing > 바지 > 데님 팬츠"), "청바지")
+        self.assertEqual(self.item_type("Clothing > 바지 > 슬랙스"), "슬랙스")
+        self.assertEqual(self.item_type("Clothing > 스커트 > 미니 스커트"), "스커트")
+
+    def test_unmapped_path_falls_back_to_the_model(self):
+        self.assertEqual(self.item_type("Clothing > 듣도보도 못한 분류"), "")
+
+    def test_missing_path_falls_back_to_the_model(self):
+        self.assertEqual(self.item_type(""), "")
+
+    def test_every_mapped_label_is_known_to_the_schema(self):
+        """규칙 엔진이 모르는 라벨을 만들어내면 격식·활동 태그가 기본값으로 뭉개진다."""
+        from fashion_attribute_schema import ATTRIBUTE_TASKS
+
+        known = set()
+        for task in ("category", "lower_subtype"):
+            labels = ATTRIBUTE_TASKS[task]
+            known |= set(labels if isinstance(labels, (list, tuple)) else labels.labels)
+        produced = {label for _, label in self.table["musinsa_item_type"]}
+        self.assertEqual(produced - known, set())
+
+    def test_coat_rule_uses_the_corrected_item_type(self):
+        """무신사가 재킷이라 하면 롱 기장으로 늘어나면 안 된다."""
+        jacket = enrich_catalog.normalize(
+            {"item_type": "재킷", "length": "기본 기장"}, self.table)
+        coat = enrich_catalog.normalize(
+            {"item_type": "코트", "length": "기본 기장"}, self.table)
+        self.assertEqual(jacket["length"], "기본 기장")
+        self.assertEqual(coat["length"], "롱 기장")
+
+
+class PurposeAndStyleTests(unittest.TestCase):
+    """목적·스타일을 종류와 격식에서 유도한다.
+
+    크롤러의 상품명 키워드 추측은 데일리·출근·데이트·여행만 낼 수 있어 면접·결혼식
+    상품이 0개가 되고, 그 목적을 고르면 추천 엔진이 ValueError 를 낸다(재현 확인).
+    스타일도 480개 중 410개(85%)가 캐주얼 기본값으로 떨어져 포멀 후보가 사라졌다.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.table = enrich_catalog.load_derivation()
+
+    def purposes(self, item_type, formality=3):
+        return enrich_catalog.derive_purposes(item_type, formality, self.table).split("|")
+
+    def test_formal_items_carry_the_interview_purpose(self):
+        self.assertIn("면접", self.purposes("블레이저", 5))
+        self.assertIn("면접", self.purposes("슬랙스", 4))
+
+    def test_formal_items_carry_the_wedding_purpose(self):
+        self.assertIn("결혼식", self.purposes("블레이저", 5))
+
+    def test_casual_items_do_not_claim_formal_purposes(self):
+        casual = self.purposes("티셔츠", 2)
+        self.assertNotIn("면접", casual)
+        self.assertNotIn("결혼식", casual)
+
+    def test_every_item_gets_at_least_one_purpose(self):
+        """목적이 비면 그 상품은 어떤 조건에도 안 걸려 후보에서 사라진다."""
+        for item_type in ("", "듣도보도 못한 종류", "티셔츠"):
+            with self.subTest(item_type=item_type):
+                self.assertTrue(self.purposes(item_type, 3)[0])
+
+    def test_style_comes_from_the_item_type(self):
+        self.assertEqual(enrich_catalog.derive_style("블레이저", 5, "캐주얼", self.table), "포멀")
+        self.assertEqual(enrich_catalog.derive_style("트랙팬츠", 1, "캐주얼", self.table), "스포티")
+
+    def test_unknown_item_type_keeps_the_crawler_guess(self):
+        self.assertEqual(
+            enrich_catalog.derive_style("듣도보도 못한 종류", 2, "스트리트", self.table), "스트리트")
+
+    def test_style_stays_inside_the_engine_vocabulary(self):
+        """규칙 엔진이 모르는 스타일은 목적별 필터에서 통째로 빠진다."""
+        from recommendation_engine import STYLE_FORMALITY
+
+        produced = set(self.table["style_by_item_type"].values()) | {"포멀"}
+        self.assertEqual(produced - set(STYLE_FORMALITY), set())
+
+
+class BodyShapeColumnTests(unittest.TestCase):
+    """상품이 어느 실루엣 목표에 도움이 되는지 채운다.
+
+    크롤러는 전 체형 허용으로 뭉뚱그려 넣어 변별력이 없었다.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.table = enrich_catalog.load_derivation()
+
+    def shapes(self, is_top, **out):
+        return enrich_catalog.derive_body_shapes(is_top, out, self.table).split("|")
+
+    def test_eye_catching_top_draws_the_upper_focus(self):
+        self.assertIn("상체 강조형", self.shapes(True, pattern="플로럴", visual_weight="4"))
+
+    def test_eye_catching_bottom_draws_the_lower_focus(self):
+        self.assertIn("하체 강조형", self.shapes(False, pattern="체크", visual_weight="4"))
+
+    def test_a_quiet_item_is_only_balanced(self):
+        self.assertEqual(self.shapes(True, pattern="무지", visual_weight="2", detail_level="1"),
+                         ["균형형"])
+
+    def test_balanced_is_always_present(self):
+        for is_top in (True, False):
+            with self.subTest(is_top=is_top):
+                self.assertIn("균형형", self.shapes(is_top, pattern="그래픽", visual_weight="5"))
+
+    def test_labels_match_the_engine_vocabulary(self):
+        """엔진이 비교하는 어휘와 어긋나면 이 칼럼이 다시 죽는다."""
+        from schemas import CATALOG_FOCUS_LABELS
+
+        produced = set(self.shapes(True, pattern="체크", visual_weight="5"))
+        produced |= set(self.shapes(False, pattern="무지", visual_weight="1"))
+        self.assertEqual(produced - set(CATALOG_FOCUS_LABELS), set())
+
+
 class EnrichedCatalogLoadsTests(unittest.TestCase):
     """채운 결과가 ProductCatalog으로 그대로 읽혀야 이어붙인 의미가 있다."""
 
