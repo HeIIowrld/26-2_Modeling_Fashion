@@ -119,7 +119,10 @@ def _analysis_markdown(quality: dict, pose, outfit) -> str:
         "#### 현재 착장",
         f"- 상의: {outfit.upper_type} ({outfit.upper_color}) / 하의: {outfit.lower_type} ({outfit.lower_color})",
         f"- 스타일 {outfit.style}, 색 조화 '{outfit.color_harmony}', 핏 {outfit.fit}",
-        f"- 소매 {outfit.sleeve_length}, 패턴 {outfit.pattern}, 소재 {outfit.material}",
+        f"- 소매 {outfit.sleeve_length} / 착용 상태 {outfit.sleeve_state}, "
+        f"패턴 {outfit.pattern}, 소재 {outfit.material}",
+        f"- 레이어드 {outfit.layering_state}: "
+        f"{', '.join(outfit.upper_items) if outfit.upper_items else '분석 보류'}",
         "",
         *[f"_{note}_" for note in outfit.notes],
     ])

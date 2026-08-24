@@ -12,6 +12,7 @@ from config import ATTRIBUTE_CONFIDENCE_THRESHOLDS
 from fashion_attribute_model import AttributePrediction, fuse_measured_and_learned, geometry_vector
 from fashion_attribute_schema import LOWER_CATEGORIES, UPPER_CATEGORIES
 from fashion_prompts import (
+    LAYERING_PROMPTS,
     LOWER_TYPE_PROMPTS,
     MATERIAL_PROMPTS,
     NECKLINE_PROMPTS,
@@ -23,6 +24,7 @@ from fashion_model import FashionClassifier
 from garment_attribute_analyzer import GarmentAttributeAnalyzer
 from pose_analyzer import _to_rgb_array
 from schemas import OutfitAnalysis, PoseAnalysis
+from wear_state_analyzer import infer_layering_state, infer_sleeve_state
 
 
 COLOR_PALETTE = {
@@ -154,6 +156,44 @@ def _masked_crop(rgb: np.ndarray, mask: np.ndarray) -> Image.Image:
     return Image.fromarray(crop)
 
 
+def _neck_roi_crop(rgb: np.ndarray, pose: PoseAnalysis) -> Image.Image:
+    """셔츠 칼라와 바깥 V넥 경계가 함께 보이는 목·윗가슴 ROI."""
+    if not pose.landmarks or not all(
+        name in pose.landmarks for name in ("left_shoulder", "right_shoulder")
+    ):
+        return Image.fromarray(rgb)
+    height, width = rgb.shape[:2]
+    left = pose.landmarks["left_shoulder"]
+    right = pose.landmarks["right_shoulder"]
+    shoulder_width = max(abs(right[0] - left[0]) * width, width * 0.12)
+    center_x = (left[0] + right[0]) * width / 2
+    shoulder_y = (left[1] + right[1]) * height / 2
+    x1 = max(0, int(center_x - shoulder_width * 0.72))
+    x2 = min(width, int(center_x + shoulder_width * 0.72))
+    y1 = max(0, int(shoulder_y - shoulder_width * 0.55))
+    y2 = min(height, int(shoulder_y + shoulder_width * 0.85))
+    if x2 <= x1 or y2 <= y1:
+        return Image.fromarray(rgb)
+    return Image.fromarray(rgb[y1:y2, x1:x2])
+
+
+def _layering_zero_shot(
+    classifier: FashionClassifier,
+    upper_crop: Image.Image,
+    neck_crop: Image.Image,
+) -> tuple[str, float]:
+    """상의 전체와 목 ROI의 레이어드 상대점수를 결합한다."""
+    prompts = list(LAYERING_PROMPTS.values())
+    upper = classifier.classify(upper_crop, prompts)
+    neck = classifier.classify(neck_crop, prompts)
+    combined = {
+        label: 0.65 * upper[prompt] + 0.35 * neck[prompt]
+        for label, prompt in LAYERING_PROMPTS.items()
+    }
+    label = max(combined, key=combined.get)
+    return label, float(combined[label])
+
+
 class OutfitAnalyzer:
     def __init__(self, parser: ClothingParser, classifier: FashionClassifier) -> None:
         self.parser = parser
@@ -179,6 +219,11 @@ class OutfitAnalyzer:
         lower_subtype = "분석 보류"
         pant_leg_shape = "분석 보류"
         pant_length = "분석 보류"
+        layering_state = "판단 보류"
+        upper_items: list[str] = []
+        inner_category = outer_category = "해당 없음"
+        layering_confidence = 0.0
+        layering_reason = "FashionSigLIP 비활성화"
         learned_upper = {}
         learned_lower = {}
         if self.classifier.enabled:
@@ -265,7 +310,37 @@ class OutfitAnalyzer:
             if learned_upper.get("collar") and learned_upper["collar"].accepted and neckline_visible:
                 collar = learned_upper["collar"].labels[0]
                 attribute_sources["collar"] = "trained_head"
-            refined_upper_type = _refine_upper_type(attributes["upper_type"], collar)
+
+            layering_label, layering_score = _layering_zero_shot(
+                self.classifier, upper_crop, _neck_roi_crop(rgb, pose)
+            )
+            layering = infer_layering_state(
+                attributes["upper_type"],
+                collar,
+                attributes["neckline"],
+                attributes["material"],
+                zero_shot_label=layering_label,
+                zero_shot_confidence=layering_score,
+            )
+            layering_state = layering.state
+            upper_items = layering.upper_items
+            inner_category = layering.inner_category
+            outer_category = layering.outer_category
+            layering_confidence = layering.confidence
+            layering_reason = layering.reason
+            attribute_sources["layering_state"] = (
+                "derived_attribute_conflict"
+                if layering.state == "레이어드"
+                else "zero_shot_roi"
+            )
+
+            refined_upper_type = _refine_upper_type(
+                attributes["upper_type"],
+                collar,
+                layering_state=layering_state,
+                material=attributes["material"],
+                neckline=attributes["neckline"],
+            )
             if refined_upper_type != attributes["upper_type"]:
                 attributes["upper_type"] = refined_upper_type
                 attribute_sources["upper_type"] = "derived_category_collar"
@@ -375,6 +450,19 @@ class OutfitAnalyzer:
             upper_type_confidence = lower_type_confidence = lower_pattern_confidence = lower_material_confidence = 0.0
             lower_pattern = lower_material = "분석 보류"
             attributes["neckline"] = "분석 보류"
+
+        sleeve = infer_sleeve_state(
+            attributes.get("measurements", {}),
+            learned_upper.get("sleeve_length"),
+            attributes["sleeve_length"],
+            pose_landmarks=pose.landmarks,
+        )
+        attributes["sleeve_length"] = sleeve.designed_length
+        attributes["visible_sleeve_length"] = sleeve.visible_length
+        attributes["sleeve_state"] = sleeve.state
+        attributes["layering_state"] = layering_state
+        attributes["upper_items"] = upper_items or [attributes["upper_type"]]
+        attribute_sources["sleeve_state"] = "visible_mask_and_trained_head"
         notes = []
         if self.parser.backend == "pose-guided-fallback":
             notes.append("포즈 기반 임시 마스크입니다. 의류 길이와 종류를 정식 분석에 사용하지 마세요.")
@@ -399,6 +487,12 @@ class OutfitAnalyzer:
                 notes.append(
                     "학습 속성 헤드 결과: " + (", ".join(accepted) if accepted else "임계값을 넘은 속성 없음")
                 )
+        notes.append(
+            f"소매 착용 상태: {sleeve.state} ({sleeve.reason}, 신뢰도 {sleeve.confidence:.2f})."
+        )
+        notes.append(
+            f"레이어드 상태: {layering_state} ({layering_reason}, 신뢰도 {layering_confidence:.2f})."
+        )
         return (
             OutfitAnalysis(
                 parser_backend=self.parser.backend,
@@ -413,6 +507,16 @@ class OutfitAnalyzer:
                 pant_leg_shape=pant_leg_shape,
                 pant_length=pant_length,
                 sleeve_length=attributes["sleeve_length"],
+                visible_sleeve_length=sleeve.visible_length,
+                sleeve_state=sleeve.state,
+                layering_state=layering_state,
+                upper_items=upper_items or [attributes["upper_type"]],
+                inner_category=inner_category,
+                outer_category=outer_category,
+                wear_state_confidence={
+                    "sleeve_state": round(sleeve.confidence, 3),
+                    "layering_state": round(layering_confidence, 3),
+                },
                 upper_length=attributes["upper_length"],
                 bottom_length=attributes["bottom_length"],
                 fit=attributes["fit"],
@@ -468,8 +572,19 @@ def _adapt_pant_length_prediction(
     return AttributePrediction([mapped], prediction.scores, prediction.confidence, prediction.accepted)
 
 
-def _refine_upper_type(category: str, collar: str) -> str:
+def _refine_upper_type(
+    category: str,
+    collar: str,
+    *,
+    layering_state: str = "단일 상의",
+    material: str = "",
+    neckline: str = "",
+) -> str:
     """카테고리와 독립 칼라 헤드가 합의할 때 한국 쇼핑 분류명으로 구체화한다."""
+    if layering_state != "단일 상의":
+        return category
+    if "니트" in material or neckline == "V넥":
+        return category
     if category == "티셔츠" and collar == "폴로 칼라":
         return "폴로 셔츠"
     return category

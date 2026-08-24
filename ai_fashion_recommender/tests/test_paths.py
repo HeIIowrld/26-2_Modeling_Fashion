@@ -46,8 +46,13 @@ class PathConfigurationTests(unittest.TestCase):
             for cell in notebook["cells"]
             for line in cell.get("source", [])
         )
-        self.assertIn("ATTRIBUTE_HEADS_PATH_INPUT = r'models/fashion_attribute_heads.pt'", source)
+        self.assertIn(
+            "ATTRIBUTE_HEADS_PATH_INPUT = r'models/fashion_attribute_heads_augmented.pt'",
+            source,
+        )
         self.assertIn("attribute_checkpoint=ATTRIBUTE_HEADS_PATH", source)
+        self.assertIn("p / 'src' / 'config.py'", source)
+        self.assertIn("PROJECT_DIR / 'src' / 'config.py'", source)
 
 
 if __name__ == "__main__":

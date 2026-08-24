@@ -47,6 +47,11 @@ class GarmentAttributeTests(unittest.TestCase):
         self.assertEqual(result["upper_type"], "상의")
         self.assertEqual(result["lower_type"], "바지")
         self.assertEqual(result["bottom_length"], "긴바지")
+        self.assertIn("visible_sleeve_length", result["measurements"])
+        self.assertEqual(
+            set(result["measurements"]["sleeve_side_coverage"]),
+            {"left", "right"},
+        )
 
     def test_accessories_do_not_pollute_main_garment_masks(self):
         segmentation = np.zeros((10, 10), dtype=np.uint8)
