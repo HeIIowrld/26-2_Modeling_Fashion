@@ -213,9 +213,52 @@ function materialPills(container, store) {
   });
 }
 
+// 예산은 직접 입력한다. 슬라이더는 원하는 금액을 정확히 맞추기 어렵고,
+// 10,000원 단위로만 끊겨 "23만원"처럼 실제로 생각하는 예산을 넣을 수 없었다.
+const BUDGET_MIN = 30000;
+const BUDGET_MAX = 500000;
 const budgetInput = $("f-budget");
+const budgetError = $("budget-error");
+
+const budgetDigits = (value) => value.replace(/[^0-9]/g, "").slice(0, 9);
+const budgetNumber = () => Number(budgetDigits(budgetInput.value) || 0);
+
+function showBudgetError(message) {
+  budgetError.textContent = message || "";
+  budgetError.hidden = !message;
+  budgetInput.setAttribute("aria-invalid", message ? "true" : "false");
+}
+
+// 입력 중에는 자릿수만 넣어준다. 커서가 끝으로 튀지 않도록 뒤쪽 길이를 기준으로 되돌린다.
 budgetInput.addEventListener("input", () => {
-  $("budget-value").textContent = `${Number(budgetInput.value).toLocaleString("ko-KR")}원`;
+  const tailBefore = budgetInput.value.length - (budgetInput.selectionStart ?? 0);
+  const digits = budgetDigits(budgetInput.value);
+  budgetInput.value = digits ? Number(digits).toLocaleString("ko-KR") : "";
+  const caret = Math.max(0, budgetInput.value.length - tailBefore);
+  budgetInput.setSelectionRange(caret, caret);
+  if (!budgetError.hidden) showBudgetError("");
+});
+
+// 범위를 벗어나면 조용히 고치지 않고 무엇이 문제인지 말한 뒤 되돌린다.
+budgetInput.addEventListener("blur", () => {
+  const value = budgetNumber();
+  if (!value) {
+    budgetInput.value = (150000).toLocaleString("ko-KR");
+    showBudgetError("");
+    return;
+  }
+  if (value < BUDGET_MIN) {
+    budgetInput.value = BUDGET_MIN.toLocaleString("ko-KR");
+    showBudgetError(`최소 ${BUDGET_MIN.toLocaleString("ko-KR")}원부터 추천할 수 있어 금액을 올렸습니다.`);
+    return;
+  }
+  if (value > BUDGET_MAX) {
+    budgetInput.value = BUDGET_MAX.toLocaleString("ko-KR");
+    showBudgetError(`최대 ${BUDGET_MAX.toLocaleString("ko-KR")}원까지 받을 수 있어 금액을 낮췄습니다.`);
+    return;
+  }
+  budgetInput.value = value.toLocaleString("ko-KR");
+  showBudgetError("");
 });
 
 $("add-wardrobe").addEventListener("click", () => addWardrobeRow());
@@ -247,7 +290,7 @@ function collectProfile() {
     desired_style: data.get("desired_style"),
     change_scope: data.get("change_scope"),
     season: data.get("season"),
-    budget: Number(data.get("budget")),
+    budget: budgetNumber() || 150000,
     silhouette_goal: data.get("silhouette_goal"),
     dress_code: data.get("dress_code"),
     activity_level: data.get("activity_level"),
@@ -295,7 +338,8 @@ function updateProgress(stageKey) {
   const done = index < 0 ? keys : keys.slice(0, index);
   renderStages(stageKey, done);
   const ratio = index < 0 ? 1 : index / keys.length;
-  $("progress-fill").style.width = `${Math.max(ratio, 0.06) * 100}%`;
+  // width 가 아니라 transform 을 움직인다(레이아웃 재계산 없음). CSS 와 짝을 맞춰야 한다.
+  $("progress-fill").style.transform = `scaleX(${Math.max(ratio, 0.06)})`;
 }
 
 $("start-analysis").addEventListener("click", async () => {
@@ -353,7 +397,7 @@ function showError(message) {
   $("error-card").hidden = false;
   $("error-message").textContent = message;
   $("progress-note").textContent = "중단되었습니다.";
-  $("progress-fill").style.width = "0%";
+  $("progress-fill").style.transform = "scaleX(0)";
 }
 
 $("error-back").addEventListener("click", () => goto(2));
@@ -571,7 +615,7 @@ function selectRecommendation(index) {
       ([key, value]) => `
       <div class="score-bar">
         <span>${escapeHtml(SCORE_LABELS[key] || key)}</span>
-        <span class="score-track"><span class="score-value" style="width: ${Math.min(value, 100)}%"></span></span>
+        <span class="score-track"><span class="score-value" style="transform: scaleX(${Math.min(value, 100) / 100})"></span></span>
         <b>${value.toFixed(0)}</b>
       </div>`
     )

@@ -138,11 +138,17 @@
           </label>
         </div>
         <label class="field">
-          <span class="field-label">
-            예산 <em class="field-value" id="budget-value">150,000원</em>
-          </span>
-          <input type="range" name="budget" id="f-budget" min="30000" max="500000" step="10000" value="150000" />
-          <span class="field-hint">상·하의 합계 기준입니다.</span>
+          <span class="field-label">예산</span>
+          <div class="money-field">
+            <input
+              type="text" name="budget" id="f-budget"
+              inputmode="numeric" autocomplete="off" spellcheck="false"
+              value="150,000" placeholder="150,000"
+              aria-describedby="budget-hint budget-error" />
+            <span class="money-unit" aria-hidden="true">원</span>
+          </div>
+          <span class="field-hint" id="budget-hint">상·하의 합계 기준입니다. 30,000 ~ 500,000원</span>
+          <span class="field-error" id="budget-error" role="alert" hidden></span>
         </label>
       </fieldset>
 
