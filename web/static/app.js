@@ -213,53 +213,37 @@ function materialPills(container, store) {
   });
 }
 
-// 예산은 직접 입력한다. 슬라이더는 원하는 금액을 정확히 맞추기 어렵고,
+// 예산은 최소·최대를 직접 입력한다. 슬라이더는 원하는 금액을 정확히 맞추기 어렵고,
 // 10,000원 단위로만 끊겨 "23만원"처럼 실제로 생각하는 예산을 넣을 수 없었다.
 const BUDGET_MIN = 30000;
 const BUDGET_MAX = 500000;
-const budgetInput = $("f-budget");
-const budgetError = $("budget-error");
-
-const budgetDigits = (value) => value.replace(/[^0-9]/g, "").slice(0, 9);
-const budgetNumber = () => Number(budgetDigits(budgetInput.value) || 0);
-
-function showBudgetError(message) {
-  budgetError.textContent = message || "";
-  budgetError.hidden = !message;
-  budgetInput.setAttribute("aria-invalid", message ? "true" : "false");
-}
 
 // 입력 중에는 자릿수만 넣어준다. 커서가 끝으로 튀지 않도록 뒤쪽 길이를 기준으로 되돌린다.
-budgetInput.addEventListener("input", () => {
-  const tailBefore = budgetInput.value.length - (budgetInput.selectionStart ?? 0);
-  const digits = budgetDigits(budgetInput.value);
-  budgetInput.value = digits ? Number(digits).toLocaleString("ko-KR") : "";
-  const caret = Math.max(0, budgetInput.value.length - tailBefore);
-  budgetInput.setSelectionRange(caret, caret);
-  if (!budgetError.hidden) showBudgetError("");
-});
-
-// 범위를 벗어나면 조용히 고치지 않고 무엇이 문제인지 말한 뒤 되돌린다.
-budgetInput.addEventListener("blur", () => {
-  const value = budgetNumber();
-  if (!value) {
-    budgetInput.value = (150000).toLocaleString("ko-KR");
-    showBudgetError("");
-    return;
-  }
-  if (value < BUDGET_MIN) {
-    budgetInput.value = BUDGET_MIN.toLocaleString("ko-KR");
-    showBudgetError(`최소 ${BUDGET_MIN.toLocaleString("ko-KR")}원부터 추천할 수 있어 금액을 올렸습니다.`);
-    return;
-  }
-  if (value > BUDGET_MAX) {
-    budgetInput.value = BUDGET_MAX.toLocaleString("ko-KR");
-    showBudgetError(`최대 ${BUDGET_MAX.toLocaleString("ko-KR")}원까지 받을 수 있어 금액을 낮췄습니다.`);
-    return;
-  }
-  budgetInput.value = value.toLocaleString("ko-KR");
-  showBudgetError("");
-});
+function bindBudgetInput(el) {
+  if (!el) return;
+  el.addEventListener("input", () => {
+    const tailBefore = el.value.length - (el.selectionStart ?? 0);
+    const digits = el.value.replace(/[^0-9]/g, "").slice(0, 9);
+    el.value = digits ? Number(digits).toLocaleString("ko-KR") : "";
+    const caret = Math.max(0, el.value.length - tailBefore);
+    el.setSelectionRange(caret, caret);
+    el.setAttribute("aria-invalid", "false");
+  });
+  // 범위를 벗어나면 조용히 넘어가지 않고 되돌린 뒤 무엇을 고쳤는지 알린다.
+  el.addEventListener("blur", () => {
+    const value = Number(el.value.replace(/[^0-9]/g, "") || 0);
+    if (!value) return;
+    if (value < BUDGET_MIN) {
+      el.value = BUDGET_MIN.toLocaleString("ko-KR");
+      toast(`최소 ${BUDGET_MIN.toLocaleString("ko-KR")}원부터 추천할 수 있어 금액을 올렸어요.`);
+    } else if (value > BUDGET_MAX) {
+      el.value = BUDGET_MAX.toLocaleString("ko-KR");
+      toast(`최대 ${BUDGET_MAX.toLocaleString("ko-KR")}원까지 받을 수 있어 금액을 낮췄어요.`);
+    }
+  });
+}
+bindBudgetInput($("f-min-budget"));
+bindBudgetInput($("f-max-budget"));
 
 $("add-wardrobe").addEventListener("click", () => addWardrobeRow());
 
@@ -283,22 +267,32 @@ function collectProfile() {
   const data = new FormData(form);
   const numeric = (key) => {
     const raw = data.get(key);
-    return raw === null || raw === "" ? null : Number(raw);
+    if (raw === null || raw === "") return null;
+    const cleaned = String(raw).replace(/[^0-9\-\.]/g, "");
+    return cleaned === "" ? null : Number(cleaned);
+  };
+  const min_b = numeric("min_budget");
+  const max_b = numeric("max_budget");
+  const computeBudget = () => {
+    if (min_b != null && max_b != null) return Math.round((min_b + max_b) / 2);
+    const single = numeric("budget");
+    return single != null ? single : null;
   };
   return {
     purpose: data.get("purpose"),
     desired_style: data.get("desired_style"),
     change_scope: data.get("change_scope"),
     season: data.get("season"),
-    budget: budgetNumber() || 150000,
+    min_budget: min_b,
+    max_budget: max_b,
+    budget: computeBudget(),
     silhouette_goal: data.get("silhouette_goal"),
     dress_code: data.get("dress_code"),
     activity_level: data.get("activity_level"),
     height_cm: numeric("height_cm"),
     weight_kg: numeric("weight_kg"),
-    chest_cm: numeric("chest_cm"),
-    waist_cm: numeric("waist_cm"),
-    hip_cm: numeric("hip_cm"),
+    usual_top_size: data.get("usual_top_size"),
+    usual_bottom_size: data.get("usual_bottom_size"),
     temperature_c: numeric("temperature_c"),
     feels_like_c: numeric("feels_like_c"),
     humidity: numeric("humidity"),
@@ -344,22 +338,29 @@ function updateProgress(stageKey) {
 
 $("start-analysis").addEventListener("click", async () => {
   if (!state.file) { toast("먼저 전신사진을 올려주세요."); goto(1); return; }
+  const profileCandidate = collectProfile();
+  // required fields: purpose, change_scope, budget range
+  if (!profileCandidate.purpose) { toast("코디 목적을 선택해주세요"); goto(2); return; }
+  if (!profileCandidate.change_scope) { toast("바꾸고 싶은 범위를 선택해주세요"); goto(2); return; }
+  if (profileCandidate.min_budget == null || profileCandidate.max_budget == null) { toast("예산 범위를 모두 입력해주세요"); goto(2); return; }
+  if (profileCandidate.min_budget > profileCandidate.max_budget) { toast("최소 예산이 최대 예산보다 큽니다"); goto(2); return; }
+
   unlock(3);
   goto(3);
   $("error-card").hidden = true;
-  $("progress-note").textContent = "모델을 준비하고 있습니다. 첫 실행은 1분 이상 걸릴 수 있습니다.";
+  $("progress-note").textContent = "모델을 준비하고 있어요. 첫 실행은 1분 이상 걸릴 수 있어요.";
   updateProgress(state.options.stages[0].key);
 
   const body = new FormData();
   body.append("image", state.file);
-  state.profile = collectProfile();
+  state.profile = profileCandidate;
   body.append("profile", JSON.stringify(state.profile));
   if (state.bodyFile) body.append("body_image", state.bodyFile);
 
   try {
     const response = await fetch(API_BASE + "/api/analyze", { method: "POST", body });
     const payload = await response.json();
-    if (!response.ok) throw new Error(payload.detail || "분석 요청에 실패했습니다.");
+    if (!response.ok) throw new Error(payload.detail || "분석 요청에 실패했어요.");
     state.jobId = payload.job_id;
     pollJob();
   } catch (error) {
@@ -407,13 +408,37 @@ function resetPrivacyBar() {
   const bar = $("privacy-bar");
   bar.classList.remove("is-deleted");
   bar.querySelector("strong").innerHTML =
-    `업로드한 사진은 <span id="retention-minutes">${state.retentionMinutes}</span>분 뒤 자동으로 삭제됩니다.`;
+    `업로드한 사진은 분석 완료 후 <span id="retention-minutes">${state.retentionMinutes}</span>분 이내 자동으로 삭제돼요.`;
   bar.querySelector("span:not(#retention-minutes)").textContent =
-    "지금 바로 지우려면 오른쪽 버튼을 누르세요. 결과 이미지도 함께 사라집니다.";
+    "지금 바로 지우려면 오른쪽 버튼을 누르세요. 결과 이미지도 함께 사라져요.";
   $("delete-now").disabled = false;
 }
 
 function renderResult(result) {
+  // Handle explicit budget-mismatch structured response from the server.
+  if (result && result.budget_match === false) {
+    $("budget-mismatch").hidden = false;
+    // Hide the recommendation view so the user focuses on fixing budget.
+    $("view-recos").hidden = true;
+    $("tab-recos").disabled = true;
+    // Button returns the user to page 2 (conditions) without clearing inputs.
+    $("budget-fix-btn").onclick = () => {
+      goto(2);
+      $("budget-mismatch").hidden = true;
+      $("view-recos").hidden = false;
+      $("tab-recos").disabled = false;
+    };
+
+    // Still render analysis details so user can inspect outfit while deciding budget.
+    resetPrivacyBar();
+    renderCurrentOutfit(result);
+    renderBodyStats(result.pose);
+    renderRules(result.rules);
+    renderFigures(result.images);
+    showView("analysis");
+    return;
+  }
+
   const best = result.recommendations[0];
   resetPrivacyBar();
   $("result-lede").textContent = best.products.length
@@ -547,14 +572,14 @@ function renderBodyStats(pose) {
     <dl class="stat-row"><dt>다리 길이 비율</dt><dd>${pose.leg_ratio.toFixed(2)}</dd></dl>
     <dl class="stat-row"><dt>자세</dt><dd>${escapeHtml(pose.posture)}</dd></dl>`;
 
-  // 체형을 어떻게 다루는지는 라벨을 실제로 보는 이 자리에서 설명한다.
+  // 체형을 어떻게 다루는지는 라벨을 실제로 보는 이 자리에서 설명해요.
   const goal = state.profile?.silhouette_goal;
   const basis = pose.body_shape_basis === "입력한 둘레"
-    ? "입력하신 둘레로 판정했습니다."
-    : "사진에서 추정했습니다. 둘레를 입력하면 더 세분화됩니다.";
-  const used = goal && goal !== "반영 안 함"
-    ? `'${goal}'를 고르셔서 추천 점수에 반영했습니다.`
-    : "체형 반영을 고르지 않아 추천 점수에는 쓰지 않았습니다.";
+    ? "입력하신 둘레로 판정했어요."
+    : "사진에서 추정했어요. 둘레를 입력하면 더 세분화돼요.";
+  const used = goal && goal !== "별도 보정 없음"
+    ? `'${goal}'를 고르셔서 추천 점수에 반영했어요.`
+    : "체형 반영을 고르지 않아 추천 점수에는 쓰지 않았어요.";
   $("body-shape-note").textContent = `${basis} ${used}`;
 }
 
@@ -857,7 +882,14 @@ function showBackendDown(detail) {
   fillSelect("f-silhouette", options.silhouette_goals);
   fillSelect("f-dresscode", options.dress_codes);
   fillSelect("f-activity", options.activity_levels);
-  $("f-scope").value = "전체 변경";
+  // Do not pre-select required fields. Insert placeholder for required selects.
+  ["f-purpose", "f-scope"].forEach((id) => {
+    const sel = $(id);
+    if (sel) {
+      sel.insertAdjacentHTML('afterbegin', '<option value="">선택해주세요</option>');
+      sel.value = "";
+    }
+  });
   $("f-activity").value = "보통";
 
   colorSwatches($("preferred-colors"), state.preferredColors);
@@ -873,7 +905,7 @@ function showBackendDown(detail) {
         el.textContent = policy.ttl_minutes;
       });
       const hint = document.querySelector(".dz-privacy");
-      if (hint) hint.textContent = `분석이 끝나고 ${policy.ttl_minutes}분 뒤 자동 삭제됩니다`;
+      if (hint) hint.textContent = `업로드한 사진은 분석 완료 후 ${policy.ttl_minutes}분 이내 자동으로 삭제돼요`;
     })
     .catch(() => {});
 
@@ -882,12 +914,6 @@ function showBackendDown(detail) {
     .then((payload) => { state.ruleTitles = payload.titles || {}; })
     .catch(() => {});
 
-  fetch(API_BASE + "/api/health")
-    .then((response) => response.json())
-    .then((health) => {
-      const chip = $("engine-chip");
-      chip.textContent = `${health.device.toUpperCase()} · 규칙 ${health.rules_implemented}/${health.rules_documented} · 상품 ${health.product_count}`;
-      chip.hidden = false;
-    })
-    .catch(() => {});
+  // health info suppressed from topbar in this UI
+  // fetch(API_BASE + "/api/health").catch(() => {});
 })();

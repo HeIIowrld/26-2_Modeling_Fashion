@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from outfit_analyzer import _dominant_palette, _dominant_rgb, _nearest_color, color_harmony
 from product_catalog import ProductCatalog
-from recommendation_engine import RecommendationEngine
+from recommendation_engine import RecommendationEngine, NoBudgetMatch, MinGreaterThanMax
 from schemas import OutfitAnalysis, PoseAnalysis, Product, UserProfile, WardrobeItem
 
 
@@ -169,6 +169,37 @@ class RecommendationTests(unittest.TestCase):
         self.assertLessEqual(
             sum(product.price for product in recommendations[0].products), floor
         )
+
+    def test_budget_range_includes_min_boundary(self):
+        """최소값 경계가 포함되는지 확인한다: 합계 == min_budget 이면 반환되어야 한다."""
+        floor = self._cheapest_daily_pair()
+        profile = UserProfile(purpose="데일리", change_scope="전체 변경", min_budget=floor, max_budget=floor)
+        recommendations = self.engine.recommend(profile, self.pose, self.outfit, top_k=1)
+        self.assertEqual(len(recommendations), 1)
+        total = sum(product.price for product in recommendations[0].products)
+        self.assertEqual(total, floor)
+
+    def test_budget_range_includes_max_boundary(self):
+        """최대값 경계가 포함되는지 확인한다: 합계 == max_budget 이면 반환되어야 한다."""
+        floor = self._cheapest_daily_pair()
+        profile = UserProfile(purpose="데일리", change_scope="전체 변경", min_budget=0, max_budget=floor)
+        recommendations = self.engine.recommend(profile, self.pose, self.outfit, top_k=1)
+        self.assertEqual(len(recommendations), 1)
+        total = sum(product.price for product in recommendations[0].products)
+        self.assertLessEqual(total, floor)
+
+    def test_no_candidates_in_budget_range(self):
+        """범위 내에 추천 조합이 없을 때는 명확한 예외를 던진다."""
+        floor = self._cheapest_daily_pair()
+        profile = UserProfile(purpose="데일리", change_scope="전체 변경", min_budget=floor + 1, max_budget=floor + 10)
+        with self.assertRaisesRegex(NoBudgetMatch, "예산 범위"):
+            self.engine.recommend(profile, self.pose, self.outfit)
+
+    def test_min_greater_than_max_is_rejected(self):
+        """최소값이 최대값보다 큰 입력은 명확한 에러를 발생시킨다."""
+        profile = UserProfile(purpose="데일리", change_scope="전체 변경", min_budget=100_000, max_budget=10_000)
+        with self.assertRaisesRegex(MinGreaterThanMax, "최소 예산이 최대 예산보다 큽니다"):
+            self.engine.recommend(profile, self.pose, self.outfit)
 
     def test_user_exclusions_are_hard_filters(self):
         profile = UserProfile(

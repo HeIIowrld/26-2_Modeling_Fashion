@@ -30,7 +30,7 @@ from outfit_analyzer import COLOR_PALETTE, OutfitAnalyzer
 from pose_analyzer import PoseAnalyzer
 from product_catalog import ProductCatalog
 from quality_checker import QualityChecker
-from recommendation_engine import CHANGE_SCOPE_MAP, PURPOSE_STYLES, RecommendationEngine
+from recommendation_engine import CHANGE_SCOPE_MAP, PURPOSE_STYLES, RecommendationEngine, NoBudgetMatch, MinGreaterThanMax
 from body_shape import classify
 from schemas import GOAL_NONE, SILHOUETTE_GOAL_CHOICES, UserProfile, WardrobeItem
 from virtual_tryon import TryOnNotReady, VirtualTryOnAdapter
@@ -177,16 +177,36 @@ def build_profile(payload: dict) -> UserProfile:
         if str(item.get("color") or "").strip()
     ]
 
+    # budget: support min_budget/max_budget from the UI while keeping backward compatibility
+    def _to_int_or_none(val):
+        try:
+            if val is None or str(val) == "":
+                return None
+            return int(float(val))
+        except Exception:
+            return None
+
+    min_b = _to_int_or_none(payload.get("min_budget"))
+    max_b = _to_int_or_none(payload.get("max_budget"))
+    if min_b is not None and max_b is not None:
+        budget_val = int((min_b + max_b) / 2)
+    else:
+        budget_val = _to_int_or_none(payload.get("budget")) or 150_000
+
     return UserProfile(
         purpose=payload.get("purpose") or "데일리",
         desired_style=payload.get("desired_style") or "캐주얼",
-        budget=int(payload.get("budget") or 150_000),
+        budget=budget_val,
+        min_budget=min_b,
+        max_budget=max_b,
         change_scope=payload.get("change_scope") or "전체 변경",
         height_cm=number("height_cm"),
         weight_kg=number("weight_kg"),
         chest_cm=number("chest_cm"),
         waist_cm=number("waist_cm"),
         hip_cm=number("hip_cm"),
+        usual_top_size=payload.get("usual_top_size"),
+        usual_bottom_size=payload.get("usual_bottom_size"),
         season=payload.get("season") or "사계절",
         silhouette_goal=payload.get("silhouette_goal") or GOAL_NONE,
         dress_code=payload.get("dress_code") or "자동",
@@ -250,7 +270,51 @@ def run_pipeline(
         on_stage("recommend")
         try:
             recommendations = engine.recommender.recommend(profile, pose_result, outfit_result, top_k=3)
-        except ValueError as exc:
+        except Exception as exc:
+            # Normalize NoBudgetMatch regardless of import path by checking class name.
+            exc_name = exc.__class__.__name__
+            if exc_name == "NoBudgetMatch":
+                on_stage("preview")
+                preview_path = output_dir / "preview.jpg"
+                Image.open(image_path).convert("RGB").save(preview_path, quality=92)
+
+                pose_dict = pose_result.to_dict()
+                pose_dict.pop("landmarks", None)
+                pose_dict["body_shape_basis"] = body_shape_basis
+                payload = {
+                    "budget_match": False,
+                    "code": "NO_BUDGET_MATCH",
+                    "message": "입력한 예산 범위에 맞는 추천 상품이 없어요.",
+                    "input_quality": input_quality,
+                    "pose": pose_dict,
+                    "outfit": outfit_result.to_dict(),
+                    "outfit_summary": outfit_result.to_summary_dict(),
+                    "recommendations": [],
+                    "rules": {
+                        "implemented": len(engine.recommender.active_rule_ids),
+                        "documented": len(engine.recommender.documented_rule_ids),
+                        "scoring": len(engine.recommender.scoring_rule_ids),
+                        "unsupported": [
+                            {"id": rule_id, "reason": engine.recommender.UNSUPPORTED_RULE_REASONS[rule_id]}
+                            for rule_id in engine.recommender.unsupported_rule_ids
+                        ],
+                    },
+                    "engine": {
+                        "device": engine.device,
+                        "trained_heads": engine.trained_heads,
+                        "parser_backend": engine.parser_backend,
+                        "vton_enabled": engine.tryon.enabled,
+                    },
+                    "tryon": tryon_status(),
+                    "images": {
+                        "original": "original.jpg",
+                        "landmarks": landmark_path.name,
+                        "segmentation": segmentation_path.name,
+                        "preview": preview_path.name,
+                    },
+                }
+                return PipelineResult(payload=payload, recommendations=[], person_image=image_path)
+            # For min>max use-case and other errors, preserve the previous PipelineError behavior.
             raise PipelineError(str(exc)) from exc
 
         on_stage("preview")

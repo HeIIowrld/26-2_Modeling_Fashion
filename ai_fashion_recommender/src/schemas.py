@@ -48,7 +48,7 @@ BASIS_ESTIMATE = "사진에서 추정한 둘레"  # 3D 체형 복원. 오차가 
 
 # 체형 분석을 추천 점수에 반영할지 정하는 선택지.
 # 사용자가 목표를 고를 때만 체형 규칙(R-BOD-*)을 적용한다는 R-KOR-02를 따른다.
-GOAL_NONE = "반영 안 함"
+GOAL_NONE = "별도 보정 없음"
 GOAL_BALANCE = "상·하체 균형 맞추기"
 GOAL_LONGER_LEGS = "다리가 길어 보이게"
 GOAL_WAISTLINE = "허리선 강조하기"
@@ -57,7 +57,7 @@ GOAL_LOWER_FOCUS = "하체에 시선 모으기"
 
 # 화면에 보여줄 순서와, 선택지마다 덧붙일 설명.
 SILHOUETTE_GOAL_CHOICES = [
-    (GOAL_NONE, "반영 안 함 (목적·취향만 고려)"),
+    (GOAL_NONE, "별도 보정 없음 (목적·취향만 고려)"),
     (GOAL_BALANCE, GOAL_BALANCE),
     (GOAL_LONGER_LEGS, GOAL_LONGER_LEGS),
     (GOAL_WAISTLINE, GOAL_WAISTLINE),
@@ -91,6 +91,8 @@ class UserProfile:
     purpose: str = "데일리"
     desired_style: str = "캐주얼"
     budget: int = 150_000
+    min_budget: int | None = None
+    max_budget: int | None = None
     change_scope: str = "전체 변경"
     height_cm: float | None = None
     weight_kg: float | None = None
@@ -98,6 +100,9 @@ class UserProfile:
     chest_cm: float | None = None
     waist_cm: float | None = None
     hip_cm: float | None = None
+    # 사용자가 입력하는 '평소 사이즈' 라벨(예: S/M/L 또는 숫자) — 선택
+    usual_top_size: str | None = None
+    usual_bottom_size: str | None = None
     season: str = "사계절"
     silhouette_goal: str = GOAL_NONE
     dress_code: str = "자동"

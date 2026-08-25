@@ -108,6 +108,14 @@ def _tie_rank(seed: str, products: list) -> str:
     return hashlib.blake2b(key.encode("utf-8"), digest_size=8).hexdigest()
 
 
+class NoBudgetMatch(Exception):
+    """Raised when no candidate combinations fit the user's min/max budget range."""
+
+
+class MinGreaterThanMax(Exception):
+    """Raised when min_budget > max_budget in profile input."""
+
+
 class RecommendationEngine:
     """Markdown 규칙을 필터·점수·안전장치·스타일링 안내로 실행한다.
 
@@ -1232,20 +1240,53 @@ class RecommendationEngine:
         tops = self._available_for_profile("top", profile) if "top" in scopes else [None]
         bottoms = self._available_for_profile("bottom", profile) if "bottom" in scopes else [None]
         candidates = []
+
+        min_b = getattr(profile, "min_budget", None)
+        max_b = getattr(profile, "max_budget", None)
+        # Defensive check: if both bounds provided but invalid, fail fast with clear message
+        if (min_b is not None and max_b is not None) and (min_b > max_b):
+            raise MinGreaterThanMax("최소 예산이 최대 예산보다 큽니다. 최소/최대 예산을 확인하세요.")
+
         for top, bottom in itertools.product(tops, bottoms):
             products = [product for product in (top, bottom) if product]
-            if not products or sum(product.price for product in products) > profile.budget:
+            if not products:
                 continue
+            total_price = sum(product.price for product in products)
+
+            # Backward-compatible behavior: when no min/max is provided, keep using the
+            # legacy single 'budget' as a hard upper bound to filter candidates early.
+            if min_b is None and max_b is None:
+                if total_price > profile.budget:
+                    continue
+
             score, breakdown, reasons, applied_rules, tips, coverage = self._score_candidate(
                 top, bottom, profile, pose, outfit
             )
-            candidates.append((score, products, breakdown, reasons, applied_rules, tips, coverage))
+            # Append total_price so we can later filter by range without recomputing.
+            candidates.append((score, products, breakdown, reasons, applied_rules, tips, coverage, total_price))
 
         if not candidates:
             raise ValueError(
                 "재고·예산·목적·계절·사용자 제외 조건을 모두 만족하는 상품이 없습니다. "
                 "예산, 계절, 제외 목록 또는 변경 범위를 조정하세요."
             )
+
+        # If the user provided min/max bounds, prefer only candidates within that range.
+        if min_b is not None or max_b is not None:
+            in_range = []
+            for item in candidates:
+                total = item[7]
+                ok = True
+                if min_b is not None and total < min_b:
+                    ok = False
+                if max_b is not None and total > max_b:
+                    ok = False
+                if ok:
+                    in_range.append(item)
+            if not in_range:
+                # Explicitly signal that no combinations satisfied the user's budget range.
+                raise NoBudgetMatch("예산 범위에 맞는 상품 조합이 없습니다. 다른 예산 범위를 시도해 주세요.")
+            candidates = in_range
 
         # 점수가 정확히 같은 후보가 매우 많다. 실측(2026-08-21)에서 최고점 동점이
         # 남성 777개(71종 상의) / 여성 2,833개(98종 상의)였다. 안정 정렬에 맡기면
@@ -1265,6 +1306,6 @@ class RecommendationEngine:
                 score_coverage=coverage,
                 styling_tips=tips,
             )
-            for index, (score, products, breakdown, reasons, applied_rules, tips, coverage)
+            for index, (score, products, breakdown, reasons, applied_rules, tips, coverage, _)
             in enumerate(candidates[:top_k], start=1)
         ]
