@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import colorsys
+import math
 from pathlib import Path
 
 import cv2
@@ -46,9 +47,133 @@ COLOR_PALETTE = {
 }
 NEUTRALS = {"블랙", "화이트", "그레이", "네이비", "브라운", "베이지"}
 
+# 색 이름마다 하나의 RGB만 두면 같은 카키도 조명과 명도에 따라 브라운·베이지로
+# 이동한다. 실제 의류에서 자주 보이는 밝기 범위를 여러 기준점으로 표현한다.
+COLOR_REFERENCE_RGB = {
+    "블랙": ((10, 10, 10), (28, 28, 28), (48, 48, 48)),
+    "화이트": ((245, 245, 245), (225, 225, 225), (242, 238, 228)),
+    "그레이": ((85, 85, 85), (130, 130, 130), (180, 180, 180)),
+    "네이비": ((23, 23, 43), (35, 50, 90), (52, 62, 92)),
+    "블루": ((45, 90, 155), (55, 110, 190), (100, 155, 215)),
+    "브라운": ((70, 45, 30), (115, 75, 45), (145, 95, 60), (105, 85, 65)),
+    "베이지": ((170, 150, 115), (205, 185, 145), (225, 207, 179)),
+    "레드": ((145, 30, 30), (185, 45, 45), (220, 65, 55)),
+    "핑크": ((190, 90, 125), (220, 125, 155), (240, 175, 190)),
+    "그린": ((35, 95, 50), (60, 130, 75), (95, 155, 100)),
+    "옐로": ((185, 145, 25), (220, 185, 50), (240, 210, 90)),
+    "퍼플": ((80, 45, 110), (115, 70, 145), (155, 105, 180)),
+    "오렌지": ((180, 80, 30), (220, 115, 45), (235, 145, 70)),
+    "카키": ((79, 75, 54), (105, 105, 55), (125, 119, 91), (135, 130, 85)),
+    "버건디": ((75, 25, 40), (115, 35, 55), (145, 50, 70)),
+}
+
+
+def _interior_mask(mask: np.ndarray) -> np.ndarray:
+    """분할 경계의 배경·피부 픽셀이 대표색에 섞이지 않도록 내부만 남긴다."""
+    binary = np.asarray(mask, dtype=np.uint8)
+    if int(binary.sum()) < 400:
+        return binary.astype(bool)
+    eroded = cv2.erode(binary, np.ones((3, 3), dtype=np.uint8), iterations=1)
+    if int(eroded.sum()) >= int(binary.sum() * 0.65):
+        return eroded.astype(bool)
+    return binary.astype(bool)
+
+
+def _white_balance_rgb(rgb: np.ndarray) -> np.ndarray:
+    """사진 속 밝은 무채색 영역으로 약한 화이트밸런스 보정을 수행한다.
+
+    확실한 흰색·밝은 회색 후보가 충분하지 않으면 원본을 그대로 사용하고,
+    과도한 보정을 막기 위해 채널 이득을 10% 이내로 제한한다.
+    """
+    image = np.asarray(rgb, dtype=np.uint8)
+    flat = image.reshape(-1, 3).astype(np.float32)
+    maximum = flat.max(axis=1)
+    minimum = flat.min(axis=1)
+    saturation = (maximum - minimum) / np.maximum(maximum, 1.0)
+    neutral = flat[(maximum >= 165) & (maximum <= 250) & (saturation <= 0.10)]
+    minimum_count = max(100, int(len(flat) * 0.01))
+    if len(neutral) < minimum_count:
+        return image
+    reference = np.percentile(neutral, 75, axis=0)
+    target = float(reference.mean())
+    gains = np.clip(target / np.maximum(reference, 1.0), 0.90, 1.10)
+    return np.clip(image.astype(np.float32) * gains, 0, 255).astype(np.uint8)
+
+
+def _rgb_to_cielab(rgb: tuple[int, int, int]) -> tuple[float, float, float]:
+    encoded = cv2.cvtColor(np.uint8([[rgb]]), cv2.COLOR_RGB2LAB)[0, 0].astype(np.float64)
+    return float(encoded[0] * 100 / 255), float(encoded[1] - 128), float(encoded[2] - 128)
+
+
+def _ciede2000(first: tuple[float, float, float], second: tuple[float, float, float]) -> float:
+    """두 CIELAB 색의 CIEDE2000 지각 색차를 계산한다."""
+    l1, a1, b1 = first
+    l2, a2, b2 = second
+    c1, c2 = math.hypot(a1, b1), math.hypot(a2, b2)
+    c_bar = (c1 + c2) / 2
+    g = 0.5 * (1 - math.sqrt(c_bar**7 / (c_bar**7 + 25**7)))
+    a1_prime, a2_prime = (1 + g) * a1, (1 + g) * a2
+    c1_prime, c2_prime = math.hypot(a1_prime, b1), math.hypot(a2_prime, b2)
+    h1_prime = math.degrees(math.atan2(b1, a1_prime)) % 360
+    h2_prime = math.degrees(math.atan2(b2, a2_prime)) % 360
+
+    delta_l = l2 - l1
+    delta_c = c2_prime - c1_prime
+    if c1_prime * c2_prime == 0:
+        delta_h_angle = 0.0
+    elif abs(h2_prime - h1_prime) <= 180:
+        delta_h_angle = h2_prime - h1_prime
+    elif h2_prime <= h1_prime:
+        delta_h_angle = h2_prime - h1_prime + 360
+    else:
+        delta_h_angle = h2_prime - h1_prime - 360
+    delta_h = 2 * math.sqrt(c1_prime * c2_prime) * math.sin(math.radians(delta_h_angle / 2))
+
+    l_bar = (l1 + l2) / 2
+    c_prime_bar = (c1_prime + c2_prime) / 2
+    if c1_prime * c2_prime == 0:
+        h_bar = h1_prime + h2_prime
+    elif abs(h1_prime - h2_prime) <= 180:
+        h_bar = (h1_prime + h2_prime) / 2
+    elif h1_prime + h2_prime < 360:
+        h_bar = (h1_prime + h2_prime + 360) / 2
+    else:
+        h_bar = (h1_prime + h2_prime - 360) / 2
+    t = (
+        1
+        - 0.17 * math.cos(math.radians(h_bar - 30))
+        + 0.24 * math.cos(math.radians(2 * h_bar))
+        + 0.32 * math.cos(math.radians(3 * h_bar + 6))
+        - 0.20 * math.cos(math.radians(4 * h_bar - 63))
+    )
+    s_l = 1 + 0.015 * (l_bar - 50) ** 2 / math.sqrt(20 + (l_bar - 50) ** 2)
+    s_c = 1 + 0.045 * c_prime_bar
+    s_h = 1 + 0.015 * c_prime_bar * t
+    delta_theta = 30 * math.exp(-((h_bar - 275) / 25) ** 2)
+    r_c = 2 * math.sqrt(c_prime_bar**7 / (c_prime_bar**7 + 25**7))
+    r_t = -r_c * math.sin(math.radians(2 * delta_theta))
+    return math.sqrt(
+        (delta_l / s_l) ** 2
+        + (delta_c / s_c) ** 2
+        + (delta_h / s_h) ** 2
+        + r_t * (delta_c / s_c) * (delta_h / s_h)
+    )
+
+
+def _semantic_color(rgb: tuple[int, int, int]) -> str:
+    """다중 기준색 가운데 지각 색차가 가장 작은 색 이름을 반환한다."""
+    sample = _rgb_to_cielab(tuple(int(value) for value in rgb))
+    return min(
+        COLOR_REFERENCE_RGB,
+        key=lambda name: min(
+            _ciede2000(sample, _rgb_to_cielab(reference))
+            for reference in COLOR_REFERENCE_RGB[name]
+        ),
+    )
+
 
 def _dominant_palette(rgb: np.ndarray, mask: np.ndarray, max_colors: int = 3) -> list[dict]:
-    pixels = rgb[mask]
+    pixels = _white_balance_rgb(rgb)[_interior_mask(mask)]
     if len(pixels) == 0:
         return [{"name": "그레이", "rgb": [128, 128, 128], "proportion": 1.0}]
     # 지나치게 밝거나 어두운 그림자/하이라이트를 줄인 뒤 대표 색 군집을 찾는다.
@@ -74,16 +199,31 @@ def _dominant_palette(rgb: np.ndarray, mask: np.ndarray, max_colors: int = 3) ->
     counts = np.bincount(labels.ravel(), minlength=cluster_count)
     center_lab = np.clip(centers, 0, 255).astype(np.uint8)
     center_rgb = cv2.cvtColor(center_lab[np.newaxis, :, :], cv2.COLOR_LAB2RGB)[0]
-    order = np.argsort(counts)[::-1]
-    total = max(int(counts.sum()), 1)
-    return [
-        {
-            "name": _nearest_color(tuple(int(value) for value in center_rgb[index])),
-            "rgb": [int(value) for value in center_rgb[index]],
-            "proportion": round(float(counts[index] / total), 3),
-        }
-        for index in order
-    ]
+    # 명도만 다른 군집이 같은 실제 색으로 판정되면 하나로 합친다. 예를 들어
+    # 네이비의 밝은 주름과 어두운 주름이 별도 군집이어도 대표색은 네이비다.
+    merged: dict[str, dict[str, np.ndarray | int]] = {}
+    for index, count in enumerate(counts):
+        if count <= 0:
+            continue
+        center = center_rgb[index].astype(np.float64)
+        name = _semantic_color(tuple(int(value) for value in center))
+        entry = merged.setdefault(name, {"count": 0, "rgb_sum": np.zeros(3, dtype=np.float64)})
+        entry["count"] = int(entry["count"]) + int(count)
+        entry["rgb_sum"] = np.asarray(entry["rgb_sum"]) + center * int(count)
+
+    total = max(sum(int(entry["count"]) for entry in merged.values()), 1)
+    palette = []
+    for name, entry in merged.items():
+        count = int(entry["count"])
+        representative = np.rint(np.asarray(entry["rgb_sum"]) / max(count, 1)).astype(int)
+        palette.append(
+            {
+                "name": name,
+                "rgb": representative.tolist(),
+                "proportion": round(float(count / total), 3),
+            }
+        )
+    return sorted(palette, key=lambda item: item["proportion"], reverse=True)
 
 
 def _dominant_rgb(rgb: np.ndarray, mask: np.ndarray) -> tuple[int, int, int]:
@@ -92,6 +232,10 @@ def _dominant_rgb(rgb: np.ndarray, mask: np.ndarray) -> tuple[int, int, int]:
 
 
 def _nearest_color(rgb: tuple[int, int, int]) -> str:
+    return _semantic_color(rgb)
+
+
+def _nearest_color_lab(rgb: tuple[int, int, int]) -> str:
     sample = cv2.cvtColor(np.uint8([[rgb]]), cv2.COLOR_RGB2LAB)[0, 0].astype(np.float32)
     return min(
         COLOR_PALETTE,
@@ -224,6 +368,7 @@ class OutfitAnalyzer:
         inner_category = outer_category = "해당 없음"
         layering_confidence = 0.0
         layering_reason = "FashionSigLIP 비활성화"
+        layering_prediction = None
         learned_upper = {}
         learned_lower = {}
         if self.classifier.enabled:
@@ -314,11 +459,13 @@ class OutfitAnalyzer:
             layering_label, layering_score = _layering_zero_shot(
                 self.classifier, upper_crop, _neck_roi_crop(rgb, pose)
             )
+            layering_prediction = self.classifier.predict_layering(upper_crop)
             layering = infer_layering_state(
                 attributes["upper_type"],
                 collar,
                 attributes["neckline"],
                 attributes["material"],
+                trained_prediction=layering_prediction,
                 zero_shot_label=layering_label,
                 zero_shot_confidence=layering_score,
             )
@@ -329,9 +476,13 @@ class OutfitAnalyzer:
             layering_confidence = layering.confidence
             layering_reason = layering.reason
             attribute_sources["layering_state"] = (
-                "derived_attribute_conflict"
-                if layering.state == "레이어드"
-                else "zero_shot_roi"
+                "trained_multi_roi_head"
+                if layering_prediction is not None and layering_prediction.accepted
+                else (
+                    "derived_attribute_conflict"
+                    if layering.state == "레이어드"
+                    else "zero_shot_roi"
+                )
             )
 
             refined_upper_type = _refine_upper_type(
@@ -493,6 +644,13 @@ class OutfitAnalyzer:
         notes.append(
             f"레이어드 상태: {layering_state} ({layering_reason}, 신뢰도 {layering_confidence:.2f})."
         )
+        if layering_prediction is not None:
+            notes.append(
+                "멀티 ROI 레이어드 헤드: "
+                f"단일 {layering_prediction.scores['단일 옷']:.2f}, "
+                f"레이어드 {layering_prediction.scores['겹쳐입음']:.2f}; "
+                f"안옷 {layering_prediction.inner_category}, 겉옷 {layering_prediction.outer_category}."
+            )
         return (
             OutfitAnalysis(
                 parser_backend=self.parser.backend,
@@ -509,6 +667,9 @@ class OutfitAnalyzer:
                 sleeve_length=attributes["sleeve_length"],
                 visible_sleeve_length=sleeve.visible_length,
                 sleeve_state=sleeve.state,
+                input_valid=not sleeve.requires_retake,
+                input_error_code=sleeve.error_code,
+                input_error_message=sleeve.error_message,
                 layering_state=layering_state,
                 upper_items=upper_items or [attributes["upper_type"]],
                 inner_category=inner_category,
