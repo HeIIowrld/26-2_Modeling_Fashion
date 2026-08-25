@@ -41,7 +41,7 @@
   <section class="panel is-active" id="panel-1" aria-labelledby="h-upload">
     <div class="hero">
       <p class="eyebrow">STEP 01</p>
-      <h1 id="h-upload">전신사진 한 장으로<br />오늘의 코디를 찾습니다</h1>
+      <h1 id="h-upload">전신 사진 한 장으로<br />나에게 맞는 코디를 찾아보세요</h1>
     </div>
 
     <div class="upload-grid">
@@ -56,7 +56,7 @@
           </div>
           <p class="dz-title">사진을 끌어다 놓거나 클릭해 선택</p>
           <p class="dz-sub">JPG · PNG · WEBP / 최대 12MB</p>
-          <p class="dz-privacy">분석이 끝나고 30분 뒤 자동 삭제됩니다</p>
+          <p class="dz-privacy">업로드한 사진은 분석 완료 후 30분 이내 자동으로 삭제돼요.</p>
         </div>
         <div class="dropzone-preview" id="dropzone-preview" hidden>
           <img id="preview-img" alt="업로드한 전신사진 미리보기" />
@@ -84,8 +84,8 @@
         </summary>
         <div class="disclosure-body">
           <p class="field-hint">
-            몸선이 드러나는 옷을 입은 정면 전신사진을 넣으면 체형을 더 정확히 봅니다.
-            없으면 위 코디 사진으로 추정합니다. 이 사진도 30분 뒤 함께 삭제됩니다.
+            몸선이 드러나는 옷을 입은 정면 전신사진을 넣으면 체형을 더 정확히 봐요.
+            없으면 위 코디 사진으로 추정해요. 이 사진도 30분 뒤 함께 삭제돼요.
           </p>
           <div class="dropzone dropzone-sm" id="body-dropzone" tabindex="0" role="button" aria-label="체형 사진 업로드">
             <input type="file" id="body-file-input" accept="image/jpeg,image/png,image/webp" hidden />
@@ -104,7 +104,7 @@
     </div>
 
     <div class="panel-actions">
-      <button class="btn btn-primary" id="to-step-2" type="button" disabled>조건 입력하기</button>
+      <button class="btn btn-primary" id="to-step-2" type="button" disabled>다음: 조건 입력</button>
     </div>
   </section>
 
@@ -112,8 +112,8 @@
   <section class="panel" id="panel-2" aria-labelledby="h-conditions">
     <div class="hero hero-compact">
       <p class="eyebrow">STEP 02</p>
-      <h1 id="h-conditions">어떤 자리에, 어떤 모습으로</h1>
-      <p class="lede">필수 항목만 채워도 추천이 나옵니다. 아래로 갈수록 선택 항목이에요.</p>
+      <h1 id="h-conditions">원하는 코디 조건을 알려주세요</h1>
+      <p class="lede">목적과 예산만 선택해도 추천받을 수 있어요. 나머지 항목은 선택 사항이에요.</p>
     </div>
 
     <form id="condition-form" class="form">
@@ -138,11 +138,19 @@
           </label>
         </div>
         <label class="field">
-          <span class="field-label">
-            예산 <em class="field-value" id="budget-value">150,000원</em>
-          </span>
-          <input type="range" name="budget" id="f-budget" min="30000" max="500000" step="10000" value="150000" />
-          <span class="field-hint">상·하의 합계 기준입니다.</span>
+          <span class="field-label">예산 <em class="badge required">필수</em></span>
+          <div class="budget-row">
+            <label class="budget-input">
+              <input type="text" name="min_budget" id="f-min-budget" placeholder="최소 예산" inputmode="numeric" />
+              <span class="unit">원</span>
+            </label>
+            <span class="budget-sep">~</span>
+            <label class="budget-input">
+              <input type="text" name="max_budget" id="f-max-budget" placeholder="최대 예산" inputmode="numeric" />
+              <span class="unit">원</span>
+            </label>
+          </div>
+          <span class="field-hint">입력한 최소·최대 예산 범위 안에서 상품을 추천해요. 상·하의 합계 기준이에요.</span>
         </label>
       </fieldset>
 
@@ -204,7 +212,7 @@
 
       <details class="disclosure">
         <summary>
-          <span>보유 옷 <em>선택 · 활용도 5점 추가</em></span>
+          <span>보유 옷 <em>선택 · 선택한 옷을 추천 코디에 우선 활용해요.</em></span>
         </summary>
         <div class="disclosure-body">
           <div id="wardrobe-list" class="wardrobe-list"></div>
@@ -214,29 +222,28 @@
 
       <details class="disclosure">
         <summary>
-          <span>쓰리사이즈 <em>선택</em></span>
+          <span>신체·사이즈 정보 <em>선택</em></span>
         </summary>
         <div class="disclosure-body">
           <p class="field-hint">
-            적으면 더 자세한 코디 추천을 받을 수 있어요. 비워두면 사진으로 추정합니다.
+            적으면 더 자세한 코디 추천을 받을 수 있어요. 비워두면 사진으로 추정해요.
           </p>
-          <div class="grid-3">
-            <label class="field"><span class="field-label">가슴둘레 (cm)</span><input type="number" name="chest_cm" min="60" max="160" placeholder="예: 88" /></label>
-            <label class="field"><span class="field-label">허리둘레 (cm)</span><input type="number" name="waist_cm" min="50" max="160" placeholder="예: 70" /></label>
-            <label class="field"><span class="field-label">엉덩이둘레 (cm)</span><input type="number" name="hip_cm" min="60" max="170" placeholder="예: 92" /></label>
-          </div>
           <div class="grid-2">
             <label class="field"><span class="field-label">키 (cm)</span><input type="number" name="height_cm" min="120" max="220" placeholder="예: 170" /></label>
             <label class="field"><span class="field-label">체중 (kg)</span><input type="number" name="weight_kg" min="30" max="200" placeholder="예: 62" /></label>
           </div>
-          <p class="field-hint">키·체중은 기록용입니다. 현재 추천 점수에는 쓰이지 않습니다.</p>
+          <div class="grid-2">
+            <label class="field"><span class="field-label">평소 상의 사이즈</span><input type="text" name="usual_top_size" placeholder="예: M" /></label>
+            <label class="field"><span class="field-label">평소 하의 사이즈</span><input type="text" name="usual_bottom_size" placeholder="예: 28" /></label>
+          </div>
+          <p class="field-hint">키·체중은 기록용이에요. 추천 점수에는 영향을 주지 않을 수 있어요.</p>
         </div>
       </details>
     </form>
 
     <div class="panel-actions">
       <button class="btn btn-ghost" id="back-to-1" type="button">이전</button>
-      <button class="btn btn-primary" id="start-analysis" type="button">코디 추천 받기</button>
+      <button class="btn btn-primary" id="start-analysis" type="button">분석 시작하기</button>
     </div>
   </section>
 
@@ -267,6 +274,13 @@
       <p class="eyebrow">STEP 04</p>
       <h1 id="h-result">추천 결과</h1>
       <p class="lede" id="result-lede"></p>
+    </div>
+    <div class="budget-mismatch" id="budget-mismatch" hidden>
+      <h2>입력한 예산에 맞는 상품을 찾지 못했어요</h2>
+      <p>최소·최대 예산을 조정한 뒤 다시 시도해주세요.</p>
+      <div class="panel-actions">
+        <button class="btn btn-primary" id="budget-fix-btn" type="button">예산 수정하기</button>
+      </div>
     </div>
 
     <div class="view-tabs" role="tablist" aria-label="결과 보기 전환">
@@ -332,8 +346,8 @@
 
     <div class="privacy-bar" id="privacy-bar">
       <div>
-        <strong>업로드한 사진은 <span id="retention-minutes">30</span>분 뒤 자동으로 삭제됩니다.</strong>
-        <span>지금 바로 지우려면 오른쪽 버튼을 누르세요. 결과 이미지도 함께 사라집니다.</span>
+        <strong>업로드한 사진은 분석 완료 후 <span id="retention-minutes">30</span>분 이내 자동으로 삭제돼요.</strong>
+        <span>지금 바로 지우려면 오른쪽 버튼을 누르세요. 결과 이미지도 함께 사라져요.</span>
       </div>
       <button class="btn btn-ghost btn-sm" id="delete-now" type="button">지금 사진 삭제</button>
     </div>

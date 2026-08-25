@@ -23,6 +23,21 @@
   --maxw: 1180px;
 }
 
+/* UI badges and budget inputs */
+.badge { display: inline-block; font-size: 12px; padding: 3px 8px; border-radius: 999px; margin-left:8px; color: var(--ink-faint); border: 1px solid var(--line); background: transparent; }
+.badge.required { color: var(--bad); border-color: rgba(163,58,50,.15); }
+.badge.optional { color: var(--ink-faint); }
+
+.budget-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.budget-input { position: relative; display: inline-flex; align-items: center; }
+.budget-input input { width: 140px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg-elev); }
+.budget-sep { font-size: 18px; color: var(--ink-faint); }
+.unit { margin-left: 6px; color: var(--ink-faint); font-size: 13px; }
+
+.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+
+
 :root[data-theme="dark"],
 :root:not([data-theme="light"]) {
   color-scheme: light;
