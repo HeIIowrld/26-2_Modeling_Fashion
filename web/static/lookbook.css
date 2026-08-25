@@ -304,6 +304,43 @@ select {
 .budget-input input:focus ~ .unit { color: var(--ink); }
 .budget-sep { font-size: 1.05rem; color: var(--ink-soft); }
 
+/* 필수 블록 — 여기까지만 채우면 추천이 나온다는 걸 면으로 보여준다. */
+.required-block {
+  border: 1px solid var(--line-strong); border-radius: var(--r-md);
+  padding: 26px 26px 30px; margin-bottom: 40px;
+}
+.required-title {
+  font-size: 1.05rem; font-weight: 900; margin: 0 0 20px;
+  display: flex; align-items: center; gap: 10px; letter-spacing: -.01em;
+}
+.required-title::after {
+  content: ""; flex: 1; height: 1px; background: var(--line);
+}
+.required-block .grid-2 { margin-bottom: 20px; }
+
+/* 선택 블록 — 열어본 사람만 더 정밀해진다. */
+.optional-head { margin-bottom: 4px; }
+.optional-head h2 { font-size: 1rem; font-weight: 900; margin: 0 0 4px; letter-spacing: -.01em; }
+.optional-head p { font-size: .85rem; color: var(--ink-soft); margin: 0 0 8px; }
+.optional-block > .disclosure:last-of-type { border-bottom: 1px solid var(--line); }
+
+/* 무엇이 남았는지 미리 알려준다. 누른 뒤에 토스트로 알리면 이미 늦다. */
+.gate-note {
+  flex: 1 1 auto; margin: 0; align-self: center;
+  font-size: .85rem; color: var(--ink-soft);
+}
+.gate-note[data-tone="ok"] { color: var(--good); font-weight: 500; }
+.gate-note[data-tone="bad"] { color: var(--bad); font-weight: 700; }
+
+/* 결과 칸이 분석을 기다리는 동안 */
+.step.is-working { color: var(--ink); font-weight: 700; }
+.step.is-working .step-num { color: var(--signal-ink); opacity: 1; }
+.step.is-working::after {
+  content: ""; width: 11px; height: 11px; margin-left: 2px;
+  border: 2px solid var(--signal); border-right-color: transparent; border-radius: 50%;
+  animation: spin .9s linear infinite;
+}
+
 /* ── 아코디언 ─────────────────────────────────────────── */
 .disclosure { border-top: 1px solid var(--line); }
 .disclosure summary {
@@ -369,7 +406,7 @@ select {
 .btn-sm { min-height: 44px; padding: 10px 16px; font-size: .85rem; }
 .btn:disabled { opacity: .42; cursor: not-allowed; }
 
-.panel-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px; flex-wrap: wrap; }
+.panel-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 30px; flex-wrap: wrap; }
 .hero-copy .panel-actions { justify-content: flex-start; margin-top: 30px; }
 
 /* ── 3단계: 분석 ──────────────────────────────────────── */
@@ -676,6 +713,8 @@ select {
 
 @media (max-width: 860px) {
   :root { --gutter: 20px; }
+  .required-block { padding: 20px 18px 24px; }
+  .gate-note { flex: 1 1 100%; order: -1; margin-bottom: 4px; }
   .topbar-inner { flex-wrap: wrap; min-height: 0; padding-top: 10px; padding-bottom: 0; }
   .stepper { order: 3; width: 100%; overflow-x: auto; border-top: 1px solid var(--line); }
   .step { flex: 1 0 auto; justify-content: center; }
@@ -703,6 +742,7 @@ select {
 @media (prefers-reduced-motion: reduce) {
   /* 상태 변화 자체는 남기고, 이동만 없앤다. */
   .panel.is-active, .view, .toast { animation: none; }
+  .step.is-working::after { animation: none; border-right-color: var(--signal); }
   .stage.is-active .stage-dot { animation: none; border-right-color: var(--signal); }
   .pick:hover { transform: none; }
   * { transition-duration: .01ms !important; }

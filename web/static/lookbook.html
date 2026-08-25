@@ -16,11 +16,12 @@
   <div class="topbar-inner">
     <a class="brand" href="#main">FITTA</a>
 
+    <!-- 사용자가 실제로 하는 일은 셋이다. 분석은 기다리는 상태지 단계가 아니라서
+         스테퍼에서 빼고 '결과' 자리에 진행 중 표시로 얹는다. -->
     <nav class="stepper" id="stepper" aria-label="진행 단계">
       <button class="step is-active" type="button" data-goto="1"><span class="step-num">01</span><span class="step-label">사진</span></button>
       <button class="step" type="button" data-goto="2"><span class="step-num">02</span><span class="step-label">조건</span></button>
-      <button class="step" type="button" data-goto="3"><span class="step-num">03</span><span class="step-label">분석</span></button>
-      <button class="step" type="button" data-goto="4"><span class="step-num">04</span><span class="step-label">결과</span></button>
+      <button class="step" type="button" data-goto="4"><span class="step-num">03</span><span class="step-label">결과</span></button>
     </nav>
 
     <button class="theme-toggle" id="theme-toggle" type="button" aria-label="테마 전환">
@@ -104,28 +105,25 @@
   <section class="panel" id="panel-2" aria-labelledby="h-conditions">
     <div class="block-head">
       <h1 id="h-conditions"><span class="block-num">02</span> 원하는 코디 조건을 알려주세요</h1>
-      <p class="lede">목적과 예산만 선택해도 추천받을 수 있어요. 나머지 항목은 선택 사항이에요.</p>
+      <p class="lede">정할 건 세 가지예요. 나머지는 비워두면 사진과 기본값으로 알아서 채워요.</p>
     </div>
 
     <form id="condition-form" class="form">
-      <fieldset class="field-group">
-        <legend>기본 조건</legend>
+      <!-- 필수 세 가지만 앞에 둔다. 나머지를 같은 무게로 깔아두면
+           '다 채워야 한다'는 인상을 주고, 실제로 그래서 이탈이 생긴다. -->
+      <section class="required-block" aria-labelledby="h-required">
+        <h2 class="required-title" id="h-required">꼭 정해야 하는 것</h2>
+
         <div class="grid-2">
           <label class="field">
             <span class="field-label">코디 목적 <em class="badge required">필수</em></span>
             <select name="purpose" id="f-purpose"></select>
+            <span class="field-hint">어떤 자리에 입을 옷인지에 따라 규칙이 달라져요.</span>
           </label>
           <label class="field">
             <span class="field-label">바꾸고 싶은 범위 <em class="badge required">필수</em></span>
             <select name="change_scope" id="f-scope"></select>
-          </label>
-          <label class="field">
-            <span class="field-label">원하는 스타일 <em class="badge optional">선택</em></span>
-            <select name="desired_style" id="f-style"></select>
-          </label>
-          <label class="field">
-            <span class="field-label">계절 <em class="badge optional">선택</em></span>
-            <select name="season" id="f-season"></select>
+            <span class="field-hint">상·하의 중 어디를 새로 추천받을지 정해요.</span>
           </label>
         </div>
 
@@ -150,95 +148,119 @@
           </div>
           <span class="field-hint" id="budget-hint">입력한 최소·최대 예산 범위 안에서 상품을 추천해요. 상·하의 합계 기준이에요. 30,000 ~ 500,000원</span>
         </label>
-      </fieldset>
+      </section>
 
-      <fieldset class="field-group">
-        <legend>실루엣과 격식</legend>
-        <div class="grid-3">
-          <label class="field">
-            <span class="field-label">체형 반영 <em class="badge optional">선택</em></span>
-            <select name="silhouette_goal" id="f-silhouette"></select>
-            <span class="field-hint">고른 목표에만 체형을 반영해요.</span>
-          </label>
-          <label class="field">
-            <span class="field-label">드레스 코드 <em class="badge optional">선택</em></span>
-            <select name="dress_code" id="f-dresscode"></select>
-          </label>
-          <label class="field">
-            <span class="field-label">활동량 <em class="badge optional">선택</em></span>
-            <select name="activity_level" id="f-activity"></select>
-          </label>
+      <!-- 선택 항목은 전부 이 아래로. 열어본 사람만 더 정밀해진다. -->
+      <div class="optional-block">
+        <div class="optional-head">
+          <h2>더 정확하게 맞추고 싶다면</h2>
+          <p>모두 선택 사항이에요. 채울수록 추천 근거가 늘어나요.</p>
         </div>
-      </fieldset>
 
-      <details class="disclosure">
-        <summary><span>색상·소재 선호 <em class="badge optional">선택</em></span></summary>
-        <div class="disclosure-body">
-          <div class="field">
-            <span class="field-label">선호 색상</span>
-            <div class="swatches" id="preferred-colors"></div>
+        <details class="disclosure">
+          <summary><span>스타일과 격식 <em class="badge optional">선택</em></span></summary>
+          <div class="disclosure-body">
+            <div class="grid-2">
+              <label class="field">
+                <span class="field-label">원하는 스타일</span>
+                <select name="desired_style" id="f-style"></select>
+              </label>
+              <label class="field">
+                <span class="field-label">계절</span>
+                <select name="season" id="f-season"></select>
+              </label>
+            </div>
+            <div class="grid-3">
+              <label class="field">
+                <span class="field-label">체형 반영</span>
+                <select name="silhouette_goal" id="f-silhouette"></select>
+                <span class="field-hint">고른 목표에만 체형을 반영해요.</span>
+              </label>
+              <label class="field">
+                <span class="field-label">드레스 코드</span>
+                <select name="dress_code" id="f-dresscode"></select>
+              </label>
+              <label class="field">
+                <span class="field-label">활동량</span>
+                <select name="activity_level" id="f-activity"></select>
+              </label>
+            </div>
           </div>
-          <div class="field">
-            <span class="field-label">피하고 싶은 색상</span>
-            <div class="swatches" id="avoided-colors"></div>
-          </div>
-          <div class="field">
-            <span class="field-label">피하고 싶은 소재</span>
-            <div class="pills" id="avoided-materials"></div>
-          </div>
-        </div>
-      </details>
+        </details>
 
-      <details class="disclosure">
-        <summary><span>상세 날씨 <em class="badge optional">선택</em></span></summary>
-        <div class="disclosure-body">
-          <p class="field-hint">입력한 항목에 해당하는 규칙만 추천에 적용돼요.</p>
-          <div class="grid-3">
-            <label class="field"><span class="field-label">기온 (°C)</span><input type="number" name="temperature_c" step="0.5" placeholder="예: 18" /></label>
-            <label class="field"><span class="field-label">체감온도 (°C)</span><input type="number" name="feels_like_c" step="0.5" placeholder="예: 16" /></label>
-            <label class="field"><span class="field-label">습도 (%)</span><input type="number" name="humidity" min="0" max="100" placeholder="예: 60" /></label>
-            <label class="field"><span class="field-label">강수확률 (%)</span><input type="number" name="precipitation_probability" min="0" max="100" placeholder="예: 30" /></label>
-            <label class="field"><span class="field-label">풍속 (m/s)</span><input type="number" name="wind_mps" step="0.1" min="0" placeholder="예: 3" /></label>
-            <label class="field"><span class="field-label">자외선 지수</span><input type="number" name="uv_index" step="1" min="0" max="12" placeholder="예: 5" /></label>
+        <details class="disclosure">
+          <summary><span>색상·소재 선호 <em class="badge optional">선택</em></span></summary>
+          <div class="disclosure-body">
+            <div class="field">
+              <span class="field-label">선호 색상</span>
+              <div class="swatches" id="preferred-colors"></div>
+            </div>
+            <div class="field">
+              <span class="field-label">피하고 싶은 색상</span>
+              <div class="swatches" id="avoided-colors"></div>
+            </div>
+            <div class="field">
+              <span class="field-label">피하고 싶은 소재</span>
+              <div class="pills" id="avoided-materials"></div>
+            </div>
           </div>
-        </div>
-      </details>
+        </details>
 
-      <details class="disclosure">
-        <summary><span>현재 옷 활용 <em class="badge optional">선택 · 선택한 옷을 추천 코디에 우선 활용해요.</em></span></summary>
-        <div class="disclosure-body">
-          <div id="wardrobe-list" class="wardrobe-list"></div>
-          <button class="btn btn-ghost btn-sm" id="add-wardrobe" type="button">+ 보유 옷 추가</button>
-        </div>
-      </details>
+        <details class="disclosure">
+          <summary><span>상세 날씨 <em class="badge optional">선택</em></span></summary>
+          <div class="disclosure-body">
+            <p class="field-hint">입력한 항목에 해당하는 규칙만 추천에 적용돼요.</p>
+            <div class="grid-3">
+              <label class="field"><span class="field-label">기온 (°C)</span><input type="number" name="temperature_c" step="0.5" placeholder="예: 18" /></label>
+              <label class="field"><span class="field-label">체감온도 (°C)</span><input type="number" name="feels_like_c" step="0.5" placeholder="예: 16" /></label>
+              <label class="field"><span class="field-label">습도 (%)</span><input type="number" name="humidity" min="0" max="100" placeholder="예: 60" /></label>
+              <label class="field"><span class="field-label">강수확률 (%)</span><input type="number" name="precipitation_probability" min="0" max="100" placeholder="예: 30" /></label>
+              <label class="field"><span class="field-label">풍속 (m/s)</span><input type="number" name="wind_mps" step="0.1" min="0" placeholder="예: 3" /></label>
+              <label class="field"><span class="field-label">자외선 지수</span><input type="number" name="uv_index" step="1" min="0" max="12" placeholder="예: 5" /></label>
+            </div>
+          </div>
+        </details>
 
-      <details class="disclosure">
-        <summary><span>신체·사이즈 정보 <em class="badge optional">선택</em></span></summary>
-        <div class="disclosure-body">
-          <p class="field-hint">적으면 더 자세한 코디 추천을 받을 수 있어요. 비워두면 사진으로 추정해요.</p>
-          <div class="grid-2">
-            <label class="field"><span class="field-label">키 (cm)</span><input type="number" name="height_cm" min="120" max="220" placeholder="예: 170" /></label>
-            <label class="field"><span class="field-label">체중 (kg)</span><input type="number" name="weight_kg" min="30" max="200" placeholder="예: 62" /></label>
+        <details class="disclosure">
+          <summary><span>현재 옷 활용 <em class="badge optional">선택</em></span></summary>
+          <div class="disclosure-body">
+            <p class="field-hint">선택한 옷을 추천 코디에 우선 활용해요.</p>
+            <div id="wardrobe-list" class="wardrobe-list"></div>
+            <button class="btn btn-ghost btn-sm" id="add-wardrobe" type="button">+ 보유 옷 추가</button>
           </div>
-          <div class="grid-2">
-            <label class="field"><span class="field-label">평소 상의 사이즈</span><input type="text" name="usual_top_size" placeholder="예: M" /></label>
-            <label class="field"><span class="field-label">평소 하의 사이즈</span><input type="text" name="usual_bottom_size" placeholder="예: 28" /></label>
+        </details>
+
+        <details class="disclosure">
+          <summary><span>신체·사이즈 정보 <em class="badge optional">선택</em></span></summary>
+          <div class="disclosure-body">
+            <p class="field-hint">적으면 더 자세한 코디 추천을 받을 수 있어요. 비워두면 사진으로 추정해요.</p>
+            <div class="grid-2">
+              <label class="field"><span class="field-label">키 (cm)</span><input type="number" name="height_cm" min="120" max="220" placeholder="예: 170" /></label>
+              <label class="field"><span class="field-label">체중 (kg)</span><input type="number" name="weight_kg" min="30" max="200" placeholder="예: 62" /></label>
+            </div>
+            <div class="grid-2">
+              <label class="field"><span class="field-label">평소 상의 사이즈</span><input type="text" name="usual_top_size" placeholder="예: M" /></label>
+              <label class="field"><span class="field-label">평소 하의 사이즈</span><input type="text" name="usual_bottom_size" placeholder="예: 28" /></label>
+            </div>
+            <p class="field-hint">키·체중은 기록용이에요. 추천 점수에는 영향을 주지 않을 수 있어요.</p>
           </div>
-          <p class="field-hint">키·체중은 기록용이에요. 추천 점수에는 영향을 주지 않을 수 있어요.</p>
-        </div>
-      </details>
+        </details>
+      </div>
     </form>
 
     <div class="panel-actions">
+      <!-- 1단계는 사진이 없으면 버튼이 잠긴다. 2단계도 같은 규칙을 따라야
+           '눌러보고 나서야 뭐가 빠졌는지 아는' 상황이 생기지 않는다. -->
+      <p class="gate-note" id="gate-note" role="status" aria-live="polite"></p>
       <button class="btn btn-ghost" id="back-to-1" type="button">이전</button>
       <button class="btn btn-primary" id="start-analysis" type="button">분석 시작하기</button>
     </div>
   </section>
 
-  <!-- ── 3단계: 분석 ───────────────────────────────────────── -->
+  <!-- ── 분석 (단계가 아니라 결과로 가는 도중의 상태) ────────── -->
   <section class="panel" id="panel-3" aria-labelledby="h-analyzing">
     <div class="block-head">
-      <h1 id="h-analyzing"><span class="block-num">03</span> 분석하고 있어요</h1>
+      <h1 id="h-analyzing">분석하고 있어요</h1>
       <p class="lede">첫 실행에서는 모델 체크포인트를 올리느라 시간이 조금 더 걸려요.</p>
     </div>
 
@@ -255,10 +277,10 @@
     </div>
   </section>
 
-  <!-- ── 4단계: 결과 ───────────────────────────────────────── -->
+  <!-- ── 3단계: 결과 ───────────────────────────────────────── -->
   <section class="panel" id="panel-4" aria-labelledby="h-result">
     <div class="block-head">
-      <h1 id="h-result"><span class="block-num">04</span> 오늘의 추천</h1>
+      <h1 id="h-result"><span class="block-num">03</span> 오늘의 추천</h1>
       <p class="lede" id="result-lede"></p>
     </div>
 
@@ -353,5 +375,6 @@
 
 <script src="config.js"></script>
 <script src="app.js"></script>
+<script src="lookbook.js"></script>
 </body>
 </html>
