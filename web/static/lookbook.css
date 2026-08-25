@@ -466,8 +466,11 @@ select {
 .view { animation: rise .24s cubic-bezier(.16, 1, .3, 1) both; }
 
 /* 코디 후보 — 룩북의 상품 카드 그리드 */
+/* 추천 개수가 3개든 4개든 아래 상세 블록과 같은 폭으로 꽉 차야 한다.
+   고정 4열이면 3개일 때 마지막 칸이 비어 폭이 어긋난다. auto-fit 은
+   빈 트랙을 접고 남은 카드가 그 자리를 나눠 갖는다. */
 .reco-picker {
-  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 20px; margin-bottom: 34px;
 }
 .pick {
@@ -707,7 +710,6 @@ select {
 
 /* ── 반응형 ───────────────────────────────────────────── */
 @media (max-width: 1080px) {
-  .reco-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .analysis-grid { grid-template-columns: 1fr; }
 }
 
@@ -733,7 +735,6 @@ select {
 @media (max-width: 520px) {
   .step-label { display: none; }
   .step-num { font-size: .88rem; }
-  .reco-picker { grid-template-columns: 1fr; }
   .product { grid-template-columns: auto 1fr; }
   .product-price { grid-column: 2; text-align: right; }
 }
