@@ -474,7 +474,11 @@ function renderCurrentOutfit(result) {
 
   const rows = [
     ["상의 종류", outfit.upper_type, outfit.attribute_sources.upper_type],
+    ["레이어드", outfit.layering_state, outfit.attribute_sources.layering_state],
+    ["감지된 상의", (outfit.upper_items || []).join(" + "), outfit.attribute_sources.layering_state],
     ["소매 길이", outfit.sleeve_length, outfit.attribute_sources.sleeve_length],
+    ["현재 보이는 소매", outfit.visible_sleeve_length, outfit.attribute_sources.sleeve_state],
+    ["소매 착용 상태", outfit.sleeve_state, outfit.attribute_sources.sleeve_state],
     ["소매 형태", outfit.sleeve_shape, outfit.attribute_sources.sleeve_shape],
     ["상의 기장", outfit.upper_length, outfit.attribute_sources.upper_length],
     ["넥라인", outfit.neckline, outfit.attribute_sources.neckline],
@@ -521,6 +525,9 @@ function sourceLabel(source) {
     mask: "마스크 측정",
     derived_category: "카테고리 유도",
     derived_category_collar: "칼라 유도",
+    derived_attribute_conflict: "속성 교차검증",
+    zero_shot_roi: "부위별 제로샷",
+    visible_mask_and_trained_head: "학습 헤드+마스크",
     not_visible: "가려짐",
   }[source] || source;
 }

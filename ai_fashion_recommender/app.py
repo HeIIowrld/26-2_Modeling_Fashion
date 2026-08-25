@@ -20,7 +20,10 @@ import gradio as gr
 # 런타임 모듈은 src/에 있다. 임포트 전에 경로를 등록한다.
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
-from config import DATA_DIR, FASHION_ATTRIBUTE_HEADS_PATH, OUTPUT_DIR, PROJECT_DIR, garment_image_path
+from config import (
+    DATA_DIR, FASHION_ATTRIBUTE_HEADS_PATH, LAYERING_HEADS_PATH,
+    OUTPUT_DIR, PROJECT_DIR, garment_image_path,
+)
 from clothing_parser import ClothingParser
 from fashion_model import FashionClassifier
 from outfit_analyzer import OutfitAnalyzer
@@ -55,11 +58,13 @@ def get_pipeline() -> dict:
         # 학습된 의류 속성 헤드(models/fashion_attribute_heads.pt)가 있으면
         # FashionSigLIP 특징 위에 얹어 옷 종류·속성 인식에 사용한다.
         heads = FASHION_ATTRIBUTE_HEADS_PATH if FASHION_ATTRIBUTE_HEADS_PATH.is_file() else None
+        layering_heads = LAYERING_HEADS_PATH if LAYERING_HEADS_PATH.is_file() else None
         if not _light_mode and heads is None:
             print(f"학습된 속성 헤드가 없어 zero-shot 분류만 사용합니다: {FASHION_ATTRIBUTE_HEADS_PATH}")
         classifier = FashionClassifier(
             enabled=not _light_mode,
             attribute_checkpoint=None if _light_mode else heads,
+            layering_checkpoint=None if _light_mode else layering_heads,
         )
         if _use_vton:
             from catvton_tryon import CatVTONTryOn
@@ -119,7 +124,10 @@ def _analysis_markdown(quality: dict, pose, outfit) -> str:
         "#### 현재 착장",
         f"- 상의: {outfit.upper_type} ({outfit.upper_color}) / 하의: {outfit.lower_type} ({outfit.lower_color})",
         f"- 스타일 {outfit.style}, 색 조화 '{outfit.color_harmony}', 핏 {outfit.fit}",
-        f"- 소매 {outfit.sleeve_length}, 패턴 {outfit.pattern}, 소재 {outfit.material}",
+        f"- 소매 {outfit.sleeve_length} / 착용 상태 {outfit.sleeve_state}, "
+        f"패턴 {outfit.pattern}, 소재 {outfit.material}",
+        f"- 레이어드 {outfit.layering_state}: "
+        f"{', '.join(outfit.upper_items) if outfit.upper_items else '분석 보류'}",
         "",
         *[f"_{note}_" for note in outfit.notes],
     ])
@@ -138,6 +146,10 @@ def recommend_outfits(image_path, purpose, style, budget, scope, season):
         return (*empty[:2], f"전신이 충분히 보이지 않아 분석을 중단했습니다.\n{issues}", "")
 
     outfit, parsed = pipeline["outfit"].analyze(image_path, pose)
+    if not outfit.input_valid:
+        analysis = _analysis_markdown(quality, pose, outfit)
+        error = f"### 입력 사진 재촬영 필요\n\n{outfit.input_error_message}"
+        return (*empty[:2], analysis, error)
     profile = UserProfile(
         purpose=purpose,
         desired_style=style,

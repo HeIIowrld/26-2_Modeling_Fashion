@@ -17,7 +17,13 @@ for _path in (PROJECT_DIR, PROJECT_DIR / "src"):
         sys.path.insert(0, str(_path))
 
 from clothing_parser import ClothingParser
-from config import DATA_DIR, ENABLE_VTON, OUTPUT_DIR, resolve_catalog
+from config import (
+    DATA_DIR,
+    ENABLE_VTON,
+    FASHION_ATTRIBUTE_HEADS_PATH,
+    OUTPUT_DIR,
+    resolve_catalog,
+)
 from fashion_model import FashionClassifier
 from feedback_store import FeedbackStore
 from outfit_analyzer import COLOR_PALETTE, OutfitAnalyzer
@@ -30,7 +36,7 @@ from schemas import GOAL_NONE, SILHOUETTE_GOAL_CHOICES, UserProfile, WardrobeIte
 from virtual_tryon import TryOnNotReady, VirtualTryOnAdapter
 
 RULES_PATH = PROJECT_DIR / "FASHION_RULES_MASTER.md"
-ATTRIBUTE_HEADS_PATH = PROJECT_DIR / "models" / "fashion_attribute_heads.pt"
+ATTRIBUTE_HEADS_PATH = FASHION_ATTRIBUTE_HEADS_PATH
 
 PURPOSES = list(PURPOSE_STYLES)
 STYLES = ["캐주얼", "미니멀", "포멀", "스포티", "스트리트", "로맨틱"]

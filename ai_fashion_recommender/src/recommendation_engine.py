@@ -10,6 +10,7 @@ from fashion_rules import FashionRuleBook
 from outfit_analyzer import COLOR_PALETTE, NEUTRALS, color_harmony
 from product_catalog import ProductCatalog
 from schemas import (
+    CurrentOutfitEvaluation,
     FOCUS_LOWER,
     FOCUS_UPPER,
     SHAPE_HOURGLASS,
@@ -119,8 +120,8 @@ class RecommendationEngine:
         "R-SIL-01", "R-SIL-03", "R-SIL-05", "R-SIL-06",
         "R-COL-01", "R-COL-02", "R-COL-03", "R-COL-04", "R-COL-05",
         "R-COL-08", "R-COL-10", "R-COL-11", "R-COL-13",
-        "R-PAT-01", "R-PAT-03", "R-PAT-04", "R-MAT-01", "R-MAT-02", "R-CMP-01",
-        "R-BOD-01", "R-BOD-02", "R-BOD-03", "R-BOD-04",
+        "R-PAT-01", "R-PAT-03", "R-PAT-04", "R-MAT-01", "R-MAT-02", "R-CMP-01", "R-CMP-02",
+        "R-BOD-01", "R-BOD-02", "R-BOD-03", "R-BOD-04", "R-BOD-05", "R-BOD-06",
         "R-WEA-01", "R-WEA-02", "R-WEA-03", "R-WEA-04",
         "R-OWN-01",
     }
@@ -140,6 +141,18 @@ class RecommendationEngine:
         "color": 0.15,
         "pattern_material_complexity": 0.10,
         "preference": 0.08,
+    }
+
+    # 현재 착장은 후보 상품과 달리 '무난해서 실패하지 않는가'보다 사진에 보이는
+    # 스타일링 완성도와 체형-핏 상호작용을 더 강하게 본다. 분석 불가능한 축은
+    # evaluate_current_outfit 에서 제외한 뒤 남은 배점만 다시 정규화한다.
+    CURRENT_OUTFIT_WEIGHTS = {
+        "purpose_tpo": 0.15,
+        "silhouette": 0.30,
+        "color": 0.15,
+        "pattern_material_complexity": 0.10,
+        "styling_intent": 0.20,
+        "preference": 0.10,
     }
 
     UNSUPPORTED_RULE_REASONS = {
@@ -431,6 +444,27 @@ class RecommendationEngine:
         saturation = colorsys.rgb_to_hsv(*(value / 255 for value in rgb))[1]
         return saturation >= 0.42
 
+    @staticmethod
+    def _is_tight_fit(fit: str) -> bool:
+        cleaned = fit.replace(" 추정", "")
+        return any(word in cleaned for word in ("슬림", "스키니", "타이트", "바디"))
+
+    @staticmethod
+    def _is_short_bottom(length: str) -> bool:
+        return any(word in length for word in ("쇼츠", "미니", "반바지", "무릎"))
+
+    @staticmethod
+    def _has_upper_structure(top: dict) -> bool:
+        structural_types = {"재킷", "블레이저", "셔츠", "블라우스", "코트", "베스트"}
+        structural_necklines = ("보트", "스퀘어", "오프숄더", "칼라", "라펠", "세일러")
+        return (
+            top["item_type"].replace(" 추정", "") in structural_types
+            or any(word in top["neckline"] for word in structural_necklines)
+            or top["pattern"] not in {"", "무지", "분석 보류", "패턴 불확실"}
+            or top["detail_level"] >= 3
+            or RecommendationEngine._is_large_fit(top["fit"], "top")
+        )
+
     # 체형이 알려주는 "시선을 나눠 줄 쪽". 상품 카탈로그의 body_shapes 칼럼과 짝이 맞는다.
     # 마름모꼴·둥근체형은 허리가 중심이라 대응하는 R-BOD 규칙이 문서에 아직 없어 비워 둔다.
     BODY_SHAPE_FOCUS = {
@@ -524,6 +558,7 @@ class RecommendationEngine:
 
         if goal == GOAL_BALANCE and body_confident:
             body_score = 0.78
+            body_component_weight = 0.18 if auto_body else 0.30
             if pose.body_shape == SHAPE_INVERTED_TRIANGLE:
                 rules.append("R-BOD-02")
                 body_score = 1.0 if bottom_large or bottom_ordered else 0.62
@@ -532,8 +567,25 @@ class RecommendationEngine:
                 rules.append("R-BOD-01")
                 top_focus = top["color"] in BRIGHT_COLORS or top["pattern"] not in {"", "무지", "패턴 불확실", "분석 보류"}
                 bottom_quiet = bottom["color"] in DARK_COLORS and bottom["pattern"] in {"", "무지"}
-                body_score = 1.0 if top_focus and bottom_quiet else 0.66
-                reasons.append("상·하체 균형 목표에 맞춰 상체로 시선을 옮기는 색·패턴 배치를 비교했습니다.")
+                tight_top = self._is_tight_fit(top["fit"])
+                upper_structure = self._has_upper_structure(top)
+                if tight_top and not upper_structure:
+                    body_score = 0.38
+                    # 명확한 체형-핏 충돌이 일반 볼륨 점수에 희석되지 않게 한다.
+                    body_component_weight = 0.48 if auto_body else 0.55
+                    rules.append("R-BOD-06")
+                    reasons.append(
+                        "어깨가 상대적으로 좁게 분석된 경우 몸에 붙는 상의에 "
+                        "어깨 구조·레이어·넥라인 포인트가 있는지 함께 확인했습니다."
+                    )
+                elif tight_top:
+                    body_score = 0.68
+                    body_component_weight = 0.32 if auto_body else 0.42
+                    rules.append("R-BOD-06")
+                    reasons.append("슬림한 상의의 어깨 구조와 상체 포인트가 균형을 만드는지 확인했습니다.")
+                else:
+                    body_score = 1.0 if (top_focus or upper_structure) and bottom_quiet else 0.66
+                    reasons.append("상·하체 균형 목표에 맞춰 상체로 시선을 옮기는 색·패턴 배치를 비교했습니다.")
             elif pose.body_shape in {SHAPE_RECTANGLE, SHAPE_HOURGLASS}:
                 # 모래시계체형도 어깨와 엉덩이가 비슷하므로 같은 규칙을 쓴다.
                 # 마름모꼴·둥근체형은 허리가 중심이라 대응하는 규칙이 문서에 아직 없다.
@@ -541,7 +593,7 @@ class RecommendationEngine:
                 body_score = 0.96 if top_large != bottom_large else 0.80
                 reasons.append("상·하체 폭이 비슷한 경우 볼륨을 한쪽씩 배치했는지 확인했습니다.")
             components.append((self._shrink_to_neutral(body_score, pose.body_shape_confidence),
-                               0.18 if auto_body else 0.30))
+                               body_component_weight))
         elif goal in {GOAL_UPPER_FOCUS, GOAL_LOWER_FOCUS}:
             rules.append("R-BOD-04")
             target = top if goal == GOAL_UPPER_FOCUS else bottom
@@ -550,6 +602,40 @@ class RecommendationEngine:
             other_quiet = other["color"] in NEUTRALS and other["pattern"] in {"", "무지"}
             components.append((1.0 if target_focus and other_quiet else 0.62, 0.30))
             reasons.append(f"사용자가 선택한 '{goal}' 위치에 색이나 패턴의 시선 중심이 생기는지 확인했습니다.")
+
+        # leg_ratio 는 이미 자세 분석에서 계산하지만 이전에는 채점에 전혀 쓰지 않았다.
+        # 절대 체형 라벨로 단정하지 않고 0.60 아래에서만 연속적인 보완 필요도로 사용한다.
+        if pose.valid and 0.40 <= pose.leg_ratio < 0.60:
+            short_leg_evidence = min(1.0, (0.60 - pose.leg_ratio) / 0.10)
+            evidence = short_leg_evidence * max(0.0, min(1.0, pose.body_shape_confidence))
+            tight_bottom = self._is_tight_fit(bottom["fit"])
+            short_bottom = self._is_short_bottom(bottom["length"])
+            long_top = "롱" in top["length"]
+            cropped_top = "크롭" in top["length"]
+            long_bottom = any(word in bottom["length"] for word in ("긴바지", "롱", "풀렝스", "맥시"))
+
+            leg_score = 0.82
+            if cropped_top:
+                leg_score += 0.14
+            if long_bottom and not tight_bottom:
+                leg_score += 0.10
+            if long_top:
+                leg_score -= 0.22
+            if tight_bottom:
+                leg_score -= 0.18
+            if short_bottom:
+                leg_score -= 0.16
+            if tight_bottom and short_bottom:
+                leg_score -= 0.18
+            leg_score = max(0.25, min(1.0, leg_score))
+            # 비율이 경계에 가깝거나 분석 신뢰도가 낮으면 일반적인 0.82점에 가까워진다.
+            leg_score = 0.82 + evidence * (leg_score - 0.82)
+            components.append((leg_score, 0.45))
+            rules.append("R-BOD-05")
+            reasons.append(
+                "사진에서 추정한 하체 비율과 상의 밑단·하의 기장·밀착 핏이 "
+                "세로선을 이어 주는지 함께 평가했습니다."
+            )
 
         # 상품이 스스로 밝힌 body_shapes 를 목표와 맞춰 본다.
         # 시선을 모을 쪽은 목표에서 정하고, 목표가 균형이면 체형이 정한다.
@@ -821,6 +907,225 @@ class RecommendationEngine:
             rules.append("R-WEA-04")
         return tips, list(dict.fromkeys(rules))
 
+    @staticmethod
+    def _usable_analysis_value(value: str) -> bool:
+        blocked = ("분석 보류", "분석 불가", "불확실", "해당 없음", "판단 보류")
+        return bool(value and not any(marker in value for marker in blocked))
+
+    def _current_purpose_formality_score(
+        self,
+        garments: list[dict],
+        profile: UserProfile,
+        outfit: OutfitAnalysis,
+    ) -> tuple[float, list[str], list[str]]:
+        suitable_styles = PURPOSE_STYLES.get(profile.purpose, set())
+        if outfit.style == profile.desired_style:
+            style_score = 1.0
+        elif not suitable_styles or outfit.style in suitable_styles:
+            style_score = 0.88
+        else:
+            style_score = 0.55
+
+        low, high = self._target_formality(profile)
+        formality_values = []
+        for garment in garments:
+            value = garment["formality"]
+            distance = low - value if value < low else value - high if value > high else 0
+            formality_values.append(max(0.35, 1.0 - 0.20 * distance))
+        formality_score = sum(formality_values) / len(formality_values)
+        return (
+            0.58 * style_score + 0.42 * formality_score,
+            [f"현재 착장의 {outfit.style} 스타일과 {profile.purpose} 목적의 격식도를 비교했습니다."],
+            ["R-CTX-01", "R-CTX-02"],
+        )
+
+    def _current_preference_score(self, outfit: OutfitAnalysis, profile: UserProfile) -> float:
+        preferred_for_purpose = PURPOSE_STYLES.get(profile.purpose, set())
+        if outfit.style == profile.desired_style:
+            style_score = 1.0
+        elif outfit.style in preferred_for_purpose:
+            style_score = 0.78
+        else:
+            style_score = 0.55
+
+        colors = {outfit.upper_color, outfit.lower_color}
+        if profile.preferred_colors:
+            color_score = 1.0 if colors & set(profile.preferred_colors) else 0.65
+            score = 0.78 * style_score + 0.22 * color_score
+        else:
+            score = style_score
+        if colors & set(profile.avoided_colors):
+            score -= 0.25
+        materials = f"{outfit.material}|{outfit.lower_material}"
+        if any(value and value in materials for value in profile.avoided_materials):
+            score -= 0.20
+        return max(0.0, min(1.0, score))
+
+    def _current_styling_intent_score(
+        self,
+        top: dict,
+        bottom: dict,
+        profile: UserProfile,
+        outfit: OutfitAnalysis,
+    ) -> tuple[float, list[str], list[str]]:
+        """안전한 기본 조합과 의도가 읽히는 스타일링을 구분한다.
+
+        무채색·무지 자체를 나쁘게 보지 않는다. 대신 비율, 소재 깊이, 구조,
+        레이어 또는 명확한 포인트가 하나도 없을 때 자동으로 최고점이 되지 않게 한다.
+        """
+        score = 0.48
+        signals: list[str] = []
+        top_large = self._is_large_fit(top["fit"], "top")
+        bottom_large = self._is_large_fit(bottom["fit"], "bottom")
+        patterned = [
+            garment for garment in (top, bottom)
+            if garment["pattern"] not in {"", "무지", "분석 보류", "패턴 불확실"}
+        ]
+
+        if top_large != bottom_large or "크롭" in top["length"]:
+            score += 0.16
+            signals.append("상·하의 비율과 볼륨의 중심")
+        if len(patterned) == 1:
+            score += 0.16
+            signals.append("한 영역에 정리된 패턴 포인트")
+        bold_count = sum(self._is_bold_color(item["color"]) for item in (top, bottom))
+        if bold_count == 1:
+            score += 0.12
+            signals.append("한 영역에 정리된 색상 포인트")
+        elif top["color"] != bottom["color"] and top["color"] in NEUTRALS and bottom["color"] in NEUTRALS:
+            # 무채색 조합은 안정적이지만 그 사실만으로 높은 완성도 점수를 주지는 않는다.
+            score += 0.04
+        if top["material"] and bottom["material"] and top["material"] != bottom["material"]:
+            score += 0.10
+            signals.append("상·하의 소재의 시각적 깊이")
+        if self._has_upper_structure(top):
+            score += 0.08
+            signals.append("넥라인·어깨의 구조")
+        if outfit.layering_state in {"레이어드", "레이어드 가능성"}:
+            score += 0.12
+            signals.append("의도적인 레이어 구조")
+
+        score = min(1.0, score)
+        if not signals:
+            reasons = [
+                "색과 핏의 충돌은 적지만 비율·소재·구조·포인트에서 "
+                "뚜렷한 스타일링 의도가 확인되지 않아 기본 조합과 구분했습니다."
+            ]
+        else:
+            reasons = ["스타일링 의도는 " + ", ".join(signals) + "에서 확인했습니다."]
+
+        # 미니멀은 강한 색·패턴이 없어도 소재와 선이 분명하면 충분히 높은 점수를 받는다.
+        if profile.desired_style in {"미니멀", "포멀"} and not patterned and bold_count == 0:
+            reasons.append("미니멀·포멀 의도에서는 강한 색이나 패턴의 부재를 별도로 감점하지 않았습니다.")
+        confidence = min(top["confidence"], bottom["confidence"])
+        return self._shrink_to_neutral(score, confidence), reasons, ["R-CMP-02"]
+
+    def evaluate_current_outfit(
+        self,
+        profile: UserProfile,
+        pose: PoseAnalysis,
+        outfit: OutfitAnalysis,
+        *,
+        keep_threshold: float = 95.0,
+    ) -> CurrentOutfitEvaluation:
+        """추천 상품 점수와 별개로 사용자가 현재 입은 상·하의 조합을 채점한다."""
+        keep_threshold = max(0.0, min(100.0, float(keep_threshold)))
+        top = self._garment(None, "top", outfit)
+        bottom = self._garment(None, "bottom", outfit)
+        garments = [top, bottom]
+        weights = dict(self.CURRENT_OUTFIT_WEIGHTS)
+        breakdown: dict[str, float] = {}
+        reasons: list[str] = []
+        applied_rules: list[str] = []
+
+        if self._usable_analysis_value(outfit.style):
+            value, component_reasons, rules = self._current_purpose_formality_score(
+                garments, profile, outfit
+            )
+            breakdown["purpose_tpo"] = value
+            reasons.extend(component_reasons)
+            applied_rules.extend(rules)
+            breakdown["preference"] = self._current_preference_score(outfit, profile)
+            if profile.preferred_colors:
+                applied_rules.append("R-COL-08")
+
+        fits_known = all(
+            self._usable_analysis_value(value) for value in (outfit.fit, outfit.lower_fit)
+        )
+        if fits_known:
+            value, component_reasons, rules = self._silhouette_score(top, bottom, profile, pose)
+            breakdown["silhouette"] = value
+            reasons.extend(component_reasons)
+            applied_rules.extend(rules)
+
+        colors_known = outfit.upper_color in COLOR_PALETTE and outfit.lower_color in COLOR_PALETTE
+        if colors_known:
+            value, component_reasons, rules = self._color_score(top, bottom, profile)
+            breakdown["color"] = value
+            reasons.extend(component_reasons)
+            applied_rules.extend(rules)
+
+        patterns_known = all(
+            self._usable_analysis_value(value) for value in (outfit.pattern, outfit.lower_pattern)
+        )
+        materials_known = all(
+            self._usable_analysis_value(value) for value in (outfit.material, outfit.lower_material)
+        )
+        if patterns_known or materials_known:
+            value, component_reasons, rules = self._pattern_material_complexity_score(
+                top, bottom, profile
+            )
+            breakdown["pattern_material_complexity"] = value
+            reasons.extend(component_reasons)
+            applied_rules.extend(rules)
+
+        styling_inputs_known = fits_known and (colors_known or patterns_known or materials_known)
+        if styling_inputs_known:
+            value, component_reasons, rules = self._current_styling_intent_score(
+                top, bottom, profile, outfit
+            )
+            breakdown["styling_intent"] = value
+            reasons.extend(component_reasons)
+            applied_rules.extend(rules)
+
+        active_weights = {name: weights[name] for name in breakdown if name in weights}
+        active_weight = sum(active_weights.values())
+        total = (
+            sum(breakdown[name] * weight for name, weight in active_weights.items())
+            / active_weight * 100
+            if active_weight
+            else 0.0
+        )
+        analysis_confidence = max(0.0, min(1.0, outfit.attribute_confidence))
+        core_items_known = all(
+            self._usable_analysis_value(value) for value in (outfit.upper_type, outfit.lower_type)
+        )
+        reliable = core_items_known and analysis_confidence >= 0.55 and active_weight >= 0.50
+        should_keep = reliable and total >= keep_threshold
+        if should_keep:
+            verdict = "좋은 코디입니다"
+        elif reliable:
+            verdict = "추천 코디로 보완할 수 있어요"
+        else:
+            verdict = "현재 코디 판정을 보류합니다"
+
+        applied_rules = [
+            rule_id for rule_id in dict.fromkeys(applied_rules)
+            if self.rule_book.has(rule_id) and rule_id in self.EXECUTABLE_RULE_IDS
+        ]
+        return CurrentOutfitEvaluation(
+            total_score=round(total, 2),
+            score_breakdown={key: round(value * 100, 1) for key, value in breakdown.items()},
+            reasons=list(dict.fromkeys(reasons)),
+            applied_rules=applied_rules,
+            score_coverage=round(active_weight * 100, 1),
+            analysis_confidence=round(analysis_confidence, 3),
+            reliable=reliable,
+            keep_threshold=keep_threshold,
+            should_keep=should_keep,
+            verdict=verdict,
+        )
+
     def _score_candidate(
         self,
         top_product: Product | None,
@@ -885,7 +1190,30 @@ class RecommendationEngine:
         pose: PoseAnalysis,
         outfit: OutfitAnalysis,
         top_k: int = 3,
+        current_outfit_keep_threshold: float | None = None,
     ) -> list[Recommendation]:
+        if current_outfit_keep_threshold is not None:
+            current = self.evaluate_current_outfit(
+                profile, pose, outfit, keep_threshold=current_outfit_keep_threshold
+            )
+            if current.should_keep:
+                return [
+                    Recommendation(
+                        rank=1,
+                        products=[],
+                        total_score=current.total_score,
+                        score_breakdown=current.score_breakdown,
+                        reasons=[
+                            "좋은 코디입니다. 현재 착장을 유지해도 좋아요.",
+                            *current.reasons,
+                        ],
+                        applied_rules=current.applied_rules,
+                        score_coverage=current.score_coverage,
+                        styling_tips=[
+                            "상·하의를 교체하지 않고 신발·가방 같은 작은 요소만 선택적으로 조정해보세요."
+                        ],
+                    )
+                ]
         scopes = CHANGE_SCOPE_MAP.get(profile.change_scope, ["top", "bottom"])
         if not scopes:
             return [

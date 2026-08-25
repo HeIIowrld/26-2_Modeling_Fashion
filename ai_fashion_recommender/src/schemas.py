@@ -155,6 +155,16 @@ class OutfitAnalysis:
     pant_leg_shape: str = "분석 보류"
     pant_length: str = "분석 보류"
     sleeve_length: str = "분석 불가"
+    visible_sleeve_length: str = "분석 불가"
+    sleeve_state: str = "판단 보류"
+    input_valid: bool = True
+    input_error_code: str = ""
+    input_error_message: str = ""
+    layering_state: str = "판단 보류"
+    upper_items: list[str] = field(default_factory=list)
+    inner_category: str = "해당 없음"
+    outer_category: str = "해당 없음"
+    wear_state_confidence: dict[str, float] = field(default_factory=dict)
     upper_length: str = "분석 불가"
     bottom_length: str = "분석 불가"
     fit: str = "분석 불가"
@@ -198,11 +208,20 @@ class OutfitAnalysis:
             lower_shape = self.lower_fit.replace(" 추정", "")
         lower_length = self.pant_length if usable(self.pant_length) else self.bottom_length
 
+        upper_name = self.upper_type
+        if self.layering_state in {"레이어드", "레이어드 가능성"} and len(self.upper_items) >= 2:
+            upper_name = " + ".join(self.upper_items)
+        sleeve_description = self.sleeve_length
+        if self.sleeve_state == "걷음 가능성 높음":
+            sleeve_description = f"{self.sleeve_length}·소매 걷음"
+        elif self.sleeve_state == "좌우 비대칭":
+            sleeve_description = f"{self.sleeve_length}·좌우 소매 상태 다름"
+
         return {
             "상의": description(
                 self.upper_color,
-                self.upper_type,
-                [self.sleeve_length],
+                upper_name,
+                [sleeve_description],
             ),
             "하의": description(
                 self.lower_color,
@@ -210,6 +229,25 @@ class OutfitAnalysis:
                 [lower_shape, lower_length, *self.lower_details[:2]],
             ),
         }
+
+
+@dataclass
+class CurrentOutfitEvaluation:
+    """현재 착장을 추천 상품 후보와 분리해 평가한 결과."""
+
+    total_score: float
+    score_breakdown: dict[str, float]
+    reasons: list[str]
+    applied_rules: list[str]
+    score_coverage: float
+    analysis_confidence: float
+    reliable: bool
+    keep_threshold: float
+    should_keep: bool
+    verdict: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 @dataclass

@@ -18,6 +18,7 @@ class FashionClassifier:
         model_id: str = FASHION_SIGLIP_MODEL_ID,
         device: str = "auto",
         attribute_checkpoint: str | Path | None = None,
+        layering_checkpoint: str | Path | None = None,
     ) -> None:
         self.enabled = enabled
         self.model_id = model_id
@@ -52,10 +53,35 @@ class FashionClassifier:
                     model_id=self.model_id,
                     device=self.device,
                 )
+            self.layering_predictor = None
+            if layering_checkpoint:
+                layering_path = Path(layering_checkpoint).expanduser().resolve()
+                if not layering_path.is_file():
+                    raise FileNotFoundError(f"학습된 레이어드 헤드가 없습니다: {layering_path}")
+                from layering_model import LayeringPredictor
+
+                self.layering_predictor = LayeringPredictor(
+                    layering_path,
+                    image_encoder=self.model,
+                    preprocess=self.preprocess,
+                    model_id=self.model_id,
+                    device=self.device,
+                )
+        else:
+            self.layering_predictor = None
 
     @property
     def trained_attributes_enabled(self) -> bool:
         return self.attribute_predictor is not None
+
+    @property
+    def trained_layering_enabled(self) -> bool:
+        return self.layering_predictor is not None
+
+    def predict_layering(self, upper_crop: str | Path | Image.Image):
+        if self.layering_predictor is None:
+            return None
+        return self.layering_predictor.predict(upper_crop)
 
     def predict_trained_attributes(
         self,

@@ -55,6 +55,30 @@ class OutfitSummaryTests(unittest.TestCase):
         self.assertEqual(summary["상의"], "화이트 셔츠 (긴팔)")
         self.assertEqual(summary["하의"], "블루 청바지 (스트레이트, 풀렝스, 5포켓)")
 
+    def test_summary_exposes_layering_and_rolled_sleeves(self):
+        result = OutfitAnalysis(
+            parser_backend="test",
+            upper_color="네이비",
+            lower_color="베이지",
+            color_harmony="안정적인 무채색 조합",
+            detected_items=["top", "pants"],
+            style="캐주얼",
+            upper_type="니트",
+            lower_type="팬츠",
+            sleeve_length="긴팔",
+            visible_sleeve_length="7부 소매",
+            sleeve_state="걷음 가능성 높음",
+            layering_state="레이어드",
+            upper_items=["셔츠", "니트"],
+            inner_category="셔츠",
+            outer_category="니트",
+        )
+
+        self.assertEqual(
+            result.to_summary_dict()["상의"],
+            "네이비 셔츠 + 니트 (긴팔·소매 걷음)",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

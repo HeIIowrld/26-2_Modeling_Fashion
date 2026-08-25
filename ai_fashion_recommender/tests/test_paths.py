@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from config import FASHION_ATTRIBUTE_HEADS_PATH, PROJECT_DIR, resolve_path
+from config import FASHION_ATTRIBUTE_HEADS_PATH, LAYERING_HEADS_PATH, PROJECT_DIR, resolve_path
 
 
 class PathConfigurationTests(unittest.TestCase):
@@ -46,8 +46,22 @@ class PathConfigurationTests(unittest.TestCase):
             for cell in notebook["cells"]
             for line in cell.get("source", [])
         )
-        self.assertIn("ATTRIBUTE_HEADS_PATH_INPUT = r'models/fashion_attribute_heads.pt'", source)
+        self.assertIn(
+            "ATTRIBUTE_HEADS_PATH_INPUT = r'models/fashion_attribute_heads_augmented.pt'",
+            source,
+        )
         self.assertIn("attribute_checkpoint=ATTRIBUTE_HEADS_PATH", source)
+        self.assertIn("p / 'src' / 'config.py'", source)
+        self.assertIn("PROJECT_DIR / 'src' / 'config.py'", source)
+
+    def test_layering_head_path_is_optional_until_training(self):
+        self.assertEqual(LAYERING_HEADS_PATH.name, "layering_heads.pt")
+        notebook = json.loads((ROOT / "main.ipynb").read_text(encoding="utf-8"))
+        source = "".join(
+            line for cell in notebook["cells"] for line in cell.get("source", [])
+        )
+        self.assertIn("LAYERING_HEADS_PATH_INPUT = r'models/layering_heads.pt'", source)
+        self.assertIn("layering_checkpoint=LAYERING_HEADS_PATH", source)
 
 
 if __name__ == "__main__":

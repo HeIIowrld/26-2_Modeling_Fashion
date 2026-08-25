@@ -54,7 +54,9 @@ class GarmentAttributeAnalyzer:
         upper_mask = np.isin(segmentation, upper_labels).astype(np.uint8)
         lower_mask = np.isin(segmentation, lower_labels).astype(np.uint8)
 
-        sleeve_ratio, sleeve_agreement = self._sleeve_coverage(upper_mask, pose)
+        sleeve_ratio, sleeve_agreement, sleeve_side_ratios = self._sleeve_coverage_details(
+            upper_mask, pose
+        )
         sleeve_length = self._sleeve_label(sleeve_ratio)
         upper_length = self._upper_length(upper_mask, pose)
         bottom_length = self._bottom_length(lower_mask, pose, lower_type)
@@ -81,15 +83,27 @@ class GarmentAttributeAnalyzer:
             "attribute_confidence": round(float(np.clip(confidence, 0, 1)), 3),
             "measurements": {
                 "sleeve_coverage_ratio": round(sleeve_ratio, 3),
+                "sleeve_side_coverage": {
+                    side: round(value, 3) for side, value in sleeve_side_ratios.items()
+                },
+                # 설계상 길이가 아니라 사진에서 현재 보이는 소매 길이다.
+                "visible_sleeve_length": sleeve_length,
                 "mask_pixel_areas": areas,
             },
         }
 
     def _sleeve_coverage(self, mask: np.ndarray, pose: PoseAnalysis) -> tuple[float, float]:
+        ratio, agreement, _ = self._sleeve_coverage_details(mask, pose)
+        return ratio, agreement
+
+    def _sleeve_coverage_details(
+        self, mask: np.ndarray, pose: PoseAnalysis
+    ) -> tuple[float, float, dict[str, float]]:
         height, width = mask.shape
         ratios = []
         radius = max(3, int(min(width, height) * 0.012))
-        for side in ("left", "right"):
+        sides = ("left", "right")
+        for side in sides:
             shoulder = _pixel_point(pose, f"{side}_shoulder", width, height)
             elbow = _pixel_point(pose, f"{side}_elbow", width, height)
             wrist = _pixel_point(pose, f"{side}_wrist", width, height)
@@ -109,7 +123,7 @@ class GarmentAttributeAnalyzer:
             covered = [t for t, occupancy in samples if occupancy >= 0.18]
             ratios.append(max(covered, default=0.0))
         agreement = 1.0 - min(abs(ratios[0] - ratios[1]), 1.0)
-        return float(np.median(ratios)), agreement
+        return float(np.median(ratios)), agreement, dict(zip(sides, ratios))
 
     @staticmethod
     def _sleeve_label(ratio: float) -> str:

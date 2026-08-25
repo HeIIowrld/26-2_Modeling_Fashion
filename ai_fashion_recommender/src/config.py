@@ -97,6 +97,12 @@ FASHION_ATTRIBUTE_HEADS_PATH = resolve_path(
     os.environ.get("FASHION_ATTRIBUTE_HEADS_PATH"),
     "models/fashion_attribute_heads_augmented.pt",
 )
+# 목·커프스·밑단·앞여밈 ROI를 함께 보는 별도 레이어드 헤드. 아직 학습 전이면
+# 파일이 존재하지 않으며 기존 zero-shot/속성 충돌 fallback을 그대로 사용한다.
+LAYERING_HEADS_PATH = resolve_path(
+    os.environ.get("FASHION_LAYERING_HEADS_PATH"),
+    "models/layering_heads.pt",
+)
 # FashionSigLIP 점수는 후보 프롬프트 사이의 상대 점수다. 실제 확률로 해석하지 않는다.
 ATTRIBUTE_CONFIDENCE_THRESHOLDS = {
     "style": 0.40,
