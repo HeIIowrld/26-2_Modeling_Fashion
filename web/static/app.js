@@ -863,6 +863,19 @@ function showBackendDown(detail) {
   console.error("백엔드 연결 실패:", detail);
 }
 
+function showPreviewOnly(detail) {
+  /* 선택지는 정적 사본으로 채웠지만 분석은 못 한다. 화면이 멀쩡해 보이는
+     만큼 무엇이 안 되는지 더 분명히 적어야 오해가 없다. */
+  const banner = document.createElement("div");
+  banner.className = "backend-down is-preview";
+  banner.innerHTML =
+    "<strong>디자인 미리보기 모드입니다.</strong>" +
+    "<span>선택지는 실제 값으로 채워 두었지만, 사진 분석과 코디 추천은 별도 서버가 켜져 있어야 동작해요. " +
+    "화면 구성과 디자인만 확인해 주세요.</span>";
+  document.body.prepend(banner);
+  console.warn("분석 서버 없음 — 정적 선택지로 화면만 표시:", detail);
+}
+
 (async function init() {
   let options;
   try {
@@ -870,8 +883,20 @@ function showBackendDown(detail) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     options = await response.json();
   } catch (error) {
-    showBackendDown(error);
-    return;
+    /* 정적 호스팅(GitHub Pages 등)에는 연산 서버가 없다. 예전에는 여기서 바로
+       빠져나가서 목적·예산 같은 선택지가 통째로 비어 있었고, 그래서 디자인을
+       검토하려고 들어온 사람이 조건 화면에서 아무것도 볼 수 없었다.
+       같은 폴더에 떠 둔 실제 선택지로 화면만 채우고, 분석이 안 된다는 사실은
+       배너로 분명히 알린다. */
+    try {
+      const fallback = await fetch("fallback-options.json");
+      if (!fallback.ok) throw new Error(`HTTP ${fallback.status}`);
+      options = await fallback.json();
+    } catch {
+      showBackendDown(error);
+      return;
+    }
+    showPreviewOnly(error);
   }
   state.options = options;
 
