@@ -57,6 +57,44 @@ PURPOSE_FORMALITY = {
     "여행": (1, 2),
 }
 
+# 상황 적합도는 원하는 미감(desired_style)과 분리해 사용 목적(purpose)만 본다.
+# 값은 1차 서비스 가설이며 사용자 평가 데이터로 보정한다.
+PURPOSE_TOP_SCORES = {
+    "데일리": {"티셔츠": .95, "폴로 셔츠": .85, "셔츠": .85, "블라우스": .80, "니트": .90, "가디건": .85, "후드티": .90, "재킷": .80, "블레이저": .65, "코트": .80, "베스트": .75, "탑": .80},
+    "데이트": {"티셔츠": .58, "폴로 셔츠": .55, "셔츠": .90, "블라우스": 1.0, "니트": .86, "가디건": .85, "후드티": .20, "재킷": .86, "블레이저": .90, "코트": .86, "베스트": .70, "탑": .82},
+    "출근": {"티셔츠": .35, "폴로 셔츠": .55, "셔츠": .95, "블라우스": .95, "니트": .78, "가디건": .75, "후드티": .10, "재킷": .78, "블레이저": 1.0, "코트": .90, "베스트": .65, "탑": .35},
+    "면접": {"티셔츠": .15, "폴로 셔츠": .25, "셔츠": 1.0, "블라우스": .95, "니트": .50, "가디건": .45, "후드티": .03, "재킷": .72, "블레이저": 1.0, "코트": .82, "베스트": .35, "탑": .15},
+    "결혼식": {"티셔츠": .20, "폴로 셔츠": .30, "셔츠": .88, "블라우스": .95, "니트": .60, "가디건": .58, "후드티": .03, "재킷": .82, "블레이저": .96, "코트": .88, "베스트": .50, "탑": .55},
+    "여행": {"티셔츠": .95, "폴로 셔츠": .82, "셔츠": .65, "블라우스": .55, "니트": .75, "가디건": .75, "후드티": .95, "재킷": .72, "블레이저": .30, "코트": .60, "베스트": .78, "탑": .72},
+}
+
+PURPOSE_BOTTOM_SCORES = {
+    "데일리": {"팬츠": .85, "슬랙스": .75, "치노 팬츠": .85, "청바지": .95, "카고 팬츠": .85, "조거·스웨트팬츠": .85, "트랙팬츠": .75, "레깅스": .65, "쇼츠": .85, "스커트": .85},
+    "데이트": {"팬츠": .75, "슬랙스": .90, "치노 팬츠": .78, "청바지": .72, "카고 팬츠": .45, "조거·스웨트팬츠": .20, "트랙팬츠": .15, "레깅스": .25, "쇼츠": .55, "스커트": .92},
+    "출근": {"팬츠": .82, "슬랙스": 1.0, "치노 팬츠": .82, "청바지": .45, "카고 팬츠": .20, "조거·스웨트팬츠": .08, "트랙팬츠": .05, "레깅스": .12, "쇼츠": .15, "스커트": .88},
+    "면접": {"팬츠": .75, "슬랙스": 1.0, "치노 팬츠": .68, "청바지": .15, "카고 팬츠": .05, "조거·스웨트팬츠": .02, "트랙팬츠": .02, "레깅스": .05, "쇼츠": .05, "스커트": .85},
+    "결혼식": {"팬츠": .72, "슬랙스": .95, "치노 팬츠": .55, "청바지": .15, "카고 팬츠": .05, "조거·스웨트팬츠": .02, "트랙팬츠": .02, "레깅스": .08, "쇼츠": .12, "스커트": .95},
+    "여행": {"팬츠": .82, "슬랙스": .38, "치노 팬츠": .72, "청바지": .82, "카고 팬츠": .90, "조거·스웨트팬츠": .95, "트랙팬츠": .92, "레깅스": .88, "쇼츠": .92, "스커트": .45},
+}
+
+ITEM_FORMALITY = {
+    "티셔츠": 1, "후드티": 1, "탑": 1, "쇼츠": 1,
+    "조거·스웨트팬츠": 1, "트랙팬츠": 1, "레깅스": 1,
+    "폴로 셔츠": 2, "청바지": 2, "카고 팬츠": 2, "팬츠": 2,
+    "니트": 3, "가디건": 3, "치노 팬츠": 3, "스커트": 3,
+    "셔츠": 4, "블라우스": 4, "재킷": 4, "슬랙스": 4, "코트": 4,
+    "블레이저": 5,
+}
+
+STYLE_NEIGHBORS = {
+    "캐주얼": {"미니멀", "스포티", "스트리트"},
+    "미니멀": {"캐주얼", "포멀"},
+    "포멀": {"미니멀", "로맨틱"},
+    "스트리트": {"캐주얼", "스포티"},
+    "로맨틱": {"미니멀", "포멀"},
+    "스포티": {"캐주얼", "스트리트"},
+}
+
 DRESS_CODE_FORMALITY = {
     "캐주얼": (1, 2),
     "스마트 캐주얼": (2, 3),
@@ -79,6 +117,7 @@ ORDERED_BOTTOM_FITS = {"스트레이트핏", "테이퍼드핏", "슬림핏", "�
 BRIGHT_COLORS = {"화이트", "베이지", "옐로", "핑크", "오렌지"}
 DARK_COLORS = {"블랙", "네이비", "브라운", "그레이", "카키", "버건디"}
 MAXIMAL_STYLES = {"스트리트", "맥시멀", "페스티벌", "힙합"}
+DIAGNOSTIC_PASS_THRESHOLD = 85.0
 
 
 def _tie_seed(pose: PoseAnalysis) -> str:
@@ -116,11 +155,11 @@ class RecommendationEngine:
     """
 
     SCORING_RULE_IDS = {
-        "R-CTX-01", "R-CTX-02", "R-CAT-02",
+        "R-CTX-01", "R-CTX-02", "R-CTX-03", "R-CAT-02",
         "R-SIL-01", "R-SIL-03", "R-SIL-05", "R-SIL-06",
         "R-COL-01", "R-COL-02", "R-COL-03", "R-COL-04", "R-COL-05",
         "R-COL-08", "R-COL-10", "R-COL-11", "R-COL-13",
-        "R-PAT-01", "R-PAT-03", "R-PAT-04", "R-MAT-01", "R-MAT-02", "R-CMP-01", "R-CMP-02",
+        "R-PAT-01", "R-PAT-03", "R-PAT-04", "R-MAT-01", "R-MAT-02", "R-CMP-01", "R-CMP-02", "R-CMP-03",
         "R-BOD-01", "R-BOD-02", "R-BOD-03", "R-BOD-04", "R-BOD-05", "R-BOD-06",
         "R-WEA-01", "R-WEA-02", "R-WEA-03", "R-WEA-04",
         "R-OWN-01",
@@ -259,7 +298,10 @@ class RecommendationEngine:
                 "category": category,
                 "color": product.color,
                 "style": product.style,
+                "style_confidence": 1.0,
+                "purposes": product.purposes,
                 "item_type": product.item_type,
+                "subtype": product.item_type,
                 "fit": product.fit,
                 "length": product.length,
                 "pattern": product.pattern,
@@ -292,8 +334,21 @@ class RecommendationEngine:
         return {
             "category": category,
             "color": color,
-            "style": outfit.style,
+            "style": (
+                outfit.upper_style if is_top else outfit.lower_style
+            ) if self._usable_analysis_value(
+                outfit.upper_style if is_top else outfit.lower_style
+            ) else outfit.style,
+            "style_confidence": (
+                outfit.upper_style_confidence if is_top else outfit.lower_style_confidence
+            ) or confidence,
+            "purposes": [],
             "item_type": outfit.upper_type if is_top else outfit.lower_type,
+            "subtype": outfit.upper_type if is_top else (
+                outfit.lower_subtype
+                if self._usable_analysis_value(outfit.lower_subtype)
+                else outfit.lower_type
+            ),
             "fit": fit,
             "length": outfit.upper_length if is_top else outfit.bottom_length,
             "pattern": pattern,
@@ -1020,13 +1075,298 @@ class RecommendationEngine:
         confidence = min(top["confidence"], bottom["confidence"])
         return self._shrink_to_neutral(score, confidence), reasons, ["R-CMP-02"]
 
+    @staticmethod
+    def _situation_item_key(item: dict) -> str:
+        """상황 점수표의 세부 카테고리 어휘로 정규화한다."""
+        values = [item.get("subtype", ""), item.get("item_type", "")]
+        known = set(ITEM_FORMALITY)
+        for value in values:
+            cleaned = value.replace(" 추정", "")
+            if cleaned in known:
+                return cleaned
+            for key in sorted(known, key=len, reverse=True):
+                if key in cleaned:
+                    return key
+        return values[0] or values[1]
+
+    def _item_situation_fit(
+        self, item: dict, profile: UserProfile
+    ) -> tuple[float, list[str], list[str]]:
+        key = self._situation_item_key(item)
+        table = PURPOSE_TOP_SCORES if item["category"] == "top" else PURPOSE_BOTTOM_SCORES
+        base = table.get(profile.purpose, {}).get(key, 0.50)
+        # 카탈로그 목적 태그는 보조 증거다. 아이템 종류상 강한 부적합을 태그 하나로
+        # 뒤집지 않도록 최대 0.08만 올린다.
+        purpose_score = min(1.0, base + (0.08 if profile.purpose in item.get("purposes", []) else 0.0))
+
+        low, high = self._target_formality(profile)
+        formality = item["formality"] if item["is_product"] else ITEM_FORMALITY.get(key, item["formality"])
+        distance = low - formality if formality < low else formality - high if formality > high else 0
+        formality_score = max(0.15, 1.0 - 0.30 * distance)
+
+        if profile.purpose == "여행" or profile.activity_level == "높음":
+            suitable = {"보행", "여행", "운동"}
+            if item.get("activity_tags"):
+                activity_score = 1.0 if suitable & set(item["activity_tags"]) else 0.35
+            else:
+                activity_score = 0.65
+            score = 0.55 * purpose_score + 0.30 * formality_score + 0.15 * activity_score
+        else:
+            score = 0.65 * purpose_score + 0.35 * formality_score
+
+        confidence = item["confidence"] if not item["is_product"] else 1.0
+        score = self._shrink_to_neutral(score, confidence)
+        reason = (
+            f"{profile.purpose} 상황에서 {key or '해당 아이템'}의 종류와 "
+            f"격식도 {formality}가 목적 범위 {low}~{high}에 맞는지 평가했습니다."
+        )
+        return score, [reason], ["R-CTX-01", "R-CTX-02", "R-CTX-03"]
+
+    def _item_style_fit(
+        self, item: dict, profile: UserProfile
+    ) -> tuple[float, list[str], list[str]]:
+        observed = item.get("style", "")
+        if not self._usable_analysis_value(observed):
+            return 0.50, ["아이템별 스타일 분석 신뢰도가 낮아 중립 점수를 적용했습니다."], ["R-DAT-01"]
+        if observed == profile.desired_style:
+            raw = 1.0
+        elif observed in STYLE_NEIGHBORS.get(profile.desired_style, set()):
+            raw = 0.72
+        else:
+            raw = 0.38
+        confidence = item.get("style_confidence", item["confidence"])
+        score = raw if item["is_product"] else self._shrink_to_neutral(raw, confidence)
+        return (
+            score,
+            [f"아이템의 {observed} 스타일과 원하는 {profile.desired_style} 스타일을 비교했습니다."],
+            ["R-CMP-02", "R-DAT-01"] if not item["is_product"] else ["R-CMP-02"],
+        )
+
+    def _item_body_fit(
+        self,
+        item: dict,
+        counterpart: dict,
+        profile: UserProfile,
+        pose: PoseAnalysis,
+    ) -> tuple[float, list[str], list[str]]:
+        """체형 자체가 아니라 해당 아이템이 목표 비율을 만드는 정도를 평가한다."""
+        score = 0.90
+        rules = ["R-KOR-01", "R-KOR-02"]
+        reasons: list[str] = []
+        tight = self._is_tight_fit(item["fit"])
+        body_confident = (
+            pose.valid
+            and pose.body_shape_confidence >= 0.65
+            and pose.body_shape != SHAPE_UNCERTAIN
+        )
+        use_body_shape = body_confident and (
+            ENABLE_AUTO_BODY_SHAPE or profile.silhouette_goal != GOAL_NONE
+        )
+
+        if item["category"] == "top":
+            if use_body_shape and pose.body_shape == SHAPE_TRIANGLE:
+                reasons.append(f"분석한 체형({pose.body_shape})을 상의 구조 평가에 참고했습니다.")
+                if tight and not self._has_upper_structure(item):
+                    score = 0.38
+                    rules.append("R-BOD-06")
+                    reasons.append("상대적으로 좁은 어깨에 밀착 상의와 구조 요소가 함께 있는지 확인했습니다.")
+                elif self._has_upper_structure(item):
+                    score = 0.95
+                    rules.append("R-BOD-06")
+            if pose.valid and 0.40 <= pose.leg_ratio < 0.60:
+                if "롱" in item["length"]:
+                    score -= 0.24
+                elif "크롭" in item["length"]:
+                    score += 0.12
+                rules.append("R-BOD-05")
+                reasons.append("상의 밑단이 사진에서 추정한 하체 비율을 어떻게 나누는지 확인했습니다.")
+        else:
+            large = self._is_large_fit(item["fit"], "bottom")
+            ordered = self._is_ordered_bottom(item["fit"])
+            if use_body_shape and pose.body_shape == SHAPE_INVERTED_TRIANGLE:
+                reasons.append(f"분석한 체형({pose.body_shape})을 하의 볼륨 평가에 참고했습니다.")
+                score = 0.95 if large or ordered else 0.58
+                rules.append("R-BOD-02")
+            if pose.valid and 0.40 <= pose.leg_ratio < 0.60:
+                short = self._is_short_bottom(item["length"])
+                long_line = any(word in item["length"] for word in ("긴바지", "롱", "풀렝스", "맥시"))
+                if tight and short:
+                    score = min(score, 0.25)
+                elif tight:
+                    score = min(score, 0.50)
+                elif long_line and (large or ordered):
+                    score = max(score, 0.96)
+                elif short:
+                    score = min(score, 0.60)
+                rules.append("R-BOD-05")
+                reasons.append("하의의 기장·밀착도·세로선이 하체 비율을 보완하는지 확인했습니다.")
+
+        if not reasons:
+            reasons.append("아이템의 핏·기장·구조가 분석된 체형과 목표 비율에 맞는지 평가했습니다.")
+        confidence = min(item["confidence"], max(pose.full_body_score, pose.body_shape_confidence))
+        return self._shrink_to_neutral(max(0.0, min(1.0, score)), confidence), reasons, list(dict.fromkeys(rules))
+
+    def _outfit_harmony_score(
+        self, top: dict, bottom: dict, profile: UserProfile,
+    ) -> tuple[float, dict[str, float], list[str], list[str]]:
+        """관찰 가능한 네 관계로 상·하의 조화를 평가한다(R-CMP-03)."""
+        reasons: list[str] = []
+        rules = ["R-CMP-03"]
+
+        top_large = self._is_large_fit(top["fit"], "top")
+        bottom_large = self._is_large_fit(bottom["fit"], "bottom")
+        bottom_ordered = self._is_ordered_bottom(bottom["fit"])
+        top_long = any(word in top["length"] for word in ("롱", "긴 기장", "장기장"))
+        bottom_long = any(word in bottom["length"] for word in ("롱", "긴바지", "풀렝스", "맥시", "장기장"))
+        if top_large and top_long and bottom_large and bottom_long:
+            silhouette = 0.96
+            reasons.append("롱 오버핏 상의와 롱 와이드 하의의 연속된 볼륨을 의도적인 트렌드 실루엣으로 평가했습니다.")
+        elif top_large and bottom_ordered:
+            silhouette = 0.72
+            reasons.append("오버핏 상의와 스트레이트 계열 하의는 안정적이지만 무난한 기본 조합이라 평균권으로 평가했습니다.")
+        elif bottom_large and not top_large:
+            silhouette = 0.90
+            reasons.append("정돈된 상의와 볼륨 하의가 선명한 실루엣 대비를 만듭니다.")
+        elif top_large and bottom_large:
+            silhouette = 0.88
+            reasons.append("상·하의의 큰 볼륨이 하나의 의도된 실루엣으로 이어집니다.")
+        else:
+            silhouette = 0.80
+            reasons.append("상·하의의 기본 볼륨 관계가 크게 충돌하지 않습니다.")
+        rules.append("R-SIL-01")
+
+        formality_gap = abs(top["formality"] - bottom["formality"])
+        formality = {0: 1.00, 1: 0.90, 2: 0.72}.get(formality_gap, 0.40)
+        if profile.desired_style in MAXIMAL_STYLES:
+            formality = max(formality, 0.72)
+        reasons.append(f"상·하의 격식도 차이 {formality_gap}단계를 조화에 반영했습니다.")
+        rules.append("R-CTX-02")
+
+        harmony_name = self._safe_harmony(top["color"], bottom["color"])
+        color = {
+            "안정적인 무채색 조합": 0.92,
+            "톤온톤": 0.90,
+            "유사색 조합": 0.88,
+            "대비색 조합": 0.76,
+            "보통 조합": 0.68,
+        }[harmony_name]
+        if (top["color"] in NEUTRALS) != (bottom["color"] in NEUTRALS):
+            color = max(color, 0.94)
+        reasons.append(f"색상 관계 '{harmony_name}'를 상·하의 연결감으로 평가했습니다.")
+        rules.append("R-COL-03")
+
+        quiet_patterns = {"", "무지", "분석 보류", "패턴 불확실"}
+        pattern_count = sum(item["pattern"] not in quiet_patterns for item in (top, bottom))
+        materials_differ = bool(top["material"] and bottom["material"] and top["material"] != bottom["material"])
+        if pattern_count == 1:
+            pattern_material = 0.95
+        elif pattern_count == 0:
+            pattern_material = 0.90 if materials_differ else 0.78
+        else:
+            pattern_material = 0.82 if profile.desired_style in MAXIMAL_STYLES else 0.48
+        if top["color"] == bottom["color"] and materials_differ:
+            pattern_material = max(pattern_material, 0.94)
+        reasons.append("패턴의 시선 경쟁과 소재의 질감 차이를 함께 확인했습니다.")
+        rules.extend(["R-PAT-01", "R-MAT-02"])
+
+        breakdown = {
+            "silhouette": silhouette,
+            "formality": formality,
+            "color": color,
+            "pattern_material": pattern_material,
+        }
+        score = (
+            0.35 * silhouette + 0.25 * formality
+            + 0.25 * color + 0.15 * pattern_material
+        )
+        return score, breakdown, reasons, list(dict.fromkeys(rules))
+
+    def _diagnose_pair(
+        self,
+        top: dict,
+        bottom: dict,
+        profile: UserProfile,
+        pose: PoseAnalysis,
+    ) -> dict:
+        top_body, top_body_reasons, top_body_rules = self._item_body_fit(top, bottom, profile, pose)
+        bottom_body, bottom_body_reasons, bottom_body_rules = self._item_body_fit(bottom, top, profile, pose)
+        top_situation, top_situation_reasons, top_situation_rules = self._item_situation_fit(top, profile)
+        bottom_situation, bottom_situation_reasons, bottom_situation_rules = self._item_situation_fit(bottom, profile)
+        top_style, top_style_reasons, top_style_rules = self._item_style_fit(top, profile)
+        bottom_style, bottom_style_reasons, bottom_style_rules = self._item_style_fit(bottom, profile)
+
+        matrix = {
+            "top": {"body_fit": top_body * 100, "situation_fit": top_situation * 100, "style_fit": top_style * 100},
+            "bottom": {"body_fit": bottom_body * 100, "situation_fit": bottom_situation * 100, "style_fit": bottom_style * 100},
+        }
+        top_total = 0.35 * top_body + 0.40 * top_situation + 0.25 * top_style
+        bottom_total = 0.35 * bottom_body + 0.40 * bottom_situation + 0.25 * bottom_style
+        harmony, harmony_breakdown, harmony_reasons, harmony_rules = self._outfit_harmony_score(
+            top, bottom, profile
+        )
+        item_average = (top_total + bottom_total) / 2
+        overall = (0.80 * item_average + 0.20 * harmony) * 100
+
+        flat = {
+            "top.body_fit": matrix["top"]["body_fit"],
+            "top.situation_fit": matrix["top"]["situation_fit"],
+            "top.style_fit": matrix["top"]["style_fit"],
+            "bottom.body_fit": matrix["bottom"]["body_fit"],
+            "bottom.situation_fit": matrix["bottom"]["situation_fit"],
+            "bottom.style_fit": matrix["bottom"]["style_fit"],
+            "outfit.harmony": harmony * 100,
+        }
+        weakest_area = min(flat, key=flat.get)
+        pass_matrix = {
+            section: {
+                name: value >= DIAGNOSTIC_PASS_THRESHOLD
+                for name, value in values.items()
+            }
+            for section, values in matrix.items()
+        }
+        failed_areas = [name for name, value in flat.items() if value < DIAGNOSTIC_PASS_THRESHOLD]
+        top_weak = min(matrix["top"].values())
+        bottom_weak = min(matrix["bottom"].values())
+        harmony_passed = harmony * 100 >= DIAGNOSTIC_PASS_THRESHOLD
+        if top_weak >= DIAGNOSTIC_PASS_THRESHOLD and bottom_weak >= DIAGNOSTIC_PASS_THRESHOLD and harmony_passed:
+            target = "keep"
+        elif top_weak < 60 and bottom_weak < 60:
+            target = "both"
+        elif top_weak <= bottom_weak - 4:
+            target = "top"
+        elif bottom_weak <= top_weak - 4:
+            target = "bottom"
+        else:
+            target = "auto"
+
+        return {
+            "overall_score": round(overall, 2),
+            "matrix": {section: {name: round(value, 1) for name, value in scores.items()} for section, scores in matrix.items()},
+            "pass_matrix": pass_matrix,
+            "failed_areas": failed_areas,
+            "weakest_area": weakest_area,
+            "change_target": target,
+            "conflict_penalty": 0.0,
+            "harmony_score": round(harmony * 100, 1),
+            "harmony_breakdown": {name: round(value * 100, 1) for name, value in harmony_breakdown.items()},
+            "harmony_passed": harmony_passed,
+            "reasons": list(dict.fromkeys(
+                top_body_reasons + bottom_body_reasons + top_situation_reasons + bottom_situation_reasons
+                + top_style_reasons + bottom_style_reasons + harmony_reasons
+            )),
+            "rules": list(dict.fromkeys(
+                top_body_rules + bottom_body_rules + top_situation_rules + bottom_situation_rules
+                + top_style_rules + bottom_style_rules + harmony_rules
+            )),
+        }
+
     def evaluate_current_outfit(
         self,
         profile: UserProfile,
         pose: PoseAnalysis,
         outfit: OutfitAnalysis,
         *,
-        keep_threshold: float = 95.0,
+        keep_threshold: float = DIAGNOSTIC_PASS_THRESHOLD,
     ) -> CurrentOutfitEvaluation:
         """추천 상품 점수와 별개로 사용자가 현재 입은 상·하의 조합을 채점한다."""
         keep_threshold = max(0.0, min(100.0, float(keep_threshold)))
@@ -1096,12 +1436,26 @@ class RecommendationEngine:
             if active_weight
             else 0.0
         )
+        # 개편된 Current Fashion Score는 상·하의별 체형/상황/스타일 진단을 사용한다.
+        # 위의 기존 축 계산은 이전 규칙 설명과 호환을 위해 남겨 두되 최종 표시 점수와
+        # 자동 변경 판단에는 동일한 pair 진단기를 사용한다.
+        diagnostic = self._diagnose_pair(top, bottom, profile, pose)
+        breakdown = {
+            f"{section}_{name}": value / 100
+            for section, values in diagnostic["matrix"].items()
+            for name, value in values.items()
+        }
+        total = diagnostic["overall_score"]
+        reasons = diagnostic["reasons"]
+        applied_rules = diagnostic["rules"]
+        active_weight = 1.0
         analysis_confidence = max(0.0, min(1.0, outfit.attribute_confidence))
         core_items_known = all(
             self._usable_analysis_value(value) for value in (outfit.upper_type, outfit.lower_type)
         )
         reliable = core_items_known and analysis_confidence >= 0.55 and active_weight >= 0.50
-        should_keep = reliable and total >= keep_threshold
+        all_cells_pass = not diagnostic["failed_areas"]
+        should_keep = reliable and total >= keep_threshold and all_cells_pass
         if should_keep:
             verdict = "좋은 코디입니다"
         elif reliable:
@@ -1124,6 +1478,15 @@ class RecommendationEngine:
             keep_threshold=keep_threshold,
             should_keep=should_keep,
             verdict=verdict,
+            diagnostic_matrix=diagnostic["matrix"],
+            pass_matrix=diagnostic["pass_matrix"],
+            failed_areas=diagnostic["failed_areas"],
+            weakest_area=diagnostic["weakest_area"],
+            change_target=diagnostic["change_target"],
+            conflict_penalty=diagnostic["conflict_penalty"],
+            harmony_score=diagnostic["harmony_score"],
+            harmony_breakdown=diagnostic["harmony_breakdown"],
+            harmony_passed=diagnostic["harmony_passed"],
         )
 
     def _score_candidate(
@@ -1170,14 +1533,32 @@ class RecommendationEngine:
             rule_id for rule_id in dict.fromkeys(applied_rules)
             if self.rule_book.has(rule_id) and rule_id in self.EXECUTABLE_RULE_IDS
         ]
+        legacy_applied_rules = list(applied_rules)
 
         weights = self._weights_for_profile(profile, include_wardrobe=wardrobe is not None)
         active_weight = sum(weights.values())
         total = sum(breakdown[name] * weight for name, weight in weights.items()) / active_weight * 100
         reasons = purpose_reasons + weather_reasons + color_reasons + silhouette_reasons + pattern_reasons
+        diagnostic = self._diagnose_pair(top, bottom, profile, pose)
+        total = diagnostic["overall_score"]
+        breakdown = {
+            f"{section}_{name}": value
+            for section, values in diagnostic["matrix"].items()
+            for name, value in values.items()
+        }
+        breakdown["outfit_harmony"] = diagnostic["harmony_score"]
+        breakdown.update({
+            f"harmony_{name}": value
+            for name, value in diagnostic["harmony_breakdown"].items()
+        })
+        reasons = diagnostic["reasons"]
+        applied_rules = [
+            rule_id for rule_id in dict.fromkeys(legacy_applied_rules + diagnostic["rules"])
+            if self.rule_book.has(rule_id) and rule_id in self.EXECUTABLE_RULE_IDS
+        ]
         return (
             round(total, 2),
-            {key: round(value * 100, 1) for key, value in breakdown.items()},
+            {key: round(value, 1) for key, value in breakdown.items()},
             reasons,
             applied_rules,
             styling_tips,
@@ -1192,54 +1573,94 @@ class RecommendationEngine:
         top_k: int = 3,
         current_outfit_keep_threshold: float | None = None,
     ) -> list[Recommendation]:
-        if current_outfit_keep_threshold is not None:
-            current = self.evaluate_current_outfit(
-                profile, pose, outfit, keep_threshold=current_outfit_keep_threshold
-            )
-            if current.should_keep:
-                return [
-                    Recommendation(
-                        rank=1,
-                        products=[],
-                        total_score=current.total_score,
-                        score_breakdown=current.score_breakdown,
-                        reasons=[
-                            "좋은 코디입니다. 현재 착장을 유지해도 좋아요.",
-                            *current.reasons,
-                        ],
-                        applied_rules=current.applied_rules,
-                        score_coverage=current.score_coverage,
-                        styling_tips=[
-                            "상·하의를 교체하지 않고 신발·가방 같은 작은 요소만 선택적으로 조정해보세요."
-                        ],
-                    )
-                ]
-        scopes = CHANGE_SCOPE_MAP.get(profile.change_scope, ["top", "bottom"])
-        if not scopes:
+        current = self.evaluate_current_outfit(
+            profile,
+            pose,
+            outfit,
+            keep_threshold=current_outfit_keep_threshold if current_outfit_keep_threshold is not None else 100.0,
+        )
+        if current_outfit_keep_threshold is not None and current.should_keep:
             return [
                 Recommendation(
                     rank=1,
                     products=[],
-                    total_score=100.0,
-                    score_breakdown={},
-                    reasons=["사용자가 선택한 현재 코디 유지 조건을 적용했습니다."],
-                    applied_rules=[rule for rule in ("R-KOR-02", "R-DAT-01") if self.rule_book.has(rule)],
-                    score_coverage=0.0,
-                    styling_tips=[],
+                    total_score=current.total_score,
+                    score_breakdown=current.score_breakdown,
+                    reasons=["좋은 코디입니다. 현재 착장을 유지해도 좋아요.", *current.reasons],
+                    applied_rules=current.applied_rules,
+                    score_coverage=current.score_coverage,
+                    styling_tips=["상·하의를 유지하고 작은 액세서리만 선택적으로 조정해보세요."],
+                    change_target="keep",
+                    current_score=current.total_score,
+                    predicted_score=current.total_score,
+                    diagnostic_matrix=current.diagnostic_matrix,
+                    harmony_score=current.harmony_score,
+                    harmony_breakdown=current.harmony_breakdown,
                 )
             ]
 
-        tops = self._available_for_profile("top", profile) if "top" in scopes else [None]
-        bottoms = self._available_for_profile("bottom", profile) if "bottom" in scopes else [None]
+        kept = set(profile.items_to_keep)
+        if kept >= {"top", "bottom"} or profile.change_scope == "현재 유지":
+            return [
+                Recommendation(
+                    rank=1, products=[], total_score=current.total_score,
+                    score_breakdown=current.score_breakdown,
+                    reasons=["사용자가 지정한 상의·하의 유지 조건을 적용했습니다.", *current.reasons],
+                    applied_rules=current.applied_rules, score_coverage=current.score_coverage,
+                    change_target="keep", current_score=current.total_score,
+                    predicted_score=current.total_score, diagnostic_matrix=current.diagnostic_matrix,
+                    harmony_score=current.harmony_score, harmony_breakdown=current.harmony_breakdown,
+                )
+            ]
+
+        # change_scope의 단일 변경 값은 구버전 UI의 명시적 요청으로 존중한다.
+        # 기본값인 '전체 변경'에서는 엔진이 top/bottom/both를 모두 비교해 자동 결정한다.
+        if kept == {"top"}:
+            actions = ["bottom"]
+        elif kept == {"bottom"}:
+            actions = ["top"]
+        elif profile.change_scope == "상의만 변경":
+            actions = ["top"]
+        elif profile.change_scope == "하의만 변경":
+            actions = ["bottom"]
+        else:
+            actions = ["top", "bottom", "both"]
+
+        available_tops = self._available_for_profile("top", profile)
+        available_bottoms = self._available_for_profile("bottom", profile)
         candidates = []
-        for top, bottom in itertools.product(tops, bottoms):
-            products = [product for product in (top, bottom) if product]
-            if not products or sum(product.price for product in products) > profile.budget:
-                continue
-            score, breakdown, reasons, applied_rules, tips, coverage = self._score_candidate(
-                top, bottom, profile, pose, outfit
-            )
-            candidates.append((score, products, breakdown, reasons, applied_rules, tips, coverage))
+        for action in actions:
+            if action == "top":
+                pairs = ((top, None) for top in available_tops)
+            elif action == "bottom":
+                pairs = ((None, bottom) for bottom in available_bottoms)
+            else:
+                pairs = itertools.product(available_tops, available_bottoms)
+            for top, bottom in pairs:
+                products = [product for product in (top, bottom) if product]
+                if not products or sum(product.price for product in products) > profile.budget:
+                    continue
+                score, breakdown, reasons, applied_rules, tips, coverage = self._score_candidate(
+                    top, bottom, profile, pose, outfit
+                )
+                changed_count = 2 if action == "both" else 1
+                delta = round(score - current.total_score, 2)
+                change_cost = float(4 * changed_count)
+                utility = round(delta - change_cost, 2)
+                matrix = {
+                    "top": {
+                        name: breakdown[f"top_{name}"]
+                        for name in ("body_fit", "situation_fit", "style_fit")
+                    },
+                    "bottom": {
+                        name: breakdown[f"bottom_{name}"]
+                        for name in ("body_fit", "situation_fit", "style_fit")
+                    },
+                }
+                candidates.append((
+                    utility, score, action, products, breakdown, reasons,
+                    applied_rules, tips, coverage, delta, change_cost, matrix,
+                ))
 
         if not candidates:
             raise ValueError(
@@ -1247,24 +1668,48 @@ class RecommendationEngine:
                 "예산, 계절, 제외 목록 또는 변경 범위를 조정하세요."
             )
 
-        # 점수가 정확히 같은 후보가 매우 많다. 실측(2026-08-21)에서 최고점 동점이
-        # 남성 777개(71종 상의) / 여성 2,833개(98종 상의)였다. 안정 정렬에 맡기면
-        # 카탈로그 CSV 행 순서가 승자를 정해 모든 사람에게 같은 조합이 나간다.
-        # 동점끼리는 사진에서 뽑은 씨앗으로 섞어, 같은 사람은 같은 결과를 받되
-        # 사람이 다르면 다른 조합을 받게 한다. 점수 자체는 건드리지 않는다.
         seed = _tie_seed(pose)
-        candidates.sort(key=lambda item: (-item[0], _tie_rank(seed, item[1])))
+        candidates.sort(key=lambda item: (-item[0], -item[1], _tie_rank(seed, item[3])))
+        # 4점 미만 개선이거나 변경 비용을 이기지 못하면 교체 이득이 작다고 본다.
+        if candidates[0][9] < 4.0 or candidates[0][0] <= 0.0:
+            return [
+                Recommendation(
+                    rank=1, products=[], total_score=current.total_score,
+                    score_breakdown=current.score_breakdown,
+                    reasons=["교체로 얻는 개선폭이 변경 비용보다 작아 현재 착장을 유지합니다.", *current.reasons],
+                    applied_rules=current.applied_rules, score_coverage=current.score_coverage,
+                    change_target="keep", current_score=current.total_score,
+                    predicted_score=current.total_score, diagnostic_matrix=current.diagnostic_matrix,
+                    harmony_score=current.harmony_score, harmony_breakdown=current.harmony_breakdown,
+                )
+            ]
         return [
             Recommendation(
                 rank=index,
                 products=products,
                 total_score=score,
                 score_breakdown=breakdown,
-                reasons=reasons,
+                reasons=[
+                    f"현재 {current.total_score:.1f}점에서 예상 {score:.1f}점으로 {delta:+.1f}점 개선됩니다.",
+                    *reasons,
+                ],
                 applied_rules=applied_rules,
                 score_coverage=coverage,
                 styling_tips=tips,
+                change_target=action,
+                current_score=current.total_score,
+                predicted_score=score,
+                delta_score=delta,
+                change_cost=change_cost,
+                utility_score=utility,
+                diagnostic_matrix=matrix,
+                harmony_score=breakdown.get("outfit_harmony", 0.0),
+                harmony_breakdown={
+                    name: breakdown.get(f"harmony_{name}", 0.0)
+                    for name in ("silhouette", "formality", "color", "pattern_material")
+                },
             )
-            for index, (score, products, breakdown, reasons, applied_rules, tips, coverage)
+            for index, (utility, score, action, products, breakdown, reasons, applied_rules,
+                        tips, coverage, delta, change_cost, matrix)
             in enumerate(candidates[:top_k], start=1)
         ]

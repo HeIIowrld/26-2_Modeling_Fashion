@@ -139,9 +139,9 @@ class RecommendationTests(unittest.TestCase):
 
     def test_rules_markdown_is_loaded(self):
         self.assertEqual(self.engine.rules_source.name, "FASHION_RULES_MASTER.md")
-        self.assertEqual(len(self.engine.documented_rule_ids), 53)
-        self.assertEqual(len(self.engine.active_rule_ids), 46)
-        self.assertEqual(len(self.engine.scoring_rule_ids), 34)
+        self.assertEqual(len(self.engine.documented_rule_ids), 55)
+        self.assertEqual(len(self.engine.active_rule_ids), 48)
+        self.assertEqual(len(self.engine.scoring_rule_ids), 36)
         self.assertIn("R-SIL-01", self.engine.active_rule_ids)
         self.assertEqual(
             set(self.engine.unsupported_rule_ids),
@@ -156,7 +156,11 @@ class RecommendationTests(unittest.TestCase):
         return min(top.price for top in tops) + min(bottom.price for bottom in bottoms)
 
     def test_budget_is_a_hard_filter(self):
-        floor = self._cheapest_daily_pair()
+        probe = UserProfile(purpose="데일리", change_scope="전체 변경")
+        floor = min(
+            min(product.price for product in self.engine._available_for_profile("top", probe)),
+            min(product.price for product in self.engine._available_for_profile("bottom", probe)),
+        )
         profile = UserProfile(purpose="데일리", budget=floor - 1, change_scope="전체 변경")
         with self.assertRaisesRegex(ValueError, "조건을 모두 만족"):
             self.engine.recommend(profile, self.pose, self.outfit)
@@ -233,7 +237,6 @@ class RecommendationTests(unittest.TestCase):
         )
         recommendation = self.engine.recommend(profile, self.pose, self.outfit, top_k=1)[0]
         self.assertEqual(recommendation.score_coverage, 85.0)
-        self.assertIn("wardrobe", recommendation.score_breakdown)
         self.assertIn("R-OWN-01", recommendation.applied_rules)
 
     def test_accessory_rules_return_guidance_not_fake_products(self):
@@ -254,13 +257,14 @@ class RecommendationTests(unittest.TestCase):
         )
         profile = UserProfile(purpose="데일리", desired_style="캐주얼", change_scope="전체 변경")
         evaluation = self.engine.evaluate_current_outfit(
-            profile, self.pose, outfit, keep_threshold=80
+            profile, self._scorable_pose(), outfit, keep_threshold=85
         )
         self.assertTrue(evaluation.reliable)
         self.assertTrue(evaluation.should_keep)
-        self.assertIn("color", evaluation.score_breakdown)
+        self.assertIn("top_situation_fit", evaluation.score_breakdown)
+        self.assertTrue(all(all(row.values()) for row in evaluation.pass_matrix.values()))
         recommendation = self.engine.recommend(
-            profile, self.pose, outfit, current_outfit_keep_threshold=80
+            profile, self._scorable_pose(), outfit, current_outfit_keep_threshold=85
         )[0]
         self.assertEqual(recommendation.products, [])
         self.assertIn("좋은 코디", recommendation.reasons[0])
@@ -285,24 +289,101 @@ class RecommendationTests(unittest.TestCase):
             "정면에 가까움", body_shape_confidence=0.95,
         )
 
-    def test_styled_outfit_scores_higher_than_a_plain_safe_outfit(self):
-        profile = UserProfile(purpose="데일리", desired_style="캐주얼")
-        plain = self.engine.evaluate_current_outfit(
-            profile, self._scorable_pose(), self._scorable_outfit()
+    def test_date_situation_scores_hoodie_lower_than_blouse(self):
+        profile = UserProfile(purpose="데이트", desired_style="캐주얼")
+        hoodie = self.engine.evaluate_current_outfit(
+            profile, self._scorable_pose(), self._scorable_outfit(upper_type="후드티")
         )
-        styled = self.engine.evaluate_current_outfit(
+        blouse = self.engine.evaluate_current_outfit(
+            profile, self._scorable_pose(), self._scorable_outfit(upper_type="블라우스")
+        )
+        hoodie_score = hoodie.diagnostic_matrix["top"]["situation_fit"]
+        blouse_score = blouse.diagnostic_matrix["top"]["situation_fit"]
+        self.assertLess(hoodie_score, 50.0)
+        self.assertGreaterEqual(blouse_score - hoodie_score, 40.0)
+        self.assertIn("R-CTX-03", hoodie.applied_rules)
+
+    def test_each_diagnostic_cell_passes_at_85(self):
+        evaluation = self.engine.evaluate_current_outfit(
+            UserProfile(purpose="데일리", desired_style="캐주얼"),
+            self._scorable_pose(),
+            self._scorable_outfit(),
+        )
+        for section, values in evaluation.diagnostic_matrix.items():
+            for name, value in values.items():
+                self.assertEqual(evaluation.pass_matrix[section][name], value >= 85.0)
+
+    def test_long_oversized_top_and_long_wide_bottom_is_trendy_harmony(self):
+        profile = UserProfile(purpose="데일리", desired_style="캐주얼")
+        trend = self.engine.evaluate_current_outfit(
             profile,
             self._scorable_pose(),
             self._scorable_outfit(
-                upper_color="레드", lower_color="블랙", upper_type="재킷",
-                upper_length="크롭 기장", lower_fit="와이드핏",
-                neckline="라펠 칼라", pattern="체크",
-                material="울", lower_material="데님",
+                fit="오버핏", upper_length="롱 기장",
+                lower_fit="와이드핏", bottom_length="롱·긴바지 기장",
             ),
         )
-        self.assertGreaterEqual(styled.total_score - plain.total_score, 7.0)
-        self.assertIn("styling_intent", styled.score_breakdown)
-        self.assertIn("R-CMP-02", styled.applied_rules)
+        safe = self.engine.evaluate_current_outfit(
+            profile,
+            self._scorable_pose(),
+            self._scorable_outfit(
+                fit="오버핏", upper_length="기본 기장",
+                lower_fit="스트레이트핏", bottom_length="긴바지",
+            ),
+        )
+        self.assertGreaterEqual(trend.harmony_breakdown["silhouette"], 90.0)
+        self.assertGreaterEqual(safe.harmony_breakdown["silhouette"], 65.0)
+        self.assertLess(safe.harmony_breakdown["silhouette"], 80.0)
+        self.assertGreaterEqual(
+            trend.harmony_breakdown["silhouette"] - safe.harmony_breakdown["silhouette"],
+            15.0,
+        )
+
+    def test_harmony_uses_the_same_85_point_pass_threshold(self):
+        evaluation = self.engine.evaluate_current_outfit(
+            UserProfile(purpose="데일리", desired_style="캐주얼"),
+            self._scorable_pose(),
+            self._scorable_outfit(
+                fit="오버핏", upper_length="롱 기장",
+                lower_fit="와이드핏", bottom_length="롱·긴바지 기장",
+            ),
+        )
+        self.assertEqual(evaluation.harmony_passed, evaluation.harmony_score >= 85.0)
+        self.assertIn("R-CMP-03", evaluation.applied_rules)
+
+    def test_auto_scope_uses_delta_minus_change_cost(self):
+        profile = UserProfile(
+            purpose="데이트", desired_style="캐주얼", budget=180_000,
+            change_scope="전체 변경",
+        )
+        outfit = self._scorable_outfit(upper_type="후드티")
+        evaluation = self.engine.evaluate_current_outfit(
+            profile, self._scorable_pose(), outfit
+        )
+        recommendation = self.engine.recommend(
+            profile, self._scorable_pose(), outfit, top_k=1
+        )[0]
+        self.assertEqual(evaluation.change_target, "top")
+        self.assertEqual(recommendation.change_target, "top")
+        self.assertGreater(recommendation.delta_score, 4.0)
+        self.assertAlmostEqual(
+            recommendation.utility_score,
+            recommendation.delta_score - recommendation.change_cost,
+        )
+
+    def test_items_to_keep_prevents_that_item_from_being_replaced(self):
+        profile = UserProfile(
+            purpose="데이트", desired_style="캐주얼", budget=180_000,
+            change_scope="전체 변경", items_to_keep=["top"],
+        )
+        recommendations = self.engine.recommend(
+            profile, self._scorable_pose(), self._scorable_outfit(upper_type="후드티"), top_k=3
+        )
+        self.assertTrue(all(
+            not recommendation.products
+            or all(product.category == "bottom" for product in recommendation.products)
+            for recommendation in recommendations
+        ))
 
     def test_short_leg_ratio_penalizes_short_tight_lower_combination(self):
         profile = UserProfile(purpose="데일리", desired_style="캐주얼")
