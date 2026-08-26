@@ -832,6 +832,10 @@ select:focus, input:focus {
   font-size: 14px;
   line-height: 1.5;
 }
+.backend-down.is-preview {
+  background: #1f2937;
+  color: #e5e7eb;
+}
 .backend-down code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;

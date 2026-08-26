@@ -708,6 +708,10 @@ select {
   font-size: .8rem; opacity: .88;
 }
 
+.backend-down.is-preview {
+  background: var(--ink); color: var(--bg);
+}
+
 /* ── 반응형 ───────────────────────────────────────────── */
 @media (max-width: 1080px) {
   .analysis-grid { grid-template-columns: 1fr; }
