@@ -62,3 +62,10 @@ NECKLINE_PROMPTS = {
     "라펠 칼라": "a garment with a lapel collar",
     "서스펜더·슬링": "a suspender or sling garment neckline",
 }
+
+# 현재 배포 체크포인트에는 layering_state 헤드가 없다. 정식 헤드를 학습하기 전까지
+# 상의 전체와 목 ROI에서 사용하는 보조적인 zero-shot 후보군이다.
+LAYERING_PROMPTS = {
+    "단일 상의": "one single upper body garment, not layered with another top",
+    "레이어드": "a visibly layered outfit with a shirt worn underneath a knit sweater or vest",
+}

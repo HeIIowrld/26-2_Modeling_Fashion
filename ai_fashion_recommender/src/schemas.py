@@ -48,7 +48,7 @@ BASIS_ESTIMATE = "사진에서 추정한 둘레"  # 3D 체형 복원. 오차가 
 
 # 체형 분석을 추천 점수에 반영할지 정하는 선택지.
 # 사용자가 목표를 고를 때만 체형 규칙(R-BOD-*)을 적용한다는 R-KOR-02를 따른다.
-GOAL_NONE = "반영 안 함"
+GOAL_NONE = "별도 보정 없음"
 GOAL_BALANCE = "상·하체 균형 맞추기"
 GOAL_LONGER_LEGS = "다리가 길어 보이게"
 GOAL_WAISTLINE = "허리선 강조하기"
@@ -57,7 +57,7 @@ GOAL_LOWER_FOCUS = "하체에 시선 모으기"
 
 # 화면에 보여줄 순서와, 선택지마다 덧붙일 설명.
 SILHOUETTE_GOAL_CHOICES = [
-    (GOAL_NONE, "반영 안 함 (목적·취향만 고려)"),
+    (GOAL_NONE, "별도 보정 없음 (목적·취향만 고려)"),
     (GOAL_BALANCE, GOAL_BALANCE),
     (GOAL_LONGER_LEGS, GOAL_LONGER_LEGS),
     (GOAL_WAISTLINE, GOAL_WAISTLINE),
@@ -91,6 +91,8 @@ class UserProfile:
     purpose: str = "데일리"
     desired_style: str = "캐주얼"
     budget: int = 150_000
+    min_budget: int | None = None
+    max_budget: int | None = None
     change_scope: str = "전체 변경"
     height_cm: float | None = None
     weight_kg: float | None = None
@@ -98,6 +100,9 @@ class UserProfile:
     chest_cm: float | None = None
     waist_cm: float | None = None
     hip_cm: float | None = None
+    # 사용자가 입력하는 '평소 사이즈' 라벨(예: S/M/L 또는 숫자) — 선택
+    usual_top_size: str | None = None
+    usual_bottom_size: str | None = None
     season: str = "사계절"
     silhouette_goal: str = GOAL_NONE
     dress_code: str = "자동"
@@ -155,6 +160,16 @@ class OutfitAnalysis:
     pant_leg_shape: str = "분석 보류"
     pant_length: str = "분석 보류"
     sleeve_length: str = "분석 불가"
+    visible_sleeve_length: str = "분석 불가"
+    sleeve_state: str = "판단 보류"
+    input_valid: bool = True
+    input_error_code: str = ""
+    input_error_message: str = ""
+    layering_state: str = "판단 보류"
+    upper_items: list[str] = field(default_factory=list)
+    inner_category: str = "해당 없음"
+    outer_category: str = "해당 없음"
+    wear_state_confidence: dict[str, float] = field(default_factory=dict)
     upper_length: str = "분석 불가"
     bottom_length: str = "분석 불가"
     fit: str = "분석 불가"
@@ -198,11 +213,20 @@ class OutfitAnalysis:
             lower_shape = self.lower_fit.replace(" 추정", "")
         lower_length = self.pant_length if usable(self.pant_length) else self.bottom_length
 
+        upper_name = self.upper_type
+        if self.layering_state in {"레이어드", "레이어드 가능성"} and len(self.upper_items) >= 2:
+            upper_name = " + ".join(self.upper_items)
+        sleeve_description = self.sleeve_length
+        if self.sleeve_state == "걷음 가능성 높음":
+            sleeve_description = f"{self.sleeve_length}·소매 걷음"
+        elif self.sleeve_state == "좌우 비대칭":
+            sleeve_description = f"{self.sleeve_length}·좌우 소매 상태 다름"
+
         return {
             "상의": description(
                 self.upper_color,
-                self.upper_type,
-                [self.sleeve_length],
+                upper_name,
+                [sleeve_description],
             ),
             "하의": description(
                 self.lower_color,
@@ -210,6 +234,25 @@ class OutfitAnalysis:
                 [lower_shape, lower_length, *self.lower_details[:2]],
             ),
         }
+
+
+@dataclass
+class CurrentOutfitEvaluation:
+    """현재 착장을 추천 상품 후보와 분리해 평가한 결과."""
+
+    total_score: float
+    score_breakdown: dict[str, float]
+    reasons: list[str]
+    applied_rules: list[str]
+    score_coverage: float
+    analysis_confidence: float
+    reliable: bool
+    keep_threshold: float
+    should_keep: bool
+    verdict: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 @dataclass

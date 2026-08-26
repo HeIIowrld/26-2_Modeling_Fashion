@@ -1,0 +1,4 @@
+image_path,split,bbox_x,bbox_y,bbox_w,bbox_h,is_layered,inner_category,outer_category
+single/example_single.jpg,train,,,,,0,,
+layered/example_shirt_knit.jpg,train,,,,,1,셔츠,니트
+layered/example_shirt_vest.jpg,val,,,,,1,셔츠,베스트

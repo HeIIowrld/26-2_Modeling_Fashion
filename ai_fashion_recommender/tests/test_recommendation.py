@@ -10,9 +10,9 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from outfit_analyzer import _dominant_palette, _dominant_rgb, color_harmony
+from outfit_analyzer import _dominant_palette, _dominant_rgb, _nearest_color, color_harmony
 from product_catalog import ProductCatalog
-from recommendation_engine import RecommendationEngine
+from recommendation_engine import RecommendationEngine, NoBudgetMatch, MinGreaterThanMax
 from schemas import OutfitAnalysis, PoseAnalysis, Product, UserProfile, WardrobeItem
 
 
@@ -117,11 +117,31 @@ class RecommendationTests(unittest.TestCase):
         self.assertAlmostEqual(sum(item["proportion"] for item in palette), 1.0, places=2)
         self.assertGreater(palette[0]["proportion"], palette[1]["proportion"])
 
+    def test_dark_navy_is_not_collapsed_into_black(self):
+        self.assertEqual(_nearest_color((23, 23, 43)), "네이비")
+        self.assertEqual(_nearest_color((43, 40, 61)), "네이비")
+
+    def test_shaded_beige_is_not_collapsed_into_gray(self):
+        self.assertEqual(_nearest_color((167, 150, 122)), "베이지")
+        self.assertEqual(_nearest_color((225, 207, 179)), "베이지")
+
+    def test_olive_khaki_is_not_collapsed_into_brown(self):
+        self.assertEqual(_nearest_color((79, 75, 54)), "카키")
+        self.assertEqual(_nearest_color((125, 119, 91)), "카키")
+
+    def test_shaded_clusters_of_one_colour_are_merged(self):
+        image = np.empty((20, 20, 3), dtype=np.uint8)
+        image[:12] = (23, 23, 43)
+        image[12:] = (43, 40, 61)
+        palette = _dominant_palette(image, np.ones((20, 20), dtype=bool), max_colors=3)
+        self.assertEqual(palette[0]["name"], "네이비")
+        self.assertAlmostEqual(palette[0]["proportion"], 1.0, places=2)
+
     def test_rules_markdown_is_loaded(self):
         self.assertEqual(self.engine.rules_source.name, "FASHION_RULES_MASTER.md")
-        self.assertEqual(len(self.engine.documented_rule_ids), 50)
-        self.assertEqual(len(self.engine.active_rule_ids), 43)
-        self.assertEqual(len(self.engine.scoring_rule_ids), 31)
+        self.assertEqual(len(self.engine.documented_rule_ids), 53)
+        self.assertEqual(len(self.engine.active_rule_ids), 46)
+        self.assertEqual(len(self.engine.scoring_rule_ids), 34)
         self.assertIn("R-SIL-01", self.engine.active_rule_ids)
         self.assertEqual(
             set(self.engine.unsupported_rule_ids),
@@ -149,6 +169,37 @@ class RecommendationTests(unittest.TestCase):
         self.assertLessEqual(
             sum(product.price for product in recommendations[0].products), floor
         )
+
+    def test_budget_range_includes_min_boundary(self):
+        """최소값 경계가 포함되는지 확인한다: 합계 == min_budget 이면 반환되어야 한다."""
+        floor = self._cheapest_daily_pair()
+        profile = UserProfile(purpose="데일리", change_scope="전체 변경", min_budget=floor, max_budget=floor)
+        recommendations = self.engine.recommend(profile, self.pose, self.outfit, top_k=1)
+        self.assertEqual(len(recommendations), 1)
+        total = sum(product.price for product in recommendations[0].products)
+        self.assertEqual(total, floor)
+
+    def test_budget_range_includes_max_boundary(self):
+        """최대값 경계가 포함되는지 확인한다: 합계 == max_budget 이면 반환되어야 한다."""
+        floor = self._cheapest_daily_pair()
+        profile = UserProfile(purpose="데일리", change_scope="전체 변경", min_budget=0, max_budget=floor)
+        recommendations = self.engine.recommend(profile, self.pose, self.outfit, top_k=1)
+        self.assertEqual(len(recommendations), 1)
+        total = sum(product.price for product in recommendations[0].products)
+        self.assertLessEqual(total, floor)
+
+    def test_no_candidates_in_budget_range(self):
+        """범위 내에 추천 조합이 없을 때는 명확한 예외를 던진다."""
+        floor = self._cheapest_daily_pair()
+        profile = UserProfile(purpose="데일리", change_scope="전체 변경", min_budget=floor + 1, max_budget=floor + 10)
+        with self.assertRaisesRegex(NoBudgetMatch, "예산 범위"):
+            self.engine.recommend(profile, self.pose, self.outfit)
+
+    def test_min_greater_than_max_is_rejected(self):
+        """최소값이 최대값보다 큰 입력은 명확한 에러를 발생시킨다."""
+        profile = UserProfile(purpose="데일리", change_scope="전체 변경", min_budget=100_000, max_budget=10_000)
+        with self.assertRaisesRegex(MinGreaterThanMax, "최소 예산이 최대 예산보다 큽니다"):
+            self.engine.recommend(profile, self.pose, self.outfit)
 
     def test_user_exclusions_are_hard_filters(self):
         profile = UserProfile(
@@ -223,6 +274,110 @@ class RecommendationTests(unittest.TestCase):
         self.assertIn("R-CAT-01", recommendation.applied_rules)
         self.assertIn("R-ACC-06", recommendation.applied_rules)
         self.assertTrue(all(product.category in {"top", "bottom"} for product in recommendation.products))
+
+    def test_current_outfit_score_is_separate_and_can_skip_recommendation(self):
+        outfit = OutfitAnalysis(
+            "test", "네이비", "베이지", "안정적인 무채색 조합", ["top", "pants"], "캐주얼",
+            upper_type="니트", lower_type="팬츠", sleeve_length="긴팔",
+            upper_length="기본 기장", bottom_length="긴바지", fit="레귤러핏",
+            lower_fit="와이드핏", pattern="무지", material="니트",
+            lower_pattern="무지", lower_material="코튼", attribute_confidence=0.90,
+        )
+        profile = UserProfile(purpose="데일리", desired_style="캐주얼", change_scope="전체 변경")
+        evaluation = self.engine.evaluate_current_outfit(
+            profile, self.pose, outfit, keep_threshold=80
+        )
+        self.assertTrue(evaluation.reliable)
+        self.assertTrue(evaluation.should_keep)
+        self.assertIn("color", evaluation.score_breakdown)
+        recommendation = self.engine.recommend(
+            profile, self.pose, outfit, current_outfit_keep_threshold=80
+        )[0]
+        self.assertEqual(recommendation.products, [])
+        self.assertIn("좋은 코디", recommendation.reasons[0])
+
+    def _scorable_outfit(self, **changes):
+        values = dict(
+            parser_backend="test", upper_color="네이비", lower_color="베이지",
+            color_harmony="안정적인 무채색 조합", detected_items=["top", "pants"],
+            style="캐주얼", upper_type="티셔츠", lower_type="팬츠",
+            upper_length="기본 기장", bottom_length="긴바지",
+            fit="레귤러핏", lower_fit="스트레이트핏", neckline="라운드넥",
+            pattern="무지", material="코튼", lower_pattern="무지",
+            lower_material="코튼", attribute_confidence=0.95,
+        )
+        values.update(changes)
+        return OutfitAnalysis(**values)
+
+    @staticmethod
+    def _scorable_pose(shape="사각체형", leg_ratio=0.65):
+        return PoseAnalysis(
+            True, 0.96, shape, 1.0, 0.55, leg_ratio,
+            "정면에 가까움", body_shape_confidence=0.95,
+        )
+
+    def test_styled_outfit_scores_higher_than_a_plain_safe_outfit(self):
+        profile = UserProfile(purpose="데일리", desired_style="캐주얼")
+        plain = self.engine.evaluate_current_outfit(
+            profile, self._scorable_pose(), self._scorable_outfit()
+        )
+        styled = self.engine.evaluate_current_outfit(
+            profile,
+            self._scorable_pose(),
+            self._scorable_outfit(
+                upper_color="레드", lower_color="블랙", upper_type="재킷",
+                upper_length="크롭 기장", lower_fit="와이드핏",
+                neckline="라펠 칼라", pattern="체크",
+                material="울", lower_material="데님",
+            ),
+        )
+        self.assertGreaterEqual(styled.total_score - plain.total_score, 7.0)
+        self.assertIn("styling_intent", styled.score_breakdown)
+        self.assertIn("R-CMP-02", styled.applied_rules)
+
+    def test_short_leg_ratio_penalizes_short_tight_lower_combination(self):
+        profile = UserProfile(purpose="데일리", desired_style="캐주얼")
+        pose = self._scorable_pose(leg_ratio=0.48)
+        tight = self.engine.evaluate_current_outfit(
+            profile,
+            pose,
+            self._scorable_outfit(
+                upper_length="롱 기장", bottom_length="쇼츠·미니 기장",
+                fit="슬림핏", lower_fit="슬림핏",
+            ),
+        )
+        balanced = self.engine.evaluate_current_outfit(
+            profile,
+            pose,
+            self._scorable_outfit(
+                upper_length="크롭 기장", bottom_length="롱·긴바지 기장",
+                lower_fit="와이드핏", material="니트", lower_material="데님",
+            ),
+        )
+        self.assertGreaterEqual(balanced.total_score - tight.total_score, 8.0)
+        self.assertIn("R-BOD-05", tight.applied_rules)
+
+    def test_narrow_shoulders_penalize_unstructured_tight_top(self):
+        profile = UserProfile(purpose="데일리", desired_style="캐주얼")
+        pose = self._scorable_pose(shape="삼각체형")
+        tight = self.engine.evaluate_current_outfit(
+            profile, pose, self._scorable_outfit(fit="슬림핏")
+        )
+        structured = self.engine.evaluate_current_outfit(
+            profile,
+            pose,
+            self._scorable_outfit(upper_type="재킷", neckline="라펠 칼라"),
+        )
+        self.assertGreaterEqual(structured.total_score - tight.total_score, 4.0)
+        self.assertIn("R-BOD-06", tight.applied_rules)
+
+    def test_current_outfit_does_not_skip_when_analysis_is_unreliable(self):
+        profile = UserProfile(purpose="데일리", desired_style="캐주얼", change_scope="전체 변경")
+        evaluation = self.engine.evaluate_current_outfit(
+            profile, self.pose, self.outfit, keep_threshold=0
+        )
+        self.assertFalse(evaluation.reliable)
+        self.assertFalse(evaluation.should_keep)
 
 
 if __name__ == "__main__":

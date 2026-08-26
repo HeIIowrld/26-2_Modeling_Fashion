@@ -23,3 +23,12 @@ collect/*.log
 
 # 실행 도구 바이너리 (ffmpeg, mediapipe 모델) — setup.py가 내려받는다
 collect/tools/
+
+# impeccable(디자인 도구)이 npx install 로 심는 파일들.
+# 도구 본체는 저장소에 넣지 않는다 — 각자 `npx impeccable install` 로 받는다.
+# 프로젝트 고유 결정이 담긴 PRODUCT.md / DESIGN.md 만 커밋한다.
+.claude/skills/
+.impeccable/
+.github/skills/
+.github/agents/impeccable-*
+.github/hooks/impeccable.json
