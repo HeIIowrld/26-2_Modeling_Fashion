@@ -356,6 +356,8 @@ class OutfitAnalyzer:
         style, style_confidence = self.classifier.best_mapped_label(image, STYLE_PROMPTS)
         if style_confidence < ATTRIBUTE_CONFIDENCE_THRESHOLDS["style"]:
             style = "스타일 불확실"
+        upper_style = lower_style = style
+        upper_style_confidence = lower_style_confidence = style_confidence
         attribute_sources: dict[str, str] = {}
         sleeve_shape = collar = silhouette = "분석 보류"
         details: list[str] = []
@@ -373,6 +375,11 @@ class OutfitAnalyzer:
         learned_lower = {}
         if self.classifier.enabled:
             upper_crop = _garment_crop(rgb, parsed["upper_mask"])
+            upper_style, upper_style_confidence = self.classifier.best_mapped_label(
+                upper_crop, STYLE_PROMPTS
+            )
+            if upper_style_confidence < ATTRIBUTE_CONFIDENCE_THRESHOLDS["style"]:
+                upper_style = "스타일 불확실"
             upper_geometry = _crop_geometry(parsed["upper_mask"])
             learned_upper, upper_results = self.classifier.analyze_crop(
                 upper_crop,
@@ -509,8 +516,15 @@ class OutfitAnalyzer:
                 lower_subtype = "해당 없음"
                 pant_leg_shape = "해당 없음"
                 pant_length = "해당 없음"
+                lower_style = upper_style
+                lower_style_confidence = upper_style_confidence
             else:
                 lower_crop = _garment_crop(rgb, parsed["lower_mask"])
+                lower_style, lower_style_confidence = self.classifier.best_mapped_label(
+                    lower_crop, STYLE_PROMPTS
+                )
+                if lower_style_confidence < ATTRIBUTE_CONFIDENCE_THRESHOLDS["style"]:
+                    lower_style = "스타일 불확실"
                 lower_geometry = _crop_geometry(parsed["lower_mask"])
                 learned_lower, lower_results = self.classifier.analyze_crop(
                     lower_crop,
@@ -659,6 +673,10 @@ class OutfitAnalyzer:
                 color_harmony=color_harmony(upper_color, lower_color),
                 detected_items=list(parsed["present_labels"]),
                 style=style,
+                upper_style=upper_style,
+                lower_style=lower_style,
+                upper_style_confidence=upper_style_confidence,
+                lower_style_confidence=lower_style_confidence,
                 upper_type=attributes["upper_type"],
                 lower_type=attributes["lower_type"],
                 lower_subtype=lower_subtype,
