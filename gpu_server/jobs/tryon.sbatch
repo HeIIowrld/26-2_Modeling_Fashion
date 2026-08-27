@@ -37,7 +37,7 @@ export HF_HOME=$B/hf_cache
 export              # 인터넷 없음. 캐시에 없으면 조용히 굶지 말고 바로 실패하게
 export MPLCONFIGDIR=$B/.cache/matplotlib
 export FASHION_DATASETS_DIR=$PROJ/datasets
-# 배포 모델: packages/PACKAGE_CHECKSUMS.json 이 augmented(22,341 crop, sha256 3c560c9d…)를
+# 배포 모델: models/CHECKSUMS.json 이 augmented(22,341 crop, sha256 3c560c9d…)를
 # "최종 채택 배포 모델"로, fashion_attribute_heads.pt(baseline)를 "rollback용"으로 적고 있다.
 # 그런데 config.py 기본값은 baseline 쪽이라 채택 모델을 명시적으로 가리킨다.
 export FASHION_ATTRIBUTE_HEADS_PATH=$PROJ/ai_fashion_recommender/models/fashion_attribute_heads_augmented.pt

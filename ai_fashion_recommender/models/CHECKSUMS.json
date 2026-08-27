@@ -1,6 +1,6 @@
 {
   "generated": "2026-08-18T17:38:03+09:00",
-  "note": "2026-08-23: 체크포인트 파일 자체는 그대로 두고, config.py 의 기본 로드 대상만 fashion_attribute_heads_augmented.pt 로 바꿨다. PACKAGE_CHECKSUMS.json 이 이미 이 파일을 최종 채택 배포 모델로 적고 있는데 코드는 baseline 을 읽고 있어서, 문서와 코드가 서로 다른 말을 하고 있었다.",
+  "note": "2026-08-23: 체크포인트 파일 자체는 그대로 두고, config.py 의 기본 로드 대상만 fashion_attribute_heads_augmented.pt 로 바꿨다. 이 파일이 augmented 모델을 최종 채택 배포 모델로 적고 있는데 코드는 baseline 을 읽고 있어서, 문서와 코드가 서로 다른 말을 하고 있었다.",
   "files": {
     "fashion_attribute_heads.pt": {
       "sha256": "0a649ba722ba52cdf2ad74eacba9a88af2fd329ed8ea7d6d80498b4f246626da",

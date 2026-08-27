@@ -84,7 +84,7 @@ ENABLE_AUTO_BODY_SHAPE = True
 
 FASHN_PARSER_MODEL_ID = "fashn-ai/fashn-human-parser"
 FASHION_SIGLIP_MODEL_ID = "Marqo/marqo-fashionSigLIP"
-# 배포 모델은 2차 보강본(22,341 crop)이다. packages/PACKAGE_CHECKSUMS.json 이
+# 배포 모델은 2차 보강본(22,341 crop)이다. models/CHECKSUMS.json 이
 # 이 파일을 adopted_model("최종 채택 배포 모델")로, fashion_attribute_heads.pt 를
 # baseline_model("초기 baseline · rollback용")로 적고 있다.
 #
