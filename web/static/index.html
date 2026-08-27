@@ -6,137 +6,133 @@
 <title>FITTA · 체형·목적 기반 AI 코디 추천</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="lookbook.css" />
 </head>
 <body>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+
 <header class="topbar">
   <div class="topbar-inner">
-    <a class="brand" href="#">
-      <span class="brand-mark" aria-hidden="true"></span>
-      <span class="brand-name">FITTA</span>
-    </a>
-    <div class="topbar-meta">
-      <span class="engine-chip" id="engine-chip" hidden></span>
-      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="테마 전환">
-        <span class="theme-icon" aria-hidden="true"></span>
-      </button>
-    </div>
+    <a class="brand" href="#main">FITTA</a>
+
+    <!-- 사용자가 실제로 하는 일은 셋이다. 분석은 기다리는 상태지 단계가 아니라서
+         스테퍼에서 빼고 '결과' 자리에 진행 중 표시로 얹는다. -->
+    <nav class="stepper" id="stepper" aria-label="진행 단계">
+      <button class="step is-active" type="button" data-goto="1"><span class="step-num">01</span><span class="step-label">사진</span></button>
+      <button class="step" type="button" data-goto="2"><span class="step-num">02</span><span class="step-label">조건</span></button>
+      <button class="step" type="button" data-goto="4"><span class="step-num">03</span><span class="step-label">결과</span></button>
+    </nav>
+
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="테마 전환">
+      <span class="theme-icon" aria-hidden="true"></span>
+    </button>
   </div>
 </header>
 
-<main class="shell">
-  <!-- ── 진행 표시 ─────────────────────────────────────────── -->
-  <nav class="stepper" id="stepper" aria-label="진행 단계">
-    <button class="step is-active" type="button" data-goto="1"><span class="step-num">1</span><span class="step-label">사진</span></button>
-    <span class="step-line" aria-hidden="true"></span>
-    <button class="step" type="button" data-goto="2"><span class="step-num">2</span><span class="step-label">조건</span></button>
-    <span class="step-line" aria-hidden="true"></span>
-    <button class="step" type="button" data-goto="3"><span class="step-num">3</span><span class="step-label">분석</span></button>
-    <span class="step-line" aria-hidden="true"></span>
-    <button class="step" type="button" data-goto="4"><span class="step-num">4</span><span class="step-label">결과</span></button>
-  </nav>
+<main class="shell" id="main">
 
   <!-- ── 1단계: 사진 ───────────────────────────────────────── -->
   <section class="panel is-active" id="panel-1" aria-labelledby="h-upload">
-    <div class="hero">
-      <p class="eyebrow">STEP 01</p>
-      <h1 id="h-upload">전신 사진 한 장으로<br />나에게 맞는 코디를 찾아보세요</h1>
-    </div>
-
-    <div class="upload-grid">
-      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="사진 업로드">
-        <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" hidden />
-        <div class="dropzone-empty" id="dropzone-empty">
-          <div class="dz-icon" aria-hidden="true">
-            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M24 32V13m0 0-7 7m7-7 7 7" />
-              <path d="M8 30v5a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4v-5" />
-            </svg>
+    <div class="hero-split">
+      <div class="hero-drop">
+        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="사진 업로드">
+          <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" hidden />
+          <div class="dropzone-empty" id="dropzone-empty">
+            <span class="dz-badge">STEP 01</span>
+            <div class="dz-icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M24 32V13m0 0-7 7m7-7 7 7" />
+                <path d="M8 30v5a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4v-5" />
+              </svg>
+            </div>
+            <p class="dz-title">사진을 끌어다 놓거나 클릭해 선택</p>
+            <p class="dz-sub">JPG · PNG · WEBP / 최대 12MB</p>
+            <p class="dz-privacy">업로드한 사진은 분석 완료 후 30분 이내 자동으로 삭제돼요.</p>
           </div>
-          <p class="dz-title">사진을 끌어다 놓거나 클릭해 선택</p>
-          <p class="dz-sub">JPG · PNG · WEBP / 최대 12MB</p>
-          <p class="dz-privacy">업로드한 사진은 분석 완료 후 30분 이내 자동으로 삭제돼요.</p>
-        </div>
-        <div class="dropzone-preview" id="dropzone-preview" hidden>
-          <img id="preview-img" alt="업로드한 전신사진 미리보기" />
-          <button class="chip-btn" id="clear-image" type="button">다른 사진 선택</button>
+          <div class="dropzone-preview" id="dropzone-preview" hidden>
+            <img id="preview-img" alt="업로드한 전신사진 미리보기" />
+            <button class="chip-btn" id="clear-image" type="button">다른 사진 선택</button>
+          </div>
         </div>
       </div>
 
-      <aside class="tips-card">
-        <h2>좋은 결과를 위한 촬영 조건</h2>
+      <div class="hero-copy">
+        <h1 id="h-upload">전신 사진 한 장으로<br />나에게 맞는 코디를 찾아보세요</h1>
+        <p class="lede">체형과 지금 입은 옷을 읽어서, 왜 이 옷인지 근거와 함께 추천해요.</p>
+
         <ul class="tips">
           <li><strong>정면 전신</strong> — 머리끝부터 발끝까지 프레임 안에</li>
           <li><strong>선명한 경계</strong> — 배경과 옷 색이 비슷하면 분리가 어려워요</li>
           <li><strong>가림 없음</strong> — 가방·외투로 상·하의가 가려지지 않게</li>
           <li><strong>해상도</strong> — 짧은 변 320px 이상</li>
         </ul>
+
         <p class="tips-note">
           사진에서 얻는 어깨·골반 비율은 실제 신체 치수가 아니라
-          코디 추천을 위한 상대적인 참고값입니다.
+          코디 추천을 위한 상대적인 참고값이에요.
         </p>
-      </aside>
 
-      <details class="disclosure body-photo">
-        <summary>
-          <span>체형 파악용 사진 <em>선택</em></span>
-        </summary>
-        <div class="disclosure-body">
-          <p class="field-hint">
-            몸선이 드러나는 옷을 입은 정면 전신사진을 넣으면 체형을 더 정확히 봐요.
-            없으면 위 코디 사진으로 추정해요. 이 사진도 30분 뒤 함께 삭제돼요.
-          </p>
-          <div class="dropzone dropzone-sm" id="body-dropzone" tabindex="0" role="button" aria-label="체형 사진 업로드">
-            <input type="file" id="body-file-input" accept="image/jpeg,image/png,image/webp" hidden />
-            <div id="body-dz-empty">
-              <p class="dz-title">체형 사진 선택</p>
-              <p class="dz-sub">JPG · PNG · WEBP / 최대 12MB</p>
-            </div>
-            <div class="dropzone-preview" id="body-dz-preview" hidden>
-              <img id="body-preview-img" alt="체형 사진 미리보기" />
-              <button class="chip-btn" id="clear-body-image" type="button">사진 지우기</button>
+        <details class="disclosure body-photo">
+          <summary><span>체형 파악용 사진 <em class="badge optional">선택</em></span></summary>
+          <div class="disclosure-body">
+            <p class="field-hint">
+              몸선이 드러나는 옷을 입은 정면 전신사진을 넣으면 체형을 더 정확히 봐요.
+              없으면 위 코디 사진으로 추정해요. 이 사진도 30분 뒤 함께 삭제돼요.
+            </p>
+            <div class="dropzone dropzone-sm" id="body-dropzone" tabindex="0" role="button" aria-label="체형 사진 업로드">
+              <input type="file" id="body-file-input" accept="image/jpeg,image/png,image/webp" hidden />
+              <div id="body-dz-empty">
+                <p class="dz-title">체형 사진 선택</p>
+                <p class="dz-sub">JPG · PNG · WEBP / 최대 12MB</p>
+              </div>
+              <div class="dropzone-preview" id="body-dz-preview" hidden>
+                <img id="body-preview-img" alt="체형 사진 미리보기" />
+                <button class="chip-btn" id="clear-body-image" type="button">사진 지우기</button>
+              </div>
             </div>
           </div>
+        </details>
+
+        <div class="panel-actions">
+          <button class="btn btn-primary" id="to-step-2" type="button" disabled>다음: 조건 입력</button>
         </div>
-      </details>
-
-    </div>
-
-    <div class="panel-actions">
-      <button class="btn btn-primary" id="to-step-2" type="button" disabled>다음: 조건 입력</button>
+      </div>
     </div>
   </section>
 
   <!-- ── 2단계: 조건 ───────────────────────────────────────── -->
   <section class="panel" id="panel-2" aria-labelledby="h-conditions">
-    <div class="hero hero-compact">
-      <p class="eyebrow">STEP 02</p>
-      <h1 id="h-conditions">원하는 코디 조건을 알려주세요</h1>
-      <p class="lede">목적과 예산만 선택해도 추천받을 수 있어요. 나머지 항목은 선택 사항이에요.</p>
+    <div class="block-head">
+      <h1 id="h-conditions"><span class="block-num">02</span> 원하는 코디 조건을 알려주세요</h1>
+      <p class="lede">목표만 정해주세요. 체형과 격식, 계절에 맞는 방법은 FITTA가 판단할게요.</p>
     </div>
 
     <form id="condition-form" class="form">
-      <fieldset class="field-group">
-        <legend>기본 조건</legend>
+      <!-- 필수 네 가지만 앞에 둔다. 나머지를 같은 무게로 깔아두면
+           '다 채워야 한다'는 인상을 주고, 실제로 그래서 이탈이 생긴다. -->
+      <section class="required-block" aria-labelledby="h-required">
+        <h2 class="required-title" id="h-required">꼭 정해야 하는 것</h2>
+
         <div class="grid-2">
           <label class="field">
             <span class="field-label">코디 목적 <em class="badge required">필수</em></span>
             <select name="purpose" id="f-purpose"></select>
+            <span class="field-hint">어떤 자리에 입을 옷인지에 따라 규칙이 달라져요.</span>
           </label>
           <label class="field">
-            <span class="field-label">원하는 스타일 <em class="badge optional">선택</em></span>
+            <span class="field-label">원하는 스타일 <em class="badge required">필수</em></span>
             <select name="desired_style" id="f-style"></select>
-          </label>
-          <label class="field">
-            <span class="field-label">바꾸고 싶은 범위 <em class="badge required">필수</em></span>
-            <select name="change_scope" id="f-scope"></select>
-          </label>
-          <label class="field">
-            <span class="field-label">계절 <em class="badge optional">선택</em></span>
-            <select name="season" id="f-season"></select>
+            <span class="field-hint">원하는 분위기를 고르면 세부 조합은 FITTA가 정해요.</span>
           </label>
         </div>
+
+        <label class="field">
+          <span class="field-label">바꾸고 싶은 범위 <em class="badge required">필수</em></span>
+          <select name="change_scope" id="f-scope"></select>
+          <span class="field-hint">상·하의 중 어디를 새로 추천받을지 정해요.</span>
+        </label>
+
         <label class="field">
           <span class="field-label">예산 <em class="badge required">필수</em></span>
           <div class="budget-row">
@@ -158,107 +154,89 @@
           </div>
           <span class="field-hint" id="budget-hint">입력한 최소·최대 예산 범위 안에서 상품을 추천해요. 상·하의 합계 기준이에요. 30,000 ~ 500,000원</span>
         </label>
-      </fieldset>
+      </section>
 
-      <fieldset class="field-group">
-        <legend>실루엣과 격식</legend>
-        <div class="grid-3">
-          <label class="field">
-            <span class="field-label">체형 반영 <em class="badge optional">선택</em></span>
-            <select name="silhouette_goal" id="f-silhouette"></select>
-            <span class="field-hint">고른 목표에만 체형을 반영합니다.</span>
-          </label>
-          <label class="field">
-            <span class="field-label">드레스 코드 <em class="badge optional">선택</em></span>
-            <select name="dress_code" id="f-dresscode"></select>
-          </label>
-          <label class="field">
-            <span class="field-label">활동량 <em class="badge optional">선택</em></span>
-            <select name="activity_level" id="f-activity"></select>
-          </label>
+      <!-- 선택 항목은 전부 이 아래로. 열어본 사람만 더 정밀해진다. -->
+      <div class="optional-block">
+        <div class="optional-head">
+          <h2>더 정확하게 맞추고 싶다면</h2>
+          <p>모두 선택 사항이에요. 채울수록 추천 근거가 늘어나요.</p>
         </div>
-      </fieldset>
 
-      <details class="disclosure">
-        <summary>
-          <span>색상·소재 선호 <em>선택</em></span>
-        </summary>
-        <div class="disclosure-body">
-          <div class="field">
-            <span class="field-label">선호 색상</span>
-            <div class="swatches" id="preferred-colors"></div>
+        <details class="disclosure">
+          <summary><span>계절과 활동 <em class="badge optional">선택</em></span></summary>
+          <div class="disclosure-body">
+            <div class="grid-2 paired-fields">
+              <label class="field">
+                <span class="field-label">계절</span>
+                <select name="season" id="f-season"></select>
+                <span class="field-hint">자동은 현재 날짜를 기준으로 계절을 적용해요.</span>
+              </label>
+              <label class="field">
+                <span class="field-label">활동량</span>
+                <select name="activity_level" id="f-activity"></select>
+                <span class="field-hint">핏과 소재의 편안함을 조정할 때 참고해요.</span>
+              </label>
+            </div>
           </div>
-          <div class="field">
-            <span class="field-label">피하고 싶은 색상</span>
-            <div class="swatches" id="avoided-colors"></div>
-          </div>
-          <div class="field">
-            <span class="field-label">피하고 싶은 소재</span>
-            <div class="pills" id="avoided-materials"></div>
-          </div>
-        </div>
-      </details>
+        </details>
 
-      <details class="disclosure">
-        <summary>
-          <span>상세 날씨 <em>선택</em></span>
-        </summary>
-        <div class="disclosure-body">
-          <p class="field-hint">입력한 항목에 해당하는 규칙만 추천에 적용됩니다.</p>
-          <div class="grid-3">
-            <label class="field"><span class="field-label">기온 (°C)</span><input type="number" name="temperature_c" step="0.5" placeholder="예: 18" /></label>
-            <label class="field"><span class="field-label">체감온도 (°C)</span><input type="number" name="feels_like_c" step="0.5" placeholder="예: 16" /></label>
-            <label class="field"><span class="field-label">습도 (%)</span><input type="number" name="humidity" min="0" max="100" placeholder="예: 60" /></label>
-            <label class="field"><span class="field-label">강수확률 (%)</span><input type="number" name="precipitation_probability" min="0" max="100" placeholder="예: 30" /></label>
-            <label class="field"><span class="field-label">풍속 (m/s)</span><input type="number" name="wind_mps" step="0.1" min="0" placeholder="예: 3" /></label>
-            <label class="field"><span class="field-label">자외선 지수</span><input type="number" name="uv_index" step="1" min="0" max="12" placeholder="예: 5" /></label>
+        <details class="disclosure">
+          <summary><span>색상·소재 선호 <em class="badge optional">선택</em></span></summary>
+          <div class="disclosure-body">
+            <div class="field">
+              <span class="field-label">선호 색상 <em class="selection-count" id="preferred-color-count">0개 선택</em></span>
+              <div class="swatches" id="preferred-colors"></div>
+            </div>
+            <div class="field">
+              <span class="field-label">피하고 싶은 색상 <em class="selection-count" id="avoided-color-count">0개 선택</em></span>
+              <div class="swatches" id="avoided-colors"></div>
+              <span class="field-hint">아무것도 고르지 않으면 색상 제한 없이 추천해요.</span>
+            </div>
+            <div class="field">
+              <span class="field-label">선호 소재</span>
+              <span class="field-hint">편한 느낌 중심의 쉬운 표현으로 묶었어요. 여러 개 선택할 수 있어요.</span>
+              <div class="pills" id="preferred-materials"></div>
+            </div>
           </div>
-        </div>
-      </details>
+        </details>
 
-      <details class="disclosure">
-        <summary>
-          <span>보유 옷 <em>선택 · 선택한 옷을 추천 코디에 우선 활용해요.</em></span>
-        </summary>
-        <div class="disclosure-body">
-          <div id="wardrobe-list" class="wardrobe-list"></div>
-          <button class="btn btn-ghost btn-sm" id="add-wardrobe" type="button">+ 보유 옷 추가</button>
-        </div>
-      </details>
+        <details class="disclosure">
+          <summary><span>신체 정보 <em class="badge optional">선택</em></span></summary>
+          <div class="disclosure-body">
+            <p class="field-hint section-hint">입력하면 사진 기반 체형 분석을 더 정확하게 반영해요.</p>
+            <div class="grid-2 paired-fields body-info-grid">
+              <label class="field"><span class="field-label">키 (cm)</span><input type="number" name="height_cm" min="120" max="220" placeholder="예: 170" /></label>
+              <label class="field"><span class="field-label">몸무게 (kg)</span><input type="number" name="weight_kg" min="30" max="200" placeholder="예: 62" /></label>
+            </div>
+          </div>
+        </details>
 
-      <details class="disclosure">
-        <summary>
-          <span>신체·사이즈 정보 <em>선택</em></span>
-        </summary>
-        <div class="disclosure-body">
-          <p class="field-hint">
-            적으면 더 자세한 코디 추천을 받을 수 있어요. 비워두면 사진으로 추정해요.
-          </p>
-          <div class="grid-2">
-            <label class="field"><span class="field-label">키 (cm)</span><input type="number" name="height_cm" min="120" max="220" placeholder="예: 170" /></label>
-            <label class="field"><span class="field-label">체중 (kg)</span><input type="number" name="weight_kg" min="30" max="200" placeholder="예: 62" /></label>
+        <details class="disclosure">
+          <summary><span>현재 보유 옷 활용 <em class="badge optional">선택</em></span></summary>
+          <div class="disclosure-body">
+            <p class="field-hint section-hint">상의·하의만 구분하고 사진을 넣어주세요. 색상과 스타일은 FITTA가 사진에서 판단해요.</p>
+            <div id="wardrobe-list" class="wardrobe-list"></div>
+            <button class="btn btn-ghost btn-sm" id="add-wardrobe" type="button">+ 보유 옷 추가</button>
           </div>
-          <div class="grid-2">
-            <label class="field"><span class="field-label">평소 상의 사이즈</span><input type="text" name="usual_top_size" placeholder="예: M" /></label>
-            <label class="field"><span class="field-label">평소 하의 사이즈</span><input type="text" name="usual_bottom_size" placeholder="예: 28" /></label>
-          </div>
-          <p class="field-hint">키·체중은 기록용이에요. 추천 점수에는 영향을 주지 않을 수 있어요.</p>
-        </div>
-      </details>
+        </details>
+      </div>
     </form>
 
     <div class="panel-actions">
+      <!-- 1단계는 사진이 없으면 버튼이 잠긴다. 2단계도 같은 규칙을 따라야
+           '눌러보고 나서야 뭐가 빠졌는지 아는' 상황이 생기지 않는다. -->
+      <p class="gate-note" id="gate-note" role="status" aria-live="polite"></p>
       <button class="btn btn-ghost" id="back-to-1" type="button">이전</button>
       <button class="btn btn-primary" id="start-analysis" type="button">분석 시작하기</button>
     </div>
   </section>
 
-  <!-- ── 3단계: 분석 ───────────────────────────────────────── -->
+  <!-- ── 분석 (단계가 아니라 결과로 가는 도중의 상태) ────────── -->
   <section class="panel" id="panel-3" aria-labelledby="h-analyzing">
-    <div class="hero hero-compact">
-      <p class="eyebrow">STEP 03</p>
-      <h1 id="h-analyzing">분석하고 있습니다</h1>
-      <p class="lede">첫 실행에서는 모델 체크포인트를 올리느라 시간이 조금 더 걸립니다.</p>
+    <div class="block-head">
+      <h1 id="h-analyzing">분석하고 있어요</h1>
+      <p class="lede">첫 실행에서는 모델 체크포인트를 올리느라 시간이 조금 더 걸려요.</p>
     </div>
 
     <div class="progress-card">
@@ -268,19 +246,19 @@
     </div>
 
     <div class="error-card" id="error-card" hidden>
-      <h2>분석을 마치지 못했습니다</h2>
+      <h2>분석을 마치지 못했어요</h2>
       <p id="error-message"></p>
       <button class="btn btn-ghost" id="error-back" type="button">조건 수정하기</button>
     </div>
   </section>
 
-  <!-- ── 4단계: 결과 ───────────────────────────────────────── -->
+  <!-- ── 3단계: 결과 ───────────────────────────────────────── -->
   <section class="panel" id="panel-4" aria-labelledby="h-result">
-    <div class="hero hero-compact">
-      <p class="eyebrow">STEP 04</p>
-      <h1 id="h-result">추천 결과</h1>
+    <div class="block-head">
+      <h1 id="h-result"><span class="block-num">03</span> 오늘의 추천</h1>
       <p class="lede" id="result-lede"></p>
     </div>
+
     <div class="budget-mismatch" id="budget-mismatch" hidden>
       <h2>입력한 예산에 맞는 상품을 찾지 못했어요</h2>
       <p>최소·최대 예산을 조정한 뒤 다시 시도해주세요.</p>
@@ -300,13 +278,11 @@
       </button>
     </div>
 
-    <!-- ── 추천 코디 ─────────────────────────────────────── -->
     <div class="view is-active" id="view-recos" role="tabpanel" aria-labelledby="tab-recos">
       <div class="reco-picker" id="reco-picker" role="tablist" aria-label="추천 코디 선택"></div>
       <div class="reco-detail" id="reco-detail"></div>
     </div>
 
-    <!-- ── 착장 분석 ─────────────────────────────────────── -->
     <div class="view" id="view-analysis" role="tabpanel" aria-labelledby="tab-analysis" hidden>
       <div class="analysis-grid">
         <div class="analysis-visual">
@@ -364,8 +340,8 @@
     </div>
 
     <p class="disclaimer">
-      추천 보드는 실제 가상 피팅 결과가 아니라 코디의 분위기를 확인하기 위한 참고 이미지입니다.
-      상품 목록은 추천 로직 검증용 샘플 데이터입니다.
+      추천 보드는 실제 가상 피팅 결과가 아니라 코디의 분위기를 확인하기 위한 참고 이미지예요.
+      상품 목록은 추천 로직 검증용 샘플 데이터예요.
     </p>
   </section>
 </main>
@@ -374,5 +350,6 @@
 
 <script src="config.js"></script>
 <script src="app.js"></script>
+<script src="lookbook.js"></script>
 </body>
 </html>

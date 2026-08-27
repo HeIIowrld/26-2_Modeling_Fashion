@@ -38,17 +38,41 @@ class BuildProfileTests(unittest.TestCase):
         self.assertEqual(profile.owned_items[0].color, "네이비")
         self.assertEqual(profile.owned_items[0].category, "bottom")
 
+    def test_owned_item_photo_placeholder_survives_until_image_analysis(self):
+        profile = build_profile(
+            {"owned_items": [{"category": "top", "image_index": 0}]}
+        )
+        self.assertEqual(len(profile.owned_items), 1)
+        self.assertEqual(profile.owned_items[0].category, "top")
+        self.assertEqual(profile.owned_items[0].color, "")
+
     def test_color_lists_drop_blank_entries(self):
         profile = build_profile({"preferred_colors": ["네이비", "  ", ""], "avoided_colors": []})
         self.assertEqual(profile.preferred_colors, ["네이비"])
         self.assertEqual(profile.avoided_colors, [])
 
+    def test_material_categories_expand_to_existing_model_labels(self):
+        profile = build_profile({"preferred_materials": ["면·일상 소재", "얇은 소재"]})
+        self.assertEqual(
+            profile.preferred_materials,
+            ["코튼", "폴리에스터", "린넨", "쉬폰"],
+        )
+
+    def test_automatic_season_uses_a_concrete_season(self):
+        self.assertIn(build_profile({"season": "자동"}).season, {"봄", "여름", "가을", "겨울"})
+
 
 class FormOptionTests(unittest.TestCase):
-    def test_options_cover_every_change_scope_the_engine_knows(self):
+    def test_required_style_options_use_plain_labels_and_engine_values(self):
+        options = form_options()["styles"]
+        labels = {option if isinstance(option, str) else option["label"] for option in options}
+        self.assertEqual(labels, {"캐주얼", "미니멀", "스트릿", "클래식", "스포티", "기타"})
+
+    def test_options_hide_the_no_change_scope(self):
         from recommendation_engine import CHANGE_SCOPE_MAP
 
-        self.assertEqual(set(form_options()["change_scopes"]), set(CHANGE_SCOPE_MAP))
+        sent = set(form_options()["change_scopes"])
+        self.assertEqual(sent, set(CHANGE_SCOPE_MAP) - {"현재 유지"})
 
     def test_silhouette_options_send_the_values_the_engine_expects(self):
         """화면이 보내는 값과 엔진이 아는 값이 어긋나면 체형 규칙이 조용히 잠든다."""

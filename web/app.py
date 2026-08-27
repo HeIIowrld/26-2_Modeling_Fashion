@@ -33,6 +33,7 @@ from pipeline import (  # noqa: E402
     STAGES,
     PipelineError,
     TryOnNotReady,
+    analyze_wardrobe_items,
     build_profile,
     form_options,
     generate_tryon,
@@ -55,6 +56,7 @@ SESSION_ROOT = Path(
 LEGACY_SESSION_ROOT = WEB_DIR.parent / "ai_fashion_recommender" / "outputs" / "web_sessions"
 
 MAX_UPLOAD_BYTES = 12 * 1024 * 1024
+MAX_WARDROBE_IMAGES = 8
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
 JOB_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 IMAGE_NAME_PATTERN = re.compile(r"^[a-z_]+[0-9]*\.jpg$")
@@ -191,11 +193,18 @@ def _session_dir(job_id: str) -> Path:
     return SESSION_ROOT / job_id
 
 
-def _worker(job_id: str, image_path: Path, profile, body_image_path: Path | None = None) -> None:
+def _worker(
+    job_id: str,
+    image_path: Path,
+    profile,
+    body_image_path: Path | None = None,
+    wardrobe_image_paths: list[Path] | None = None,
+) -> None:
     def on_stage(stage: str) -> None:
         _update_job(job_id, stage=stage)
 
     try:
+        analyze_wardrobe_items(profile, wardrobe_image_paths or [])
         outcome = run_pipeline(image_path, profile, _session_dir(job_id), on_stage, body_image_path)
     except PipelineError as exc:
         # 분석에 실패하면 보여줄 결과가 없으므로 사진을 바로 지운다.
@@ -248,11 +257,18 @@ async def analyze(
     image: UploadFile = File(...),
     profile: str = Form(...),
     body_image: UploadFile | None = File(None),
+    wardrobe_images: list[UploadFile] = File(default=[]),
 ) -> JSONResponse:
     try:
         payload = json.loads(profile)
     except json.JSONDecodeError as exc:
         raise HTTPException(status_code=400, detail=f"조건 값을 읽을 수 없습니다: {exc}") from exc
+
+    owned_items = payload.get("owned_items") or []
+    if len(wardrobe_images) > MAX_WARDROBE_IMAGES:
+        raise HTTPException(status_code=400, detail=f"보유 옷 사진은 최대 {MAX_WARDROBE_IMAGES}장까지 지원합니다.")
+    if len(wardrobe_images) != len(owned_items):
+        raise HTTPException(status_code=400, detail="보유 옷 정보와 사진 수가 맞지 않습니다.")
 
     raw = await image.read()
     if not raw:
@@ -297,6 +313,29 @@ async def analyze(
                 shutil.rmtree(session, ignore_errors=True)
                 raise
 
+    wardrobe_paths: list[Path] = []
+    for index, wardrobe_image in enumerate(wardrobe_images, start=1):
+        wardrobe_raw = await wardrobe_image.read()
+        if not wardrobe_raw:
+            shutil.rmtree(session, ignore_errors=True)
+            raise HTTPException(status_code=400, detail="비어 있는 보유 옷 사진이 있습니다.")
+        if len(wardrobe_raw) > MAX_UPLOAD_BYTES:
+            shutil.rmtree(session, ignore_errors=True)
+            raise HTTPException(status_code=413, detail="보유 옷 사진은 장당 12MB 이하만 지원합니다.")
+        wardrobe_path = session / f"wardrobe_{index}.jpg"
+        try:
+            with Image.open(BytesIO(wardrobe_raw)) as opened:
+                if opened.format not in ALLOWED_FORMATS:
+                    raise HTTPException(status_code=400, detail="보유 옷 사진은 JPG, PNG, WEBP만 지원합니다.")
+                opened.convert("RGB").save(wardrobe_path, "JPEG", quality=95)
+        except UnidentifiedImageError as exc:
+            shutil.rmtree(session, ignore_errors=True)
+            raise HTTPException(status_code=400, detail="보유 옷 사진을 해석할 수 없습니다.") from exc
+        except HTTPException:
+            shutil.rmtree(session, ignore_errors=True)
+            raise
+        wardrobe_paths.append(wardrobe_path)
+
     job = {
         "id": job_id,
         "status": "running",
@@ -310,7 +349,9 @@ async def analyze(
 
     profile_object = build_profile(payload)
     threading.Thread(
-        target=_worker, args=(job_id, image_path, profile_object), daemon=True
+        target=_worker,
+        args=(job_id, image_path, profile_object, body_path, wardrobe_paths),
+        daemon=True,
     ).start()
     return JSONResponse({"job_id": job_id, "status": "running", "stage": job["stage"]})
 

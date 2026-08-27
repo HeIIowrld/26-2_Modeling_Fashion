@@ -43,6 +43,7 @@
 
   const REQUIRED = [
     ["f-purpose", "코디 목적"],
+    ["f-style", "원하는 스타일"],
     ["f-scope", "바꾸고 싶은 범위"],
     ["f-min-budget", "최소 예산"],
     ["f-max-budget", "최대 예산"],

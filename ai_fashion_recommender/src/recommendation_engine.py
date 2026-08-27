@@ -806,8 +806,17 @@ class RecommendationEngine:
                 style_score = 0.78
             else:
                 style_score = 0.55
-            color_score = 1.0 if product.color in profile.preferred_colors else 0.75
-            values.append(0.78 * style_score + 0.22 * color_score if profile.preferred_colors else style_score)
+            components = [(style_score, 0.65)]
+            if profile.preferred_colors:
+                color_score = 1.0 if product.color in profile.preferred_colors else 0.70
+                components.append((color_score, 0.20))
+            if profile.preferred_materials:
+                material_score = 1.0 if any(
+                    value and value in product.material for value in profile.preferred_materials
+                ) else 0.70
+                components.append((material_score, 0.15))
+            total_weight = sum(weight for _, weight in components)
+            values.append(sum(score * weight for score, weight in components) / total_weight)
         return sum(values) / len(values)
 
     def _wardrobe_score(self, products: list[Product], profile: UserProfile) -> float | None:
@@ -965,6 +974,11 @@ class RecommendationEngine:
         if colors & set(profile.avoided_colors):
             score -= 0.25
         materials = f"{outfit.material}|{outfit.lower_material}"
+        if profile.preferred_materials:
+            material_score = 1.0 if any(
+                value and value in materials for value in profile.preferred_materials
+            ) else 0.70
+            score = 0.85 * score + 0.15 * material_score
         if any(value and value in materials for value in profile.avoided_materials):
             score -= 0.20
         return max(0.0, min(1.0, score))

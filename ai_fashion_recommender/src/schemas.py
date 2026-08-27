@@ -109,6 +109,7 @@ class UserProfile:
     activity_level: str = "보통"
     preferred_colors: list[str] = field(default_factory=list)
     avoided_colors: list[str] = field(default_factory=list)
+    preferred_materials: list[str] = field(default_factory=list)
     avoided_materials: list[str] = field(default_factory=list)
     excluded_item_types: list[str] = field(default_factory=list)
     temperature_c: float | None = None

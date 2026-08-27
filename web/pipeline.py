@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import sys
 import threading
+from datetime import datetime
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+import numpy as np
 from PIL import Image
 
 PROJECT_DIR = Path(__file__).resolve().parents[1] / "ai_fashion_recommender"
@@ -25,8 +27,9 @@ from config import (
     resolve_catalog,
 )
 from fashion_model import FashionClassifier
+from fashion_prompts import STYLE_PROMPTS
 from feedback_store import FeedbackStore
-from outfit_analyzer import COLOR_PALETTE, OutfitAnalyzer
+from outfit_analyzer import COLOR_PALETTE, OutfitAnalyzer, _dominant_palette
 from pose_analyzer import PoseAnalyzer
 from product_catalog import ProductCatalog
 from quality_checker import QualityChecker
@@ -39,13 +42,37 @@ RULES_PATH = PROJECT_DIR / "FASHION_RULES_MASTER.md"
 ATTRIBUTE_HEADS_PATH = FASHION_ATTRIBUTE_HEADS_PATH
 
 PURPOSES = list(PURPOSE_STYLES)
-STYLES = ["캐주얼", "미니멀", "포멀", "스포티", "스트리트", "로맨틱"]
-CHANGE_SCOPES = list(CHANGE_SCOPE_MAP)
-SEASONS = ["사계절", "봄", "여름", "가을", "겨울"]
+STYLES = [
+    "캐주얼",
+    "미니멀",
+    {"value": "스트리트", "label": "스트릿"},
+    {"value": "포멀", "label": "클래식"},
+    "스포티",
+    "기타",
+]
+CHANGE_SCOPES = [scope for scope in CHANGE_SCOPE_MAP if scope != "현재 유지"]
+SEASONS = [
+    {"value": "자동", "label": "자동 (현재 계절)"},
+    "봄",
+    "여름",
+    "가을",
+    "겨울",
+]
 SILHOUETTE_GOALS = [{"value": value, "label": label} for value, label in SILHOUETTE_GOAL_CHOICES]
 DRESS_CODES = ["자동", "캐주얼", "스마트 캐주얼", "비즈니스 캐주얼", "포멀"]
-ACTIVITY_LEVELS = ["낮음", "보통", "높음"]
-MATERIALS = ["코튼", "린넨", "데님", "니트", "울", "가죽", "폴리에스터", "쉬폰"]
+ACTIVITY_LEVELS = [
+    {"value": "낮음", "label": "적음"},
+    "보통",
+    {"value": "높음", "label": "많음"},
+]
+MATERIALS = ["면·일상 소재", "데님", "니트", "얇은 소재", "가죽"]
+MATERIAL_PREFERENCE_MAP = {
+    "면·일상 소재": ["코튼", "폴리에스터"],
+    "데님": ["데님"],
+    "니트": ["니트"],
+    "얇은 소재": ["린넨", "쉬폰"],
+    "가죽": ["가죽"],
+}
 
 STAGES = [
     ("quality", "사진 품질 검사"),
@@ -61,6 +88,7 @@ __all__ = [
     "PipelineError",
     "PipelineResult",
     "TryOnNotReady",
+    "analyze_wardrobe_items",
     "build_profile",
     "form_options",
     "generate_tryon",
@@ -154,6 +182,39 @@ def _build_engine() -> Engine:
     )
 
 
+def analyze_wardrobe_items(profile: UserProfile, image_paths: list[Path]) -> None:
+    """보유 옷 사진에서 사용자가 고르지 않은 색상과 스타일을 채운다.
+
+    상품 단독 사진은 전신 포즈가 없으므로 의류 파서를 쓰지 않는다. 가장자리의
+    배경색과 다른 영역을 옷으로 보고 대표색을 구하고, 스타일은 웹 분석과 같은
+    FashionSigLIP 분류기를 재사용한다.
+    """
+    if not profile.owned_items or not image_paths:
+        return
+    classifier = get_engine().outfit_analyzer.classifier
+    for item, image_path in zip(profile.owned_items, image_paths):
+        with Image.open(image_path) as opened:
+            rgb = np.asarray(opened.convert("RGB"))
+        height, width = rgb.shape[:2]
+        edge = max(1, min(height, width) // 20)
+        corners = np.concatenate(
+            (
+                rgb[:edge, :edge].reshape(-1, 3),
+                rgb[:edge, -edge:].reshape(-1, 3),
+                rgb[-edge:, :edge].reshape(-1, 3),
+                rgb[-edge:, -edge:].reshape(-1, 3),
+            ),
+            axis=0,
+        )
+        background = np.median(corners, axis=0)
+        distance = np.linalg.norm(rgb.astype(np.float32) - background, axis=2)
+        garment_mask = distance >= 24
+        if float(garment_mask.mean()) < 0.04:
+            garment_mask = np.ones((height, width), dtype=bool)
+        item.color = _dominant_palette(rgb, garment_mask, max_colors=1)[0]["name"]
+        item.style = classifier.best_mapped_label(image_path, STYLE_PROMPTS)[0]
+
+
 def build_profile(payload: dict) -> UserProfile:
     def number(key: str) -> float | None:
         value = payload.get(key)
@@ -165,6 +226,23 @@ def build_profile(payload: dict) -> UserProfile:
         value = payload.get(key) or []
         return [str(item).strip() for item in value if str(item).strip()]
 
+    def current_season() -> str:
+        month = datetime.now().month
+        if month in (3, 4, 5):
+            return "봄"
+        if month in (6, 7, 8):
+            return "여름"
+        if month in (9, 10, 11):
+            return "가을"
+        return "겨울"
+
+    selected_materials = string_list("preferred_materials")
+    preferred_materials = list(dict.fromkeys(
+        model_label
+        for selected in selected_materials
+        for model_label in MATERIAL_PREFERENCE_MAP.get(selected, [selected])
+    ))
+
     owned_items = [
         WardrobeItem(
             item_id=str(item.get("item_id") or f"OWN-{index:02d}"),
@@ -174,7 +252,7 @@ def build_profile(payload: dict) -> UserProfile:
             season=str(item.get("season") or "사계절"),
         )
         for index, item in enumerate(payload.get("owned_items") or [], start=1)
-        if str(item.get("color") or "").strip()
+        if str(item.get("color") or "").strip() or item.get("image_index") is not None
     ]
 
     # budget: support min_budget/max_budget from the UI while keeping backward compatibility
@@ -207,12 +285,17 @@ def build_profile(payload: dict) -> UserProfile:
         hip_cm=number("hip_cm"),
         usual_top_size=payload.get("usual_top_size"),
         usual_bottom_size=payload.get("usual_bottom_size"),
-        season=payload.get("season") or "사계절",
+        season=(
+            current_season()
+            if payload.get("season") in (None, "", "자동")
+            else payload.get("season")
+        ),
         silhouette_goal=payload.get("silhouette_goal") or GOAL_NONE,
         dress_code=payload.get("dress_code") or "자동",
         activity_level=payload.get("activity_level") or "보통",
         preferred_colors=string_list("preferred_colors"),
         avoided_colors=string_list("avoided_colors"),
+        preferred_materials=preferred_materials,
         avoided_materials=string_list("avoided_materials"),
         excluded_item_types=string_list("excluded_item_types"),
         temperature_c=number("temperature_c"),

@@ -23,7 +23,7 @@ const state = {
   tryon: { available: false, reason: "생성 모델을 준비 중입니다." },
   preferredColors: new Set(),
   avoidedColors: new Set(),
-  avoidedMaterials: new Set(),
+  preferredMaterials: new Set(),
   wardrobe: [],
 };
 
@@ -181,7 +181,12 @@ function fillSelect(id, values) {
     .join("");
 }
 
-function colorSwatches(container, store) {
+function updateSelectionCount(id, store) {
+  const counter = $(id);
+  if (counter) counter.textContent = `${store.size}개 선택`;
+}
+
+function colorSwatches(container, store, counterId) {
   container.innerHTML = "";
   state.options.colors.forEach(({ name, rgb }) => {
     const button = document.createElement("button");
@@ -192,22 +197,28 @@ function colorSwatches(container, store) {
       if (store.has(name)) store.delete(name);
       else store.add(name);
       button.classList.toggle("is-on", store.has(name));
+      button.setAttribute("aria-pressed", String(store.has(name)));
+      updateSelectionCount(counterId, store);
     });
+    button.setAttribute("aria-pressed", "false");
     container.appendChild(button);
   });
 }
 
 function materialPills(container, store) {
   container.innerHTML = "";
-  state.options.materials.forEach((name) => {
+  state.options.materials.forEach((item) => {
+    const option = typeof item === "string" ? { value: item, label: item } : item;
     const button = document.createElement("button");
     button.type = "button";
     button.className = "pill";
-    button.textContent = name;
+    button.textContent = option.label;
+    button.setAttribute("aria-pressed", "false");
     button.addEventListener("click", () => {
-      if (store.has(name)) store.delete(name);
-      else store.add(name);
-      button.classList.toggle("is-on", store.has(name));
+      if (store.has(option.value)) store.delete(option.value);
+      else store.add(option.value);
+      button.classList.toggle("is-on", store.has(option.value));
+      button.setAttribute("aria-pressed", String(store.has(option.value)));
     });
     container.appendChild(button);
   });
@@ -251,15 +262,41 @@ function addWardrobeRow() {
   const list = $("wardrobe-list");
   const row = document.createElement("div");
   row.className = "wardrobe-row";
-  const colorOptions = state.options.colors.map((c) => `<option>${c.name}</option>`).join("");
-  const styleOptions = ["", ...state.options.styles].map((s) => `<option value="${s}">${s || "스타일 무관"}</option>`).join("");
   row.innerHTML = `
     <select class="w-category"><option value="top">상의</option><option value="bottom">하의</option></select>
-    <select class="w-color">${colorOptions}</select>
-    <select class="w-style">${styleOptions}</select>
+    <label class="wardrobe-upload">
+      <input class="w-image" type="file" accept="image/jpeg,image/png,image/webp" hidden />
+      <span class="wardrobe-upload-copy">옷 사진 선택</span>
+      <img class="wardrobe-thumb" alt="보유 옷 미리보기" hidden />
+    </label>
     <button class="row-remove" type="button" aria-label="삭제">×</button>`;
+  const input = row.querySelector(".w-image");
+  input.addEventListener("change", () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      input.value = "";
+      toast("보유 옷 사진은 JPG, PNG, WEBP만 지원합니다.");
+      return;
+    }
+    if (file.size > 12 * 1024 * 1024) {
+      input.value = "";
+      toast("보유 옷 사진은 장당 12MB 이하만 지원합니다.");
+      return;
+    }
+    row._file = file;
+    const thumb = row.querySelector(".wardrobe-thumb");
+    thumb.src = URL.createObjectURL(file);
+    thumb.hidden = false;
+    row.querySelector(".wardrobe-upload-copy").textContent = file.name;
+    row.classList.add("has-image");
+  });
   row.querySelector(".row-remove").addEventListener("click", () => row.remove());
   list.appendChild(row);
+}
+
+function wardrobeRowsWithImages() {
+  return [...document.querySelectorAll(".wardrobe-row")].filter((row) => row._file);
 }
 
 function collectProfile() {
@@ -286,28 +323,17 @@ function collectProfile() {
     min_budget: min_b,
     max_budget: max_b,
     budget: computeBudget(),
-    silhouette_goal: data.get("silhouette_goal"),
-    dress_code: data.get("dress_code"),
     activity_level: data.get("activity_level"),
     height_cm: numeric("height_cm"),
     weight_kg: numeric("weight_kg"),
-    usual_top_size: data.get("usual_top_size"),
-    usual_bottom_size: data.get("usual_bottom_size"),
-    temperature_c: numeric("temperature_c"),
-    feels_like_c: numeric("feels_like_c"),
-    humidity: numeric("humidity"),
-    precipitation_probability: numeric("precipitation_probability"),
-    wind_mps: numeric("wind_mps"),
-    uv_index: numeric("uv_index"),
     preferred_colors: [...state.preferredColors],
     avoided_colors: [...state.avoidedColors],
-    avoided_materials: [...state.avoidedMaterials],
+    preferred_materials: [...state.preferredMaterials],
     excluded_item_types: [],
-    owned_items: [...document.querySelectorAll(".wardrobe-row")].map((row, index) => ({
+    owned_items: wardrobeRowsWithImages().map((row, index) => ({
       item_id: `OWN-${index + 1}`,
       category: row.querySelector(".w-category").value,
-      color: row.querySelector(".w-color").value,
-      style: row.querySelector(".w-style").value,
+      image_index: index,
     })),
   };
 }
@@ -339,8 +365,9 @@ function updateProgress(stageKey) {
 $("start-analysis").addEventListener("click", async () => {
   if (!state.file) { toast("먼저 전신사진을 올려주세요."); goto(1); return; }
   const profileCandidate = collectProfile();
-  // required fields: purpose, change_scope, budget range
+  // required fields: purpose, desired style, change scope, budget range
   if (!profileCandidate.purpose) { toast("코디 목적을 선택해주세요"); goto(2); return; }
+  if (!profileCandidate.desired_style) { toast("원하는 스타일을 선택해주세요"); goto(2); return; }
   if (!profileCandidate.change_scope) { toast("바꾸고 싶은 범위를 선택해주세요"); goto(2); return; }
   if (profileCandidate.min_budget == null || profileCandidate.max_budget == null) { toast("예산 범위를 모두 입력해주세요"); goto(2); return; }
   if (profileCandidate.min_budget > profileCandidate.max_budget) { toast("최소 예산이 최대 예산보다 큽니다"); goto(2); return; }
@@ -356,6 +383,7 @@ $("start-analysis").addEventListener("click", async () => {
   state.profile = profileCandidate;
   body.append("profile", JSON.stringify(state.profile));
   if (state.bodyFile) body.append("body_image", state.bodyFile);
+  wardrobeRowsWithImages().forEach((row) => body.append("wardrobe_images", row._file));
 
   try {
     const response = await fetch(API_BASE + "/api/analyze", { method: "POST", body });
@@ -904,22 +932,21 @@ function showPreviewOnly(detail) {
   fillSelect("f-style", options.styles);
   fillSelect("f-scope", options.change_scopes);
   fillSelect("f-season", options.seasons);
-  fillSelect("f-silhouette", options.silhouette_goals);
-  fillSelect("f-dresscode", options.dress_codes);
   fillSelect("f-activity", options.activity_levels);
   // Do not pre-select required fields. Insert placeholder for required selects.
-  ["f-purpose", "f-scope"].forEach((id) => {
+  ["f-purpose", "f-style", "f-scope"].forEach((id) => {
     const sel = $(id);
     if (sel) {
       sel.insertAdjacentHTML('afterbegin', '<option value="">선택해주세요</option>');
       sel.value = "";
     }
   });
+  $("f-season").value = "자동";
   $("f-activity").value = "보통";
 
-  colorSwatches($("preferred-colors"), state.preferredColors);
-  colorSwatches($("avoided-colors"), state.avoidedColors);
-  materialPills($("avoided-materials"), state.avoidedMaterials);
+  colorSwatches($("preferred-colors"), state.preferredColors, "preferred-color-count");
+  colorSwatches($("avoided-colors"), state.avoidedColors, "avoided-color-count");
+  materialPills($("preferred-materials"), state.preferredMaterials);
   renderStages(null, []);
 
   fetch(API_BASE + "/api/retention")

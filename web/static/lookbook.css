@@ -323,6 +323,20 @@ select {
 .optional-head h2 { font-size: 1rem; font-weight: 900; margin: 0 0 4px; letter-spacing: -.01em; }
 .optional-head p { font-size: .85rem; color: var(--ink-soft); margin: 0 0 8px; }
 .optional-block > .disclosure:last-of-type { border-bottom: 1px solid var(--line); }
+.section-hint { margin: 0 0 14px; }
+
+/* 같은 행의 입력은 라벨·컨트롤·힌트 기준선을 공유한다. 문구 길이가 달라도
+   계절/활동, 키/몸무게 입력칸에 단차가 생기지 않는다. */
+.paired-fields { align-items: stretch; }
+.paired-fields .field {
+  display: grid;
+  grid-template-rows: auto 44px minmax(0, 1fr);
+  align-content: start;
+}
+.paired-fields .field-label { align-self: end; }
+.paired-fields select, .paired-fields input { height: 44px; }
+.body-info-grid .field { grid-template-rows: auto 44px; }
+.selection-count { margin-left: auto; font-style: normal; font-weight: 500; color: var(--ink-soft); }
 
 /* 무엇이 남았는지 미리 알려준다. 누른 뒤에 토스트로 알리면 이미 늦다. */
 .gate-note {
@@ -381,8 +395,23 @@ select {
 }
 
 .wardrobe-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
-.wardrobe-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.wardrobe-row select { width: auto; min-width: 120px; flex: 1 1 120px; }
+.wardrobe-row {
+  display: grid; grid-template-columns: minmax(110px, .35fr) minmax(220px, 1fr) auto;
+  gap: 8px; align-items: stretch;
+}
+.wardrobe-row select { width: 100%; }
+.wardrobe-upload {
+  min-height: 44px; padding: 8px 12px;
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+  border: 1px dashed var(--line-strong); cursor: pointer; background: var(--panel-2);
+}
+.wardrobe-upload:hover { background: var(--signal-tint); border-color: var(--signal-ink); }
+.wardrobe-upload-copy {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: .84rem; font-weight: 700;
+}
+.wardrobe-thumb { width: 34px; height: 34px; object-fit: cover; order: -1; flex: none; }
+.wardrobe-row.has-image .wardrobe-upload { border-style: solid; }
 .row-remove {
   min-width: 44px; min-height: 44px;
   background: none; border: 1px solid var(--line); border-radius: var(--r);
@@ -734,6 +763,8 @@ select {
   .panel-actions .btn { flex: 1 1 auto; }
   .budget-input input { width: 100%; }
   .budget-input { flex: 1 1 140px; }
+  .wardrobe-row { grid-template-columns: 1fr auto; }
+  .wardrobe-upload { grid-column: 1 / -1; grid-row: 2; }
 }
 
 @media (max-width: 520px) {
