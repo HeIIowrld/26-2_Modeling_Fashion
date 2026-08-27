@@ -94,6 +94,9 @@ class UserProfile:
     min_budget: int | None = None
     max_budget: int | None = None
     change_scope: str = "전체 변경"
+    # 변경 범위는 추천 엔진이 정하고, 사용자는 반드시 유지할 아이템만 고정한다.
+    # 기존 change_scope는 웹/노트북 호환을 위해 당분간 유지한다.
+    items_to_keep: list[str] = field(default_factory=list)
     height_cm: float | None = None
     weight_kg: float | None = None
     # 둘레를 입력하면 사진으로는 판정할 수 없는 체형까지 분류한다.
@@ -155,6 +158,10 @@ class OutfitAnalysis:
     color_harmony: str
     detected_items: list[str]
     style: str
+    upper_style: str = "스타일 불확실"
+    lower_style: str = "스타일 불확실"
+    upper_style_confidence: float = 0.0
+    lower_style_confidence: float = 0.0
     upper_type: str = "분석 불가"
     lower_type: str = "분석 불가"
     lower_subtype: str = "분석 보류"
@@ -251,6 +258,15 @@ class CurrentOutfitEvaluation:
     keep_threshold: float
     should_keep: bool
     verdict: str
+    diagnostic_matrix: dict[str, dict[str, float]] = field(default_factory=dict)
+    pass_matrix: dict[str, dict[str, bool]] = field(default_factory=dict)
+    failed_areas: list[str] = field(default_factory=list)
+    weakest_area: str = ""
+    change_target: str = "keep"
+    conflict_penalty: float = 0.0
+    harmony_score: float = 0.0
+    harmony_breakdown: dict[str, float] = field(default_factory=dict)
+    harmony_passed: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -302,6 +318,15 @@ class Recommendation:
     applied_rules: list[str] = field(default_factory=list)
     score_coverage: float = 0.0
     styling_tips: list[str] = field(default_factory=list)
+    change_target: str = ""
+    current_score: float = 0.0
+    predicted_score: float = 0.0
+    delta_score: float = 0.0
+    change_cost: float = 0.0
+    utility_score: float = 0.0
+    diagnostic_matrix: dict[str, dict[str, float]] = field(default_factory=dict)
+    harmony_score: float = 0.0
+    harmony_breakdown: dict[str, float] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
