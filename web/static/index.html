@@ -19,9 +19,9 @@
     <!-- 사용자가 실제로 하는 일은 셋이다. 분석은 기다리는 상태지 단계가 아니라서
          스테퍼에서 빼고 '결과' 자리에 진행 중 표시로 얹는다. -->
     <nav class="stepper" id="stepper" aria-label="진행 단계">
-      <button class="step is-active" type="button" data-goto="1"><span class="step-num">01</span><span class="step-label">사진</span></button>
-      <button class="step" type="button" data-goto="2"><span class="step-num">02</span><span class="step-label">조건</span></button>
-      <button class="step" type="button" data-goto="4"><span class="step-num">03</span><span class="step-label">결과</span></button>
+      <button class="step is-active" type="button" data-goto="1" aria-current="step"><span class="step-num">01</span><span class="step-label">사진</span></button>
+      <button class="step" type="button" data-goto="2" disabled><span class="step-num">02</span><span class="step-label">조건</span></button>
+      <button class="step" type="button" data-goto="4" disabled><span class="step-num">03</span><span class="step-label">결과</span></button>
     </nav>
 
     <button class="theme-toggle" id="theme-toggle" type="button" aria-label="테마 전환">
@@ -48,7 +48,7 @@
             </div>
             <p class="dz-title">사진을 끌어다 놓거나 클릭해 선택</p>
             <p class="dz-sub">JPG · PNG · WEBP / 최대 12MB</p>
-            <p class="dz-privacy">업로드한 사진은 분석 완료 후 30분 이내 자동으로 삭제돼요.</p>
+            <p class="dz-privacy">사진은 분석 완료 후 30분 이내 자동 삭제</p>
           </div>
           <div class="dropzone-preview" id="dropzone-preview" hidden>
             <img id="preview-img" alt="업로드한 전신사진 미리보기" />
@@ -58,7 +58,7 @@
       </div>
 
       <div class="hero-copy">
-        <h1 id="h-upload">전신 사진 한 장으로<br />나에게 맞는 코디를 찾아보세요</h1>
+        <h1 id="h-upload"><span class="headline-line">전신 사진 한 장으로</span><span class="headline-line">나에게 맞는 코디를 찾아보세요</span></h1>
         <p class="lede">체형과 지금 입은 옷을 읽어서, 왜 이 옷인지 근거와 함께 추천해요.</p>
 
         <ul class="tips">
@@ -72,6 +72,14 @@
           사진에서 얻는 어깨·골반 비율은 실제 신체 치수가 아니라
           코디 추천을 위한 상대적인 참고값이에요.
         </p>
+
+        <div class="panel-actions hero-primary-action">
+          <p class="photo-gate-note" id="photo-gate-note" role="status" aria-live="polite">
+            사진을 선택하면 조건 입력으로 넘어갈 수 있어요.
+          </p>
+          <button class="btn btn-primary" id="to-step-2" type="button"
+                  aria-describedby="photo-gate-note" disabled>다음: 조건 입력</button>
+        </div>
 
         <details class="disclosure body-photo">
           <summary><span>체형 파악용 사진 <em class="badge optional">선택</em></span></summary>
@@ -94,9 +102,6 @@
           </div>
         </details>
 
-        <div class="panel-actions">
-          <button class="btn btn-primary" id="to-step-2" type="button" disabled>다음: 조건 입력</button>
-        </div>
       </div>
     </div>
   </section>
@@ -137,7 +142,7 @@
           <span class="field-label">예산 <em class="badge required">필수</em></span>
           <div class="budget-row">
             <label class="budget-input">
-              <span class="sr-only">최소 예산</span>
+              <span class="budget-label">최소 예산</span>
               <input type="text" name="min_budget" id="f-min-budget" placeholder="최소 예산"
                      inputmode="numeric" autocomplete="off" spellcheck="false"
                      aria-describedby="budget-hint" />
@@ -145,7 +150,7 @@
             </label>
             <span class="budget-sep" aria-hidden="true">~</span>
             <label class="budget-input">
-              <span class="sr-only">최대 예산</span>
+              <span class="budget-label">최대 예산</span>
               <input type="text" name="max_budget" id="f-max-budget" placeholder="최대 예산"
                      inputmode="numeric" autocomplete="off" spellcheck="false"
                      aria-describedby="budget-hint" />
@@ -255,7 +260,10 @@
   <!-- ── 3단계: 결과 ───────────────────────────────────────── -->
   <section class="panel" id="panel-4" aria-labelledby="h-result">
     <div class="block-head">
-      <h1 id="h-result"><span class="block-num">03</span> 오늘의 추천</h1>
+      <div class="result-title-row">
+        <h1 id="h-result"><span class="block-num">03</span> 오늘의 추천</h1>
+        <span class="data-badge" id="result-data-badge" hidden>시연 데이터</span>
+      </div>
       <p class="lede" id="result-lede"></p>
     </div>
 
@@ -339,9 +347,8 @@
       <button class="btn btn-ghost" id="tweak" type="button">조건만 바꾸기</button>
     </div>
 
-    <p class="disclaimer">
+    <p class="disclaimer" id="result-disclaimer">
       추천 보드는 실제 가상 피팅 결과가 아니라 코디의 분위기를 확인하기 위한 참고 이미지예요.
-      상품 목록은 추천 로직 검증용 샘플 데이터예요.
     </p>
   </section>
 </main>

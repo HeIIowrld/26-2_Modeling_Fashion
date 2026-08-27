@@ -29,11 +29,16 @@
     const slot = slotOf(step);
     document.querySelectorAll(".stepper .step").forEach((el, index) => {
       const pos = index + 1;
-      el.classList.toggle("is-active", pos === slot);
+      const active = pos === slot;
+      const clickable = Number(el.dataset.goto) <= state.maxStep;
+      el.classList.toggle("is-active", active);
       el.classList.toggle("is-done", pos < slot);
       // 결과 칸은 분석 중일 때만 돌아가는 표시를 단다.
       el.classList.toggle("is-working", pos === 3 && step === 3);
-      el.dataset.clickable = Number(el.dataset.goto) <= state.maxStep ? "1" : "";
+      el.dataset.clickable = clickable ? "1" : "";
+      el.toggleAttribute("disabled", !clickable);
+      if (active) el.setAttribute("aria-current", "step");
+      else el.removeAttribute("aria-current");
     });
 
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -79,7 +84,7 @@
       note.textContent = order;
       note.dataset.tone = "bad";
     } else if (left.length) {
-      note.textContent = `${left.join(" · ")}을(를) 정하면 분석할 수 있어요.`;
+      note.textContent = `남은 필수 항목: ${left.join(" · ")}`;
       note.dataset.tone = "wait";
     } else {
       note.textContent = "필요한 항목을 모두 채웠어요.";
