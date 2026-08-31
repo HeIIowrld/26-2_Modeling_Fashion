@@ -36,7 +36,7 @@ from pipeline import (  # noqa: E402
     analyze_wardrobe_items,
     build_profile,
     form_options,
-    generate_tryon,
+    generate_tryon_with_warnings,
     get_engine,
     run_pipeline,
     rule_titles,
@@ -65,6 +65,8 @@ IMAGE_NAME_PATTERN = re.compile(r"^[a-z_]+[0-9]*\.jpg$")
 SESSION_TTL = timedelta(minutes=30)
 MAX_SESSIONS = 20
 SWEEP_INTERVAL_SECONDS = 300
+TRYON_BATCH_LIMIT = 3
+TRYON_BATCH_ACTIVE_STATES = {"queued", "running"}
 
 app = FastAPI(title="AI 코디 추천", docs_url=None, redoc_url=None)
 
@@ -129,7 +131,12 @@ def purge_session(path: Path) -> bool:
 
 def _running_job_ids() -> frozenset[str]:
     with _jobs_lock:
-        return frozenset(job_id for job_id, job in _jobs.items() if job["status"] == "running")
+        return frozenset(
+            job_id
+            for job_id, job in _jobs.items()
+            if job["status"] == "running"
+            or (job.get("tryon_batch") or {}).get("status") in TRYON_BATCH_ACTIVE_STATES
+        )
 
 
 def _forget_jobs(job_ids: list[str]) -> None:
@@ -208,8 +215,246 @@ def _record_tryon_warnings(job_id: str, rank: int, warnings: list[str]) -> None:
             job.setdefault("tryon_warnings", {})[rank] = list(warnings)
 
 
+def _tryon_batch_snapshot_locked(job: dict) -> dict:
+    """잠금 안에서 내부 배치 상태를 JSON 응답 형태로 복사한다."""
+    batch = job.get("tryon_batch") or {
+        "status": "idle",
+        "reason": "",
+        "items": {},
+    }
+    items = [
+        {
+            "rank": int(rank),
+            "status": item.get("status", "queued"),
+            "image": item.get("image"),
+            "warnings": list(item.get("warnings") or []),
+            "error": item.get("error"),
+        }
+        for rank, item in sorted(
+            (batch.get("items") or {}).items(), key=lambda pair: int(pair[0])
+        )
+    ]
+    ready = sum(item["status"] == "done" for item in items)
+    finished = sum(item["status"] in {"done", "failed"} for item in items)
+    return {
+        "status": batch.get("status", "idle"),
+        "reason": batch.get("reason", ""),
+        "total": len(items),
+        "ready": ready,
+        "finished": finished,
+        "items": items,
+    }
+
+
+def _read_tryon_batch(job_id: str) -> dict | None:
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        return _tryon_batch_snapshot_locked(job) if job is not None else None
+
+
+def _initialize_tryon_batch(job_id: str) -> dict | None:
+    """추천 결과에서 최대 세 개의 자동 합성 항목을 만든다."""
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None:
+            return None
+        result = job.get("result") or {}
+        recommendations = [
+            item
+            for item in (job.get("recommendations") or [])
+            if item.products
+        ][:TRYON_BATCH_LIMIT]
+        capability = result.get("tryon") or {}
+        available = bool(capability.get("available"))
+        preview_kind = capability.get("preview_kind")
+        preview_name = (result.get("images") or {}).get("preview")
+        items: dict[int, dict] = {}
+        for recommendation in recommendations:
+            item = {
+                "status": "queued" if available else "unavailable",
+                "image": None,
+                "warnings": [],
+                "error": None,
+            }
+            if (
+                available
+                and recommendation.rank == 1
+                and preview_kind == "tryon"
+                and isinstance(preview_name, str)
+                and IMAGE_NAME_PATTERN.match(preview_name)
+                and (_session_dir(job_id) / preview_name).is_file()
+            ):
+                item.update(
+                    status="done",
+                    image=preview_name,
+                    warnings=list(capability.get("warnings") or []),
+                )
+            items[recommendation.rank] = item
+
+        if not recommendations:
+            status, reason = "done", "생성할 추천 코디가 없습니다."
+        elif not available:
+            status, reason = "unavailable", str(capability.get("reason") or "")
+        elif any(item["status"] == "queued" for item in items.values()):
+            status, reason = "queued", ""
+        else:
+            status, reason = "done", ""
+        job["tryon_batch"] = {
+            "status": status,
+            "reason": reason,
+            "items": items,
+        }
+        return _tryon_batch_snapshot_locked(job)
+
+
+def _set_tryon_batch_item(job_id: str, rank: int, **fields) -> None:
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None:
+            return
+        item = ((job.get("tryon_batch") or {}).get("items") or {}).get(rank)
+        if item is not None:
+            item.update(fields)
+
+
+def _finish_tryon_batch(job_id: str) -> None:
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None:
+            return
+        batch = job.get("tryon_batch") or {}
+        items = list((batch.get("items") or {}).values())
+        ready = sum(item.get("status") == "done" for item in items)
+        failed = sum(item.get("status") == "failed" for item in items)
+        if failed == 0:
+            batch["status"] = "done"
+            batch["reason"] = ""
+        elif ready:
+            batch["status"] = "partial"
+            batch["reason"] = "일부 착장샷을 만들지 못했습니다."
+        else:
+            batch["status"] = "failed"
+            batch["reason"] = "착장샷을 만들지 못했습니다."
+
+
 def _session_dir(job_id: str) -> Path:
     return SESSION_ROOT / job_id
+
+
+def _generate_tryon_for_job(job_id: str, rank: int) -> dict:
+    """한 순위의 합성을 캐시·직렬화하고 결과 메타데이터를 돌려준다."""
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None or job["status"] != "done" or job.get("cancelled"):
+            raise LookupError("분석 결과를 찾을 수 없습니다.")
+        work_lock = job.setdefault("work_lock", threading.Lock())
+
+    # 자동 배치와 사용자의 수동 재시도가 같은 순위를 중복 생성하지 않게 한다.
+    with work_lock:
+        with _jobs_lock:
+            job = _jobs.get(job_id)
+            if job is None or job["status"] != "done" or job.get("cancelled"):
+                raise LookupError("분석 결과를 찾을 수 없습니다.")
+            recommendation = next(
+                (item for item in job.get("recommendations") or [] if item.rank == rank),
+                None,
+            )
+            if recommendation is None:
+                raise LookupError("해당 순위의 추천을 찾을 수 없습니다.")
+            result = job.get("result") or {}
+            person_image = job["person_image"]
+            tryon_context = job.get("tryon_context")
+
+        # 실제 VTON으로 기록된 1순위 미리보기만 재사용한다. 재료 부족으로 만든
+        # 추천 보드는 preview_kind=preview라 이 경로를 타지 않는다.
+        capability = result.get("tryon") or {}
+        preview_name = (result.get("images") or {}).get("preview")
+        if (
+            rank == 1
+            and capability.get("preview_kind") == "tryon"
+            and isinstance(preview_name, str)
+            and IMAGE_NAME_PATTERN.match(preview_name)
+        ):
+            preview = _session_dir(job_id) / preview_name
+            if preview.is_file():
+                return {
+                    "image": preview.name,
+                    "cached": True,
+                    "warnings": list(capability.get("warnings") or []),
+                }
+
+        output = _session_dir(job_id) / f"tryon_{rank}.jpg"
+        if output.is_file():
+            with _jobs_lock:
+                current = _jobs.get(job_id) or {}
+                warnings = list((current.get("tryon_warnings") or {}).get(rank) or [])
+            return {"image": output.name, "cached": True, "warnings": warnings}
+
+        generated, warnings = generate_tryon_with_warnings(
+            person_image,
+            recommendation,
+            output,
+            context=tryon_context,
+        )
+        warnings = list(warnings)
+        _record_tryon_warnings(job_id, rank, warnings)
+        return {"image": Path(generated).name, "cached": False, "warnings": warnings}
+
+
+def _tryon_batch_worker(job_id: str) -> None:
+    while True:
+        with _jobs_lock:
+            job = _jobs.get(job_id)
+            if job is None or job.get("cancelled"):
+                return
+            batch = job.get("tryon_batch") or {}
+            queued = [
+                int(rank)
+                for rank, item in sorted(
+                    (batch.get("items") or {}).items(), key=lambda pair: int(pair[0])
+                )
+                if item.get("status") == "queued"
+            ]
+            if not queued:
+                break
+            rank = queued[0]
+            batch["items"][rank].update(status="running", error=None)
+
+        try:
+            generated = _generate_tryon_for_job(job_id, rank)
+        except TryOnNotReady as exc:
+            _set_tryon_batch_item(job_id, rank, status="failed", error=str(exc))
+        except Exception as exc:  # noqa: BLE001 - 항목별 실패를 나머지 순위와 격리한다.
+            _set_tryon_batch_item(
+                job_id,
+                rank,
+                status="failed",
+                error=f"{type(exc).__name__}: {exc}",
+            )
+        else:
+            _set_tryon_batch_item(
+                job_id,
+                rank,
+                status="done",
+                image=generated["image"],
+                warnings=list(generated.get("warnings") or []),
+                error=None,
+            )
+    _finish_tryon_batch(job_id)
+
+
+def _start_tryon_batch(job_id: str) -> dict | None:
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None:
+            return None
+        batch = job.get("tryon_batch") or {}
+        if batch.get("status") != "queued":
+            return _tryon_batch_snapshot_locked(job)
+        batch["status"] = "running"
+        snapshot = _tryon_batch_snapshot_locked(job)
+    threading.Thread(target=_tryon_batch_worker, args=(job_id,), daemon=True).start()
+    return snapshot
 
 
 def _worker(
@@ -246,6 +491,8 @@ def _worker(
             person_image=outcome.person_image,
             tryon_context=outcome.tryon_context,
         )
+        _initialize_tryon_batch(job_id)
+        _start_tryon_batch(job_id)
     finally:
         # 새 분석마다 오래된 사진을 함께 정리한다.
         sweep_now()
@@ -371,6 +618,8 @@ async def analyze(
         "error": None,
         "result": None,
         "created_at": datetime.now(timezone.utc).isoformat(),
+        "work_lock": threading.Lock(),
+        "cancelled": False,
     }
     with _jobs_lock:
         _jobs[job_id] = job
@@ -396,6 +645,7 @@ def job_status(job_id: str) -> dict:
         "stage_history": job.get("stage_history", []),
         "error": job["error"],
         "result": job["result"],
+        "tryon_batch": _read_tryon_batch(job_id),
     }
 
 
@@ -415,59 +665,53 @@ def tryon_capability() -> dict:
     return tryon_status()
 
 
-@app.post("/api/jobs/{job_id}/tryon/{rank}")
-def create_tryon(job_id: str, rank: int) -> dict:
-    """추천 코디 하나를 입은 예상 착장샷을 생성한다."""
+@app.get("/api/jobs/{job_id}/tryon-batch")
+def tryon_batch_status(job_id: str) -> dict:
+    if not JOB_ID_PATTERN.match(job_id):
+        raise HTTPException(status_code=400, detail="잘못된 요청입니다.")
+    batch = _read_tryon_batch(job_id)
+    if batch is None:
+        raise HTTPException(status_code=404, detail="분석 결과를 찾을 수 없습니다.")
+    return batch
+
+
+@app.post("/api/jobs/{job_id}/tryon-batch")
+def start_tryon_batch(job_id: str) -> dict:
+    """추천 결과 최대 세 개를 중복 없이 자동 합성 큐에 넣는다."""
     if not JOB_ID_PATTERN.match(job_id):
         raise HTTPException(status_code=400, detail="잘못된 요청입니다.")
     job = _read_job(job_id)
     if job is None or job["status"] != "done":
         raise HTTPException(status_code=404, detail="분석 결과를 찾을 수 없습니다.")
+    if job.get("tryon_batch") is None:
+        _initialize_tryon_batch(job_id)
+    return _start_tryon_batch(job_id) or {
+        "status": "idle", "reason": "", "total": 0, "ready": 0, "finished": 0, "items": []
+    }
 
-    recommendation = next(
-        (item for item in job.get("recommendations") or [] if item.rank == rank), None
-    )
-    if recommendation is None:
-        raise HTTPException(status_code=404, detail="해당 순위의 추천을 찾을 수 없습니다.")
 
-    # 분석 단계에서 1순위 VTON을 preview.jpg로 이미 생성한다. 같은 입력으로 다시
-    # GPU 생성 모델을 호출하면 사용자는 거의 같은 이미지를 기다리고 자원만 두 번 쓴다.
-    result = job.get("result") or {}
-    preview_name = (result.get("images") or {}).get("preview")
-    if (
-        rank == 1
-        and (result.get("tryon") or {}).get("available")
-        and isinstance(preview_name, str)
-        and IMAGE_NAME_PATTERN.match(preview_name)
-    ):
-        preview = _session_dir(job_id) / preview_name
-        if preview.is_file():
-            return {
-                "image": preview.name,
-                "cached": True,
-                "warnings": list((result.get("tryon") or {}).get("warnings") or []),
-            }
-
-    output = _session_dir(job_id) / f"tryon_{rank}.jpg"
-    if output.is_file():
-        return {
-            "image": output.name,
-            "cached": True,
-            "warnings": list((job.get("tryon_warnings") or {}).get(rank) or []),
-        }
+@app.post("/api/jobs/{job_id}/tryon/{rank}")
+def create_tryon(job_id: str, rank: int) -> dict:
+    """추천 코디 하나를 입은 예상 착장샷을 생성한다."""
+    if not JOB_ID_PATTERN.match(job_id):
+        raise HTTPException(status_code=400, detail="잘못된 요청입니다.")
     try:
-        generate_tryon(
-            job["person_image"],
-            recommendation,
-            output,
-            context=job.get("tryon_context"),
-        )
+        generated = _generate_tryon_for_job(job_id, rank)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except TryOnNotReady as exc:
         # 501: 화면이 '준비 중' 안내를 그릴 수 있도록 실패와 구분한다.
         raise HTTPException(status_code=501, detail=str(exc)) from exc
-    warnings = list(tryon_status().get("warnings") or [])
-    _record_tryon_warnings(job_id, rank, warnings)
-    return {"image": output.name, "cached": False, "warnings": warnings}
+    _set_tryon_batch_item(
+        job_id,
+        rank,
+        status="done",
+        image=generated["image"],
+        warnings=list(generated.get("warnings") or []),
+        error=None,
+    )
+    _finish_tryon_batch(job_id)
+    return generated
 
 
 @app.delete("/api/jobs/{job_id}")
@@ -475,13 +719,20 @@ def delete_job(job_id: str) -> dict:
     """사용자가 결과 화면에서 자기 사진을 즉시 지울 수 있게 한다."""
     if not JOB_ID_PATTERN.match(job_id):
         raise HTTPException(status_code=400, detail="잘못된 요청입니다.")
-    session = _session_dir(job_id)
-    if not session.is_dir():
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is not None:
+            job["cancelled"] = True
+            work_lock = job.setdefault("work_lock", threading.Lock())
+        else:
+            work_lock = threading.Lock()
+    # 진행 중인 한 장의 저장이 끝난 뒤 지워야 CatVTON이 삭제된 세션 폴더를
+    # 다시 만들어 개인정보가 남는 경쟁 조건을 막을 수 있다.
+    with work_lock:
+        session = _session_dir(job_id)
+        if session.is_dir() and not purge_session(session):
+            raise HTTPException(status_code=500, detail="사진을 삭제하지 못했습니다. 잠시 후 다시 시도하세요.")
         _forget_jobs([job_id])
-        return {"deleted": True}
-    if not purge_session(session):
-        raise HTTPException(status_code=500, detail="사진을 삭제하지 못했습니다. 잠시 후 다시 시도하세요.")
-    _forget_jobs([job_id])
     return {"deleted": True}
 
 

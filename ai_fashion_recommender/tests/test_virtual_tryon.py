@@ -24,6 +24,7 @@ import config
 import pipeline as web_pipeline
 from schemas import Product, Recommendation
 from virtual_tryon import TryOnNotReady, VirtualTryOnAdapter
+from catvton_tryon import CatVTONTryOn
 
 
 def sample_recommendation(rank: int = 1, with_products: bool = True) -> Recommendation:
@@ -65,7 +66,10 @@ class AdapterAvailabilityTests(unittest.TestCase):
                 context=context,
             )
         self.assertEqual(result, expected)
-        self.assertIs(adapter.synthesize.call_args.kwargs["context"], context)
+        passed_context = adapter.synthesize.call_args.kwargs["context"]
+        self.assertIsNot(passed_context, context)
+        self.assertIs(passed_context["upper_mask"], context["upper_mask"])
+        self.assertTrue(passed_context["strict_vton"])
 
     def test_disabled_adapter_reports_unavailable_with_a_reason(self):
         adapter = VirtualTryOnAdapter(enabled=False)
@@ -122,6 +126,17 @@ class AdapterAvailabilityTests(unittest.TestCase):
                     person_image=_person(directory),
                     recommendation=sample_recommendation(),
                     output_path=Path(directory) / "out.jpg",
+                )
+
+    def test_catvton_strict_request_never_returns_a_recommendation_board(self):
+        adapter = CatVTONTryOn()
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(TryOnNotReady, "상품 이미지나 의류 마스크"):
+                adapter.generate(
+                    person_image=_person(directory),
+                    recommendation=sample_recommendation(),
+                    output_path=Path(directory) / "out.jpg",
+                    context={"strict_vton": True},
                 )
 
 

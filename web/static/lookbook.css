@@ -562,6 +562,30 @@ select {
 .view { animation: rise .24s cubic-bezier(.16, 1, .3, 1) both; }
 
 /* 코디 후보 — 룩북의 상품 카드 그리드 */
+.tryon-batch-status {
+  display: grid; gap: 13px; margin: 0 0 22px; padding: 17px 19px;
+  border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel-2);
+}
+.tryon-batch-status[data-status="running"] { border-color: var(--signal); }
+.tryon-batch-status[data-status="done"] { border-color: color-mix(in srgb, #2e7d4f 55%, var(--line)); }
+.tryon-batch-copy { display: grid; grid-template-columns: minmax(0, 1fr) 180px; align-items: center; gap: 18px; }
+.tryon-batch-copy > div:first-child { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.tryon-batch-copy strong { font-size: .92rem; }
+.tryon-batch-copy span { color: var(--ink-soft); font-size: .78rem; white-space: nowrap; }
+.tryon-batch-progress { height: 6px; overflow: hidden; background: var(--line); }
+.tryon-batch-progress span {
+  display: block; width: 100%; height: 100%; transform-origin: left;
+  background: var(--signal); transition: transform .35s ease;
+}
+.tryon-batch-items { display: flex; flex-wrap: wrap; gap: 7px; }
+.tryon-batch-items button {
+  min-height: 34px; padding: 7px 11px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--bg); color: var(--ink-soft); font-family: var(--sans); font-size: .75rem;
+}
+.tryon-batch-items button.is-done { border-color: var(--ink); color: var(--ink); cursor: pointer; font-weight: 800; }
+.tryon-batch-items button.is-running { border-color: var(--signal); color: var(--signal-ink); }
+.tryon-batch-status > p { margin: 0; color: var(--warn); font-size: .78rem; }
+
 /* 추천 개수가 3개든 4개든 아래 상세 블록과 같은 폭으로 꽉 차야 한다.
    고정 4열이면 3개일 때 마지막 칸이 비어 폭이 어긋난다. auto-fit 은
    빈 트랙을 접고 남은 카드가 그 자리를 나눠 갖는다. */
@@ -595,6 +619,13 @@ select {
 }
 .pick-names { font-size: .84rem; font-weight: 500; line-height: 1.5; }
 .pick-price { font-size: .88rem; font-weight: 700; color: var(--ink-soft); margin-top: auto; }
+.pick-render-state {
+  align-self: flex-start; padding: 4px 8px; border-radius: 999px;
+  background: var(--panel-2); color: var(--ink-soft); font-size: .68rem; font-weight: 800;
+}
+.pick-render-state.is-running { color: var(--signal-ink); }
+.pick-render-state.is-done { background: color-mix(in srgb, #2e7d4f 13%, var(--bg)); color: #2e7d4f; }
+.pick-render-state.is-failed { background: color-mix(in srgb, var(--warn) 12%, var(--bg)); color: var(--warn); }
 
 /* 선택한 코디 상세 */
 .reco-detail { display: grid; gap: 16px; }
@@ -764,6 +795,19 @@ select {
 .tryon.is-working { border-color: var(--signal); }
 .tryon.is-done img { width: 100%; display: block; }
 .tryon-note { font-size: .78rem; color: var(--ink-soft); margin: 0; padding: 13px 20px; }
+.tryon-actions {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 0 20px 15px;
+}
+.tryon-switcher { display: inline-flex; align-items: center; gap: 8px; }
+.tryon-switcher button, .tryon-download {
+  min-height: 38px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r);
+  background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: .76rem;
+  text-decoration: none; cursor: pointer;
+}
+.tryon-switcher button:hover, .tryon-download:hover { border-color: var(--ink); }
+.tryon-switcher span { min-width: 42px; text-align: center; color: var(--ink-soft); font-size: .75rem; }
+.tryon-download { display: inline-flex; align-items: center; font-weight: 800; }
 .tryon-slot { display: flex; align-items: center; gap: 16px; }
 .tryon-icon { width: 38px; height: 38px; color: var(--ink-soft); flex-shrink: 0; }
 .tryon-icon svg { width: 100%; height: 100%; }
@@ -777,6 +821,11 @@ select {
 }
 .tryon-btn:hover { background: var(--signal-ink); }
 .tryon-btn:disabled { opacity: .42; cursor: not-allowed; }
+.tryon-auto-badge {
+  flex: none; padding: 7px 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--signal) 14%, var(--bg));
+  color: var(--signal-ink); font-size: .74rem; font-weight: 800;
+}
 
 /* ── 착장 분석 ────────────────────────────────────────── */
 .analysis-visual { position: sticky; top: 84px; }
@@ -926,6 +975,11 @@ select {
     margin-right: calc(var(--gutter) * -1);
   }
   .pick { scroll-snap-align: start; }
+  .tryon-batch-copy { grid-template-columns: 1fr; gap: 10px; }
+  .tryon-batch-copy > div:first-child { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .tryon-actions { align-items: stretch; flex-direction: column; }
+  .tryon-switcher { justify-content: space-between; }
+  .tryon-download { justify-content: center; }
   .budget-values output { font-size: .92rem; }
   .product { grid-template-columns: auto 1fr; }
   .product-price { grid-column: 2; text-align: right; }

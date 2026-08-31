@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import threading
 import inspect
@@ -100,6 +101,7 @@ __all__ = [
     "build_profile",
     "form_options",
     "generate_tryon",
+    "generate_tryon_with_warnings",
     "get_engine",
     "run_pipeline",
     "rule_titles",
@@ -164,6 +166,13 @@ def _build_tryon() -> VirtualTryOnAdapter:
     try:
         from catvton_tryon import CatVTONTryOn
 
+        preset = os.environ.get("FASHION_VTON_PRESET", "standard").strip().lower()
+        if preset == "fast":
+            return CatVTONTryOn.fast()
+        if preset in {"high", "high_detail"}:
+            return CatVTONTryOn.high_detail()
+        if preset not in {"", "standard"}:
+            print(f"[VTON] 알 수 없는 프리셋 {preset!r}; standard를 사용합니다.")
         return CatVTONTryOn()
     except Exception as error:  # 저장소 없음·의존성 없음·GPU 없음 모두 여기로 온다
         print(f"[VTON] 생성 모델을 켜지 못해 비활성으로 실행합니다: {type(error).__name__}: {error}")
@@ -441,7 +450,7 @@ def run_pipeline(
                             getattr(engine.recommender, "catalog", None), "color_override_count", 0
                         ),
                     },
-                    "tryon": tryon_status(),
+                    "tryon": _adapter_tryon_status(engine.tryon, preview_kind="original"),
                     "request": _request_summary(profile),
                     "images": {
                         "original": "original.jpg",
@@ -477,8 +486,17 @@ def run_pipeline(
                 output_path=preview_path,
                 context=tryon_context,
             )
+            preview_kind = getattr(engine.tryon, "last_render_kind", "") or (
+                "tryon" if engine.tryon.available else "preview"
+            )
         else:
             Image.open(image_path).convert("RGB").save(preview_path, quality=92)
+            preview_kind = "original"
+        # last_warnings는 어댑터 인스턴스의 마지막 호출 상태이므로 분석 잠금을
+        # 잡은 채 복사해야 다른 작업의 합성 경고와 섞이지 않는다.
+        preview_tryon_status = _adapter_tryon_status(
+            engine.tryon, preview_kind=preview_kind
+        )
 
     on_stage("finalize")
     pose_dict = pose_result.to_dict()
@@ -512,7 +530,7 @@ def run_pipeline(
                 getattr(engine.recommender, "catalog", None), "color_override_count", 0
             ),
         },
-        "tryon": tryon_status(),
+        "tryon": preview_tryon_status,
         "request": _request_summary(profile),
         "images": {
             "original": "original.jpg",
@@ -529,14 +547,26 @@ def run_pipeline(
     )
 
 
-def tryon_status() -> dict:
-    """예상 착장샷 생성이 가능한지와, 불가능하면 그 사유를 알려준다."""
-    adapter = get_engine().tryon
-    return {
+def _adapter_tryon_status(
+    adapter: VirtualTryOnAdapter,
+    *,
+    preview_kind: str | None = None,
+) -> dict:
+    raw_warnings = getattr(adapter, "last_warnings", [])
+    warnings = list(raw_warnings) if isinstance(raw_warnings, (list, tuple)) else []
+    status = {
         "available": adapter.available,
         "reason": "" if adapter.available else adapter.NOT_READY_REASON,
-        "warnings": list(getattr(adapter, "last_warnings", [])),
+        "warnings": warnings,
     }
+    if preview_kind is not None:
+        status["preview_kind"] = preview_kind
+    return status
+
+
+def tryon_status() -> dict:
+    """예상 착장샷 생성이 가능한지와, 불가능하면 그 사유를 알려준다."""
+    return _adapter_tryon_status(get_engine().tryon)
 
 
 def generate_tryon(
@@ -549,15 +579,37 @@ def generate_tryon(
 
     생성 모델이 없으면 추천 보드로 몰래 대체하지 않고 TryOnNotReady를 올린다.
     """
+    output, _warnings = generate_tryon_with_warnings(
+        person_image,
+        recommendation,
+        output_path,
+        context=context,
+    )
+    return output
+
+
+def generate_tryon_with_warnings(
+    person_image: Path,
+    recommendation,
+    output_path: Path,
+    context: dict | None = None,
+) -> tuple[Path, list[str]]:
+    """합성 결과와 그 호출에서 나온 품질 경고를 원자적으로 돌려준다."""
     if not recommendation.products:
         raise TryOnNotReady("현재 코디를 유지하는 조건이라 새로 생성할 착장샷이 없습니다.")
+    strict_context = dict(context or {})
+    strict_context["strict_vton"] = True
     with _analysis_lock:
-        return get_engine().tryon.synthesize(
+        adapter = get_engine().tryon
+        output = adapter.synthesize(
             person_image=person_image,
             recommendation=recommendation,
             output_path=output_path,
-            context=context,
+            context=strict_context,
         )
+        raw_warnings = getattr(adapter, "last_warnings", [])
+        warnings = list(raw_warnings) if isinstance(raw_warnings, (list, tuple)) else []
+        return output, warnings
 
 
 def _recommendation_dict(recommendation) -> dict:

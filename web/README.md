@@ -88,3 +88,16 @@ cd ../web/tests && ../../.venv-web/bin/python -m unittest discover -s .
 
 `ai_fashion_recommender/tests`는 파이프라인 호환성을, `web/tests`는 게이트웨이,
 예산 API, 1순위 VTON 캐시와 UI 계약을 검사합니다.
+
+## 자동 다중 착장샷
+
+분석이 끝나면 서버가 상품이 있는 상위 추천을 최대 3개까지 자동으로 합성합니다.
+1순위가 분석 단계에서 이미 실제 VTON으로 생성됐다면 그 파일을 재사용하고, 나머지는
+GPU에서 순차 생성합니다. 한 순위가 실패해도 다른 순위는 계속 처리합니다.
+
+- `POST /api/jobs/{job_id}/tryon-batch`: 배치를 중복 없이 시작하거나 현재 상태 반환
+- `GET /api/jobs/{job_id}/tryon-batch`: 순위별 `queued/running/done/failed` 상태 조회
+- `GET /api/jobs/{job_id}/images/{name}`: 준비된 JPEG 확인·다운로드
+
+화면은 배치 진행률과 준비된 순위를 바로 갱신하고, 이전/다음 렌더 전환 및 순위별
+JPEG 다운로드를 제공합니다. 결과와 원본은 기존과 같이 30분 안에 삭제됩니다.

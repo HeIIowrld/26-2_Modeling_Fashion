@@ -124,7 +124,9 @@ squeue -u $USER
 
 `web_service.sbatch`는 FASHN/FashionSigLIP 인식과 CatVTON 생성을 GPU 한 장에서
 같이 실행한다. 인식 결과의 의류 마스크는 메모리에 보관했다가 최초 미리보기와
-순위별 추가 합성에 그대로 재사용한다.
+순위별 추가 합성에 그대로 재사용한다. 분석 완료 직후 상위 추천 최대 3개를 자동으로
+순차 생성하며, 운영 기본값은 검증된 `fast` 프리셋(DPM++ 25 steps)이다.
+`FASHION_VTON_PRESET=standard` 또는 `high`로 제출 환경에서 덮어쓸 수 있다.
 
 Master Node의 사용자 systemd 서비스가 비공개 GPU API Slurm 작업을 제출·감시한다.
 실제 GPU 프로세스는 스케줄러가 할당한 계산 노드에서만 실행된다.

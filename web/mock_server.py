@@ -93,6 +93,37 @@ def _prune_jobs() -> None:
             JOBS.pop(job_id, None)
 
 
+def _mock_tryon_batch(job: dict) -> dict:
+    """실제 서버와 같은 배치 상태를 시간 경과로 재현한다."""
+    elapsed = max(0.0, time.monotonic() - job["created"] - 3.2)
+    ready = min(3, 1 + int(elapsed / 0.9))
+    items = []
+    for rank in range(1, 4):
+        if rank <= ready:
+            status, image = "done", f"tryon-{rank}"
+        elif rank == ready + 1:
+            status, image = "running", None
+        else:
+            status, image = "queued", None
+        items.append(
+            {
+                "rank": rank,
+                "status": status,
+                "image": image,
+                "warnings": [],
+                "error": None,
+            }
+        )
+    return {
+        "status": "done" if ready == 3 else "running",
+        "reason": "",
+        "total": 3,
+        "ready": ready,
+        "finished": ready,
+        "items": items,
+    }
+
+
 def _product(name: str, category: str, color: str, price: int, style: str, rank: int) -> dict:
     is_top = category == "top"
     return {
@@ -292,7 +323,7 @@ def _build_result(profile: dict, image_seed: int) -> dict:
             "parser_backend": "mock-parser",
             "vton_enabled": True,
         },
-        "tryon": {"available": True, "reason": ""},
+        "tryon": {"available": True, "reason": "", "warnings": [], "preview_kind": "tryon"},
         "images": {
             "original": "original",
             "landmarks": "landmarks",
@@ -458,6 +489,15 @@ class MockHandler(SimpleHTTPRequestHandler):
                 )
             return
 
+        match = re.fullmatch(r"/api/jobs/([0-9a-f]{32})/tryon-batch", path)
+        if match:
+            job = self._job(match.group(1))
+            if job is None:
+                self._json({"detail": "분석 결과를 찾을 수 없습니다."}, HTTPStatus.NOT_FOUND)
+                return
+            self._json(_mock_tryon_batch(job))
+            return
+
         match = re.fullmatch(r"/api/jobs/([0-9a-f]{32})/images/([a-z0-9_-]+)", path)
         if match:
             job_id, name = match.groups()
@@ -542,7 +582,16 @@ class MockHandler(SimpleHTTPRequestHandler):
             if job is None:
                 self._json({"detail": "분석 결과를 찾을 수 없습니다."}, HTTPStatus.NOT_FOUND)
                 return
-            self._json({"image": f"tryon-{rank}", "cached": False, "mock": True})
+            self._json({"image": f"tryon-{rank}", "cached": False, "mock": True, "warnings": []})
+            return
+
+        match = re.fullmatch(r"/api/jobs/([0-9a-f]{32})/tryon-batch", path)
+        if match:
+            job = self._job(match.group(1))
+            if job is None:
+                self._json({"detail": "분석 결과를 찾을 수 없습니다."}, HTTPStatus.NOT_FOUND)
+                return
+            self._json(_mock_tryon_batch(job))
             return
 
         if path == "/api/feedback":

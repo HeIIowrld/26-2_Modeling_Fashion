@@ -20,6 +20,9 @@ const state = {
   selected: 0,
   feedbackByRank: {},
   tryonByRank: {},
+  tryonStateByRank: {},
+  tryonBatch: null,
+  tryonPoll: null,
   tryon: { available: false, reason: "생성 모델을 준비 중입니다." },
   preferredColors: new Set(),
   avoidedColors: new Set(),
@@ -394,6 +397,7 @@ $("start-analysis").addEventListener("click", async () => {
   if (profileCandidate.min_budget > profileCandidate.max_budget) { toast("최소 예산이 최대 예산보다 큽니다"); goto(2); return; }
 
   unlock(3);
+  stopTryonBatchPolling();
   goto(3);
   $("error-card").hidden = true;
   $("progress-note").textContent = "모델을 준비하고 있어요. 첫 실행은 1분 이상 걸릴 수 있어요.";
@@ -486,6 +490,10 @@ function renderRequestSummary(request) {
 }
 
 function renderResult(result) {
+  stopTryonBatchPolling();
+  state.tryonBatch = null;
+  state.tryonStateByRank = {};
+  $("tryon-batch-status").hidden = true;
   renderRequestSummary(result?.request);
   const isMock = Boolean(result?.mock);
   $("result-data-badge").hidden = !isMock;
@@ -543,6 +551,9 @@ function renderResult(result) {
   renderCurrentOutfit(result);
   renderBodyStats(result.pose);
   renderRecommendations(recommendations);
+  if (state.tryon.available && recommendations.some((item) => item.products.length)) {
+    startTryonBatch();
+  }
   renderShoppingProducts(result.shopping_results || []);
   renderRules(result.rules);
   renderFigures(result.images);
@@ -725,6 +736,7 @@ function renderRecommendations(recommendations) {
   state.recommendations = recommendations;
   state.feedbackByRank = {};
   state.tryonByRank = {};
+  state.tryonStateByRank = {};
 
   const picker = $("reco-picker");
   picker.innerHTML = "";
@@ -736,6 +748,7 @@ function renderRecommendations(recommendations) {
     const card = document.createElement("button");
     card.type = "button";
     card.className = `pick${index === 0 ? " is-on" : ""}`;
+    card.dataset.rank = String(reco.rank);
     card.setAttribute("role", "tab");
     card.setAttribute("aria-selected", String(index === 0));
     card.innerHTML = `
@@ -747,7 +760,8 @@ function renderRecommendations(recommendations) {
         ${reco.products.map((p) => `<i style="background: rgb(${p.color_rgb.join(",")})"></i>`).join("")}
       </div>
       <div class="pick-names">${reco.products.map((p) => escapeHtml(p.name)).join("<br />")}</div>
-      <div class="pick-price">${total.toLocaleString("ko-KR")}원</div>`;
+      <div class="pick-price">${total.toLocaleString("ko-KR")}원</div>
+      ${reco.products.length ? '<span class="pick-render-state is-queued">렌더 대기</span>' : ""}`;
     card.addEventListener("click", () => selectRecommendation(index));
     picker.appendChild(card);
   });
@@ -851,12 +865,47 @@ function selectRecommendation(index) {
   $("reco-detail").querySelector(".feedback-group").addEventListener("click", sendFeedback);
   const tryonButton = $("reco-detail").querySelector(".tryon-btn");
   if (tryonButton) tryonButton.addEventListener("click", () => requestTryon(reco.rank));
+  $("reco-detail").querySelectorAll("[data-render-nav]").forEach((button) => {
+    button.addEventListener("click", () => moveToReadyRender(reco.rank, Number(button.dataset.renderNav)));
+  });
 }
 
-/* 예상 착장샷 — 생성 모델이 붙기 전에는 자리만 잡아 둔다. */
+function readyTryonIndexes() {
+  return state.recommendations
+    .map((reco, index) => (state.tryonByRank[reco.rank]?.image ? index : -1))
+    .filter((index) => index >= 0);
+}
+
+function moveToReadyRender(currentRank, direction) {
+  const ready = readyTryonIndexes();
+  if (ready.length < 2) return;
+  const current = state.recommendations.findIndex((reco) => reco.rank === currentRank);
+  const position = Math.max(0, ready.indexOf(current));
+  const target = ready[(position + direction + ready.length) % ready.length];
+  selectRecommendation(target);
+}
+
+function tryonControls(reco, imageName) {
+  const ready = readyTryonIndexes();
+  const navigation = ready.length > 1
+    ? `<div class="tryon-switcher" aria-label="생성된 착장샷 전환">
+         <button type="button" data-render-nav="-1">← 이전 렌더</button>
+         <span>${ready.indexOf(state.selected) + 1} / ${ready.length}</span>
+         <button type="button" data-render-nav="1">다음 렌더 →</button>
+       </div>`
+    : "";
+  return `<div class="tryon-actions">
+    ${navigation}
+    <a class="tryon-download" href="${API_BASE}/api/jobs/${state.jobId}/images/${imageName}"
+       download="fitta-look-${reco.rank}.jpg">결과 사진 다운로드</a>
+  </div>`;
+}
+
+/* 예상 착장샷 — 분석 직후 서버가 추천 순위별로 자동 생성한다. */
 function tryonBlock(reco) {
   const generated = state.tryonByRank[reco.rank];
   const done = typeof generated === "string" ? generated : generated?.image;
+  const batchItem = state.tryonStateByRank[reco.rank];
   const warnings = generated?.warnings || (reco.rank === 1 ? state.tryon.warnings : []) || [];
   const warningBlock = warnings.length
     ? `<div class="tryon-warning"><strong>생성 품질 확인 필요</strong><ul>${warnings
@@ -868,12 +917,24 @@ function tryonBlock(reco) {
       <div class="tryon is-done">
         <img src="${API_BASE}/api/jobs/${state.jobId}/images/${done}" alt="추천 코디 예상 착장샷" />
         <p class="tryon-note">${state.result?.mock ? "서비스 흐름 확인용 시연 이미지입니다." : "생성 모델이 만든 예상 이미지입니다. 실제 핏을 보장하지 않습니다."}</p>
+        ${tryonControls(reco, done)}
         ${warningBlock}
       </div>`;
   }
   const ready = state.tryon.available;
+  const autoWorking = ["queued", "running"].includes(batchItem?.status);
+  const failed = batchItem?.status === "failed";
+  const message = batchItem?.status === "running"
+    ? "GPU에서 이 코디를 합성하고 있어요. 준비되는 즉시 자동으로 표시됩니다."
+    : batchItem?.status === "queued"
+      ? "앞선 추천 코디 다음으로 자동 생성됩니다."
+      : failed
+        ? batchItem.error || "자동 생성에 실패했습니다. 다시 시도할 수 있어요."
+        : ready
+          ? "이 코디를 입은 모습을 생성해 봅니다."
+          : state.tryon.reason;
   return `
-    <div class="tryon${ready ? "" : " is-pending"}">
+    <div class="tryon${autoWorking ? " is-working" : ready ? "" : " is-pending"}">
       <div class="tryon-slot">
         <div class="tryon-icon" aria-hidden="true">
           <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4"
@@ -883,11 +944,13 @@ function tryonBlock(reco) {
         </div>
         <div class="tryon-copy">
           <strong>예상 착장샷</strong>
-          <span>${escapeHtml(ready ? "이 코디를 입은 모습을 생성해 봅니다." : state.tryon.reason)}</span>
+          <span>${escapeHtml(message)}</span>
         </div>
-        <button class="btn btn-ghost btn-sm tryon-btn" type="button" ${ready ? "" : "disabled"}>
-          ${ready ? "생성하기" : "준비 중"}
-        </button>
+        ${autoWorking
+          ? '<span class="tryon-auto-badge">자동 생성 중</span>'
+          : `<button class="btn btn-ghost btn-sm tryon-btn" type="button" ${ready ? "" : "disabled"}>
+               ${failed ? "다시 생성" : ready ? "지금 생성" : "준비 중"}
+             </button>`}
       </div>
       ${warningBlock}
     </div>`;
@@ -907,12 +970,148 @@ async function requestTryon(rank) {
       image: payload.image,
       warnings: Array.isArray(payload.warnings) ? payload.warnings : [],
     };
+    state.tryonStateByRank[rank] = {
+      rank,
+      status: "done",
+      image: payload.image,
+      warnings: state.tryonByRank[rank].warnings,
+      error: null,
+    };
+    await pollTryonBatch();
     selectRecommendation(state.selected);
   } catch (error) {
     button.disabled = false;
     button.textContent = "다시 시도";
     box.classList.remove("is-working");
     toast(error.message);
+  }
+}
+
+function stopTryonBatchPolling() {
+  clearInterval(state.tryonPoll);
+  state.tryonPoll = null;
+}
+
+function tryonStateCopy(item) {
+  return JSON.stringify([item?.status, item?.image, item?.error, item?.warnings || []]);
+}
+
+function syncPickerRenderStates() {
+  document.querySelectorAll(".pick[data-rank]").forEach((card) => {
+    const badge = card.querySelector(".pick-render-state");
+    if (!badge) return;
+    const item = state.tryonStateByRank[Number(card.dataset.rank)];
+    const labels = {
+      queued: "렌더 대기",
+      running: "렌더 생성 중",
+      done: "렌더 준비 완료",
+      failed: "렌더 재시도 필요",
+      unavailable: "렌더 불가",
+    };
+    badge.className = `pick-render-state is-${item?.status || "queued"}`;
+    badge.textContent = labels[item?.status] || "렌더 대기";
+  });
+}
+
+function renderTryonBatchStatus() {
+  const panel = $("tryon-batch-status");
+  const batch = state.tryonBatch;
+  if (!batch || !batch.total || batch.status === "unavailable") {
+    panel.hidden = true;
+    return;
+  }
+  const headlines = {
+    queued: "추천 코디를 자동 렌더링할게요",
+    running: "추천 코디를 자동 렌더링 중이에요",
+    done: "모든 결과 사진이 준비됐어요",
+    partial: "준비된 결과부터 확인할 수 있어요",
+    failed: "자동 렌더링을 마치지 못했어요",
+  };
+  const labels = {
+    queued: "대기",
+    running: "생성 중",
+    done: "보기",
+    failed: "오류",
+  };
+  const progress = batch.total ? Math.min(1, batch.finished / batch.total) : 0;
+  panel.dataset.status = batch.status;
+  panel.innerHTML = `
+    <div class="tryon-batch-copy">
+      <div><strong>${escapeHtml(headlines[batch.status] || "예상 착장샷")}</strong>
+        <span>${batch.ready} / ${batch.total}장 준비</span></div>
+      <div class="tryon-batch-progress" aria-label="착장샷 생성 진행률">
+        <span style="transform:scaleX(${progress})"></span>
+      </div>
+    </div>
+    <div class="tryon-batch-items">
+      ${batch.items.map((item) => `
+        <button type="button" data-batch-rank="${item.rank}"
+          class="is-${item.status}" ${item.status === "done" ? "" : "disabled"}>
+          ${item.rank}위 · ${labels[item.status] || item.status}
+        </button>`).join("")}
+    </div>
+    ${batch.reason && ["partial", "failed"].includes(batch.status)
+      ? `<p>${escapeHtml(batch.reason)}</p>` : ""}`;
+  panel.hidden = false;
+  panel.querySelectorAll("[data-batch-rank]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = state.recommendations.findIndex(
+        (reco) => reco.rank === Number(button.dataset.batchRank)
+      );
+      if (index >= 0) selectRecommendation(index);
+    });
+  });
+}
+
+function applyTryonBatch(batch) {
+  const selectedRank = state.recommendations[state.selected]?.rank;
+  const before = tryonStateCopy(state.tryonStateByRank[selectedRank]);
+  state.tryonBatch = batch;
+  (batch.items || []).forEach((item) => {
+    state.tryonStateByRank[item.rank] = item;
+    if (item.status === "done" && item.image) {
+      state.tryonByRank[item.rank] = {
+        image: item.image,
+        warnings: Array.isArray(item.warnings) ? item.warnings : [],
+      };
+    }
+  });
+  syncPickerRenderStates();
+  renderTryonBatchStatus();
+  const after = tryonStateCopy(state.tryonStateByRank[selectedRank]);
+  if (selectedRank != null && before !== after) selectRecommendation(state.selected);
+  if (["done", "partial", "failed", "unavailable"].includes(batch.status)) {
+    stopTryonBatchPolling();
+  }
+}
+
+async function pollTryonBatch() {
+  if (!state.jobId) return stopTryonBatchPolling();
+  try {
+    const response = await fetch(`${API_BASE}/api/jobs/${state.jobId}/tryon-batch`);
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "렌더링 상태를 확인하지 못했습니다.");
+    applyTryonBatch(payload);
+  } catch (error) {
+    stopTryonBatchPolling();
+    toast(error.message);
+  }
+}
+
+async function startTryonBatch() {
+  if (!state.jobId) return;
+  try {
+    const response = await fetch(`${API_BASE}/api/jobs/${state.jobId}/tryon-batch`, { method: "POST" });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "자동 렌더링을 시작하지 못했습니다.");
+    applyTryonBatch(payload);
+    if (["queued", "running"].includes(payload.status)) {
+      stopTryonBatchPolling();
+      state.tryonPoll = setInterval(pollTryonBatch, 1200);
+    }
+  } catch (error) {
+    // 구버전 백엔드에서는 기존 순위별 '지금 생성' 버튼을 그대로 사용할 수 있다.
+    console.warn("자동 렌더링 배치를 사용할 수 없습니다:", error);
   }
 }
 
@@ -969,12 +1168,19 @@ function showFigure(images, key) {
     segmentation: "시연용 의류 분리 화면입니다.",
     preview: "추천 코디의 분위기를 정리한 시연용 보드입니다.",
   };
-  $("figure-caption").textContent = (state.result?.mock ? mockCaptions : FIGURE_CAPTIONS)[key] || "";
+  const liveCaptions = {
+    ...FIGURE_CAPTIONS,
+    preview: state.result?.tryon?.preview_kind === "tryon"
+      ? "1순위 추천 코디를 합성한 예상 착장샷입니다. 실제 핏을 보장하지 않습니다."
+      : "추천 상품을 정리한 참고 보드이며 실제 합성 결과가 아닙니다.",
+  };
+  $("figure-caption").textContent = (state.result?.mock ? mockCaptions : liveCaptions)[key] || "";
 }
 
 $("delete-now").addEventListener("click", async () => {
   if (!state.jobId) return;
   try {
+    stopTryonBatchPolling();
     const response = await fetch(`${API_BASE}/api/jobs/${state.jobId}`, { method: "DELETE" });
     if (!response.ok) throw new Error("삭제하지 못했습니다.");
     const bar = $("privacy-bar");
@@ -982,12 +1188,14 @@ $("delete-now").addEventListener("click", async () => {
     bar.querySelector("strong").textContent = "사진과 결과 이미지를 삭제했습니다.";
     bar.querySelector("span").textContent = "화면에 남은 분석 내용은 새로고침하면 사라집니다.";
     $("delete-now").disabled = true;
-    document.querySelectorAll(".figure img").forEach((img) => img.removeAttribute("src"));
+    document.querySelectorAll(".figure img, .tryon img").forEach((img) => img.removeAttribute("src"));
     $("figure-caption").textContent = "삭제되었습니다.";
     $("clear-image").click();
     $("clear-body-image").click();
     $("wardrobe-list").replaceChildren();
     state.jobId = null;
+    state.tryonByRank = {};
+    state.tryonStateByRank = {};
     toast("사진을 삭제했습니다.");
   } catch (error) {
     toast(error.message);
@@ -995,11 +1203,14 @@ $("delete-now").addEventListener("click", async () => {
 });
 
 $("restart").addEventListener("click", () => {
+  stopTryonBatchPolling();
   $("clear-image").click();
   $("clear-body-image").click();
   $("wardrobe-list").replaceChildren();
   state.result = null;
   state.jobId = null;
+  state.tryonByRank = {};
+  state.tryonStateByRank = {};
   state.maxStep = 1;
   goto(1);
 });

@@ -43,6 +43,9 @@ class VirtualTryOnAdapter:
 
     def __init__(self, enabled: bool = False) -> None:
         self.enabled = enabled
+        # 웹이 추천 보드와 실제 생성 결과를 혼동하지 않도록 마지막 출력의 종류를
+        # 명시한다. 구현체도 같은 값("tryon" | "preview")을 유지한다.
+        self.last_render_kind = ""
 
     @property
     def available(self) -> bool:
@@ -57,8 +60,12 @@ class VirtualTryOnAdapter:
     ) -> Path:
         """context에는 구현체가 사용할 부가 정보(FASHN 마스크 등)를 담는다."""
         if self.enabled:
-            return self._synthesize(person_image, recommendation, output_path)
-        return self._make_preview(person_image, recommendation, output_path)
+            output = self._synthesize(person_image, recommendation, output_path)
+            self.last_render_kind = "tryon"
+            return output
+        output = self._make_preview(person_image, recommendation, output_path)
+        self.last_render_kind = "preview"
+        return output
 
     def synthesize(
         self,

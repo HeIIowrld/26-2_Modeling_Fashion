@@ -45,6 +45,17 @@ class UIContractTests(unittest.TestCase):
         self.assertIn("생성 품질 확인 필요", javascript)
         self.assertIn("payload.warnings", javascript)
 
+    def test_multiple_tryon_renders_are_queued_and_switchable(self):
+        html = (STATIC / "index.html").read_text(encoding="utf-8")
+        javascript = (STATIC / "app.js").read_text(encoding="utf-8")
+        active_css = (STATIC / "lookbook.css").read_text(encoding="utf-8")
+        self.assertIn('id="tryon-batch-status"', html)
+        self.assertIn("/tryon-batch", javascript)
+        self.assertIn("moveToReadyRender", javascript)
+        self.assertIn("결과 사진 다운로드", javascript)
+        self.assertIn(".tryon-batch-status", active_css)
+        self.assertIn(".tryon-switcher", active_css)
+
 
 if __name__ == "__main__":
     unittest.main()

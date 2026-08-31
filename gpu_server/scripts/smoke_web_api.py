@@ -158,6 +158,34 @@ def main() -> int:
     if tryon_name != result["images"]["preview"] or not tryon.get("cached"):
         raise RuntimeError("1순위 VTON이 분석 중 만든 preview를 재사용하지 않았습니다.")
 
+    batch = _json_request(
+        f"{base_url}/api/jobs/{job_id}/tryon-batch",
+        method="POST",
+        data=b"",
+    )
+    while batch.get("status") in {"queued", "running"} and time.monotonic() < deadline:
+        print("tryon-batch", batch.get("status"), f"{batch.get('ready')}/{batch.get('total')}")
+        time.sleep(1)
+        batch = _json_request(f"{base_url}/api/jobs/{job_id}/tryon-batch")
+    if batch.get("status") != "done":
+        raise RuntimeError(f"다중 VTON 배치가 완료되지 않았습니다: {batch!r}")
+    expected_renders = min(3, sum(bool(item.get("products")) for item in recommendations))
+    if batch.get("ready") != expected_renders or batch.get("total") != expected_renders:
+        raise RuntimeError(f"예상 착장샷 개수가 다릅니다: {batch!r}")
+    rendered_names = []
+    for item in batch.get("items") or []:
+        if item.get("status") != "done" or not item.get("image"):
+            raise RuntimeError(f"완료되지 않은 착장샷 항목이 있습니다: {item!r}")
+        content_type, image = _download(
+            f"{base_url}/api/jobs/{job_id}/images/{item['image']}"
+        )
+        if content_type != "image/jpeg" or not image.startswith(b"\xff\xd8\xff"):
+            raise RuntimeError(f"{item['rank']}순위 VTON 결과가 유효한 JPEG가 아닙니다.")
+        rendered_names.append(item["image"])
+        print("tryon-item", item["rank"], item["image"], len(image))
+    if len(set(rendered_names)) != expected_renders:
+        raise RuntimeError(f"순위별 VTON 이미지가 중복되었습니다: {rendered_names!r}")
+
     if not args.keep:
         deleted = _json_request(f"{base_url}/api/jobs/{job_id}", method="DELETE")
         print("delete", deleted.get("deleted"))
