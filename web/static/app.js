@@ -491,7 +491,7 @@ function renderResult(result) {
   $("result-data-badge").hidden = !isMock;
   $("result-disclaimer").textContent = isMock
     ? "현재 분석 수치와 상품은 서비스 흐름을 확인하기 위한 시연 데이터예요. 실제 모델 서버를 연결하면 실제 분석 결과로 바뀝니다."
-    : "추천 보드는 코디의 분위기를 확인하기 위한 참고 이미지이며 실제 핏을 보장하지 않습니다.";
+    : "추천 보드는 코디의 분위기를 확인하기 위한 참고 이미지이며 실제 핏을 보장하지 않습니다. 무신사 상품은 실시간 검색 결과로 가격과 재고가 달라질 수 있습니다.";
 
   // Handle explicit budget-mismatch structured response from the server.
   if (result && result.budget_match === false) {
