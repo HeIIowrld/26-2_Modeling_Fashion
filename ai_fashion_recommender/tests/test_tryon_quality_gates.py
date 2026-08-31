@@ -224,6 +224,25 @@ class LengthGapTests(unittest.TestCase):
         self.assertEqual(sleeve_length_gap("반팔", "긴팔"), -2)
 
 
+class NecklineGapTests(unittest.TestCase):
+    def test_high_neck_to_round_neck_is_disclosed(self):
+        tryon = CatVTONTryOn()
+        tryon._check_neckline_gap(
+            SimpleNamespace(neckline="라운드넥"),
+            {"outfit": SimpleNamespace(neckline="터틀넥")},
+        )
+        self.assertEqual(len(tryon.last_warnings), 1)
+        self.assertIn("기존 칼라", tryon.last_warnings[0])
+
+    def test_similar_coverage_does_not_warn(self):
+        tryon = CatVTONTryOn()
+        tryon._check_neckline_gap(
+            SimpleNamespace(neckline="스탠드 칼라"),
+            {"outfit": SimpleNamespace(neckline="터틀넥")},
+        )
+        self.assertEqual(tryon.last_warnings, [])
+
+
 class ReferenceQualityTests(unittest.TestCase):
     @staticmethod
     def _reference(mask_pixels: int, brightness: int, size: int = 100):

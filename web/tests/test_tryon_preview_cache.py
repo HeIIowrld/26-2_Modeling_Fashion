@@ -15,7 +15,7 @@ class TryOnPreviewCacheTests(unittest.TestCase):
             "status": "done",
             "recommendations": [SimpleNamespace(rank=1)],
             "result": {
-                "tryon": {"available": True},
+                "tryon": {"available": True, "warnings": ["목 부분 확인 필요"]},
                 "images": {"preview": "preview.jpg"},
             },
         }
@@ -27,7 +27,10 @@ class TryOnPreviewCacheTests(unittest.TestCase):
         ):
             response = web_app.create_tryon("a" * 32, 1)
 
-        self.assertEqual(response, {"image": "preview.jpg", "cached": True})
+        self.assertEqual(
+            response,
+            {"image": "preview.jpg", "cached": True, "warnings": ["목 부분 확인 필요"]},
+        )
         generate.assert_not_called()
 
 

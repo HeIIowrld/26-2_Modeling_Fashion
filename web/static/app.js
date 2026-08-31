@@ -810,12 +810,20 @@ function selectRecommendation(index) {
 
 /* 예상 착장샷 — 생성 모델이 붙기 전에는 자리만 잡아 둔다. */
 function tryonBlock(reco) {
-  const done = state.tryonByRank[reco.rank];
+  const generated = state.tryonByRank[reco.rank];
+  const done = typeof generated === "string" ? generated : generated?.image;
+  const warnings = generated?.warnings || (reco.rank === 1 ? state.tryon.warnings : []) || [];
+  const warningBlock = warnings.length
+    ? `<div class="tryon-warning"><strong>생성 품질 확인 필요</strong><ul>${warnings
+        .map((warning) => `<li>${escapeHtml(warning)}</li>`)
+        .join("")}</ul></div>`
+    : "";
   if (done) {
     return `
       <div class="tryon is-done">
         <img src="${API_BASE}/api/jobs/${state.jobId}/images/${done}" alt="추천 코디 예상 착장샷" />
         <p class="tryon-note">${state.result?.mock ? "서비스 흐름 확인용 시연 이미지입니다." : "생성 모델이 만든 예상 이미지입니다. 실제 핏을 보장하지 않습니다."}</p>
+        ${warningBlock}
       </div>`;
   }
   const ready = state.tryon.available;
@@ -836,6 +844,7 @@ function tryonBlock(reco) {
           ${ready ? "생성하기" : "준비 중"}
         </button>
       </div>
+      ${warningBlock}
     </div>`;
 }
 
@@ -849,7 +858,10 @@ async function requestTryon(rank) {
     const response = await fetch(`${API_BASE}/api/jobs/${state.jobId}/tryon/${rank}`, { method: "POST" });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.detail || "예상 착장샷을 만들지 못했습니다.");
-    state.tryonByRank[rank] = payload.image;
+    state.tryonByRank[rank] = {
+      image: payload.image,
+      warnings: Array.isArray(payload.warnings) ? payload.warnings : [],
+    };
     selectRecommendation(state.selected);
   } catch (error) {
     button.disabled = false;

@@ -513,6 +513,7 @@ def tryon_status() -> dict:
     return {
         "available": adapter.available,
         "reason": "" if adapter.available else adapter.NOT_READY_REASON,
+        "warnings": list(getattr(adapter, "last_warnings", [])),
     }
 
 

@@ -201,6 +201,13 @@ def _read_job(job_id: str) -> dict | None:
         return dict(job) if job else None
 
 
+def _record_tryon_warnings(job_id: str, rank: int, warnings: list[str]) -> None:
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is not None:
+            job.setdefault("tryon_warnings", {})[rank] = list(warnings)
+
+
 def _session_dir(job_id: str) -> Path:
     return SESSION_ROOT / job_id
 
@@ -435,11 +442,19 @@ def create_tryon(job_id: str, rank: int) -> dict:
     ):
         preview = _session_dir(job_id) / preview_name
         if preview.is_file():
-            return {"image": preview.name, "cached": True}
+            return {
+                "image": preview.name,
+                "cached": True,
+                "warnings": list((result.get("tryon") or {}).get("warnings") or []),
+            }
 
     output = _session_dir(job_id) / f"tryon_{rank}.jpg"
     if output.is_file():
-        return {"image": output.name, "cached": True}
+        return {
+            "image": output.name,
+            "cached": True,
+            "warnings": list((job.get("tryon_warnings") or {}).get(rank) or []),
+        }
     try:
         generate_tryon(
             job["person_image"],
@@ -450,7 +465,9 @@ def create_tryon(job_id: str, rank: int) -> dict:
     except TryOnNotReady as exc:
         # 501: 화면이 '준비 중' 안내를 그릴 수 있도록 실패와 구분한다.
         raise HTTPException(status_code=501, detail=str(exc)) from exc
-    return {"image": output.name, "cached": False}
+    warnings = list(tryon_status().get("warnings") or [])
+    _record_tryon_warnings(job_id, rank, warnings)
+    return {"image": output.name, "cached": False, "warnings": warnings}
 
 
 @app.delete("/api/jobs/{job_id}")

@@ -606,6 +606,27 @@ select {
   border-left: 3px solid var(--signal); background: var(--panel-2);
   color: var(--ink-soft); font-size: .8rem;
 }
+
+.tryon-warning {
+  margin: 10px 0 0;
+  padding: 11px 13px;
+  border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--warn) 11%, var(--bg));
+  color: var(--warn);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.tryon-warning strong {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.tryon-warning ul {
+  margin: 0;
+  padding-left: 18px;
+}
 .reco-head {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
   flex-wrap: wrap;

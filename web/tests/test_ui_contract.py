@@ -42,6 +42,8 @@ class UIContractTests(unittest.TestCase):
         self.assertIn("renderRequestSummary(result?.request)", javascript)
         self.assertIn("reco.ranking_tied", javascript)
         self.assertIn("상품 이미지 확인", javascript)
+        self.assertIn("생성 품질 확인 필요", javascript)
+        self.assertIn("payload.warnings", javascript)
 
 
 if __name__ == "__main__":

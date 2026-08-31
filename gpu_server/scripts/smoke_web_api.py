@@ -149,6 +149,8 @@ def main() -> int:
         data=b"",
     )
     tryon_name = tryon["image"]
+    if not isinstance(tryon.get("warnings"), list):
+        raise RuntimeError("VTON 품질 경고 목록이 응답에 없습니다.")
     content_type, image = _download(f"{base_url}/api/jobs/{job_id}/images/{tryon_name}")
     print("tryon", tryon_name, content_type, len(image), "cached=" + str(tryon.get("cached")))
     if content_type != "image/jpeg" or not image.startswith(b"\xff\xd8\xff"):
