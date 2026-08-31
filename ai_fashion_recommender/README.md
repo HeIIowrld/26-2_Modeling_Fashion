@@ -131,6 +131,22 @@ Notebook과 공용이라 `ai_fashion_recommender/`에 있습니다. 런타임 �
 python -m unittest discover -s tests -t .
 ```
 
+### 상품 이미지 색상 감사
+
+쇼핑몰 카탈로그 색상과 대표 이미지가 어긋나면 추천 색 조합과 VTON 검토가 함께
+틀어질 수 있습니다. 원본 이미지가 있는 배포 환경에서는 다음 명령으로 sidecar를
+갱신합니다.
+
+```bash
+python scripts/audit_product_colors.py \
+  --catalog data/products_musinsa_enriched.csv
+```
+
+결과 `data/product_image_colors.csv`는 원본 이미지에서 다시 만들 수 있어 Git에는
+넣지 않습니다. 모델 착용컷의 배경·피부·그림자를 상품색으로 오인하지 않도록,
+무채색·유사색 불일치는 수동 검토로만 표시하고 신뢰도 높은 유채색 대조만
+`ProductCatalog`에서 자동 교정합니다.
+
 ## Notebook으로 실행
 
 1. 팀원은 `ai_fashion_recommender` 폴더 전체를 자신의 PC로 복사합니다.

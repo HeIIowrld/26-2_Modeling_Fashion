@@ -183,10 +183,29 @@ def _update_job(job_id: str, **fields) -> None:
             job.update(fields)
 
 
+def _record_job_stage(job_id: str, stage: str) -> None:
+    """현재 단계와 실제 통과 순서를 함께 보존해 UI·운영 점검이 같은 값을 보게 한다."""
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None:
+            return
+        history = job.setdefault("stage_history", [])
+        if not history or history[-1] != stage:
+            history.append(stage)
+        job["stage"] = stage
+
+
 def _read_job(job_id: str) -> dict | None:
     with _jobs_lock:
         job = _jobs.get(job_id)
         return dict(job) if job else None
+
+
+def _record_tryon_warnings(job_id: str, rank: int, warnings: list[str]) -> None:
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is not None:
+            job.setdefault("tryon_warnings", {})[rank] = list(warnings)
 
 
 def _session_dir(job_id: str) -> Path:
@@ -201,9 +220,13 @@ def _worker(
     wardrobe_image_paths: list[Path] | None = None,
 ) -> None:
     def on_stage(stage: str) -> None:
-        _update_job(job_id, stage=stage)
+        _record_job_stage(job_id, stage)
 
     try:
+        on_stage("prepare")
+        # 최초 요청의 모델·카탈로그 로드 시간을 '사진 검사' 시간으로 표시하지 않는다.
+        get_engine()
+        on_stage("wardrobe")
         analyze_wardrobe_items(profile, wardrobe_image_paths or [])
         outcome = run_pipeline(image_path, profile, _session_dir(job_id), on_stage, body_image_path)
     except PipelineError as exc:
@@ -221,6 +244,7 @@ def _worker(
             result=outcome.payload,
             recommendations=outcome.recommendations,
             person_image=outcome.person_image,
+            tryon_context=outcome.tryon_context,
         )
     finally:
         # 새 분석마다 오래된 사진을 함께 정리한다.
@@ -242,6 +266,9 @@ def health() -> dict:
         "parser_backend": engine.parser_backend,
         "vton_enabled": engine.tryon.enabled,
         "product_count": len(engine.recommender.catalog.products),
+        "product_color_audits": len(engine.recommender.catalog.color_audits),
+        "product_color_overrides": engine.recommender.catalog.color_override_count,
+        "product_color_mismatches": engine.recommender.catalog.color_mismatch_count,
         "rules_implemented": len(engine.recommender.active_rule_ids),
         "rules_documented": len(engine.recommender.documented_rule_ids),
     }
@@ -340,6 +367,7 @@ async def analyze(
         "id": job_id,
         "status": "running",
         "stage": STAGES[0][0],
+        "stage_history": [],
         "error": None,
         "result": None,
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -365,6 +393,7 @@ def job_status(job_id: str) -> dict:
         "job_id": job["id"],
         "status": job["status"],
         "stage": job["stage"],
+        "stage_history": job.get("stage_history", []),
         "error": job["error"],
         "result": job["result"],
     }
@@ -401,15 +430,44 @@ def create_tryon(job_id: str, rank: int) -> dict:
     if recommendation is None:
         raise HTTPException(status_code=404, detail="해당 순위의 추천을 찾을 수 없습니다.")
 
+    # 분석 단계에서 1순위 VTON을 preview.jpg로 이미 생성한다. 같은 입력으로 다시
+    # GPU 생성 모델을 호출하면 사용자는 거의 같은 이미지를 기다리고 자원만 두 번 쓴다.
+    result = job.get("result") or {}
+    preview_name = (result.get("images") or {}).get("preview")
+    if (
+        rank == 1
+        and (result.get("tryon") or {}).get("available")
+        and isinstance(preview_name, str)
+        and IMAGE_NAME_PATTERN.match(preview_name)
+    ):
+        preview = _session_dir(job_id) / preview_name
+        if preview.is_file():
+            return {
+                "image": preview.name,
+                "cached": True,
+                "warnings": list((result.get("tryon") or {}).get("warnings") or []),
+            }
+
     output = _session_dir(job_id) / f"tryon_{rank}.jpg"
     if output.is_file():
-        return {"image": output.name, "cached": True}
+        return {
+            "image": output.name,
+            "cached": True,
+            "warnings": list((job.get("tryon_warnings") or {}).get(rank) or []),
+        }
     try:
-        generate_tryon(job["person_image"], recommendation, output)
+        generate_tryon(
+            job["person_image"],
+            recommendation,
+            output,
+            context=job.get("tryon_context"),
+        )
     except TryOnNotReady as exc:
         # 501: 화면이 '준비 중' 안내를 그릴 수 있도록 실패와 구분한다.
         raise HTTPException(status_code=501, detail=str(exc)) from exc
-    return {"image": output.name, "cached": False}
+    warnings = list(tryon_status().get("warnings") or [])
+    _record_tryon_warnings(job_id, rank, warnings)
+    return {"image": output.name, "cached": False, "warnings": warnings}
 
 
 @app.delete("/api/jobs/{job_id}")
