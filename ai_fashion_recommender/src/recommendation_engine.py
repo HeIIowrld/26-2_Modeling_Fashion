@@ -10,6 +10,7 @@ from config import ENABLE_AUTO_BODY_SHAPE
 from fashion_rules import FashionRuleBook
 from outfit_analyzer import COLOR_PALETTE, NEUTRALS, color_harmony
 from product_catalog import ProductCatalog
+from recommendation_keywords import RecommendationKeywordGenerator, TargetKeywordResult
 from schemas import (
     CurrentOutfitEvaluation,
     FOCUS_LOWER,
@@ -216,6 +217,16 @@ class RecommendationEngine:
     def __init__(self, rules_path: str | Path, catalog: ProductCatalog) -> None:
         self.rule_book = FashionRuleBook.from_markdown(rules_path)
         self.catalog = catalog
+        self.keyword_generator = RecommendationKeywordGenerator(set(self.rule_book.rules))
+
+    def generate_target_keywords(
+        self,
+        profile: UserProfile,
+        pose: PoseAnalysis,
+        outfit: OutfitAnalysis,
+    ) -> TargetKeywordResult:
+        """점수 없이 사용자 조건과 사진을 검색용 의류 속성으로 변환한다."""
+        return self.keyword_generator.generate(profile, pose, outfit)
 
     @property
     def active_rule_ids(self) -> list[str]:

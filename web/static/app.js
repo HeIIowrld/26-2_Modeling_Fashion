@@ -543,9 +543,54 @@ function renderResult(result) {
   renderCurrentOutfit(result);
   renderBodyStats(result.pose);
   renderRecommendations(recommendations);
+  renderShoppingProducts(result.shopping_results || []);
   renderRules(result.rules);
   renderFigures(result.images);
   showView("recos");
+}
+
+function renderShoppingProducts(products) {
+  const section = $("shopping-section");
+  const grid = $("shopping-results");
+  if (!section || !grid) return;
+  if (!products.length) {
+    section.hidden = true;
+    grid.innerHTML = "";
+    return;
+  }
+  grid.innerHTML = products.slice(0, 3).map((product) => {
+    const reviews = product.review_count
+      ? `리뷰 ${Number(product.review_count).toLocaleString("ko-KR")}`
+      : "";
+    const rating = product.review_score
+      ? `${(Number(product.review_score) / 20).toFixed(1)} / 5`
+      : "";
+    return `
+      <a class="shopping-card" href="${escapeHtml(product.url)}" target="_blank"
+         rel="noopener noreferrer sponsored" aria-label="무신사에서 ${escapeHtml(product.name)} 보기">
+        <div class="shopping-image-wrap">
+          <img class="shopping-image" src="${escapeHtml(product.image_url)}"
+               alt="${escapeHtml(product.name)} 상품 사진" loading="lazy" referrerpolicy="no-referrer" />
+          <span class="shopping-category">${product.category === "top" ? "상의" : "하의"}</span>
+        </div>
+        <div class="shopping-copy">
+          <span class="shopping-brand">${escapeHtml(product.brand || "MUSINSA")}</span>
+          <h3>${escapeHtml(product.name)}</h3>
+          <div class="shopping-meta">${escapeHtml([rating, reviews, product.gender].filter(Boolean).join(" · "))}</div>
+          ${(product.search_keywords || []).length ? `
+            <div class="shopping-keywords" aria-label="대표 검색 키워드">
+              ${(product.search_keywords || []).slice(0, 3).map((keyword) =>
+                `<span class="shopping-keyword">${escapeHtml(keyword)}</span>`
+              ).join("")}
+            </div>` : ""}
+          <div class="shopping-bottom">
+            <strong>${Number(product.price).toLocaleString("ko-KR")}원</strong>
+            <span>무신사에서 보기 ↗</span>
+          </div>
+        </div>
+      </a>`;
+  }).join("");
+  section.hidden = false;
 }
 
 /* 상위 탭: 추천 / 분석 */

@@ -289,6 +289,16 @@
     <div class="view is-active" id="view-recos" role="tabpanel" aria-labelledby="tab-recos">
       <div class="reco-picker" id="reco-picker" role="tablist" aria-label="추천 코디 선택"></div>
       <div class="reco-detail" id="reco-detail"></div>
+      <section class="shopping-section" id="shopping-section" aria-labelledby="h-shopping" hidden>
+        <div class="shopping-head">
+          <div>
+            <span class="shopping-eyebrow">LIVE SEARCH</span>
+            <h2 id="h-shopping">무신사에서 찾은 상품</h2>
+          </div>
+          <p>추천 조건으로 방금 검색한 결과예요. 가격과 재고는 무신사에서 다시 확인해주세요.</p>
+        </div>
+        <div class="shopping-grid" id="shopping-results"></div>
+      </section>
     </div>
 
     <div class="view" id="view-analysis" role="tabpanel" aria-labelledby="tab-analysis" hidden>
@@ -349,6 +359,7 @@
 
     <p class="disclaimer" id="result-disclaimer">
       추천 보드는 실제 가상 피팅 결과가 아니라 코디의 분위기를 확인하기 위한 참고 이미지예요.
+      무신사 상품은 실시간 검색 결과이며 가격과 재고가 달라질 수 있어요.
     </p>
   </section>
 </main>
