@@ -4,6 +4,7 @@ import colorsys
 import hashlib
 import itertools
 from pathlib import Path
+from typing import Callable
 
 from config import ENABLE_AUTO_BODY_SHAPE
 from fashion_rules import FashionRuleBook
@@ -1594,7 +1595,10 @@ class RecommendationEngine:
         outfit: OutfitAnalysis,
         top_k: int = 3,
         current_outfit_keep_threshold: float | None = None,
+        on_stage: Callable[[str], None] | None = None,
     ) -> list[Recommendation]:
+        if on_stage:
+            on_stage("candidates")
         current = self.evaluate_current_outfit(
             profile,
             pose,
@@ -1657,6 +1661,8 @@ class RecommendationEngine:
         if (min_b is not None and max_b is not None) and (min_b > max_b):
             raise MinGreaterThanMax("최소 예산이 최대 예산보다 큽니다. 최소/최대 예산을 확인하세요.")
 
+        if on_stage:
+            on_stage("scoring")
         for action in actions:
             if action == "top":
                 pairs = ((top, None) for top in available_tops)
@@ -1737,7 +1743,7 @@ class RecommendationEngine:
                     harmony_score=current.harmony_score, harmony_breakdown=current.harmony_breakdown,
                 )
             ]
-        return [
+        recommendations = [
             Recommendation(
                 rank=index,
                 products=products,
@@ -1767,3 +1773,18 @@ class RecommendationEngine:
                         tips, coverage, delta, change_cost, matrix, _total_price)
             in enumerate(candidates[:top_k], start=1)
         ]
+        primary_groups: dict[tuple[float, float], list[Recommendation]] = {}
+        for recommendation in recommendations:
+            key = (recommendation.utility_score, recommendation.total_score)
+            primary_groups.setdefault(key, []).append(recommendation)
+        for recommendation in recommendations:
+            key = (recommendation.utility_score, recommendation.total_score)
+            tied = primary_groups[key]
+            recommendation.display_rank = min(item.rank for item in tied)
+            recommendation.ranking_tied = len(tied) > 1
+            if recommendation.ranking_tied:
+                recommendation.ranking_reason = (
+                    "적합도와 변경 효율이 같은 공동 순위이며, 표시 순서만 "
+                    "같은 사진에서 항상 같도록 고정했습니다."
+                )
+        return recommendations

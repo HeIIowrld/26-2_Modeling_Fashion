@@ -1,0 +1,14 @@
+[Unit]
+Description=FITTA private tunnel to the scheduled GPU worker
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ssh -N -T -p 222 -i /root/.ssh/fitta_gpu_ed25519 -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=yes -L 127.0.0.1:18000:165.132.80.37:8000 dsl01@afsd.iptime.org
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

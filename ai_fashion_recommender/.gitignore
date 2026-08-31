@@ -53,3 +53,4 @@ models/fashion_attribute_heads_finetuned.pt
 
 # 무신사 카탈로그 CSV — 재배포 금지, 로컬에만 보존 (이미지는 ../datasets/garments/)
 data/products_musinsa.csv
+data/product_image_colors.csv

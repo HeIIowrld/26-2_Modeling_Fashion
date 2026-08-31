@@ -6,6 +6,7 @@ __pycache__/
 .DS_Store
 .ipynb_checkpoints/
 .pytest_cache/
+.venv*/
 
 # Claude Code 로컬 세션 설정
 .claude/

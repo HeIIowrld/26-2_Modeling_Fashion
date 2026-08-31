@@ -306,6 +306,12 @@ class Product:
     gender: str = ""
     image_url: str = ""
     image_path: str = ""
+    # 크롤링 텍스트와 상품 대표 이미지의 색이 다를 때 원본 값과 검증 근거를
+    # 함께 보존한다. color는 추천에 실제 사용한 최종 색이다.
+    catalog_color: str = ""
+    image_color: str = ""
+    image_color_confidence: float = 0.0
+    color_source: str = "catalog"
 
 
 @dataclass
@@ -327,6 +333,11 @@ class Recommendation:
     diagnostic_matrix: dict[str, dict[str, float]] = field(default_factory=dict)
     harmony_score: float = 0.0
     harmony_breakdown: dict[str, float] = field(default_factory=dict)
+    # API 호출용 rank는 항상 고유하다. display_rank는 동일한 적합도·효율을 가진
+    # 후보를 화면에서 공동 순위로 정직하게 표시하기 위한 값이다.
+    display_rank: int = 0
+    ranking_tied: bool = False
+    ranking_reason: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)

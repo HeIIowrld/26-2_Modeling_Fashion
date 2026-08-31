@@ -300,23 +300,55 @@ select {
   background-repeat: no-repeat;
 }
 
-/* 예산 — 최소·최대를 직접 입력한다. */
-.budget-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.budget-input { position: relative; display: inline-flex; align-items: center; }
-.budget-input input {
-  width: 190px; padding-right: 32px; padding-left: 72px;
-  font-variant-numeric: tabular-nums; text-align: right;
+/* 예산 — 두 핸들로 최소·최대를 바로 정한다. */
+.budget-slider { width: min(100%, 620px); }
+.budget-values {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; margin-bottom: 12px;
 }
-.budget-label {
-  position: absolute; left: 11px; z-index: 1;
-  font-size: .72rem; font-weight: 700; color: var(--ink-soft); pointer-events: none;
+.budget-values output {
+  font-family: var(--disp); font-size: 1rem; font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
-.budget-input .unit {
-  position: absolute; right: 11px;
-  font-size: .82rem; color: var(--ink-soft); pointer-events: none;
+.budget-values span { color: var(--ink-soft); }
+.budget-range { position: relative; height: 30px; }
+.budget-track, .budget-selected {
+  position: absolute; left: 0; right: 0; top: 13px;
+  height: 5px; border-radius: 999px;
 }
-.budget-input input:focus ~ .unit { color: var(--ink); }
-.budget-sep { font-size: 1.05rem; color: var(--ink-soft); }
+.budget-track { background: var(--line); }
+.budget-selected { background: var(--signal); }
+.budget-range input[type="range"] {
+  position: absolute; inset: 0; width: 100%; height: 30px; margin: 0;
+  appearance: none; -webkit-appearance: none;
+  background: transparent; pointer-events: none;
+}
+.budget-range input[type="range"]::-webkit-slider-runnable-track { height: 5px; background: transparent; }
+.budget-range input[type="range"]::-moz-range-track { height: 5px; background: transparent; }
+.budget-range input[type="range"]::-webkit-slider-thumb {
+  appearance: none; -webkit-appearance: none;
+  width: 22px; height: 22px; margin-top: -8.5px;
+  border: 3px solid var(--bg); border-radius: 50%; background: var(--signal-ink);
+  box-shadow: 0 0 0 1px var(--signal-ink), var(--shadow-sm);
+  cursor: grab; pointer-events: auto;
+}
+.budget-range input[type="range"]::-moz-range-thumb {
+  width: 17px; height: 17px;
+  border: 3px solid var(--bg); border-radius: 50%; background: var(--signal-ink);
+  box-shadow: 0 0 0 1px var(--signal-ink), var(--shadow-sm);
+  cursor: grab; pointer-events: auto;
+}
+.budget-range input[type="range"]:focus-visible { outline: none; }
+.budget-range input[type="range"]:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--signal); outline-offset: 3px;
+}
+.budget-range input[type="range"]:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--signal); outline-offset: 3px;
+}
+.budget-scale {
+  display: flex; justify-content: space-between;
+  margin-top: 1px; font-size: .73rem; color: var(--ink-soft);
+}
 
 /* 필수 블록 — 여기까지만 채우면 추천이 나온다는 걸 면으로 보여준다. */
 .required-block {
@@ -500,6 +532,20 @@ select {
   color: var(--ink-soft); background: var(--panel-2);
   font-size: .72rem; font-weight: 700;
 }
+.request-summary {
+  margin: -4px 0 24px; padding: 14px 16px;
+  border: 1px solid var(--line); background: var(--panel-2);
+}
+.request-summary > strong {
+  display: block; margin-bottom: 9px;
+  font-size: .76rem; color: var(--ink-soft);
+}
+.request-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.request-chip {
+  padding: 4px 9px; border: 1px solid var(--line);
+  border-radius: 999px; background: var(--bg); font-size: .75rem;
+}
+.request-chip b { margin-right: 3px; }
 .view-tabs { display: flex; gap: 26px; border-bottom: 1px solid var(--line); margin-bottom: 30px; }
 .view-tab {
   background: none; border: 0; cursor: pointer;
@@ -555,6 +601,11 @@ select {
 .reco { border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
 .reco.is-top { border-color: var(--signal); }
 .reco.is-top .rank-badge { background: var(--signal-ink); }
+.ranking-note {
+  margin: 0 0 16px; padding: 10px 12px;
+  border-left: 3px solid var(--signal); background: var(--panel-2);
+  color: var(--ink-soft); font-size: .8rem;
+}
 .reco-head {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
   flex-wrap: wrap;
@@ -779,8 +830,6 @@ select {
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
   .score-bar { grid-template-columns: 96px 1fr 30px; }
   .panel-actions .btn { flex: 1 1 auto; }
-  .budget-input input { width: 100%; }
-  .budget-input { flex: 1 1 140px; }
   .wardrobe-row { grid-template-columns: 1fr auto; }
   .wardrobe-upload { grid-column: 1 / -1; grid-row: 2; }
 }
@@ -799,9 +848,7 @@ select {
     margin-right: calc(var(--gutter) * -1);
   }
   .pick { scroll-snap-align: start; }
-  .budget-row { display: grid; grid-template-columns: 1fr; gap: 7px; }
-  .budget-input, .budget-input input { width: 100%; }
-  .budget-sep { text-align: center; line-height: 1; }
+  .budget-values output { font-size: .92rem; }
   .product { grid-template-columns: auto 1fr; }
   .product-price { grid-column: 2; text-align: right; }
 }

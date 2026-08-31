@@ -3,6 +3,7 @@ from __future__ import annotations
 import colorsys
 import math
 from pathlib import Path
+from typing import Callable
 
 import cv2
 import numpy as np
@@ -344,9 +345,18 @@ class OutfitAnalyzer:
         self.classifier = classifier
         self.attribute_analyzer = GarmentAttributeAnalyzer()
 
-    def analyze(self, image: str | Path | Image.Image, pose: PoseAnalysis) -> tuple[OutfitAnalysis, dict]:
+    def analyze(
+        self,
+        image: str | Path | Image.Image,
+        pose: PoseAnalysis,
+        on_stage: Callable[[str], None] | None = None,
+    ) -> tuple[OutfitAnalysis, dict]:
         rgb = _to_rgb_array(image)
+        if on_stage:
+            on_stage("segment")
         parsed = self.parser.parse(image, pose)
+        if on_stage:
+            on_stage("attributes")
         attributes = self.attribute_analyzer.analyze(parsed["segmentation"], pose)
         parsed["attributes"] = attributes
         upper_palette = _dominant_palette(rgb, parsed["upper_mask"])

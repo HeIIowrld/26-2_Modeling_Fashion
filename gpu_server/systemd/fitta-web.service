@@ -1,0 +1,17 @@
+[Unit]
+Description=FITTA private GPU worker Slurm controller
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Environment=FITTA_PROJECT_MASTER=/data1/dsl01/releases/fitta_current
+Environment=FITTA_PROJECT_COMPUTE=/mnt/data1/dsl01/releases/fitta_current
+ExecStart=/data1/dsl01/releases/fitta_current/gpu_server/scripts/fitta_web_controller.sh
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=45
+
+[Install]
+WantedBy=default.target

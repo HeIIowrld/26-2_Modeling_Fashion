@@ -105,6 +105,23 @@ class RecommendationTests(unittest.TestCase):
         ]
         self.assertEqual(len(set(scores)), 1)
 
+    def test_equal_primary_scores_are_reported_as_a_shared_rank(self):
+        template = next(
+            product for product in self.catalog.products
+            if product.product_id == "TOP012"
+        )
+        products = [replace(template, product_id=f"SHARED{index}") for index in range(4)]
+        engine = RecommendationEngine(ROOT / "FASHION_RULES_MASTER.md", StubCatalog(products))
+        recommendations = engine.recommend(
+            UserProfile(purpose="데일리", change_scope="상의만 변경"),
+            self.pose,
+            self.outfit,
+            top_k=3,
+        )
+        self.assertTrue(all(item.ranking_tied for item in recommendations))
+        self.assertEqual([item.display_rank for item in recommendations], [1, 1, 1])
+        self.assertTrue(all("공동 순위" in item.ranking_reason for item in recommendations))
+
     def test_scope_changes_only_top(self):
         profile = UserProfile(change_scope="상의만 변경")
         recommendation = self.engine.recommend(profile, self.pose, self.outfit, top_k=1)[0]

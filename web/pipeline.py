@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import sys
 import threading
+import inspect
 from datetime import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
@@ -75,11 +76,17 @@ MATERIAL_PREFERENCE_MAP = {
 }
 
 STAGES = [
-    ("quality", "사진 품질 검사"),
-    ("pose", "체형·자세 분석"),
-    ("outfit", "현재 착장 분석"),
-    ("recommend", "코디 후보 순위 결정"),
-    ("preview", "결과 이미지 생성"),
+    ("prepare", "GPU 모델·상품 데이터 준비"),
+    ("wardrobe", "보유 옷 사진 확인"),
+    ("pose", "전신 관절·자세 찾기"),
+    ("quality", "해상도·선명도 검사"),
+    ("body", "체형·실루엣 비율 계산"),
+    ("segment", "상의·하의 영역 분리"),
+    ("attributes", "색상·핏·소재 인식"),
+    ("candidates", "조건·예산 후보 검색"),
+    ("scoring", "코디 규칙·조화도 채점"),
+    ("preview", "1순위 예상 착장 생성"),
+    ("finalize", "추천 결과 정리"),
 ]
 
 
@@ -111,6 +118,7 @@ class PipelineResult:
     payload: dict
     recommendations: list
     person_image: Path
+    tryon_context: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -129,8 +137,9 @@ class Engine:
 
 _engine: Engine | None = None
 _engine_lock = threading.Lock()
-# MediaPipe와 SegFormer 세션은 동시 호출에 안전하지 않아 분석 자체를 직렬화한다.
-_analysis_lock = threading.Lock()
+# MediaPipe·SegFormer·CatVTON 세션은 동시 호출에 안전하지 않다. 분석 도중의
+# 자동 미리보기와 결과 화면의 추가 합성이 겹치지 않도록 하나의 재진입 잠금을 쓴다.
+_analysis_lock = threading.RLock()
 
 
 def get_engine() -> Engine:
@@ -320,8 +329,9 @@ def run_pipeline(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     with _analysis_lock:
-        on_stage("quality")
+        on_stage("pose")
         pose_result = engine.pose_analyzer.analyze(image_path)
+        on_stage("quality")
         input_quality = engine.quality_checker.check_input(image_path, pose=pose_result)
         if not input_quality["passed"]:
             raise PipelineError(
@@ -329,7 +339,6 @@ def run_pipeline(
                 + " / ".join(input_quality["issues"])
             )
 
-        on_stage("pose")
         if not pose_result.valid:
             raise PipelineError("유효한 전신 포즈를 찾지 못했습니다. 정면 전신사진을 사용하세요.")
         landmark_path = output_dir / "pose_landmarks.jpg"
@@ -339,20 +348,50 @@ def run_pipeline(
         # 둘레를 입력했으면 사진 추정보다 정확하므로 그 값으로 덮어쓴다.
         # 여기서 확정해야 추천 엔진과 화면이 같은 체형을 본다.
         # 체형 파악용 사진이 있으면 그쪽을 쓴다. 몸이 드러날수록 실루엣 폭이 정확하다.
+        on_stage("body")
         pose_result.body_shape, body_shape_basis = classify(
             profile, pose_result, person_image=body_image_path or image_path
         )
 
-        on_stage("outfit")
-        outfit_result, parsed = engine.outfit_analyzer.analyze(image_path, pose_result)
+        analyze_outfit = engine.outfit_analyzer.analyze
+        if "on_stage" in inspect.signature(analyze_outfit).parameters:
+            outfit_result, parsed = analyze_outfit(image_path, pose_result, on_stage=on_stage)
+        else:  # 간단한 테스트 대역·구버전 어댑터 호환
+            on_stage("segment")
+            outfit_result, parsed = analyze_outfit(image_path, pose_result)
+            on_stage("attributes")
+        tryon_context = {
+            key: parsed.get(key)
+            for key in (
+                "upper_mask",
+                "lower_mask",
+                "upper_style_mask",
+                "lower_style_mask",
+                "segmentation",
+            )
+        }
+        tryon_context.update(
+            {
+                "outfit": outfit_result,
+                "classifier": getattr(engine.outfit_analyzer, "classifier", None),
+                "pose": pose_result,
+            }
+        )
         segmentation_path = output_dir / "segmentation.jpg"
         engine.outfit_analyzer.parser.colorize(parsed["segmentation"]).save(
             segmentation_path, quality=92
         )
 
-        on_stage("recommend")
         try:
-            recommendations = engine.recommender.recommend(profile, pose_result, outfit_result, top_k=3)
+            recommend = engine.recommender.recommend
+            if "on_stage" in inspect.signature(recommend).parameters:
+                recommendations = recommend(
+                    profile, pose_result, outfit_result, top_k=3, on_stage=on_stage
+                )
+            else:
+                on_stage("candidates")
+                on_stage("scoring")
+                recommendations = recommend(profile, pose_result, outfit_result, top_k=3)
         except Exception as exc:
             # Normalize NoBudgetMatch regardless of import path by checking class name.
             exc_name = exc.__class__.__name__
@@ -364,6 +403,7 @@ def run_pipeline(
                 pose_dict = pose_result.to_dict()
                 pose_dict.pop("landmarks", None)
                 pose_dict["body_shape_basis"] = body_shape_basis
+                on_stage("finalize")
                 payload = {
                     "budget_match": False,
                     "code": "NO_BUDGET_MATCH",
@@ -387,8 +427,15 @@ def run_pipeline(
                         "trained_heads": engine.trained_heads,
                         "parser_backend": engine.parser_backend,
                         "vton_enabled": engine.tryon.enabled,
+                        "product_color_audits": len(
+                            getattr(getattr(engine.recommender, "catalog", None), "color_audits", {})
+                        ),
+                        "product_color_overrides": getattr(
+                            getattr(engine.recommender, "catalog", None), "color_override_count", 0
+                        ),
                     },
                     "tryon": tryon_status(),
+                    "request": _request_summary(profile),
                     "images": {
                         "original": "original.jpg",
                         "landmarks": landmark_path.name,
@@ -407,10 +454,12 @@ def run_pipeline(
                 person_image=image_path,
                 recommendation=recommendations[0],
                 output_path=preview_path,
+                context=tryon_context,
             )
         else:
             Image.open(image_path).convert("RGB").save(preview_path, quality=92)
 
+    on_stage("finalize")
     pose_dict = pose_result.to_dict()
     pose_dict.pop("landmarks", None)
     pose_dict["body_shape_basis"] = body_shape_basis
@@ -434,8 +483,15 @@ def run_pipeline(
             "trained_heads": engine.trained_heads,
             "parser_backend": engine.parser_backend,
             "vton_enabled": engine.tryon.enabled,
+            "product_color_audits": len(
+                getattr(getattr(engine.recommender, "catalog", None), "color_audits", {})
+            ),
+            "product_color_overrides": getattr(
+                getattr(engine.recommender, "catalog", None), "color_override_count", 0
+            ),
         },
         "tryon": tryon_status(),
+        "request": _request_summary(profile),
         "images": {
             "original": "original.jpg",
             "landmarks": landmark_path.name,
@@ -443,7 +499,12 @@ def run_pipeline(
             "preview": preview_path.name,
         },
     }
-    return PipelineResult(payload=payload, recommendations=recommendations, person_image=image_path)
+    return PipelineResult(
+        payload=payload,
+        recommendations=recommendations,
+        person_image=image_path,
+        tryon_context=tryon_context,
+    )
 
 
 def tryon_status() -> dict:
@@ -455,18 +516,25 @@ def tryon_status() -> dict:
     }
 
 
-def generate_tryon(person_image: Path, recommendation, output_path: Path) -> Path:
+def generate_tryon(
+    person_image: Path,
+    recommendation,
+    output_path: Path,
+    context: dict | None = None,
+) -> Path:
     """추천 코디 하나에 대한 예상 착장샷을 만든다.
 
     생성 모델이 없으면 추천 보드로 몰래 대체하지 않고 TryOnNotReady를 올린다.
     """
     if not recommendation.products:
         raise TryOnNotReady("현재 코디를 유지하는 조건이라 새로 생성할 착장샷이 없습니다.")
-    return get_engine().tryon.synthesize(
-        person_image=person_image,
-        recommendation=recommendation,
-        output_path=output_path,
-    )
+    with _analysis_lock:
+        return get_engine().tryon.synthesize(
+            person_image=person_image,
+            recommendation=recommendation,
+            output_path=output_path,
+            context=context,
+        )
 
 
 def _recommendation_dict(recommendation) -> dict:
@@ -489,10 +557,30 @@ def _recommendation_dict(recommendation) -> dict:
             "material": product.material,
             "neckline": product.neckline,
             "formality": product.formality,
+            "catalog_color": product.catalog_color or product.color,
+            "image_color": product.image_color,
+            "image_color_confidence": product.image_color_confidence,
+            "color_source": product.color_source,
         }
         for product in recommendation.products
     ]
     return data
+
+
+def _request_summary(profile: UserProfile) -> dict:
+    """사용자가 고른 조건이 결과에 어떻게 넘어갔는지 화면·QA에서 확인한다."""
+    return {
+        "purpose": profile.purpose,
+        "desired_style": profile.desired_style,
+        "change_scope": profile.change_scope,
+        "min_budget": profile.min_budget,
+        "max_budget": profile.max_budget,
+        "season": profile.season,
+        "activity_level": profile.activity_level,
+        "preferred_colors": list(profile.preferred_colors),
+        "avoided_colors": list(profile.avoided_colors),
+        "preferred_materials": list(profile.preferred_materials),
+    }
 
 
 def rule_titles() -> dict[str, str]:

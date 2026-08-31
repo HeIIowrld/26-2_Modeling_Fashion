@@ -69,10 +69,18 @@ class PipelineBudgetAPITests(unittest.TestCase):
         original_get_engine = pipeline.get_engine
         pipeline.get_engine = lambda: FakeEngine()
 
-        profile = UserProfile(purpose="데일리", change_scope="전체 변경", min_budget=1000, max_budget=2000)
+        profile = UserProfile(
+            purpose="데일리",
+            desired_style="캐주얼",
+            change_scope="전체 변경",
+            min_budget=1000,
+            max_budget=2000,
+            preferred_colors=["블루"],
+        )
 
+        stages = []
         def on_stage(stage):
-            pass
+            stages.append(stage)
 
         try:
             result = run_pipeline(img_path, profile, tmpdir / "out", on_stage)
@@ -82,6 +90,13 @@ class PipelineBudgetAPITests(unittest.TestCase):
             self.assertFalse(payload["budget_match"])
             self.assertEqual(payload["code"], "NO_BUDGET_MATCH")
             self.assertIn("입력한 예산", payload["message"])
+            self.assertEqual(
+                stages,
+                ["pose", "quality", "body", "segment", "attributes", "candidates", "scoring", "preview", "finalize"],
+            )
+            self.assertEqual(payload["request"]["desired_style"], "캐주얼")
+            self.assertEqual(payload["request"]["min_budget"], 1000)
+            self.assertEqual(payload["request"]["preferred_colors"], ["블루"])
         finally:
             # restore
             pipeline.get_engine = original_get_engine
