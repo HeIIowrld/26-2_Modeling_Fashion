@@ -187,14 +187,62 @@ def main() -> int:
         raise RuntimeError(f"순위별 VTON 이미지가 중복되었습니다: {rendered_names!r}")
 
     shopping_results = result.get("shopping_results") or []
+    available_by_category = {"top": [], "bottom": []}
     selected_by_category = {}
     for product in shopping_results:
         if "tryon_available" not in product or "tryon_reason" not in product:
             raise RuntimeError("무신사 상품의 합성 가능 여부가 응답에 없습니다.")
         if product.get("tryon_available") and product.get("category") in {"top", "bottom"}:
+            available_by_category[product["category"]].append(product)
             selected_by_category.setdefault(product["category"], product)
     if set(selected_by_category) != {"top", "bottom"}:
         raise RuntimeError(f"합성 가능한 무신사 상의·하의가 모두 없습니다: {shopping_results!r}")
+
+    expected_combinations = [
+        [top["product_id"], bottom["product_id"]]
+        for top in available_by_category["top"]
+        for bottom in available_by_category["bottom"]
+    ]
+    shopping_batch = _json_request(
+        f"{base_url}/api/jobs/{job_id}/shopping-tryon-batch",
+        method="POST",
+        data=b"",
+    )
+    while shopping_batch.get("status") in {"queued", "running"} and time.monotonic() < deadline:
+        print(
+            "shopping-tryon-batch",
+            shopping_batch.get("status"),
+            f"{shopping_batch.get('ready')}/{shopping_batch.get('total')}",
+        )
+        time.sleep(1)
+        shopping_batch = _json_request(
+            f"{base_url}/api/jobs/{job_id}/shopping-tryon-batch"
+        )
+    if shopping_batch.get("status") != "done":
+        raise RuntimeError(f"무신사 전체 조합 배치가 완료되지 않았습니다: {shopping_batch!r}")
+    actual_combinations = [
+        item.get("product_ids") for item in shopping_batch.get("items") or []
+    ]
+    if actual_combinations != expected_combinations:
+        raise RuntimeError(
+            f"무신사 전체 조합이 일치하지 않습니다: expected={expected_combinations!r}, "
+            f"actual={actual_combinations!r}"
+        )
+    for item in shopping_batch.get("items") or []:
+        if item.get("status") != "done" or not item.get("image"):
+            raise RuntimeError(f"완료되지 않은 무신사 조합이 있습니다: {item!r}")
+        content_type, image = _download(
+            f"{base_url}/api/jobs/{job_id}/images/{item['image']}"
+        )
+        if content_type != "image/jpeg" or not image.startswith(b"\xff\xd8\xff"):
+            raise RuntimeError(f"무신사 조합 {item['index']} 결과가 유효한 JPEG가 아닙니다.")
+        print(
+            "shopping-tryon-item",
+            item["index"],
+            "+".join(item["product_ids"]),
+            len(image),
+        )
+
     selected_products = [selected_by_category["top"], selected_by_category["bottom"]]
     request_body = json.dumps(
         {"product_ids": [product["product_id"] for product in selected_products]}

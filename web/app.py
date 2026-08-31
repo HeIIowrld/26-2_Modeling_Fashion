@@ -140,6 +140,8 @@ def _running_job_ids() -> frozenset[str]:
             for job_id, job in _jobs.items()
             if job["status"] == "running"
             or (job.get("tryon_batch") or {}).get("status") in TRYON_BATCH_ACTIVE_STATES
+            or (job.get("shopping_tryon_batch") or {}).get("status")
+            in TRYON_BATCH_ACTIVE_STATES
         )
 
 
@@ -493,6 +495,208 @@ def _generate_product_tryon_for_job(job_id: str, product_ids: list[str]) -> dict
         }
 
 
+def _shopping_tryon_batch_snapshot_locked(job: dict) -> dict:
+    """잠금 안에서 무신사 전체 조합 배치 상태를 공개 응답으로 복사한다."""
+    batch = job.get("shopping_tryon_batch") or {
+        "status": "idle",
+        "reason": "",
+        "items": {},
+    }
+    items = [
+        {
+            "index": int(index),
+            "product_ids": list(item.get("product_ids") or []),
+            "categories": list(item.get("categories") or []),
+            "status": item.get("status", "queued"),
+            "image": item.get("image"),
+            "cached": bool(item.get("cached")),
+            "warnings": list(item.get("warnings") or []),
+            "error": item.get("error"),
+        }
+        for index, item in sorted(
+            (batch.get("items") or {}).items(), key=lambda pair: int(pair[0])
+        )
+    ]
+    ready = sum(item["status"] == "done" for item in items)
+    finished = sum(item["status"] in {"done", "failed"} for item in items)
+    return {
+        "status": batch.get("status", "idle"),
+        "reason": batch.get("reason", ""),
+        "total": len(items),
+        "ready": ready,
+        "finished": finished,
+        "items": items,
+    }
+
+
+def _read_shopping_tryon_batch(job_id: str) -> dict | None:
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        return _shopping_tryon_batch_snapshot_locked(job) if job is not None else None
+
+
+def _initialize_shopping_tryon_batch(job_id: str) -> dict | None:
+    """파싱에 성공한 무신사 상·하의의 가능한 모든 조합을 큐에 넣는다."""
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None:
+            return None
+        result = job.get("result") or {}
+        prepared = job.get("shopping_tryon_products") or {}
+        ordered_products = []
+        seen_ids: set[str] = set()
+        for item in result.get("shopping_results") or []:
+            product_id = str(item.get("product_id") or "")
+            product = prepared.get(product_id)
+            if product is None or product_id in seen_ids:
+                continue
+            if product.category not in {"top", "bottom"}:
+                continue
+            seen_ids.add(product_id)
+            ordered_products.append(product)
+
+        tops = [product for product in ordered_products if product.category == "top"]
+        bottoms = [product for product in ordered_products if product.category == "bottom"]
+        if tops and bottoms:
+            combinations = [[top, bottom] for top in tops for bottom in bottoms]
+        else:
+            combinations = [[product] for product in tops or bottoms]
+
+        items = {
+            index: {
+                "product_ids": [product.product_id for product in products],
+                "categories": [product.category for product in products],
+                "status": "queued",
+                "image": None,
+                "cached": False,
+                "warnings": [],
+                "error": None,
+            }
+            for index, products in enumerate(combinations, start=1)
+        }
+        capability = result.get("tryon") or {}
+        if items:
+            status, reason = "queued", ""
+        elif not capability.get("available"):
+            status = "unavailable"
+            reason = str(capability.get("reason") or "현재 합성 GPU를 사용할 수 없습니다.")
+        else:
+            status = "unavailable"
+            reason = "이미지 파싱과 VTON 준비가 끝난 무신사 상·하의가 없습니다."
+        job["shopping_tryon_batch"] = {
+            "status": status,
+            "reason": reason,
+            "items": items,
+        }
+        return _shopping_tryon_batch_snapshot_locked(job)
+
+
+def _set_shopping_tryon_batch_item(job_id: str, index: int, **fields) -> None:
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None:
+            return
+        item = ((job.get("shopping_tryon_batch") or {}).get("items") or {}).get(index)
+        if item is not None:
+            item.update(fields)
+
+
+def _finish_shopping_tryon_batch(job_id: str) -> None:
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None:
+            return
+        batch = job.get("shopping_tryon_batch") or {}
+        items = list((batch.get("items") or {}).values())
+        active = [
+            item.get("status")
+            for item in items
+            if item.get("status") in TRYON_BATCH_ACTIVE_STATES
+        ]
+        if active:
+            batch["status"] = "running" if "running" in active else "queued"
+            batch["reason"] = ""
+            return
+        ready = sum(item.get("status") == "done" for item in items)
+        failed = sum(item.get("status") == "failed" for item in items)
+        if failed == 0:
+            batch["status"] = "done"
+            batch["reason"] = ""
+        elif ready:
+            batch["status"] = "partial"
+            batch["reason"] = "일부 무신사 상품 조합을 만들지 못했습니다."
+        else:
+            batch["status"] = "failed"
+            batch["reason"] = "무신사 상품 조합을 만들지 못했습니다."
+
+
+def _shopping_tryon_batch_worker(job_id: str) -> None:
+    while True:
+        with _jobs_lock:
+            job = _jobs.get(job_id)
+            if job is None or job.get("cancelled"):
+                return
+            batch = job.get("shopping_tryon_batch") or {}
+            queued = [
+                int(index)
+                for index, item in sorted(
+                    (batch.get("items") or {}).items(), key=lambda pair: int(pair[0])
+                )
+                if item.get("status") == "queued"
+            ]
+            if not queued:
+                break
+            index = queued[0]
+            item = batch["items"][index]
+            product_ids = list(item.get("product_ids") or [])
+            item.update(status="running", error=None)
+
+        try:
+            generated = _generate_product_tryon_for_job(job_id, product_ids)
+        except Exception as exc:  # noqa: BLE001 - 한 조합 실패를 나머지와 격리한다.
+            _set_shopping_tryon_batch_item(
+                job_id,
+                index,
+                status="failed",
+                error=(
+                    str(exc)
+                    if isinstance(exc, TryOnNotReady)
+                    else f"{type(exc).__name__}: {exc}"
+                ),
+            )
+        else:
+            _set_shopping_tryon_batch_item(
+                job_id,
+                index,
+                status="done",
+                image=generated["image"],
+                cached=bool(generated.get("cached")),
+                warnings=list(generated.get("warnings") or []),
+                product_ids=list(generated.get("product_ids") or product_ids),
+                categories=list(generated.get("categories") or []),
+                error=None,
+            )
+    _finish_shopping_tryon_batch(job_id)
+
+
+def _start_shopping_tryon_batch(job_id: str) -> dict | None:
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None:
+            return None
+        batch = job.get("shopping_tryon_batch") or {}
+        if batch.get("status") != "queued":
+            return _shopping_tryon_batch_snapshot_locked(job)
+        batch["status"] = "running"
+        snapshot = _shopping_tryon_batch_snapshot_locked(job)
+    threading.Thread(
+        target=_shopping_tryon_batch_worker,
+        args=(job_id,),
+        daemon=True,
+    ).start()
+    return snapshot
+
+
 def _tryon_batch_worker(job_id: str) -> None:
     while True:
         with _jobs_lock:
@@ -586,6 +790,8 @@ def _worker(
         )
         _initialize_tryon_batch(job_id)
         _start_tryon_batch(job_id)
+        _initialize_shopping_tryon_batch(job_id)
+        _start_shopping_tryon_batch(job_id)
     finally:
         # 새 분석마다 오래된 사진을 함께 정리한다.
         sweep_now()
@@ -739,6 +945,7 @@ def job_status(job_id: str) -> dict:
         "error": job["error"],
         "result": job["result"],
         "tryon_batch": _read_tryon_batch(job_id),
+        "shopping_tryon_batch": _read_shopping_tryon_batch(job_id),
     }
 
 
@@ -823,6 +1030,32 @@ def create_product_tryon(job_id: str, payload: dict) -> dict:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except TryOnNotReady as exc:
         raise HTTPException(status_code=501, detail=str(exc)) from exc
+
+
+@app.get("/api/jobs/{job_id}/shopping-tryon-batch")
+def shopping_tryon_batch_status(job_id: str) -> dict:
+    """검색된 무신사 상품의 전체 조합 생성 진행률을 돌려준다."""
+    if not JOB_ID_PATTERN.match(job_id):
+        raise HTTPException(status_code=400, detail="잘못된 요청입니다.")
+    batch = _read_shopping_tryon_batch(job_id)
+    if batch is None:
+        raise HTTPException(status_code=404, detail="분석 결과를 찾을 수 없습니다.")
+    return batch
+
+
+@app.post("/api/jobs/{job_id}/shopping-tryon-batch")
+def start_shopping_tryon_batch(job_id: str) -> dict:
+    """파싱 가능한 무신사 상·하의의 가능한 모든 조합을 자동 생성한다."""
+    if not JOB_ID_PATTERN.match(job_id):
+        raise HTTPException(status_code=400, detail="잘못된 요청입니다.")
+    job = _read_job(job_id)
+    if job is None or job["status"] != "done":
+        raise HTTPException(status_code=404, detail="분석 결과를 찾을 수 없습니다.")
+    if job.get("shopping_tryon_batch") is None:
+        _initialize_shopping_tryon_batch(job_id)
+    return _start_shopping_tryon_batch(job_id) or {
+        "status": "idle", "reason": "", "total": 0, "ready": 0, "finished": 0, "items": []
+    }
 
 
 @app.delete("/api/jobs/{job_id}")

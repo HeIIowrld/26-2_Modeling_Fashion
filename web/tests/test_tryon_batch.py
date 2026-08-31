@@ -214,6 +214,75 @@ class TryOnBatchTests(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "준비하지 못했습니다"):
             web_app.create_product_tryon(self.job_id, {"product_ids": ["MS404"]})
 
+    def test_all_musinsa_top_bottom_combinations_are_queued_and_failures_are_isolated(self):
+        products = {
+            "TOP1": shopping_product("TOP1", "top"),
+            "TOP2": shopping_product("TOP2", "top"),
+            "BOTTOM1": shopping_product("BOTTOM1", "bottom"),
+            "BOTTOM2": shopping_product("BOTTOM2", "bottom"),
+        }
+        self.job["shopping_tryon_products"] = products
+        self.job["result"]["shopping_results"] = [
+            {"product_id": product_id} for product_id in products
+        ]
+        calls = []
+
+        def fake_generate(_person, reco, output, *, context):
+            product_ids = [product.product_id for product in reco.products]
+            calls.append(product_ids)
+            if product_ids == ["TOP2", "BOTTOM1"]:
+                raise RuntimeError("one combination failed")
+            output.write_bytes("+".join(product_ids).encode())
+            return output, []
+
+        with (
+            patch.object(web_app, "_session_dir", return_value=self.session),
+            patch.object(web_app, "generate_tryon_with_warnings", side_effect=fake_generate),
+        ):
+            initialized = web_app._initialize_shopping_tryon_batch(self.job_id)
+            self.assertEqual(
+                [item["product_ids"] for item in initialized["items"]],
+                [
+                    ["TOP1", "BOTTOM1"],
+                    ["TOP1", "BOTTOM2"],
+                    ["TOP2", "BOTTOM1"],
+                    ["TOP2", "BOTTOM2"],
+                ],
+            )
+            web_app._start_shopping_tryon_batch(self.job_id)
+            for _ in range(300):
+                snapshot = web_app._read_shopping_tryon_batch(self.job_id)
+                if snapshot["status"] == "partial":
+                    break
+                time.sleep(0.005)
+            else:
+                self.fail("shopping try-on batch did not finish")
+
+        self.assertEqual(len(calls), 4)
+        self.assertEqual(snapshot["total"], 4)
+        self.assertEqual(snapshot["ready"], 3)
+        self.assertEqual(snapshot["finished"], 4)
+        self.assertEqual(snapshot["items"][2]["status"], "failed")
+        self.assertEqual(snapshot["items"][3]["status"], "done")
+
+    def test_single_category_musinsa_results_are_all_rendered_individually(self):
+        self.job["shopping_tryon_products"] = {
+            "TOP1": shopping_product("TOP1", "top"),
+            "TOP2": shopping_product("TOP2", "top"),
+        }
+        self.job["result"]["shopping_results"] = [
+            {"product_id": "TOP1"},
+            {"product_id": "TOP2"},
+        ]
+
+        initialized = web_app._initialize_shopping_tryon_batch(self.job_id)
+
+        self.assertEqual(initialized["total"], 2)
+        self.assertEqual(
+            [item["product_ids"] for item in initialized["items"]],
+            [["TOP1"], ["TOP2"]],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

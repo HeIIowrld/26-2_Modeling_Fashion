@@ -762,6 +762,27 @@ select {
   color: var(--ink-soft); font-size: .73rem;
 }
 .shopping-selection b { color: var(--ink); }
+.shopping-batch {
+  display: grid; gap: 10px; padding: 14px 20px 18px;
+  border-top: 1px solid var(--line); background: var(--panel);
+}
+.shopping-batch-copy { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.shopping-batch-copy strong { font-size: .84rem; }
+.shopping-batch-copy span { color: var(--ink-soft); font-size: .76rem; white-space: nowrap; }
+.shopping-batch-progress { height: 6px; overflow: hidden; background: var(--line); }
+.shopping-batch-progress span {
+  display: block; width: 100%; height: 100%; background: var(--signal);
+  transform-origin: left; transition: transform .25s ease;
+}
+.shopping-batch-items { display: flex; flex-wrap: wrap; gap: 6px; }
+.shopping-batch-items span {
+  padding: 5px 8px; border: 1px solid var(--line); border-radius: 999px;
+  color: var(--ink-soft); background: var(--bg); font-size: .68rem;
+}
+.shopping-batch-items .is-running { border-color: var(--signal); color: var(--signal-ink); }
+.shopping-batch-items .is-done { border-color: #2e7d4f; color: #2e7d4f; }
+.shopping-batch-items .is-failed { border-color: var(--warn); color: var(--warn); }
+.shopping-batch > p { margin: 0; color: var(--warn); font-size: .75rem; }
 .shopping-tryon-result { border-top: 1px solid var(--line); background: var(--bg); }
 .shopping-tryon-result > img { width: 100%; max-height: 760px; display: block; object-fit: contain; background: #111; }
 .shopping-tryon-history { display: flex; flex-wrap: wrap; gap: 7px; padding: 13px 18px; }
@@ -1027,6 +1048,7 @@ select {
   .product-price { grid-column: 2; text-align: right; }
   .shopping-grid { grid-template-columns: 1fr; }
   .shopping-tryon-toolbar, .shopping-tryon-result-actions { align-items: stretch; flex-direction: column; }
+  .shopping-batch-copy { align-items: flex-start; flex-direction: column; gap: 4px; }
   .shopping-tryon-toolbar .btn, .shopping-tryon-result-actions a { width: 100%; justify-content: center; text-align: center; }
   .shopping-tryon-result-actions span { white-space: normal; }
 }

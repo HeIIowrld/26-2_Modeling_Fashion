@@ -124,6 +124,53 @@ def _mock_tryon_batch(job: dict) -> dict:
     }
 
 
+def _mock_shopping_tryon_batch(job: dict) -> dict:
+    """검색된 mock 상·하의의 전체 조합 배치를 재현한다."""
+    products = [
+        item
+        for item in job["result"].get("shopping_results", [])
+        if item.get("tryon_available") and item.get("category") in {"top", "bottom"}
+    ]
+    tops = [item for item in products if item["category"] == "top"]
+    bottoms = [item for item in products if item["category"] == "bottom"]
+    combinations = (
+        [[top, bottom] for top in tops for bottom in bottoms]
+        if tops and bottoms
+        else [[item] for item in tops or bottoms]
+    )
+    elapsed = max(0.0, time.monotonic() - job["created"] - 3.2)
+    ready = min(len(combinations), int(elapsed / 0.9))
+    items = []
+    for index, products_for_look in enumerate(combinations, start=1):
+        if index <= ready:
+            status, image = "done", f"tryon-products-{index}"
+        elif index == ready + 1:
+            status, image = "running", None
+        else:
+            status, image = "queued", None
+        items.append(
+            {
+                "index": index,
+                "product_ids": [item["product_id"] for item in products_for_look],
+                "categories": [item["category"] for item in products_for_look],
+                "status": status,
+                "image": image,
+                "cached": False,
+                "warnings": [],
+                "error": None,
+            }
+        )
+    total = len(items)
+    return {
+        "status": "done" if ready == total else "running",
+        "reason": "",
+        "total": total,
+        "ready": ready,
+        "finished": ready,
+        "items": items,
+    }
+
+
 def _product(name: str, category: str, color: str, price: int, style: str, rank: int) -> dict:
     is_top = category == "top"
     return {
@@ -519,7 +566,15 @@ class MockHandler(SimpleHTTPRequestHandler):
                 )
             else:
                 self._json(
-                    {"job_id": job_id, "status": "done", "stage": None, "error": None, "result": job["result"]}
+                    {
+                        "job_id": job_id,
+                        "status": "done",
+                        "stage": None,
+                        "error": None,
+                        "result": job["result"],
+                        "tryon_batch": _mock_tryon_batch(job),
+                        "shopping_tryon_batch": _mock_shopping_tryon_batch(job),
+                    }
                 )
             return
 
@@ -530,6 +585,15 @@ class MockHandler(SimpleHTTPRequestHandler):
                 self._json({"detail": "분석 결과를 찾을 수 없습니다."}, HTTPStatus.NOT_FOUND)
                 return
             self._json(_mock_tryon_batch(job))
+            return
+
+        match = re.fullmatch(r"/api/jobs/([0-9a-f]{32})/shopping-tryon-batch", path)
+        if match:
+            job = self._job(match.group(1))
+            if job is None:
+                self._json({"detail": "분석 결과를 찾을 수 없습니다."}, HTTPStatus.NOT_FOUND)
+                return
+            self._json(_mock_shopping_tryon_batch(job))
             return
 
         match = re.fullmatch(r"/api/jobs/([0-9a-f]{32})/images/([a-z0-9_-]+)", path)
@@ -626,6 +690,15 @@ class MockHandler(SimpleHTTPRequestHandler):
                 self._json({"detail": "분석 결과를 찾을 수 없습니다."}, HTTPStatus.NOT_FOUND)
                 return
             self._json(_mock_tryon_batch(job))
+            return
+
+        match = re.fullmatch(r"/api/jobs/([0-9a-f]{32})/shopping-tryon-batch", path)
+        if match:
+            job = self._job(match.group(1))
+            if job is None:
+                self._json({"detail": "분석 결과를 찾을 수 없습니다."}, HTTPStatus.NOT_FOUND)
+                return
+            self._json(_mock_shopping_tryon_batch(job))
             return
 
         match = re.fullmatch(r"/api/jobs/([0-9a-f]{32})/tryon-products", path)

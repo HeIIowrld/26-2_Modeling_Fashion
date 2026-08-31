@@ -27,6 +27,8 @@ const state = {
   shoppingSelection: {},
   shoppingTryonResults: [],
   shoppingTryonSelected: 0,
+  shoppingTryonBatch: null,
+  shoppingTryonPoll: null,
   tryon: { available: false, reason: "생성 모델을 준비 중입니다." },
   preferredColors: new Set(),
   avoidedColors: new Set(),
@@ -402,6 +404,7 @@ $("start-analysis").addEventListener("click", async () => {
 
   unlock(3);
   stopTryonBatchPolling();
+  stopShoppingTryonBatchPolling();
   goto(3);
   $("error-card").hidden = true;
   $("progress-note").textContent = "모델을 준비하고 있어요. 첫 실행은 1분 이상 걸릴 수 있어요.";
@@ -495,12 +498,14 @@ function renderRequestSummary(request) {
 
 function renderResult(result) {
   stopTryonBatchPolling();
+  stopShoppingTryonBatchPolling();
   state.tryonBatch = null;
   state.tryonStateByRank = {};
   state.shoppingProducts = [];
   state.shoppingSelection = {};
   state.shoppingTryonResults = [];
   state.shoppingTryonSelected = 0;
+  state.shoppingTryonBatch = null;
   $("tryon-batch-status").hidden = true;
   $("shopping-tryon-panel").hidden = true;
   renderRequestSummary(result?.request);
@@ -564,6 +569,9 @@ function renderResult(result) {
     startTryonBatch();
   }
   renderShoppingProducts(result.shopping_results || []);
+  if (state.tryon.available && (result.shopping_results || []).some((product) => product.tryon_available)) {
+    startShoppingTryonBatch();
+  }
   renderRules(result.rules);
   renderFigures(result.images);
   showView("recos");
@@ -657,14 +665,39 @@ function renderShoppingTryonPanel() {
   if (!panel) return;
   const selected = selectedShoppingProducts();
   const active = state.shoppingTryonResults[state.shoppingTryonSelected];
+  const batch = state.shoppingTryonBatch;
   const selectedCopy = selected.length
     ? selected.map((product) => `<span><b>${product.category === "top" ? "상의" : "하의"}</b> ${escapeHtml(product.name)}</span>`).join("")
-    : "<span>상품 카드에서 상의나 하의를 선택해주세요.</span>";
+    : "<span>아래 전체 조합은 자동 생성됩니다. 특정 조합을 먼저 보려면 상품을 선택하세요.</span>";
   const history = state.shoppingTryonResults.length > 1
     ? `<div class="shopping-tryon-history" aria-label="무신사 상품 합성 결과 전환">
         ${state.shoppingTryonResults.map((result, index) => `
           <button type="button" data-shopping-result="${index}"
-            class="${index === state.shoppingTryonSelected ? "is-on" : ""}">룩 ${index + 1}</button>`).join("")}
+            class="${index === state.shoppingTryonSelected ? "is-on" : ""}"
+            title="${escapeHtml(result.names.join(" + "))}">룩 ${index + 1}</button>`).join("")}
+       </div>`
+    : "";
+  const batchLabels = {
+    idle: "조합 계산 중",
+    queued: "전체 조합 렌더 대기",
+    running: "전체 조합 렌더링 중",
+    done: "전체 조합 렌더링 완료",
+    partial: "일부 조합 렌더링 완료",
+    failed: "조합 렌더링 실패",
+    unavailable: "전체 조합 렌더링 불가",
+  };
+  const batchProgress = batch
+    ? `<div class="shopping-batch" data-status="${escapeHtml(batch.status)}">
+         <div class="shopping-batch-copy">
+           <strong>${escapeHtml(batchLabels[batch.status] || "무신사 전체 조합")}</strong>
+           <span>${Number(batch.ready || 0)} / ${Number(batch.total || 0)}장 준비</span>
+         </div>
+         ${batch.total ? `<div class="shopping-batch-progress" aria-label="무신사 조합 렌더링 진행률">
+           <span style="transform:scaleX(${Math.min(1, Number(batch.finished || 0) / Number(batch.total || 1))})"></span>
+         </div>
+         <div class="shopping-batch-items">${(batch.items || []).map((item) => `
+           <span class="is-${escapeHtml(item.status)}">조합 ${item.index} · ${escapeHtml({queued:"대기",running:"생성 중",done:"완료",failed:"실패"}[item.status] || item.status)}</span>`).join("")}</div>` : ""}
+         ${batch.reason ? `<p>${escapeHtml(batch.reason)}</p>` : ""}
        </div>`
     : "";
   const warnings = active?.warnings?.length
@@ -687,13 +720,14 @@ function renderShoppingTryonPanel() {
   panel.innerHTML = `
     <div class="shopping-tryon-toolbar">
       <div>
-        <strong>선택한 무신사 상품으로 입어보기</strong>
+        <strong>검색된 무신사 상품의 모든 조합 입어보기</strong>
         <div class="shopping-selection">${selectedCopy}</div>
-        <p>상의·하의는 실제 상품 이미지로 합성합니다. 신발은 전용 마스크와 모델이 없어 아직 합성하지 않습니다.</p>
+        <p>파싱 가능한 상의×하의 조합을 모두 자동 생성하고, 완성되는 즉시 아래에서 전환할 수 있습니다. 신발은 전용 마스크와 모델이 없어 아직 합성하지 않습니다.</p>
       </div>
       <button class="btn btn-primary" id="shopping-tryon-generate" type="button"
         ${selected.length ? "" : "disabled"}>선택 조합 렌더링</button>
     </div>
+    ${batchProgress}
     ${result}`;
   panel.hidden = false;
   $("shopping-tryon-generate").addEventListener("click", requestShoppingTryon);
@@ -737,6 +771,70 @@ async function requestShoppingTryon() {
     button.disabled = false;
     button.textContent = "다시 렌더링";
     toast(error.message);
+  }
+}
+
+function shoppingTryonResult(item) {
+  const productIds = Array.isArray(item.product_ids) ? item.product_ids : [];
+  return {
+    ...item,
+    key: productIds.join("|"),
+    names: productIds.map((productId) =>
+      state.shoppingProducts.find((product) => product.product_id === productId)?.name || productId
+    ),
+  };
+}
+
+function stopShoppingTryonBatchPolling() {
+  clearInterval(state.shoppingTryonPoll);
+  state.shoppingTryonPoll = null;
+}
+
+function applyShoppingTryonBatch(batch) {
+  const activeKey = state.shoppingTryonResults[state.shoppingTryonSelected]?.key;
+  state.shoppingTryonBatch = batch;
+  const automatic = (batch.items || [])
+    .filter((item) => item.status === "done" && item.image)
+    .map(shoppingTryonResult);
+  const automaticKeys = new Set(automatic.map((item) => item.key));
+  const manualOnly = state.shoppingTryonResults.filter((item) => !automaticKeys.has(item.key));
+  state.shoppingTryonResults = [...automatic, ...manualOnly];
+  const preserved = state.shoppingTryonResults.findIndex((item) => item.key === activeKey);
+  state.shoppingTryonSelected = preserved >= 0 ? preserved : 0;
+  renderShoppingTryonPanel();
+  if (["done", "partial", "failed", "unavailable"].includes(batch.status)) {
+    stopShoppingTryonBatchPolling();
+  }
+}
+
+async function pollShoppingTryonBatch() {
+  if (!state.jobId) return stopShoppingTryonBatchPolling();
+  try {
+    const response = await fetch(`${API_BASE}/api/jobs/${state.jobId}/shopping-tryon-batch`);
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "무신사 조합 렌더링 상태를 확인하지 못했습니다.");
+    applyShoppingTryonBatch(payload);
+  } catch (error) {
+    stopShoppingTryonBatchPolling();
+    toast(error.message);
+  }
+}
+
+async function startShoppingTryonBatch() {
+  if (!state.jobId) return;
+  try {
+    const response = await fetch(`${API_BASE}/api/jobs/${state.jobId}/shopping-tryon-batch`, {
+      method: "POST",
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "무신사 전체 조합 렌더링을 시작하지 못했습니다.");
+    applyShoppingTryonBatch(payload);
+    if (["queued", "running"].includes(payload.status)) {
+      stopShoppingTryonBatchPolling();
+      state.shoppingTryonPoll = setInterval(pollShoppingTryonBatch, 1200);
+    }
+  } catch (error) {
+    console.warn("무신사 전체 조합 배치를 사용할 수 없습니다:", error);
   }
 }
 
@@ -1319,6 +1417,7 @@ $("delete-now").addEventListener("click", async () => {
   if (!state.jobId) return;
   try {
     stopTryonBatchPolling();
+    stopShoppingTryonBatchPolling();
     const response = await fetch(`${API_BASE}/api/jobs/${state.jobId}`, { method: "DELETE" });
     if (!response.ok) throw new Error("삭제하지 못했습니다.");
     const bar = $("privacy-bar");
@@ -1338,6 +1437,7 @@ $("delete-now").addEventListener("click", async () => {
     state.shoppingProducts = [];
     state.shoppingSelection = {};
     state.shoppingTryonResults = [];
+    state.shoppingTryonBatch = null;
     $("shopping-tryon-panel").replaceChildren();
     $("shopping-tryon-panel").hidden = true;
     toast("사진을 삭제했습니다.");
@@ -1348,6 +1448,7 @@ $("delete-now").addEventListener("click", async () => {
 
 $("restart").addEventListener("click", () => {
   stopTryonBatchPolling();
+  stopShoppingTryonBatchPolling();
   $("clear-image").click();
   $("clear-body-image").click();
   $("wardrobe-list").replaceChildren();
@@ -1358,6 +1459,7 @@ $("restart").addEventListener("click", () => {
   state.shoppingProducts = [];
   state.shoppingSelection = {};
   state.shoppingTryonResults = [];
+  state.shoppingTryonBatch = null;
   $("shopping-tryon-panel").replaceChildren();
   $("shopping-tryon-panel").hidden = true;
   state.maxStep = 1;
