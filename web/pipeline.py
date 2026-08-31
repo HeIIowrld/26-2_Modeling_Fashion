@@ -34,6 +34,7 @@ from pose_analyzer import PoseAnalyzer
 from product_catalog import ProductCatalog
 from quality_checker import QualityChecker
 from recommendation_engine import CHANGE_SCOPE_MAP, PURPOSE_STYLES, RecommendationEngine, NoBudgetMatch, MinGreaterThanMax
+from musinsa_live_search import MusinsaLiveSearch
 from body_shape import classify
 from schemas import GOAL_NONE, SILHOUETTE_GOAL_CHOICES, UserProfile, WardrobeItem
 from virtual_tryon import TryOnNotReady, VirtualTryOnAdapter
@@ -121,6 +122,7 @@ class Engine:
     quality_checker: QualityChecker
     outfit_analyzer: OutfitAnalyzer
     recommender: RecommendationEngine
+    product_search: MusinsaLiveSearch
     tryon: VirtualTryOnAdapter
     device: str
     trained_heads: bool
@@ -175,6 +177,7 @@ def _build_engine() -> Engine:
         quality_checker=QualityChecker(pose_analyzer),
         outfit_analyzer=OutfitAnalyzer(clothing_parser, classifier),
         recommender=RecommendationEngine(RULES_PATH, catalog),
+        product_search=MusinsaLiveSearch(),
         tryon=_build_tryon(),
         device=classifier.device,
         trained_heads=classifier.trained_attributes_enabled,
@@ -305,6 +308,10 @@ def build_profile(payload: dict) -> UserProfile:
         wind_mps=number("wind_mps"),
         uv_index=number("uv_index"),
         owned_items=owned_items,
+        provided_fields=[
+            key for key, value in payload.items()
+            if value not in (None, "", [], {})
+        ],
     )
 
 
@@ -400,6 +407,20 @@ def run_pipeline(
             # For min>max use-case and other errors, preserve the previous PipelineError behavior.
             raise PipelineError(str(exc)) from exc
 
+        target_keywords = engine.recommender.generate_target_keywords(profile, pose_result, outfit_result)
+        product_search = getattr(engine, "product_search", None)
+        shopping_results = []
+        if product_search is not None:
+            try:
+                shopping_results = product_search.search(
+                    target_keywords,
+                    profile,
+                    limit=3,
+                    fallback_products=engine.recommender.catalog.products,
+                )
+            except Exception as exc:  # 외부 검색 장애가 본 분석까지 실패시키지 않게 격리한다.
+                print(f"[MUSINSA] live search unavailable: {exc}")
+
         on_stage("preview")
         preview_path = output_dir / "preview.jpg"
         if recommendations[0].products:
@@ -420,6 +441,7 @@ def run_pipeline(
         "outfit": outfit_result.to_dict(),
         "outfit_summary": outfit_result.to_summary_dict(),
         "recommendations": [_recommendation_dict(item) for item in recommendations],
+        "shopping_results": [item.public_dict() for item in shopping_results],
         "rules": {
             "implemented": len(engine.recommender.active_rule_ids),
             "documented": len(engine.recommender.documented_rule_ids),

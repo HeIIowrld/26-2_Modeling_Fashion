@@ -120,6 +120,9 @@ class UserProfile:
     uv_index: float | None = None
     owned_items: list[WardrobeItem] = field(default_factory=list)
     gender: str = ""  # "남성"/"여성", 빈 값이면 성별 무관
+    # None은 노트북·기존 Python 호출처럼 전달된 값을 입력으로 간주한다.
+    # 웹에서는 실제 payload에 존재한 필드만 넣어 기본값과 사용자 입력을 구분한다.
+    provided_fields: list[str] | None = None
 
     @property
     def has_circumferences(self) -> bool:

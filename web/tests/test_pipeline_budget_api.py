@@ -78,6 +78,7 @@ class PipelineBudgetAPITests(unittest.TestCase):
             result = run_pipeline(img_path, profile, tmpdir / "out", on_stage)
             self.assertIsInstance(result, PipelineResult)
             payload = result.payload
+            self.assertNotIn("target_keywords", payload)
             self.assertIn("budget_match", payload)
             self.assertFalse(payload["budget_match"])
             self.assertEqual(payload["code"], "NO_BUDGET_MATCH")
