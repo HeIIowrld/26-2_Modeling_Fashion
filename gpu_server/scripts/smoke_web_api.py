@@ -69,7 +69,7 @@ def main() -> int:
     profile = {
         "purpose": "데일리",
         "desired_style": "캐주얼",
-        "change_scope": "상의만 변경",
+        "change_scope": "전체 변경",
         "min_budget": 50_000,
         "max_budget": 250_000,
         "budget": 150_000,
@@ -185,6 +185,49 @@ def main() -> int:
         print("tryon-item", item["rank"], item["image"], len(image))
     if len(set(rendered_names)) != expected_renders:
         raise RuntimeError(f"순위별 VTON 이미지가 중복되었습니다: {rendered_names!r}")
+
+    shopping_results = result.get("shopping_results") or []
+    selected_by_category = {}
+    for product in shopping_results:
+        if "tryon_available" not in product or "tryon_reason" not in product:
+            raise RuntimeError("무신사 상품의 합성 가능 여부가 응답에 없습니다.")
+        if product.get("tryon_available") and product.get("category") in {"top", "bottom"}:
+            selected_by_category.setdefault(product["category"], product)
+    if set(selected_by_category) != {"top", "bottom"}:
+        raise RuntimeError(f"합성 가능한 무신사 상의·하의가 모두 없습니다: {shopping_results!r}")
+    selected_products = [selected_by_category["top"], selected_by_category["bottom"]]
+    request_body = json.dumps(
+        {"product_ids": [product["product_id"] for product in selected_products]}
+    ).encode("utf-8")
+    product_tryon = _json_request(
+        f"{base_url}/api/jobs/{job_id}/tryon-products",
+        method="POST",
+        data=request_body,
+        headers={"Content-Type": "application/json"},
+    )
+    content_type, image = _download(
+        f"{base_url}/api/jobs/{job_id}/images/{product_tryon['image']}"
+    )
+    if content_type != "image/jpeg" or not image.startswith(b"\xff\xd8\xff"):
+        raise RuntimeError("선택한 무신사 상·하의 합성 결과가 유효한 JPEG가 아닙니다.")
+    if product_tryon.get("categories") != ["top", "bottom"]:
+        raise RuntimeError(f"무신사 상품 합성 순서가 다릅니다: {product_tryon!r}")
+    if not isinstance(product_tryon.get("warnings"), list):
+        raise RuntimeError("무신사 상품 합성 품질 경고 목록이 없습니다.")
+    print(
+        "shopping-tryon",
+        "+".join(product_tryon["product_ids"]),
+        product_tryon["image"],
+        len(image),
+    )
+    cached_product_tryon = _json_request(
+        f"{base_url}/api/jobs/{job_id}/tryon-products",
+        method="POST",
+        data=request_body,
+        headers={"Content-Type": "application/json"},
+    )
+    if not cached_product_tryon.get("cached") or cached_product_tryon["image"] != product_tryon["image"]:
+        raise RuntimeError("같은 무신사 상품 조합이 캐시되지 않았습니다.")
 
     if not args.keep:
         deleted = _json_request(f"{base_url}/api/jobs/{job_id}", method="DELETE")

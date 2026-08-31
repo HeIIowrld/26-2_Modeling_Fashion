@@ -308,6 +308,40 @@ def _build_result(profile: dict, image_seed: int) -> dict:
             "하의": "그레이 슬랙스 (스트레이트, 발목 기장)",
         },
         "recommendations": recommendations,
+        "shopping_results": [
+            {
+                "product_id": "MSMOCKTOP1",
+                "name": "오버핏 코튼 셔츠",
+                "brand": "MUSINSA MOCK",
+                "price": 59_000,
+                "image_url": "https://image.msscdn.net/thumbnails/images/prd_img/202608/mock_top.jpg",
+                "url": "https://www.musinsa.com/products/1000001",
+                "category": "top",
+                "gender": "공용",
+                "review_count": 1240,
+                "review_score": 94,
+                "source": "mock",
+                "search_keywords": ["여유핏", "코튼", "캐주얼"],
+                "tryon_available": True,
+                "tryon_reason": "",
+            },
+            {
+                "product_id": "MSMOCKBOTTOM1",
+                "name": "세미 와이드 데님 팬츠",
+                "brand": "MUSINSA MOCK",
+                "price": 69_000,
+                "image_url": "https://image.msscdn.net/thumbnails/images/prd_img/202608/mock_bottom.jpg",
+                "url": "https://www.musinsa.com/products/1000002",
+                "category": "bottom",
+                "gender": "공용",
+                "review_count": 830,
+                "review_score": 96,
+                "source": "mock",
+                "search_keywords": ["세미와이드", "데님", "풀렝스"],
+                "tryon_available": True,
+                "tryon_reason": "",
+            },
+        ],
         "rules": {
             "implemented": 43,
             "documented": 50,
@@ -592,6 +626,29 @@ class MockHandler(SimpleHTTPRequestHandler):
                 self._json({"detail": "분석 결과를 찾을 수 없습니다."}, HTTPStatus.NOT_FOUND)
                 return
             self._json(_mock_tryon_batch(job))
+            return
+
+        match = re.fullmatch(r"/api/jobs/([0-9a-f]{32})/tryon-products", path)
+        if match:
+            job = self._job(match.group(1))
+            if job is None:
+                self._json({"detail": "분석 결과를 찾을 수 없습니다."}, HTTPStatus.NOT_FOUND)
+                return
+            payload = self._read_json()
+            product_ids = payload.get("product_ids") or []
+            if not isinstance(product_ids, list) or not 1 <= len(product_ids) <= 2:
+                self._json({"detail": "상품 번호 목록이 필요합니다."}, HTTPStatus.BAD_REQUEST)
+                return
+            self._json(
+                {
+                    "image": f"tryon-products-{len(product_ids)}",
+                    "cached": False,
+                    "mock": True,
+                    "warnings": [],
+                    "product_ids": product_ids,
+                    "categories": ["top", "bottom"][: len(product_ids)],
+                }
+            )
             return
 
         if path == "/api/feedback":

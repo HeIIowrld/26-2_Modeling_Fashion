@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -43,6 +44,7 @@ from pipeline import (  # noqa: E402
     save_feedback,
     tryon_status,
 )
+from schemas import Recommendation  # noqa: E402
 
 # 업로드 사진은 프로젝트 폴더에 두지 않는다. 프로젝트가 OneDrive·Dropbox 같은
 # 동기화 폴더 안에 있으면 사용자의 전신사진이 클라우드로 올라가기 때문이다.
@@ -59,13 +61,15 @@ MAX_UPLOAD_BYTES = 12 * 1024 * 1024
 MAX_WARDROBE_IMAGES = 8
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
 JOB_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
-IMAGE_NAME_PATTERN = re.compile(r"^[a-z_]+[0-9]*\.jpg$")
+IMAGE_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*\.jpg$")
+PRODUCT_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
 
 # 업로드한 전신사진은 개인정보다. 결과를 확인할 동안만 두고 곧바로 지운다.
 SESSION_TTL = timedelta(minutes=30)
 MAX_SESSIONS = 20
 SWEEP_INTERVAL_SECONDS = 300
 TRYON_BATCH_LIMIT = 3
+TRYON_PRODUCT_LIMIT = 2
 TRYON_BATCH_ACTIVE_STATES = {"queued", "running"}
 
 app = FastAPI(title="AI 코디 추천", docs_url=None, redoc_url=None)
@@ -410,6 +414,85 @@ def _generate_tryon_for_job(job_id: str, rank: int) -> dict:
         return {"image": Path(generated).name, "cached": False, "warnings": warnings}
 
 
+def _generate_product_tryon_for_job(job_id: str, product_ids: list[str]) -> dict:
+    """사용자가 무신사 카드에서 고른 상의·하의 조합을 실제 상품 이미지로 합성한다."""
+    selected_ids = list(dict.fromkeys(str(product_id) for product_id in product_ids))
+    if not selected_ids or len(selected_ids) > TRYON_PRODUCT_LIMIT:
+        raise ValueError("상의와 하의를 합쳐 최대 2개까지 선택할 수 있습니다.")
+    if any(not PRODUCT_ID_PATTERN.fullmatch(product_id) for product_id in selected_ids):
+        raise ValueError("잘못된 상품 번호가 포함되어 있습니다.")
+
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None or job["status"] != "done" or job.get("cancelled"):
+            raise LookupError("분석 결과를 찾을 수 없습니다.")
+        work_lock = job.setdefault("work_lock", threading.Lock())
+
+    with work_lock:
+        with _jobs_lock:
+            job = _jobs.get(job_id)
+            if job is None or job["status"] != "done" or job.get("cancelled"):
+                raise LookupError("분석 결과를 찾을 수 없습니다.")
+            available = job.get("shopping_tryon_products") or {}
+            missing = [product_id for product_id in selected_ids if product_id not in available]
+            if missing:
+                raise TryOnNotReady(
+                    "선택한 무신사 상품 이미지를 GPU 합성용으로 준비하지 못했습니다."
+                )
+            products = [available[product_id] for product_id in selected_ids]
+            categories = [product.category for product in products]
+            if any(category not in {"top", "bottom"} for category in categories):
+                raise TryOnNotReady("현재 실제 상품 합성은 상의와 하의만 지원합니다.")
+            if len(categories) != len(set(categories)):
+                raise ValueError("상의와 하의는 카테고리별로 한 개씩만 선택할 수 있습니다.")
+            products.sort(key=lambda product: 0 if product.category == "top" else 1)
+            person_image = job["person_image"]
+            tryon_context = job.get("tryon_context")
+
+        cache_key = "|".join(product.product_id for product in products)
+        digest = hashlib.sha256(cache_key.encode("utf-8")).hexdigest()[:12]
+        output = _session_dir(job_id) / f"product_tryon_{digest}.jpg"
+        if output.is_file():
+            with _jobs_lock:
+                current = _jobs.get(job_id) or {}
+                warnings = list(
+                    (current.get("product_tryon_warnings") or {}).get(cache_key) or []
+                )
+            return {
+                "image": output.name,
+                "cached": True,
+                "warnings": warnings,
+                "product_ids": [product.product_id for product in products],
+                "categories": [product.category for product in products],
+            }
+
+        recommendation = Recommendation(
+            rank=0,
+            products=products,
+            total_score=0.0,
+            score_breakdown={},
+            reasons=[],
+        )
+        generated, warnings = generate_tryon_with_warnings(
+            person_image,
+            recommendation,
+            output,
+            context=tryon_context,
+        )
+        warnings = list(warnings)
+        with _jobs_lock:
+            current = _jobs.get(job_id)
+            if current is not None:
+                current.setdefault("product_tryon_warnings", {})[cache_key] = warnings
+        return {
+            "image": Path(generated).name,
+            "cached": False,
+            "warnings": warnings,
+            "product_ids": [product.product_id for product in products],
+            "categories": [product.category for product in products],
+        }
+
+
 def _tryon_batch_worker(job_id: str) -> None:
     while True:
         with _jobs_lock:
@@ -499,6 +582,7 @@ def _worker(
             recommendations=outcome.recommendations,
             person_image=outcome.person_image,
             tryon_context=outcome.tryon_context,
+            shopping_tryon_products=outcome.shopping_tryon_products,
         )
         _initialize_tryon_batch(job_id)
         _start_tryon_batch(job_id)
@@ -721,6 +805,24 @@ def create_tryon(job_id: str, rank: int) -> dict:
     )
     _finish_tryon_batch(job_id)
     return generated
+
+
+@app.post("/api/jobs/{job_id}/tryon-products")
+def create_product_tryon(job_id: str, payload: dict) -> dict:
+    """무신사 카드에서 고른 상의·하의를 한 착장으로 합성한다."""
+    if not JOB_ID_PATTERN.match(job_id):
+        raise HTTPException(status_code=400, detail="잘못된 요청입니다.")
+    product_ids = payload.get("product_ids")
+    if not isinstance(product_ids, list):
+        raise HTTPException(status_code=400, detail="상품 번호 목록이 필요합니다.")
+    try:
+        return _generate_product_tryon_for_job(job_id, product_ids)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except TryOnNotReady as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
 
 
 @app.delete("/api/jobs/{job_id}")

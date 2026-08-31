@@ -7,10 +7,27 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import web.app as web_app
+from schemas import Product
 
 
 def recommendation(rank: int):
     return SimpleNamespace(rank=rank, products=[SimpleNamespace(product_id=f"P{rank}")])
+
+
+def shopping_product(product_id: str, category: str) -> Product:
+    return Product(
+        product_id,
+        f"{category} product",
+        category,
+        "블랙",
+        "캐주얼",
+        ["데일리"],
+        [],
+        50_000,
+        "사계절",
+        True,
+        image_path=f"{product_id}.jpg",
+    )
 
 
 class TryOnBatchTests(unittest.TestCase):
@@ -151,6 +168,51 @@ class TryOnBatchTests(unittest.TestCase):
         self.assertEqual(snapshot["status"], "running")
         self.assertEqual(snapshot["ready"], 2)
         self.assertEqual(snapshot["finished"], 2)
+
+    def test_selected_musinsa_top_and_bottom_are_composited_and_cached(self):
+        self.job["shopping_tryon_products"] = {
+            "MS_TOP": shopping_product("MS_TOP", "top"),
+            "MS_BOTTOM": shopping_product("MS_BOTTOM", "bottom"),
+        }
+        calls = []
+
+        def fake_generate(_person, reco, output, *, context):
+            calls.append([product.category for product in reco.products])
+            output.write_bytes(b"selected look")
+            return output, ["quality warning"]
+
+        with (
+            patch.object(web_app, "_session_dir", return_value=self.session),
+            patch.object(web_app, "generate_tryon_with_warnings", side_effect=fake_generate),
+        ):
+            first = web_app.create_product_tryon(
+                self.job_id, {"product_ids": ["MS_BOTTOM", "MS_TOP"]}
+            )
+            second = web_app.create_product_tryon(
+                self.job_id, {"product_ids": ["MS_TOP", "MS_BOTTOM"]}
+            )
+
+        self.assertEqual(calls, [["top", "bottom"]])
+        self.assertFalse(first["cached"])
+        self.assertTrue(second["cached"])
+        self.assertEqual(first["image"], second["image"])
+        self.assertEqual(first["product_ids"], ["MS_TOP", "MS_BOTTOM"])
+        self.assertEqual(first["warnings"], ["quality warning"])
+
+    def test_same_category_musinsa_products_are_rejected(self):
+        self.job["shopping_tryon_products"] = {
+            "MS_TOP_1": shopping_product("MS_TOP_1", "top"),
+            "MS_TOP_2": shopping_product("MS_TOP_2", "top"),
+        }
+        with self.assertRaisesRegex(Exception, "카테고리별로 한 개"):
+            web_app.create_product_tryon(
+                self.job_id, {"product_ids": ["MS_TOP_1", "MS_TOP_2"]}
+            )
+
+    def test_uncached_live_musinsa_product_is_not_faked(self):
+        self.job["shopping_tryon_products"] = {}
+        with self.assertRaisesRegex(Exception, "준비하지 못했습니다"):
+            web_app.create_product_tryon(self.job_id, {"product_ids": ["MS404"]})
 
 
 if __name__ == "__main__":

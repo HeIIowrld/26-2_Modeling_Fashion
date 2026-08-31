@@ -23,6 +23,10 @@ const state = {
   tryonStateByRank: {},
   tryonBatch: null,
   tryonPoll: null,
+  shoppingProducts: [],
+  shoppingSelection: {},
+  shoppingTryonResults: [],
+  shoppingTryonSelected: 0,
   tryon: { available: false, reason: "생성 모델을 준비 중입니다." },
   preferredColors: new Set(),
   avoidedColors: new Set(),
@@ -493,7 +497,12 @@ function renderResult(result) {
   stopTryonBatchPolling();
   state.tryonBatch = null;
   state.tryonStateByRank = {};
+  state.shoppingProducts = [];
+  state.shoppingSelection = {};
+  state.shoppingTryonResults = [];
+  state.shoppingTryonSelected = 0;
   $("tryon-batch-status").hidden = true;
+  $("shopping-tryon-panel").hidden = true;
   renderRequestSummary(result?.request);
   const isMock = Boolean(result?.mock);
   $("result-data-badge").hidden = !isMock;
@@ -563,45 +572,172 @@ function renderResult(result) {
 function renderShoppingProducts(products) {
   const section = $("shopping-section");
   const grid = $("shopping-results");
+  const panel = $("shopping-tryon-panel");
   if (!section || !grid) return;
   if (!products.length) {
     section.hidden = true;
     grid.innerHTML = "";
+    if (panel) panel.hidden = true;
     return;
   }
-  grid.innerHTML = products.slice(0, 3).map((product) => {
+  state.shoppingProducts = products.slice(0, 3);
+  grid.innerHTML = state.shoppingProducts.map((product) => {
     const reviews = product.review_count
       ? `리뷰 ${Number(product.review_count).toLocaleString("ko-KR")}`
       : "";
     const rating = product.review_score
       ? `${(Number(product.review_score) / 20).toFixed(1)} / 5`
       : "";
+    const selected = state.shoppingSelection[product.category] === product.product_id;
+    const tryonReady = Boolean(product.tryon_available && state.tryon.available);
+    const tryonReason = product.tryon_reason || state.tryon.reason || "상품 이미지를 준비하지 못했습니다.";
     return `
-      <a class="shopping-card" href="${escapeHtml(product.url)}" target="_blank"
-         rel="noopener noreferrer sponsored" aria-label="무신사에서 ${escapeHtml(product.name)} 보기">
-        <div class="shopping-image-wrap">
-          <img class="shopping-image" src="${escapeHtml(product.image_url)}"
-               alt="${escapeHtml(product.name)} 상품 사진" loading="lazy" referrerpolicy="no-referrer" />
-          <span class="shopping-category">${product.category === "top" ? "상의" : "하의"}</span>
-        </div>
-        <div class="shopping-copy">
-          <span class="shopping-brand">${escapeHtml(product.brand || "MUSINSA")}</span>
-          <h3>${escapeHtml(product.name)}</h3>
-          <div class="shopping-meta">${escapeHtml([rating, reviews, product.gender].filter(Boolean).join(" · "))}</div>
-          ${(product.search_keywords || []).length ? `
-            <div class="shopping-keywords" aria-label="대표 검색 키워드">
-              ${(product.search_keywords || []).slice(0, 3).map((keyword) =>
-                `<span class="shopping-keyword">${escapeHtml(keyword)}</span>`
-              ).join("")}
-            </div>` : ""}
-          <div class="shopping-bottom">
-            <strong>${Number(product.price).toLocaleString("ko-KR")}원</strong>
-            <span>무신사에서 보기 ↗</span>
+      <article class="shopping-card${selected ? " is-selected" : ""}">
+        <a class="shopping-link" href="${escapeHtml(product.url)}" target="_blank"
+           rel="noopener noreferrer sponsored" aria-label="무신사에서 ${escapeHtml(product.name)} 보기">
+          <div class="shopping-image-wrap">
+            <img class="shopping-image" src="${escapeHtml(product.image_url)}"
+                 alt="${escapeHtml(product.name)} 상품 사진" loading="lazy" referrerpolicy="no-referrer" />
+            <span class="shopping-category">${product.category === "top" ? "상의" : product.category === "bottom" ? "하의" : "미지원"}</span>
           </div>
+          <div class="shopping-copy">
+            <span class="shopping-brand">${escapeHtml(product.brand || "MUSINSA")}</span>
+            <h3>${escapeHtml(product.name)}</h3>
+            <div class="shopping-meta">${escapeHtml([rating, reviews, product.gender].filter(Boolean).join(" · "))}</div>
+            ${(product.search_keywords || []).length ? `
+              <div class="shopping-keywords" aria-label="대표 검색 키워드">
+                ${(product.search_keywords || []).slice(0, 3).map((keyword) =>
+                  `<span class="shopping-keyword">${escapeHtml(keyword)}</span>`
+                ).join("")}
+              </div>` : ""}
+            <div class="shopping-bottom">
+              <strong>${Number(product.price).toLocaleString("ko-KR")}원</strong>
+              <span>무신사에서 보기 ↗</span>
+            </div>
+          </div>
+        </a>
+        <div class="shopping-tryon-choice">
+          <button type="button" data-shopping-select="${escapeHtml(product.product_id)}"
+            aria-pressed="${selected}" ${tryonReady ? "" : "disabled"}
+            title="${escapeHtml(tryonReady ? "이 상품을 실제 합성 조합에 넣습니다." : tryonReason)}">
+            ${selected ? "✓ 입어보기 선택됨" : tryonReady ? "입어보기 선택" : "합성 이미지 준비 안 됨"}
+          </button>
+          <small>${escapeHtml(tryonReady ? "상품 이미지 파싱·VTON 가능" : tryonReason)}</small>
         </div>
-      </a>`;
+      </article>`;
   }).join("");
+  grid.querySelectorAll("[data-shopping-select]").forEach((button) => {
+    button.addEventListener("click", () => toggleShoppingSelection(button.dataset.shoppingSelect));
+  });
+  renderShoppingTryonPanel();
   section.hidden = false;
+}
+
+function toggleShoppingSelection(productId) {
+  const product = state.shoppingProducts.find((item) => item.product_id === productId);
+  if (!product?.tryon_available) return;
+  if (state.shoppingSelection[product.category] === productId) {
+    delete state.shoppingSelection[product.category];
+  } else {
+    state.shoppingSelection[product.category] = productId;
+  }
+  renderShoppingProducts(state.shoppingProducts);
+}
+
+function selectedShoppingProducts() {
+  return ["top", "bottom"]
+    .map((category) => state.shoppingProducts.find(
+      (product) => product.product_id === state.shoppingSelection[category]
+    ))
+    .filter(Boolean);
+}
+
+function renderShoppingTryonPanel() {
+  const panel = $("shopping-tryon-panel");
+  if (!panel) return;
+  const selected = selectedShoppingProducts();
+  const active = state.shoppingTryonResults[state.shoppingTryonSelected];
+  const selectedCopy = selected.length
+    ? selected.map((product) => `<span><b>${product.category === "top" ? "상의" : "하의"}</b> ${escapeHtml(product.name)}</span>`).join("")
+    : "<span>상품 카드에서 상의나 하의를 선택해주세요.</span>";
+  const history = state.shoppingTryonResults.length > 1
+    ? `<div class="shopping-tryon-history" aria-label="무신사 상품 합성 결과 전환">
+        ${state.shoppingTryonResults.map((result, index) => `
+          <button type="button" data-shopping-result="${index}"
+            class="${index === state.shoppingTryonSelected ? "is-on" : ""}">룩 ${index + 1}</button>`).join("")}
+       </div>`
+    : "";
+  const warnings = active?.warnings?.length
+    ? `<div class="tryon-warning"><strong>생성 품질 확인 필요</strong><ul>${active.warnings
+        .map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul></div>`
+    : "";
+  const result = active
+    ? `<div class="shopping-tryon-result">
+         ${history}
+         <img src="${API_BASE}/api/jobs/${state.jobId}/images/${active.image}"
+              alt="선택한 무신사 상품을 적용한 예상 착장샷" />
+         <div class="shopping-tryon-result-actions">
+           <span>${active.names.map((name) => escapeHtml(name)).join(" + ")}</span>
+           <a href="${API_BASE}/api/jobs/${state.jobId}/images/${active.image}"
+              download="fitta-musinsa-look.jpg">결과 사진 다운로드</a>
+         </div>
+         ${warnings}
+       </div>`
+    : "";
+  panel.innerHTML = `
+    <div class="shopping-tryon-toolbar">
+      <div>
+        <strong>선택한 무신사 상품으로 입어보기</strong>
+        <div class="shopping-selection">${selectedCopy}</div>
+        <p>상의·하의는 실제 상품 이미지로 합성합니다. 신발은 전용 마스크와 모델이 없어 아직 합성하지 않습니다.</p>
+      </div>
+      <button class="btn btn-primary" id="shopping-tryon-generate" type="button"
+        ${selected.length ? "" : "disabled"}>선택 조합 렌더링</button>
+    </div>
+    ${result}`;
+  panel.hidden = false;
+  $("shopping-tryon-generate").addEventListener("click", requestShoppingTryon);
+  panel.querySelectorAll("[data-shopping-result]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.shoppingTryonSelected = Number(button.dataset.shoppingResult);
+      renderShoppingTryonPanel();
+    });
+  });
+}
+
+async function requestShoppingTryon() {
+  const selected = selectedShoppingProducts();
+  if (!state.jobId || !selected.length) return;
+  const button = $("shopping-tryon-generate");
+  button.disabled = true;
+  button.textContent = "선택한 옷 합성 중…";
+  try {
+    const response = await fetch(`${API_BASE}/api/jobs/${state.jobId}/tryon-products`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ product_ids: selected.map((product) => product.product_id) }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "선택한 상품을 합성하지 못했습니다.");
+    const key = payload.product_ids.join("|");
+    const result = {
+      ...payload,
+      key,
+      names: payload.product_ids.map((productId) =>
+        state.shoppingProducts.find((product) => product.product_id === productId)?.name || productId
+      ),
+    };
+    const previous = state.shoppingTryonResults.findIndex((item) => item.key === key);
+    if (previous >= 0) state.shoppingTryonResults.splice(previous, 1);
+    state.shoppingTryonResults.unshift(result);
+    state.shoppingTryonSelected = 0;
+    renderShoppingTryonPanel();
+    toast(payload.cached ? "저장된 합성 결과를 불러왔습니다." : "선택한 상품 합성을 완료했습니다.");
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = "다시 렌더링";
+    toast(error.message);
+  }
 }
 
 /* 상위 탭: 추천 / 분석 */
@@ -786,7 +922,9 @@ function selectRecommendation(index) {
       <div class="product">
         <span class="product-swatch" style="background: rgb(${product.color_rgb.join(",")})"></span>
         <div>
-          <div class="product-name">${escapeHtml(product.name)}</div>
+          <div class="product-name">${product.url
+            ? `<a href="${escapeHtml(product.url)}" target="_blank" rel="noopener noreferrer sponsored">${escapeHtml(product.name)} ↗</a>`
+            : escapeHtml(product.name)}</div>
           <div class="product-meta">${escapeHtml(joinKnown([
             product.item_type,
             product.fit,
@@ -1188,7 +1326,8 @@ $("delete-now").addEventListener("click", async () => {
     bar.querySelector("strong").textContent = "사진과 결과 이미지를 삭제했습니다.";
     bar.querySelector("span").textContent = "화면에 남은 분석 내용은 새로고침하면 사라집니다.";
     $("delete-now").disabled = true;
-    document.querySelectorAll(".figure img, .tryon img").forEach((img) => img.removeAttribute("src"));
+    document.querySelectorAll(".figure img, .tryon img, .shopping-tryon-result img")
+      .forEach((img) => img.removeAttribute("src"));
     $("figure-caption").textContent = "삭제되었습니다.";
     $("clear-image").click();
     $("clear-body-image").click();
@@ -1196,6 +1335,11 @@ $("delete-now").addEventListener("click", async () => {
     state.jobId = null;
     state.tryonByRank = {};
     state.tryonStateByRank = {};
+    state.shoppingProducts = [];
+    state.shoppingSelection = {};
+    state.shoppingTryonResults = [];
+    $("shopping-tryon-panel").replaceChildren();
+    $("shopping-tryon-panel").hidden = true;
     toast("사진을 삭제했습니다.");
   } catch (error) {
     toast(error.message);
@@ -1211,6 +1355,11 @@ $("restart").addEventListener("click", () => {
   state.jobId = null;
   state.tryonByRank = {};
   state.tryonStateByRank = {};
+  state.shoppingProducts = [];
+  state.shoppingSelection = {};
+  state.shoppingTryonResults = [];
+  $("shopping-tryon-panel").replaceChildren();
+  $("shopping-tryon-panel").hidden = true;
   state.maxStep = 1;
   goto(1);
 });
