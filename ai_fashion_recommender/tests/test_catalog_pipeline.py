@@ -470,6 +470,34 @@ class EnrichedCatalogLoadsTests(unittest.TestCase):
             existing = next(csv.reader(handle))
         self.assertEqual(set(existing) - set(enrich_catalog.OUTPUT_FIELDS), set())
 
+    def test_high_confidence_image_color_overrides_bad_catalog_text(self):
+        row = {field: "" for field in enrich_catalog.OUTPUT_FIELDS}
+        row.update({
+            "product_id": "M-COLOR", "name": "색상 검증 상품", "category": "top",
+            "color": "그린", "style": "캐주얼", "purposes": "데일리",
+            "body_shapes": "균형형", "price": "59000", "season": "사계절",
+            "stock": "true",
+        })
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "products_musinsa_enriched.csv"
+            write_csv(path, enrich_catalog.OUTPUT_FIELDS, [row])
+            write_csv(
+                path.with_name("product_image_colors.csv"),
+                ["product_id", "image_color", "confidence", "override"],
+                [{
+                    "product_id": "M-COLOR", "image_color": "버건디",
+                    "confidence": "0.659", "override": "true",
+                }],
+            )
+            catalog = ProductCatalog(path)
+            product = catalog.products[0]
+
+        self.assertEqual(product.catalog_color, "그린")
+        self.assertEqual(product.color, "버건디")
+        self.assertEqual(product.image_color, "버건디")
+        self.assertEqual(product.color_source, "image")
+        self.assertEqual(catalog.color_override_count, 1)
+
 
 class CoverageReportTests(unittest.TestCase):
     """채운 카탈로그가 규칙을 발동시킬 수 있는지 스스로 점검할 수 있어야 한다."""

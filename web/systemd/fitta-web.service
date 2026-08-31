@@ -1,0 +1,17 @@
+[Unit]
+Description=FITTA public web gateway
+Wants=network-online.target fitta-gpu-tunnel.service
+After=network-online.target fitta-gpu-tunnel.service
+
+[Service]
+Type=simple
+WorkingDirectory=/root/26-2_Modeling_Fashion
+Environment=FITTA_GPU_API_URL=http://127.0.0.1:18000
+ExecStart=/root/26-2_Modeling_Fashion/.venv-web/bin/python -m uvicorn --app-dir /root/26-2_Modeling_Fashion/web --host 0.0.0.0 --port 8000 --workers 1 gateway:app
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

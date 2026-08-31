@@ -27,6 +27,35 @@ const state = {
   wardrobe: [],
 };
 
+const BUDGET_MIN = 30000;
+const BUDGET_MAX = 500000;
+const BUDGET_STEP = 10000;
+
+function syncBudgetSlider(changed) {
+  const minInput = $("f-min-budget");
+  const maxInput = $("f-max-budget");
+  let minimum = Number(minInput.value);
+  let maximum = Number(maxInput.value);
+  if (minimum > maximum - BUDGET_STEP) {
+    if (changed === minInput) minimum = maximum - BUDGET_STEP;
+    else maximum = minimum + BUDGET_STEP;
+  }
+  minimum = Math.max(BUDGET_MIN, minimum);
+  maximum = Math.min(BUDGET_MAX, maximum);
+  minInput.value = String(minimum);
+  maxInput.value = String(maximum);
+  $("min-budget-output").textContent = `${minimum.toLocaleString("ko-KR")}원`;
+  $("max-budget-output").textContent = `${maximum.toLocaleString("ko-KR")}원`;
+  minInput.setAttribute("aria-valuetext", `${minimum.toLocaleString("ko-KR")}원`);
+  maxInput.setAttribute("aria-valuetext", `${maximum.toLocaleString("ko-KR")}원`);
+  const left = ((minimum - BUDGET_MIN) / (BUDGET_MAX - BUDGET_MIN)) * 100;
+  const right = 100 - ((maximum - BUDGET_MIN) / (BUDGET_MAX - BUDGET_MIN)) * 100;
+  $("budget-selected").style.left = `${left}%`;
+  $("budget-selected").style.right = `${right}%`;
+  minInput.style.zIndex = minimum > BUDGET_MAX - BUDGET_STEP * 3 ? "4" : "3";
+  maxInput.style.zIndex = "3";
+}
+
 const SCORE_LABELS = {
   purpose_tpo: "목적·격식",
   weather_activity: "날씨·활동",
@@ -66,9 +95,13 @@ function goto(step) {
   });
   document.querySelectorAll(".stepper .step").forEach((el, index) => {
     const num = index + 1;
-    el.classList.toggle("is-active", num === step);
+    const active = num === step;
+    el.classList.toggle("is-active", active);
     el.classList.toggle("is-done", num < step);
     el.dataset.clickable = num <= state.maxStep ? "1" : "";
+    el.toggleAttribute("disabled", num > state.maxStep);
+    if (active) el.setAttribute("aria-current", "step");
+    else el.removeAttribute("aria-current");
   });
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -125,6 +158,8 @@ $("clear-image").addEventListener("click", (event) => {
   $("dropzone-preview").hidden = true;
   $("dropzone-empty").hidden = false;
   $("to-step-2").disabled = true;
+  $("photo-gate-note").textContent = "사진을 선택하면 조건 입력으로 넘어갈 수 있어요.";
+  $("photo-gate-note").dataset.tone = "wait";
 });
 
 function acceptFile(file) {
@@ -141,6 +176,8 @@ function acceptFile(file) {
   $("dropzone-empty").hidden = true;
   $("dropzone-preview").hidden = false;
   $("to-step-2").disabled = false;
+  $("photo-gate-note").textContent = "사진이 준비됐어요. 다음 단계에서 원하는 코디 조건을 정해주세요.";
+  $("photo-gate-note").dataset.tone = "ok";
 }
 
 /* 체형 파악용 사진 (선택) */
@@ -150,15 +187,28 @@ const bodyFileInput = $("body-file-input");
 bodyDropzone.addEventListener("click", (event) => {
   if (event.target.id !== "clear-body-image") bodyFileInput.click();
 });
-bodyFileInput.addEventListener("change", () => {
-  const file = bodyFileInput.files?.[0];
-  if (!file) return;
+bodyDropzone.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" || event.key === " ") { event.preventDefault(); bodyFileInput.click(); }
+});
+function acceptBodyFile(file) {
   if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return toast("JPG, PNG, WEBP 이미지만 지원합니다.");
   if (file.size > 12 * 1024 * 1024) return toast("이미지 용량은 12MB 이하만 지원합니다.");
   state.bodyFile = file;
   $("body-preview-img").src = URL.createObjectURL(file);
   $("body-dz-empty").hidden = true;
   $("body-dz-preview").hidden = false;
+}
+bodyFileInput.addEventListener("change", () => {
+  const file = bodyFileInput.files?.[0];
+  if (!file) return;
+  acceptBodyFile(file);
+});
+[["dragenter", true], ["dragover", true], ["dragleave", false], ["drop", false]].forEach(([name, active]) => {
+  bodyDropzone.addEventListener(name, (event) => {
+    event.preventDefault();
+    bodyDropzone.classList.toggle("is-drag", active);
+    if (name === "drop" && event.dataTransfer.files?.[0]) acceptBodyFile(event.dataTransfer.files[0]);
+  });
 });
 $("clear-body-image").addEventListener("click", (event) => {
   event.stopPropagation();
@@ -223,38 +273,6 @@ function materialPills(container, store) {
     container.appendChild(button);
   });
 }
-
-// 예산은 최소·최대를 직접 입력한다. 슬라이더는 원하는 금액을 정확히 맞추기 어렵고,
-// 10,000원 단위로만 끊겨 "23만원"처럼 실제로 생각하는 예산을 넣을 수 없었다.
-const BUDGET_MIN = 30000;
-const BUDGET_MAX = 500000;
-
-// 입력 중에는 자릿수만 넣어준다. 커서가 끝으로 튀지 않도록 뒤쪽 길이를 기준으로 되돌린다.
-function bindBudgetInput(el) {
-  if (!el) return;
-  el.addEventListener("input", () => {
-    const tailBefore = el.value.length - (el.selectionStart ?? 0);
-    const digits = el.value.replace(/[^0-9]/g, "").slice(0, 9);
-    el.value = digits ? Number(digits).toLocaleString("ko-KR") : "";
-    const caret = Math.max(0, el.value.length - tailBefore);
-    el.setSelectionRange(caret, caret);
-    el.setAttribute("aria-invalid", "false");
-  });
-  // 범위를 벗어나면 조용히 넘어가지 않고 되돌린 뒤 무엇을 고쳤는지 알린다.
-  el.addEventListener("blur", () => {
-    const value = Number(el.value.replace(/[^0-9]/g, "") || 0);
-    if (!value) return;
-    if (value < BUDGET_MIN) {
-      el.value = BUDGET_MIN.toLocaleString("ko-KR");
-      toast(`최소 ${BUDGET_MIN.toLocaleString("ko-KR")}원부터 추천할 수 있어 금액을 올렸어요.`);
-    } else if (value > BUDGET_MAX) {
-      el.value = BUDGET_MAX.toLocaleString("ko-KR");
-      toast(`최대 ${BUDGET_MAX.toLocaleString("ko-KR")}원까지 받을 수 있어 금액을 낮췄어요.`);
-    }
-  });
-}
-bindBudgetInput($("f-min-budget"));
-bindBudgetInput($("f-max-budget"));
 
 $("add-wardrobe").addEventListener("click", () => addWardrobeRow());
 
@@ -357,9 +375,12 @@ function updateProgress(stageKey) {
   const index = keys.indexOf(stageKey);
   const done = index < 0 ? keys : keys.slice(0, index);
   renderStages(stageKey, done);
-  const ratio = index < 0 ? 1 : index / keys.length;
+  const ratio = index < 0 ? 1 : (index + 1) / keys.length;
   // width 가 아니라 transform 을 움직인다(레이아웃 재계산 없음). CSS 와 짝을 맞춰야 한다.
   $("progress-fill").style.transform = `scaleX(${Math.max(ratio, 0.06)})`;
+  $("progress-note").textContent = index >= 0
+    ? `${state.options.stages[index].label} 중이에요…`
+    : "분석과 생성을 모두 마쳤어요.";
 }
 
 $("start-analysis").addEventListener("click", async () => {
@@ -369,7 +390,7 @@ $("start-analysis").addEventListener("click", async () => {
   if (!profileCandidate.purpose) { toast("코디 목적을 선택해주세요"); goto(2); return; }
   if (!profileCandidate.desired_style) { toast("원하는 스타일을 선택해주세요"); goto(2); return; }
   if (!profileCandidate.change_scope) { toast("바꾸고 싶은 범위를 선택해주세요"); goto(2); return; }
-  if (profileCandidate.min_budget == null || profileCandidate.max_budget == null) { toast("예산 범위를 모두 입력해주세요"); goto(2); return; }
+  if (profileCandidate.min_budget == null || profileCandidate.max_budget == null) { toast("예산 범위를 선택해주세요"); goto(2); return; }
   if (profileCandidate.min_budget > profileCandidate.max_budget) { toast("최소 예산이 최대 예산보다 큽니다"); goto(2); return; }
 
   unlock(3);
@@ -405,7 +426,6 @@ function pollJob() {
       if (!response.ok) throw new Error(payload.detail || "상태를 확인할 수 없습니다.");
       if (payload.status === "running") {
         updateProgress(payload.stage);
-        $("progress-note").textContent = "분석 중입니다. 창을 닫지 마세요.";
         return;
       }
       clearInterval(state.poll);
@@ -442,9 +462,41 @@ function resetPrivacyBar() {
   $("delete-now").disabled = false;
 }
 
+function renderRequestSummary(request) {
+  const summary = $("request-summary");
+  const values = request || state.profile;
+  if (!values) { summary.hidden = true; return; }
+  const chips = [
+    ["목적", values.purpose],
+    ["스타일", values.desired_style],
+    ["변경", values.change_scope],
+    ["예산", values.min_budget != null && values.max_budget != null
+      ? `${Number(values.min_budget).toLocaleString("ko-KR")}~${Number(values.max_budget).toLocaleString("ko-KR")}원`
+      : ""],
+    ["계절", values.season],
+    ["활동", values.activity_level],
+    ["선호색", (values.preferred_colors || []).join("·")],
+    ["제외색", (values.avoided_colors || []).join("·")],
+    ["선호소재", (values.preferred_materials || []).join("·")],
+  ].filter(([, value]) => value && value !== "자동");
+  $("request-chips").innerHTML = chips
+    .map(([label, value]) => `<span class="request-chip"><b>${escapeHtml(label)}</b> ${escapeHtml(value)}</span>`)
+    .join("");
+  summary.hidden = chips.length === 0;
+}
+
 function renderResult(result) {
+  renderRequestSummary(result?.request);
+  const isMock = Boolean(result?.mock);
+  $("result-data-badge").hidden = !isMock;
+  $("result-disclaimer").textContent = isMock
+    ? "현재 분석 수치와 상품은 서비스 흐름을 확인하기 위한 시연 데이터예요. 실제 모델 서버를 연결하면 실제 분석 결과로 바뀝니다."
+    : "추천 보드는 코디의 분위기를 확인하기 위한 참고 이미지이며 실제 핏을 보장하지 않습니다.";
+
   // Handle explicit budget-mismatch structured response from the server.
   if (result && result.budget_match === false) {
+    $("result-lede").textContent = "착장 분석은 완료했지만 입력한 예산 안에서 추천 후보를 만들지 못했어요.";
+    $("reco-count").textContent = "";
     $("budget-mismatch").hidden = false;
     // Hide the recommendation view so the user focuses on fixing budget.
     $("view-recos").hidden = true;
@@ -467,17 +519,30 @@ function renderResult(result) {
     return;
   }
 
-  const best = result.recommendations[0];
+  const recommendations = Array.isArray(result.recommendations) ? result.recommendations : [];
+  const best = recommendations[0];
   resetPrivacyBar();
+  if (!best) {
+    $("result-lede").textContent = "조건에 맞는 추천 후보를 만들지 못했어요. 조건을 조금 넓혀 다시 시도해주세요.";
+    $("reco-count").textContent = "";
+    $("reco-picker").replaceChildren();
+    $("reco-detail").innerHTML = '<div class="error-card"><h2>추천 후보가 없습니다</h2><p>예산이나 코디 조건을 조정한 뒤 다시 분석해주세요.</p></div>';
+    renderCurrentOutfit(result);
+    renderBodyStats(result.pose);
+    renderRules(result.rules);
+    renderFigures(result.images);
+    showView("recos");
+    return;
+  }
   $("result-lede").textContent = best.products.length
     ? `점수가 가장 높은 코디부터 보여드립니다. 카드를 눌러 다른 후보를 확인하세요.`
     : "현재 코디를 유지하는 조건이라 보완 안내만 표시합니다.";
-  $("reco-count").textContent = best.products.length ? result.recommendations.length : "";
+  $("reco-count").textContent = best.products.length ? recommendations.length : "";
   if (result.tryon) state.tryon = result.tryon;
 
   renderCurrentOutfit(result);
   renderBodyStats(result.pose);
-  renderRecommendations(result.recommendations);
+  renderRecommendations(recommendations);
   renderShoppingProducts(result.shopping_results || []);
   renderRules(result.rules);
   renderFigures(result.images);
@@ -652,7 +717,7 @@ function renderBodyStats(pose) {
     : "사진에서 추정했어요. 둘레를 입력하면 더 세분화돼요.";
   const used = goal && goal !== "별도 보정 없음"
     ? `'${goal}'를 고르셔서 추천 점수에 반영했어요.`
-    : "체형 반영을 고르지 않아 추천 점수에는 쓰지 않았어요.";
+    : "체형은 추천 근거를 설명하는 참고 정보로만 보여드려요.";
   $("body-shape-note").textContent = `${basis} ${used}`;
 }
 
@@ -675,7 +740,7 @@ function renderRecommendations(recommendations) {
     card.setAttribute("aria-selected", String(index === 0));
     card.innerHTML = `
       <div class="pick-top">
-        <span class="pick-rank"><span class="rank-badge">${reco.rank}</span>순위</span>
+        <span class="pick-rank"><span class="rank-badge">${reco.ranking_tied ? "=" : reco.rank}</span>${reco.ranking_tied ? `공동 ${reco.display_rank || reco.rank}위` : "순위"}</span>
         <span class="pick-score">${reco.total_score.toFixed(1)}</span>
       </div>
       <div class="pick-swatches">
@@ -708,7 +773,13 @@ function selectRecommendation(index) {
         <span class="product-swatch" style="background: rgb(${product.color_rgb.join(",")})"></span>
         <div>
           <div class="product-name">${escapeHtml(product.name)}</div>
-          <div class="product-meta">${escapeHtml(joinKnown([product.item_type, product.fit, product.material, product.style]))}</div>
+          <div class="product-meta">${escapeHtml(joinKnown([
+            product.item_type,
+            product.fit,
+            product.material,
+            product.style,
+            product.color_source === "image" ? `${product.color}·상품 이미지 확인` : product.color,
+          ]))}</div>
         </div>
         <span class="product-price">${product.price.toLocaleString("ko-KR")}원</span>
       </div>`
@@ -727,7 +798,7 @@ function selectRecommendation(index) {
     .join("");
 
   const head = reco.products.length
-    ? `<span class="reco-rank"><span class="rank-badge">${reco.rank}</span>추천 코디</span>
+    ? `<span class="reco-rank"><span class="rank-badge">${reco.ranking_tied ? "=" : reco.rank}</span>${reco.ranking_tied ? `공동 ${reco.display_rank || reco.rank}위 코디` : "추천 코디"}</span>
        <span class="reco-score">${reco.total_score.toFixed(1)}<small>점 · ${total.toLocaleString("ko-KR")}원</small></span>`
     : `<span class="reco-rank"><span class="rank-badge">＝</span>현재 코디 유지</span>
        <span class="card-note">새로 구매할 상품 없음</span>`;
@@ -739,6 +810,7 @@ function selectRecommendation(index) {
       <div class="reco-head">${head}</div>
       <div class="reco-body">
         ${reco.products.length ? tryonBlock(reco) : ""}
+        ${reco.ranking_reason ? `<p class="ranking-note">${escapeHtml(reco.ranking_reason)}</p>` : ""}
         ${products ? `<div class="product-list">${products}</div>` : ""}
         ${reco.reasons.length ? `<ul class="reasons">${reco.reasons.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul>` : ""}
         ${
@@ -783,12 +855,20 @@ function selectRecommendation(index) {
 
 /* 예상 착장샷 — 생성 모델이 붙기 전에는 자리만 잡아 둔다. */
 function tryonBlock(reco) {
-  const done = state.tryonByRank[reco.rank];
+  const generated = state.tryonByRank[reco.rank];
+  const done = typeof generated === "string" ? generated : generated?.image;
+  const warnings = generated?.warnings || (reco.rank === 1 ? state.tryon.warnings : []) || [];
+  const warningBlock = warnings.length
+    ? `<div class="tryon-warning"><strong>생성 품질 확인 필요</strong><ul>${warnings
+        .map((warning) => `<li>${escapeHtml(warning)}</li>`)
+        .join("")}</ul></div>`
+    : "";
   if (done) {
     return `
       <div class="tryon is-done">
         <img src="${API_BASE}/api/jobs/${state.jobId}/images/${done}" alt="추천 코디 예상 착장샷" />
-        <p class="tryon-note">생성 모델이 만든 예상 이미지입니다. 실제 핏을 보장하지 않습니다.</p>
+        <p class="tryon-note">${state.result?.mock ? "서비스 흐름 확인용 시연 이미지입니다." : "생성 모델이 만든 예상 이미지입니다. 실제 핏을 보장하지 않습니다."}</p>
+        ${warningBlock}
       </div>`;
   }
   const ready = state.tryon.available;
@@ -809,6 +889,7 @@ function tryonBlock(reco) {
           ${ready ? "생성하기" : "준비 중"}
         </button>
       </div>
+      ${warningBlock}
     </div>`;
 }
 
@@ -822,7 +903,10 @@ async function requestTryon(rank) {
     const response = await fetch(`${API_BASE}/api/jobs/${state.jobId}/tryon/${rank}`, { method: "POST" });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.detail || "예상 착장샷을 만들지 못했습니다.");
-    state.tryonByRank[rank] = payload.image;
+    state.tryonByRank[rank] = {
+      image: payload.image,
+      warnings: Array.isArray(payload.warnings) ? payload.warnings : [],
+    };
     selectRecommendation(state.selected);
   } catch (error) {
     button.disabled = false;
@@ -879,7 +963,13 @@ function renderFigures(images) {
 
 function showFigure(images, key) {
   $("figure-img").src = `${API_BASE}/api/jobs/${state.jobId}/images/${images[key]}`;
-  $("figure-caption").textContent = FIGURE_CAPTIONS[key] || "";
+  const mockCaptions = {
+    original: "업로드한 원본 사진입니다.",
+    landmarks: "시연용 관절 위치 화면입니다.",
+    segmentation: "시연용 의류 분리 화면입니다.",
+    preview: "추천 코디의 분위기를 정리한 시연용 보드입니다.",
+  };
+  $("figure-caption").textContent = (state.result?.mock ? mockCaptions : FIGURE_CAPTIONS)[key] || "";
 }
 
 $("delete-now").addEventListener("click", async () => {
@@ -894,6 +984,9 @@ $("delete-now").addEventListener("click", async () => {
     $("delete-now").disabled = true;
     document.querySelectorAll(".figure img").forEach((img) => img.removeAttribute("src"));
     $("figure-caption").textContent = "삭제되었습니다.";
+    $("clear-image").click();
+    $("clear-body-image").click();
+    $("wardrobe-list").replaceChildren();
     state.jobId = null;
     toast("사진을 삭제했습니다.");
   } catch (error) {
@@ -903,6 +996,10 @@ $("delete-now").addEventListener("click", async () => {
 
 $("restart").addEventListener("click", () => {
   $("clear-image").click();
+  $("clear-body-image").click();
+  $("wardrobe-list").replaceChildren();
+  state.result = null;
+  state.jobId = null;
   state.maxStep = 1;
   goto(1);
 });
@@ -937,15 +1034,8 @@ function showBackendDown(detail) {
 }
 
 function showPreviewOnly(detail) {
-  /* 선택지는 정적 사본으로 채웠지만 분석은 못 한다. 화면이 멀쩡해 보이는
-     만큼 무엇이 안 되는지 더 분명히 적어야 오해가 없다. */
-  const banner = document.createElement("div");
-  banner.className = "backend-down is-preview";
-  banner.innerHTML =
-    "<strong>디자인 미리보기 모드입니다.</strong>" +
-    "<span>선택지는 실제 값으로 채워 두었지만, 사진 분석과 코디 추천은 별도 서버가 켜져 있어야 동작해요. " +
-    "화면 구성과 디자인만 확인해 주세요.</span>";
-  document.body.prepend(banner);
+  /* 정적 호스팅에서도 fallback 선택지로 화면을 그대로 보여준다.
+     백엔드 연결 상태는 방문자 화면에 노출하지 않고 개발자 콘솔에만 남긴다. */
   console.warn("분석 서버 없음 — 정적 선택지로 화면만 표시:", detail);
 }
 
@@ -959,8 +1049,7 @@ function showPreviewOnly(detail) {
     /* 정적 호스팅(GitHub Pages 등)에는 연산 서버가 없다. 예전에는 여기서 바로
        빠져나가서 목적·예산 같은 선택지가 통째로 비어 있었고, 그래서 디자인을
        검토하려고 들어온 사람이 조건 화면에서 아무것도 볼 수 없었다.
-       같은 폴더에 떠 둔 실제 선택지로 화면만 채우고, 분석이 안 된다는 사실은
-       배너로 분명히 알린다. */
+       같은 폴더에 떠 둔 실제 선택지로 화면을 채우고 연결 실패는 콘솔에 남긴다. */
     try {
       const fallback = await fetch("fallback-options.json");
       if (!fallback.ok) throw new Error(`HTTP ${fallback.status}`);
@@ -972,6 +1061,10 @@ function showPreviewOnly(detail) {
     showPreviewOnly(error);
   }
   state.options = options;
+
+  $("f-min-budget").addEventListener("input", (event) => syncBudgetSlider(event.currentTarget));
+  $("f-max-budget").addEventListener("input", (event) => syncBudgetSlider(event.currentTarget));
+  syncBudgetSlider();
 
   fillSelect("f-purpose", options.purposes);
   fillSelect("f-style", options.styles);
@@ -1002,7 +1095,7 @@ function showPreviewOnly(detail) {
         el.textContent = policy.ttl_minutes;
       });
       const hint = document.querySelector(".dz-privacy");
-      if (hint) hint.textContent = `업로드한 사진은 분석 완료 후 ${policy.ttl_minutes}분 이내 자동으로 삭제돼요`;
+      if (hint) hint.textContent = `사진은 분석 완료 후 ${policy.ttl_minutes}분 이내 자동 삭제`;
     })
     .catch(() => {});
 

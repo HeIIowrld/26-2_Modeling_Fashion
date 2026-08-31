@@ -6,6 +6,21 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 
 
+def env_flag(name: str, default: bool = False) -> bool:
+    """환경변수의 일반적인 boolean 표기를 엄격하게 읽는다."""
+    value = os.environ.get(name)
+    if value is None or not value.strip():
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(
+        f"{name} must be one of 1/0, true/false, yes/no, or on/off; got {value!r}"
+    )
+
+
 def resolve_path(value: str | Path | None, default: str | Path, base_dir: str | Path = PROJECT_DIR) -> Path:
     """상대경로는 프로젝트 폴더 기준, 절대경로는 그대로 해석한다."""
     selected = Path(value).expanduser() if value else Path(default).expanduser()
@@ -67,7 +82,7 @@ PRODUCTS_CSV = resolve_catalog()
 # 정식 분석 경로는 두 모델을 모두 사용한다. 메모리·네트워크 점검 때만 False로 바꾼다.
 ENABLE_FASHN_PARSER = True
 ENABLE_FASHION_SIGLIP = True
-ENABLE_VTON = False
+ENABLE_VTON = env_flag("FASHION_ENABLE_VTON", default=False)
 # 쓰리사이즈를 입력하지 않았을 때 사진 실루엣으로 체형을 추정할지 여부.
 # MediaPipe 분할 마스크만 쓰므로 추가 모델이나 라이선스 동의가 필요 없다.
 ENABLE_BODY_MEASUREMENT = True
@@ -84,7 +99,7 @@ ENABLE_AUTO_BODY_SHAPE = True
 
 FASHN_PARSER_MODEL_ID = "fashn-ai/fashn-human-parser"
 FASHION_SIGLIP_MODEL_ID = "Marqo/marqo-fashionSigLIP"
-# 배포 모델은 2차 보강본(22,341 crop)이다. packages/PACKAGE_CHECKSUMS.json 이
+# 배포 모델은 2차 보강본(22,341 crop)이다. models/CHECKSUMS.json 이
 # 이 파일을 adopted_model("최종 채택 배포 모델")로, fashion_attribute_heads.pt 를
 # baseline_model("초기 baseline · rollback용")로 적고 있다.
 #

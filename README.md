@@ -19,7 +19,7 @@
 │       └── clean/            파서로 옷만 남긴 정제본 (자동 생성)
 ├── collect/                  유튜브 프레임 수집 파이프라인 (현재 미사용)
 ├── third_party/CatVTON/      가상 피팅 모델 (직접 클론)
-└── packages/                 배포용 zip
+└── packages/                 로컬에서 생성하는 배포용 zip (Git 제외)
 ```
 
 이미지 자산은 `datasets/` 한 곳에 모아 두고 코드에서는 `config.py`의

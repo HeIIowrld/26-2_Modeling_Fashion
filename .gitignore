@@ -3,8 +3,10 @@
 # web/ 처럼 루트 바로 아래 폴더는 여기서 막는다.
 __pycache__/
 *.py[cod]
+.DS_Store
 .ipynb_checkpoints/
 .pytest_cache/
+.venv*/
 
 # Claude Code 로컬 세션 설정
 .claude/
@@ -12,6 +14,10 @@ __pycache__/
 # 대용량 원본·외부 저장소는 커밋하지 않는다
 /모델링_인스타.zip
 /third_party/
+
+# 배포 압축본과 체크섬은 experiments/build_release_zip.py로 재생성한다.
+/packages/*.zip
+/packages/PACKAGE_CHECKSUMS.json
 
 # 이미지 자산은 재배포 금지 — 코드와 메타데이터(CSV)만 커밋한다
 /datasets/people/

@@ -3,10 +3,12 @@
 생성 모델을 연결할 때 이 테스트가 통과하면 웹 화면도 그대로 동작한다.
 """
 
+import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 from PIL import Image
@@ -18,6 +20,8 @@ sys.path.insert(0, str(ROOT / "src"))  # 런타임 모듈은 src/에 있다
 sys.path.insert(0, str(ROOT.parent / "web"))
 
 import app as web_app
+import config
+import pipeline as web_pipeline
 from schemas import Product, Recommendation
 from virtual_tryon import TryOnNotReady, VirtualTryOnAdapter
 
@@ -35,6 +39,34 @@ def sample_recommendation(rank: int = 1, with_products: bool = True) -> Recommen
 
 
 class AdapterAvailabilityTests(unittest.TestCase):
+    def test_vton_can_be_enabled_from_the_service_environment(self):
+        with mock.patch.dict(os.environ, {"FASHION_ENABLE_VTON": "1"}):
+            self.assertTrue(config.env_flag("FASHION_ENABLE_VTON"))
+
+    def test_invalid_vton_environment_value_is_rejected(self):
+        with mock.patch.dict(os.environ, {"FASHION_ENABLE_VTON": "maybe"}):
+            with self.assertRaises(ValueError):
+                config.env_flag("FASHION_ENABLE_VTON")
+
+    def test_generation_receives_the_masks_from_recognition(self):
+        context = {"upper_mask": object(), "segmentation": object()}
+        adapter = mock.Mock()
+        expected = Path("out.jpg")
+        adapter.synthesize.return_value = expected
+        with mock.patch.object(
+            web_pipeline,
+            "get_engine",
+            return_value=SimpleNamespace(tryon=adapter),
+        ):
+            result = web_pipeline.generate_tryon(
+                Path("person.jpg"),
+                sample_recommendation(),
+                expected,
+                context=context,
+            )
+        self.assertEqual(result, expected)
+        self.assertIs(adapter.synthesize.call_args.kwargs["context"], context)
+
     def test_disabled_adapter_reports_unavailable_with_a_reason(self):
         adapter = VirtualTryOnAdapter(enabled=False)
         self.assertFalse(adapter.available)

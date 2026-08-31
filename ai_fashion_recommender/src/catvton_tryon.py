@@ -90,6 +90,12 @@ SKIRT_CATEGORIES = {"스커트"}
 
 SLEEVE_LENGTH_ORDER = {"민소매": 0, "반팔": 1, "7부 소매": 2, "긴팔": 3}
 
+# 기존 옷이 목을 덮는데 새 옷은 목을 드러내면, garment-only VTON이 가려져 있던
+# 피부를 새로 복원해야 한다. 이 경우 원래 칼라가 일부 남는 사례가 있어 결과 옆에
+# 품질 한계를 명시한다.
+HIGH_COVERAGE_NECKLINES = ("터틀", "하이넥", "스탠드")
+LOW_COVERAGE_NECKLINES = ("라운드", "V넥", "스퀘어", "보트", "오프숄더", "홀터")
+
 # 실측 기준(female_012 통제 실험): gap=1은 정상 합성, gap=3은 마스크 전체가
 # 옷 텍스처로 채워지는 실패. gap=2는 미검증이라 보수적으로 경고에 포함한다.
 UNRELIABLE_LENGTH_GAP = 2
@@ -684,6 +690,20 @@ class CatVTONTryOn(VirtualTryOnAdapter):
                 f"마스크가 원래 옷 모양이라 {unit} 영역이 옷 텍스처로 채워질 수 있습니다."
             )
 
+    def _check_neckline_gap(self, product, context: dict) -> None:
+        """가려진 목 피부를 새로 그려야 하는 네크라인 변경은 품질 한계를 알린다."""
+        outfit = context.get("outfit")
+        current = getattr(outfit, "neckline", "") if outfit is not None else ""
+        target = getattr(product, "neckline", "") or ""
+        if (
+            any(marker in current for marker in HIGH_COVERAGE_NECKLINES)
+            and any(marker in target for marker in LOW_COVERAGE_NECKLINES)
+        ):
+            self._add_warning(
+                f"네크라인 변화가 큽니다({current} → {target}). 원래 옷이 가린 목 피부를 "
+                "생성해야 해서 기존 칼라가 일부 남을 수 있습니다."
+            )
+
     def _is_skirt_reference(self, garment: Image.Image, product, context: dict) -> bool:
         """추천 하의 레퍼런스가 스커트인지 판정한다(상품명 → category 헤드).
 
@@ -906,6 +926,8 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             category = product.category
             garment = self._prepare_garment_reference(garment_path, category)
             self._check_length_gap(garment, category, context)
+            if category == "top":
+                self._check_neckline_gap(product, context)
             guidance_override = None
             if (
                 category == "bottom"
