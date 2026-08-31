@@ -139,6 +139,19 @@ class TryOnBatchTests(unittest.TestCase):
         self.assertEqual(snapshot["items"][1]["status"], "failed")
         self.assertEqual(snapshot["items"][2]["status"], "done")
 
+    def test_manual_cached_result_does_not_finish_an_active_batch_early(self):
+        web_app._initialize_tryon_batch(self.job_id)
+        web_app._set_tryon_batch_item(self.job_id, 1, status="done", image="preview.jpg")
+        web_app._set_tryon_batch_item(self.job_id, 2, status="done", image="tryon_2.jpg")
+        web_app._set_tryon_batch_item(self.job_id, 3, status="running")
+
+        web_app._finish_tryon_batch(self.job_id)
+
+        snapshot = web_app._read_tryon_batch(self.job_id)
+        self.assertEqual(snapshot["status"], "running")
+        self.assertEqual(snapshot["ready"], 2)
+        self.assertEqual(snapshot["finished"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()

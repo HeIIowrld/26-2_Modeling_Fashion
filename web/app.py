@@ -324,6 +324,15 @@ def _finish_tryon_batch(job_id: str) -> None:
             return
         batch = job.get("tryon_batch") or {}
         items = list((batch.get("items") or {}).values())
+        active = [
+            item.get("status")
+            for item in items
+            if item.get("status") in TRYON_BATCH_ACTIVE_STATES
+        ]
+        if active:
+            batch["status"] = "running" if "running" in active else "queued"
+            batch["reason"] = ""
+            return
         ready = sum(item.get("status") == "done" for item in items)
         failed = sum(item.get("status") == "failed" for item in items)
         if failed == 0:
