@@ -46,6 +46,19 @@ class UIContractTests(unittest.TestCase):
         self.assertNotIn('id="reco-detail"', html)
         self.assertNotIn("renderRecommendations", javascript)
 
+    def test_musinsa_products_can_be_selected_for_real_tryon(self):
+        html = (STATIC / "index.html").read_text(encoding="utf-8")
+        javascript = (STATIC / "app.js").read_text(encoding="utf-8")
+        active_css = (STATIC / "lookbook.css").read_text(encoding="utf-8")
+        self.assertIn('id="shopping-tryon-panel"', html)
+        self.assertIn("/tryon-products", javascript)
+        self.assertIn("/shopping-tryon-batch", javascript)
+        self.assertIn("toggleShoppingSelection", javascript)
+        self.assertIn("모든 조합 입어보기", javascript)
+        self.assertIn("신발은 전용 마스크와 모델이 없어", javascript)
+        self.assertIn(".shopping-tryon-panel", active_css)
+        self.assertIn(".shopping-batch", active_css)
+
 
 if __name__ == "__main__":
     unittest.main()

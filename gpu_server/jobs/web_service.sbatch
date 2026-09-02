@@ -29,6 +29,8 @@ export FASHION_DATASETS_DIR=$PROJECT/datasets
 export FASHION_PRODUCTS_CSV=$PROJECT/ai_fashion_recommender/data/products_musinsa_enriched.csv
 export FASHION_ATTRIBUTE_HEADS_PATH=$PROJECT/ai_fashion_recommender/models/fashion_attribute_heads_augmented.pt
 export FASHION_ENABLE_VTON=1
+# 검증된 DPM++ 25스텝 프리셋으로 순위별 배치 결과의 대기 시간을 줄인다.
+export FASHION_VTON_PRESET=${FASHION_VTON_PRESET:-fast}
 export PYTHONIOENCODING=utf-8
 export PYTHONUNBUFFERED=1
 export TOKENIZERS_PARALLELISM=false

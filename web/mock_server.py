@@ -93,6 +93,53 @@ def _prune_jobs() -> None:
             JOBS.pop(job_id, None)
 
 
+def _mock_shopping_tryon_batch(job: dict) -> dict:
+    """검색된 mock 상·하의의 전체 조합 배치를 재현한다."""
+    products = [
+        item
+        for item in job["result"].get("shopping_results", [])
+        if item.get("tryon_available") and item.get("category") in {"top", "bottom"}
+    ]
+    tops = [item for item in products if item["category"] == "top"]
+    bottoms = [item for item in products if item["category"] == "bottom"]
+    combinations = (
+        [[top, bottom] for top in tops for bottom in bottoms]
+        if tops and bottoms
+        else [[item] for item in tops or bottoms]
+    )
+    elapsed = max(0.0, time.monotonic() - job["created"] - 3.2)
+    ready = min(len(combinations), int(elapsed / 0.9))
+    items = []
+    for index, products_for_look in enumerate(combinations, start=1):
+        if index <= ready:
+            status, image = "done", f"tryon-products-{index}"
+        elif index == ready + 1:
+            status, image = "running", None
+        else:
+            status, image = "queued", None
+        items.append(
+            {
+                "index": index,
+                "product_ids": [item["product_id"] for item in products_for_look],
+                "categories": [item["category"] for item in products_for_look],
+                "status": status,
+                "image": image,
+                "cached": False,
+                "warnings": [],
+                "error": None,
+            }
+        )
+    total = len(items)
+    return {
+        "status": "done" if ready == total else "running",
+        "reason": "",
+        "total": total,
+        "ready": ready,
+        "finished": ready,
+        "items": items,
+    }
+
+
 def _build_result(profile: dict, image_seed: int) -> dict:
     purpose = str(profile.get("purpose") or "데일리")
     style = str(profile.get("desired_style") or "미니멀")
@@ -178,7 +225,40 @@ def _build_result(profile: dict, image_seed: int) -> dict:
             "상의": "네이비 셔츠 (긴소매)",
             "하의": "그레이 슬랙스 (스트레이트, 발목 기장)",
         },
-        "shopping_results": [],
+        "shopping_results": [
+            {
+                "product_id": "MSMOCKTOP1",
+                "name": "오버핏 코튼 셔츠",
+                "brand": "MUSINSA MOCK",
+                "price": 59_000,
+                "image_url": "https://image.msscdn.net/thumbnails/images/prd_img/202608/mock_top.jpg",
+                "url": "https://www.musinsa.com/products/1000001",
+                "category": "top",
+                "gender": "공용",
+                "review_count": 1240,
+                "review_score": 94,
+                "source": "mock",
+                "search_keywords": ["여유핏", "코튼", "캐주얼"],
+                "tryon_available": True,
+                "tryon_reason": "",
+            },
+            {
+                "product_id": "MSMOCKBOTTOM1",
+                "name": "세미 와이드 데님 팬츠",
+                "brand": "MUSINSA MOCK",
+                "price": 69_000,
+                "image_url": "https://image.msscdn.net/thumbnails/images/prd_img/202608/mock_bottom.jpg",
+                "url": "https://www.musinsa.com/products/1000002",
+                "category": "bottom",
+                "gender": "공용",
+                "review_count": 830,
+                "review_score": 96,
+                "source": "mock",
+                "search_keywords": ["세미와이드", "데님", "풀렝스"],
+                "tryon_available": True,
+                "tryon_reason": "",
+            },
+        ],
         "rules": {
             "implemented": 43,
             "documented": 50,
@@ -194,6 +274,7 @@ def _build_result(profile: dict, image_seed: int) -> dict:
             "parser_backend": "mock-parser",
             "vton_enabled": True,
         },
+        "tryon": {"available": True, "reason": "", "warnings": []},
         "images": {
             "original": "original",
             "landmarks": "landmarks",
@@ -354,8 +435,24 @@ class MockHandler(SimpleHTTPRequestHandler):
                 )
             else:
                 self._json(
-                    {"job_id": job_id, "status": "done", "stage": None, "error": None, "result": job["result"]}
+                    {
+                        "job_id": job_id,
+                        "status": "done",
+                        "stage": None,
+                        "error": None,
+                        "result": job["result"],
+                        "shopping_tryon_batch": _mock_shopping_tryon_batch(job),
+                    }
                 )
+            return
+
+        match = re.fullmatch(r"/api/jobs/([0-9a-f]{32})/shopping-tryon-batch", path)
+        if match:
+            job = self._job(match.group(1))
+            if job is None:
+                self._json({"detail": "분석 결과를 찾을 수 없습니다."}, HTTPStatus.NOT_FOUND)
+                return
+            self._json(_mock_shopping_tryon_batch(job))
             return
 
         match = re.fullmatch(r"/api/jobs/([0-9a-f]{32})/images/([a-z0-9_-]+)", path)
@@ -435,14 +532,36 @@ class MockHandler(SimpleHTTPRequestHandler):
             self._json({"job_id": job_id, "status": "running", "stage": STAGES[0]})
             return
 
-        match = re.fullmatch(r"/api/jobs/([0-9a-f]{32})/tryon/(\d+)", path)
+        match = re.fullmatch(r"/api/jobs/([0-9a-f]{32})/shopping-tryon-batch", path)
         if match:
-            job_id, rank = match.groups()
-            job = self._job(job_id)
+            job = self._job(match.group(1))
             if job is None:
                 self._json({"detail": "분석 결과를 찾을 수 없습니다."}, HTTPStatus.NOT_FOUND)
                 return
-            self._json({"image": f"tryon-{rank}", "cached": False, "mock": True})
+            self._json(_mock_shopping_tryon_batch(job))
+            return
+
+        match = re.fullmatch(r"/api/jobs/([0-9a-f]{32})/tryon-products", path)
+        if match:
+            job = self._job(match.group(1))
+            if job is None:
+                self._json({"detail": "분석 결과를 찾을 수 없습니다."}, HTTPStatus.NOT_FOUND)
+                return
+            payload = self._read_json()
+            product_ids = payload.get("product_ids") or []
+            if not isinstance(product_ids, list) or not 1 <= len(product_ids) <= 2:
+                self._json({"detail": "상품 번호 목록이 필요합니다."}, HTTPStatus.BAD_REQUEST)
+                return
+            self._json(
+                {
+                    "image": f"tryon-products-{len(product_ids)}",
+                    "cached": False,
+                    "mock": True,
+                    "warnings": [],
+                    "product_ids": product_ids,
+                    "categories": ["top", "bottom"][: len(product_ids)],
+                }
+            )
             return
 
         if path == "/api/feedback":

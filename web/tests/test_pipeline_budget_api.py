@@ -41,6 +41,9 @@ class FakeRecommender:
     unsupported_rule_ids = []
     UNSUPPORTED_RULE_REASONS = {}
 
+    def __init__(self):
+        self.catalog = SimpleNamespace(products=[])
+
     def recommend(self, profile, pose_result, outfit_result, top_k=3):
         raise AssertionError("CSV 카탈로그 추천은 웹 파이프라인에서 호출하면 안 됩니다.")
 

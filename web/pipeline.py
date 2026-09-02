@@ -2,16 +2,21 @@
 
 from __future__ import annotations
 
+import hashlib
+import io
+import os
 import sys
 import threading
 import inspect
+import urllib.parse
+import urllib.request
 from datetime import datetime
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
 import numpy as np
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 PROJECT_DIR = Path(__file__).resolve().parents[1] / "ai_fashion_recommender"
 # 런타임 모듈은 src/에 모여 있고 평면 임포트를 유지한다(커밋 014b384).
@@ -25,6 +30,7 @@ from config import (
     ENABLE_VTON,
     FASHION_ATTRIBUTE_HEADS_PATH,
     OUTPUT_DIR,
+    garment_image_path,
     resolve_catalog,
 )
 from fashion_model import FashionClassifier
@@ -37,7 +43,7 @@ from quality_checker import QualityChecker
 from recommendation_engine import CHANGE_SCOPE_MAP, PURPOSE_STYLES, RecommendationEngine
 from musinsa_live_search import MusinsaLiveSearch
 from body_shape import classify
-from schemas import GOAL_NONE, SILHOUETTE_GOAL_CHOICES, UserProfile, WardrobeItem
+from schemas import GOAL_NONE, SILHOUETTE_GOAL_CHOICES, Product, UserProfile, WardrobeItem
 from virtual_tryon import TryOnNotReady, VirtualTryOnAdapter
 
 RULES_PATH = PROJECT_DIR / "FASHION_RULES_MASTER.md"
@@ -75,6 +81,10 @@ MATERIAL_PREFERENCE_MAP = {
     "얇은 소재": ["린넨", "쉬폰"],
     "가죽": ["가죽"],
 }
+TRYON_PRODUCT_CATEGORIES = {"top", "bottom"}
+MAX_SHOPPING_IMAGE_BYTES = 12 * 1024 * 1024
+MAX_SHOPPING_IMAGE_PIXELS = 30_000_000
+SHOPPING_IMAGE_HOST_SUFFIX = ".msscdn.net"
 
 STAGES = [
     ("prepare", "GPU 모델·상품 데이터 준비"),
@@ -100,6 +110,7 @@ __all__ = [
     "build_profile",
     "form_options",
     "generate_tryon",
+    "generate_tryon_with_warnings",
     "get_engine",
     "run_pipeline",
     "rule_titles",
@@ -120,6 +131,7 @@ class PipelineResult:
     recommendations: list
     person_image: Path
     tryon_context: dict = field(default_factory=dict)
+    shopping_tryon_products: dict[str, Product] = field(default_factory=dict)
 
 
 @dataclass
@@ -164,6 +176,13 @@ def _build_tryon() -> VirtualTryOnAdapter:
     try:
         from catvton_tryon import CatVTONTryOn
 
+        preset = os.environ.get("FASHION_VTON_PRESET", "standard").strip().lower()
+        if preset == "fast":
+            return CatVTONTryOn.fast()
+        if preset in {"high", "high_detail"}:
+            return CatVTONTryOn.high_detail()
+        if preset not in {"", "standard"}:
+            print(f"[VTON] 알 수 없는 프리셋 {preset!r}; standard를 사용합니다.")
         return CatVTONTryOn()
     except Exception as error:  # 저장소 없음·의존성 없음·GPU 없음 모두 여기로 온다
         print(f"[VTON] 생성 모델을 켜지 못해 비활성으로 실행합니다: {type(error).__name__}: {error}")
@@ -324,6 +343,102 @@ def build_profile(payload: dict) -> UserProfile:
     )
 
 
+def _shopping_image_host_allowed(url: str) -> bool:
+    parsed = urllib.parse.urlparse(url)
+    hostname = (parsed.hostname or "").lower()
+    return parsed.scheme == "https" and (
+        hostname == SHOPPING_IMAGE_HOST_SUFFIX.removeprefix(".")
+        or hostname.endswith(SHOPPING_IMAGE_HOST_SUFFIX)
+    )
+
+
+def _cache_live_shopping_image(product, output_dir: Path) -> Path | None:
+    """무신사 API가 돌려준 공개 상품 이미지를 현재 세션에만 안전하게 저장한다."""
+    if not _shopping_image_host_allowed(product.image_url):
+        return None
+    suffix = hashlib.sha256(product.product_id.encode("utf-8")).hexdigest()[:12]
+    target = output_dir / f"shopping_{suffix}.jpg"
+    if target.is_file():
+        return target
+    request = urllib.request.Request(
+        product.image_url,
+        headers={"User-Agent": "Mozilla/5.0 (compatible; FITTA/1.0)"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=6.0) as response:
+            if not _shopping_image_host_allowed(response.geturl()):
+                return None
+            declared = int(response.headers.get("Content-Length") or 0)
+            if declared > MAX_SHOPPING_IMAGE_BYTES:
+                return None
+            raw = response.read(MAX_SHOPPING_IMAGE_BYTES + 1)
+        if not raw or len(raw) > MAX_SHOPPING_IMAGE_BYTES:
+            return None
+        with Image.open(io.BytesIO(raw)) as opened:
+            if opened.width * opened.height > MAX_SHOPPING_IMAGE_PIXELS:
+                return None
+            opened.convert("RGB").save(target, "JPEG", quality=95)
+    except (OSError, ValueError, UnidentifiedImageError):
+        return None
+    return target
+
+
+def _shopping_tryon_payloads(
+    shopping_results: list,
+    catalog_products: list[Product],
+    output_dir: Path,
+    *,
+    adapter_available: bool,
+) -> tuple[list[dict], dict[str, Product]]:
+    """검색 상품을 공개 응답과 실제 VTON에 쓸 수 있는 Product 객체로 나눈다."""
+    catalog_by_id = {product.product_id: product for product in catalog_products}
+    payloads: list[dict] = []
+    tryon_products: dict[str, Product] = {}
+    for item in shopping_results:
+        payload = item.public_dict()
+        resolved = catalog_by_id.get(item.product_id)
+        reason = ""
+        if item.category not in TRYON_PRODUCT_CATEGORIES:
+            reason = "현재 실제 합성은 상의와 하의만 지원합니다."
+            resolved = None
+        elif not adapter_available:
+            reason = "현재 합성 GPU를 사용할 수 없습니다."
+            resolved = None
+        elif resolved is not None:
+            path = garment_image_path(resolved.image_path) if resolved.image_path else None
+            if path is None or not path.is_file():
+                reason = "GPU 서버에 이 상품 이미지가 준비되지 않았습니다."
+                resolved = None
+        else:
+            cached = _cache_live_shopping_image(item, output_dir)
+            if cached is None:
+                reason = "실시간 상품 이미지를 GPU 세션에 준비하지 못했습니다."
+            else:
+                resolved = Product(
+                    product_id=item.product_id,
+                    name=item.name,
+                    category=item.category,
+                    color="",
+                    style="",
+                    purposes=[],
+                    body_shapes=[],
+                    price=item.price,
+                    season="사계절",
+                    stock=True,
+                    url=item.url,
+                    brand=item.brand,
+                    gender=item.gender,
+                    image_url=item.image_url,
+                    image_path=str(cached),
+                )
+        if resolved is not None:
+            tryon_products[item.product_id] = resolved
+        payload["tryon_available"] = resolved is not None
+        payload["tryon_reason"] = reason
+        payloads.append(payload)
+    return payloads, tryon_products
+
+
 def run_pipeline(
     image_path: Path,
     profile: UserProfile,
@@ -367,6 +482,25 @@ def run_pipeline(
             on_stage("segment")
             outfit_result, parsed = analyze_outfit(image_path, pose_result)
             on_stage("attributes")
+        # 구형 CSV 추천에는 쓰지 않지만, 사용자가 고른 무신사 상품을 VTON으로
+        # 합성할 때 현재 착장의 마스크·분석 결과가 필요하다.
+        tryon_context = {
+            key: parsed.get(key)
+            for key in (
+                "upper_mask",
+                "lower_mask",
+                "upper_style_mask",
+                "lower_style_mask",
+                "segmentation",
+            )
+        }
+        tryon_context.update(
+            {
+                "outfit": outfit_result,
+                "classifier": getattr(engine.outfit_analyzer, "classifier", None),
+                "pose": pose_result,
+            }
+        )
         segmentation_path = output_dir / "segmentation.jpg"
         engine.outfit_analyzer.parser.colorize(parsed["segmentation"]).save(
             segmentation_path, quality=92
@@ -388,6 +522,12 @@ def run_pipeline(
                 )
             except Exception as exc:  # 외부 검색 장애가 본 분석까지 실패시키지 않게 격리한다.
                 print(f"[MUSINSA] live search unavailable: {exc}")
+        shopping_payloads, shopping_tryon_products = _shopping_tryon_payloads(
+            shopping_results,
+            engine.recommender.catalog.products,
+            output_dir,
+            adapter_available=engine.tryon.available,
+        )
 
         on_stage("preview")
 
@@ -400,7 +540,7 @@ def run_pipeline(
         "pose": pose_dict,
         "outfit": outfit_result.to_dict(),
         "outfit_summary": outfit_result.to_summary_dict(),
-        "shopping_results": [item.public_dict() for item in shopping_results],
+        "shopping_results": shopping_payloads,
         "rules": {
             "implemented": len(engine.recommender.active_rule_ids),
             "documented": len(engine.recommender.documented_rule_ids),
@@ -422,6 +562,7 @@ def run_pipeline(
                 getattr(engine.recommender, "catalog", None), "color_override_count", 0
             ),
         },
+        "tryon": _adapter_tryon_status(engine.tryon),
         "request": _request_summary(profile),
         "images": {
             "original": "original.jpg",
@@ -433,17 +574,31 @@ def run_pipeline(
         payload=payload,
         recommendations=[],
         person_image=image_path,
+        tryon_context=tryon_context,
+        shopping_tryon_products=shopping_tryon_products,
     )
+
+
+def _adapter_tryon_status(
+    adapter: VirtualTryOnAdapter,
+    *,
+    preview_kind: str | None = None,
+) -> dict:
+    raw_warnings = getattr(adapter, "last_warnings", [])
+    warnings = list(raw_warnings) if isinstance(raw_warnings, (list, tuple)) else []
+    status = {
+        "available": adapter.available,
+        "reason": "" if adapter.available else adapter.NOT_READY_REASON,
+        "warnings": warnings,
+    }
+    if preview_kind is not None:
+        status["preview_kind"] = preview_kind
+    return status
 
 
 def tryon_status() -> dict:
     """예상 착장샷 생성이 가능한지와, 불가능하면 그 사유를 알려준다."""
-    adapter = get_engine().tryon
-    return {
-        "available": adapter.available,
-        "reason": "" if adapter.available else adapter.NOT_READY_REASON,
-        "warnings": list(getattr(adapter, "last_warnings", [])),
-    }
+    return _adapter_tryon_status(get_engine().tryon)
 
 
 def generate_tryon(
@@ -456,15 +611,37 @@ def generate_tryon(
 
     생성 모델이 없으면 추천 보드로 몰래 대체하지 않고 TryOnNotReady를 올린다.
     """
+    output, _warnings = generate_tryon_with_warnings(
+        person_image,
+        recommendation,
+        output_path,
+        context=context,
+    )
+    return output
+
+
+def generate_tryon_with_warnings(
+    person_image: Path,
+    recommendation,
+    output_path: Path,
+    context: dict | None = None,
+) -> tuple[Path, list[str]]:
+    """합성 결과와 그 호출에서 나온 품질 경고를 원자적으로 돌려준다."""
     if not recommendation.products:
         raise TryOnNotReady("현재 코디를 유지하는 조건이라 새로 생성할 착장샷이 없습니다.")
+    strict_context = dict(context or {})
+    strict_context["strict_vton"] = True
     with _analysis_lock:
-        return get_engine().tryon.synthesize(
+        adapter = get_engine().tryon
+        output = adapter.synthesize(
             person_image=person_image,
             recommendation=recommendation,
             output_path=output_path,
-            context=context,
+            context=strict_context,
         )
+        raw_warnings = getattr(adapter, "last_warnings", [])
+        warnings = list(raw_warnings) if isinstance(raw_warnings, (list, tuple)) else []
+        return output, warnings
 
 
 def _recommendation_dict(recommendation) -> dict:

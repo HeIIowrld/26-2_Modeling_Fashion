@@ -11,6 +11,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
+import numpy as np
 from PIL import Image
 
 
@@ -24,6 +25,7 @@ import config
 import pipeline as web_pipeline
 from schemas import Product, Recommendation
 from virtual_tryon import TryOnNotReady, VirtualTryOnAdapter
+from catvton_tryon import CatVTONTryOn
 
 
 def sample_recommendation(rank: int = 1, with_products: bool = True) -> Recommendation:
@@ -65,7 +67,10 @@ class AdapterAvailabilityTests(unittest.TestCase):
                 context=context,
             )
         self.assertEqual(result, expected)
-        self.assertIs(adapter.synthesize.call_args.kwargs["context"], context)
+        passed_context = adapter.synthesize.call_args.kwargs["context"]
+        self.assertIsNot(passed_context, context)
+        self.assertIs(passed_context["upper_mask"], context["upper_mask"])
+        self.assertTrue(passed_context["strict_vton"])
 
     def test_disabled_adapter_reports_unavailable_with_a_reason(self):
         adapter = VirtualTryOnAdapter(enabled=False)
@@ -122,6 +127,83 @@ class AdapterAvailabilityTests(unittest.TestCase):
                     person_image=_person(directory),
                     recommendation=sample_recommendation(),
                     output_path=Path(directory) / "out.jpg",
+                )
+
+    def test_catvton_strict_request_never_returns_a_recommendation_board(self):
+        adapter = CatVTONTryOn()
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(TryOnNotReady, "상품 이미지나 의류 마스크"):
+                adapter.generate(
+                    person_image=_person(directory),
+                    recommendation=sample_recommendation(),
+                    output_path=Path(directory) / "out.jpg",
+                    context={"strict_vton": True},
+                )
+
+    def test_catvton_applies_selected_top_and_bottom_in_order(self):
+        adapter = CatVTONTryOn(width=64, height=96, protect_restore=False)
+        with tempfile.TemporaryDirectory() as directory:
+            person = _person(directory)
+            top_image = Path(directory) / "top.jpg"
+            bottom_image = Path(directory) / "bottom.jpg"
+            Image.new("RGB", (48, 64), "white").save(top_image)
+            Image.new("RGB", (48, 64), "black").save(bottom_image)
+            recommendation = sample_recommendation()
+            top, bottom = recommendation.products
+            top.image_path = str(top_image)
+            bottom.image_path = str(bottom_image)
+            context = {
+                "upper_mask": np.ones((600, 400), dtype=np.uint8) * 255,
+                "lower_mask": np.ones((600, 400), dtype=np.uint8) * 255,
+                "strict_vton": True,
+            }
+            fake_utils = SimpleNamespace(
+                resize_and_crop=lambda image, size: image.resize(size)
+            )
+            with (
+                mock.patch.dict(sys.modules, {"utils": fake_utils}),
+                mock.patch.object(adapter, "_load_pipeline"),
+                mock.patch.object(
+                    adapter,
+                    "_prepare_garment_reference",
+                    return_value=Image.new("RGB", (48, 64), "gray"),
+                ),
+                mock.patch.object(
+                    adapter,
+                    "_tryon_once",
+                    side_effect=lambda current, *_args, **_kwargs: current,
+                ) as synthesize,
+            ):
+                output = adapter.generate(
+                    person,
+                    recommendation,
+                    Path(directory) / "combined.jpg",
+                    context=context,
+                )
+
+            self.assertTrue(output.is_file())
+            self.assertEqual(synthesize.call_count, 2)
+            self.assertEqual(adapter.last_render_kind, "tryon")
+
+    def test_catvton_never_treats_shoes_as_a_lower_body_garment(self):
+        adapter = CatVTONTryOn()
+        with tempfile.TemporaryDirectory() as directory:
+            shoe_image = Path(directory) / "shoes.jpg"
+            Image.new("RGB", (32, 32), "black").save(shoe_image)
+            shoe = sample_recommendation().products[0]
+            shoe.category = "shoes"
+            shoe.image_path = str(shoe_image)
+            recommendation = sample_recommendation()
+            recommendation.products = [shoe]
+            with self.assertRaisesRegex(TryOnNotReady, "상의와 하의만"):
+                adapter.generate(
+                    _person(directory),
+                    recommendation,
+                    Path(directory) / "shoes.jpg",
+                    context={
+                        "lower_mask": np.ones((600, 400), dtype=np.uint8),
+                        "strict_vton": True,
+                    },
                 )
 
 

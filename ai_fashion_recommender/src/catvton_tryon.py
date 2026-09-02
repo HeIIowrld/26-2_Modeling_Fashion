@@ -31,7 +31,7 @@ from PIL import Image, ImageFilter
 
 from config import GARMENT_CLEAN_DIR, PROJECT_DIR, garment_image_path
 from schemas import Recommendation
-from virtual_tryon import VirtualTryOnAdapter
+from virtual_tryon import TryOnNotReady, VirtualTryOnAdapter
 
 CATVTON_REPO = PROJECT_DIR.parent / "third_party" / "CatVTON"
 BASE_CKPT = "booksforcharlie/stable-diffusion-inpainting"
@@ -879,11 +879,25 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         """
         context = context or {}
         self.last_warnings = []
+        self.last_render_kind = ""
         person = Image.open(person_image).convert("RGB")
 
         jobs = []  # (garment 이미지 경로, 원본 크기 마스크, Product)
+        unsupported_categories: list[str] = []
         for product in recommendation.products:
-            garment_path = garment_image_path(product.image_path) if product.image_path else None
+            if product.category not in {"top", "bottom"}:
+                unsupported_categories.append(product.category or "알 수 없는 품목")
+                self._add_warning(
+                    f"{product.name}은(는) {product.category or '미분류'} 품목이라 "
+                    "현재 상의·하의 VTON에 적용하지 않았습니다."
+                )
+                continue
+            configured_path = Path(product.image_path).expanduser() if product.image_path else None
+            garment_path = (
+                configured_path
+                if configured_path is not None and configured_path.is_absolute()
+                else garment_image_path(product.image_path) if product.image_path else None
+            )
             if garment_path is None or not garment_path.exists():
                 continue
             mask_keys = (
@@ -899,8 +913,21 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         if jobs:
             jobs = self._apply_outerwear_policy(jobs, context)
         if not jobs:
-            # 합성 재료가 없으면 기존 추천 보드로 대체한다.
-            return self._make_preview(person_image, recommendation, output_path)
+            # 분석 단계의 미리보기는 추천 보드로 안전하게 폴백할 수 있지만, 사용자가
+            # 요청한 실제 합성 API에서는 보드를 합성 사진처럼 돌려주면 안 된다.
+            if context.get("strict_vton"):
+                if unsupported_categories:
+                    categories = ", ".join(dict.fromkeys(unsupported_categories))
+                    raise TryOnNotReady(
+                        f"{categories} 품목은 현재 실제 합성 범위가 아닙니다. "
+                        "현재는 상의와 하의만 지원합니다."
+                    )
+                raise TryOnNotReady(
+                    "추천 상품 이미지나 의류 마스크가 없어 실제 착장샷을 만들 수 없습니다."
+                )
+            output = self._make_preview(person_image, recommendation, output_path)
+            self.last_render_kind = "preview"
+            return output
 
         self._load_pipeline()
         # 얼굴·헤어·손·발·가방 등은 어떤 마스크에서도 제외해 원본을 보존한다.
@@ -958,4 +985,5 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         output = Path(output_path)
         output.parent.mkdir(parents=True, exist_ok=True)
         result.save(output, quality=95)
+        self.last_render_kind = "tryon"
         return output
