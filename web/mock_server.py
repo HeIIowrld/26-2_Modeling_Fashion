@@ -93,60 +93,6 @@ def _prune_jobs() -> None:
             JOBS.pop(job_id, None)
 
 
-def _product(name: str, category: str, color: str, price: int, style: str, rank: int) -> dict:
-    is_top = category == "top"
-    return {
-        "product_id": f"MOCK-{rank}-{category.upper()}",
-        "name": name,
-        "category": category,
-        "color": color,
-        "color_rgb": COLOR_RGB.get(color, [150, 150, 150]),
-        "style": style,
-        "price": max(price, 10_000),
-        "season": "사계절",
-        "url": "",
-        "item_type": "셔츠" if is_top else "팬츠",
-        "fit": "릴랙스드핏" if is_top else "세미와이드핏",
-        "length": "기본 기장" if is_top else "발목 기장",
-        "pattern": "무지",
-        "material": "코튼" if is_top else "코튼 혼방",
-        "neckline": "칼라넥" if is_top else "",
-        "formality": 3,
-    }
-
-
-def _recommendation_names(purpose: str) -> list[tuple[str, str]]:
-    if purpose in {"출근", "면접"}:
-        return [
-            ("클린 코튼 셔츠", "원턱 세미와이드 슬랙스"),
-            ("텍스처드 미니멀 재킷", "스트레이트 슬랙스"),
-            ("소프트 칼라 니트", "테이퍼드 팬츠"),
-        ]
-    if purpose == "데이트":
-        return [
-            ("소프트 니트 카디건", "클린 스트레이트 데님"),
-            ("오픈칼라 셔츠", "세미와이드 코튼 팬츠"),
-            ("라이트 크루넥 니트", "딥톤 데님 팬츠"),
-        ]
-    if purpose == "여행":
-        return [
-            ("라이트 유틸리티 셔츠", "이지 테이퍼드 팬츠"),
-            ("코튼 오버셔츠", "스트레치 와이드 팬츠"),
-            ("에어리 크루넥 탑", "라이트웨이트 카고 팬츠"),
-        ]
-    if purpose == "결혼식":
-        return [
-            ("텍스처드 싱글 블레이저", "클린 테이퍼드 슬랙스"),
-            ("미니멀 칼라 재킷", "원턱 드레스 팬츠"),
-            ("소프트 포멀 셔츠", "세미와이드 슬랙스"),
-        ]
-    return [
-        ("릴랙스드 오픈칼라 셔츠", "세미와이드 코튼 팬츠"),
-        ("미니멀 크루넥 니트", "클린 스트레이트 데님"),
-        ("라이트 코튼 오버셔츠", "이지 테이퍼드 팬츠"),
-    ]
-
-
 def _build_result(profile: dict, image_seed: int) -> dict:
     purpose = str(profile.get("purpose") or "데일리")
     style = str(profile.get("desired_style") or "미니멀")
@@ -155,50 +101,6 @@ def _build_result(profile: dict, image_seed: int) -> dict:
     palette = list(dict.fromkeys(palette))
     while len(palette) < 4:
         palette.append("그레이")
-
-    minimum = max(_number(profile.get("min_budget"), 60_000), 30_000)
-    maximum = max(_number(profile.get("max_budget"), 180_000), minimum)
-    midpoint = (minimum + maximum) // 2
-    names = _recommendation_names(purpose)
-    recommendations = []
-    scores = [93.6, 89.8, 86.4]
-
-    for index, (top_name, bottom_name) in enumerate(names, start=1):
-        factor = [1.0, 0.9, 1.06][index - 1]
-        total = min(maximum, max(minimum, int(midpoint * factor)))
-        top_price = max(10_000, int(total * 0.44))
-        bottom_price = max(10_000, total - top_price)
-        top_color = palette[(index - 1) % len(palette)]
-        bottom_color = palette[index % len(palette)]
-        recommendations.append(
-            {
-                "rank": index,
-                "products": [
-                    _product(top_name, "top", top_color, top_price, style, index),
-                    _product(bottom_name, "bottom", bottom_color, bottom_price, style, index),
-                ],
-                "total_score": scores[index - 1],
-                "score_breakdown": {
-                    "purpose_tpo": 96.0 - index,
-                    "weather_activity": 90.0 - index,
-                    "silhouette": 94.0 - index * 2,
-                    "color": 93.0 - index,
-                    "pattern_material_complexity": 89.0 - index,
-                    "preference": 95.0 - index * 2,
-                },
-                "reasons": [
-                    f"{purpose} 상황의 격식과 활동량을 함께 고려한 조합입니다.",
-                    f"{style} 분위기를 유지하면서 상·하의 볼륨 차이를 정돈했습니다.",
-                    f"{top_color}와 {bottom_color}의 색상 관계가 안정적으로 이어집니다.",
-                ],
-                "applied_rules": ["R-CTX-01", "R-CTX-02", "R-COL-03", "R-SIL-01", "R-BUD-01"],
-                "score_coverage": 88.0,
-                "styling_tips": [
-                    "신발과 가방은 하의와 비슷한 명도로 맞추면 전체가 길어 보여요.",
-                    "액세서리는 한 가지 금속 톤으로 통일해 보세요.",
-                ],
-            }
-        )
 
     body_shapes = ["역삼각체형", "사각체형", "삼각체형"]
     body_shape = body_shapes[image_seed % len(body_shapes)]
@@ -276,7 +178,7 @@ def _build_result(profile: dict, image_seed: int) -> dict:
             "상의": "네이비 셔츠 (긴소매)",
             "하의": "그레이 슬랙스 (스트레이트, 발목 기장)",
         },
-        "recommendations": recommendations,
+        "shopping_results": [],
         "rules": {
             "implemented": 43,
             "documented": 50,
@@ -292,12 +194,10 @@ def _build_result(profile: dict, image_seed: int) -> dict:
             "parser_backend": "mock-parser",
             "vton_enabled": True,
         },
-        "tryon": {"available": True, "reason": ""},
         "images": {
             "original": "original",
             "landmarks": "landmarks",
             "segmentation": "segmentation",
-            "preview": "preview",
         },
     }
 

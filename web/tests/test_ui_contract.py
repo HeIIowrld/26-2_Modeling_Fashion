@@ -40,10 +40,11 @@ class UIContractTests(unittest.TestCase):
         javascript = (STATIC / "app.js").read_text(encoding="utf-8")
         self.assertIn('id="request-summary"', html)
         self.assertIn("renderRequestSummary(result?.request)", javascript)
-        self.assertIn("reco.ranking_tied", javascript)
-        self.assertIn("상품 이미지 확인", javascript)
-        self.assertIn("생성 품질 확인 필요", javascript)
-        self.assertIn("payload.warnings", javascript)
+        self.assertIn("무신사 상품 추천", html)
+        self.assertIn("renderShoppingProducts(result.shopping_results || [])", javascript)
+        self.assertNotIn('id="reco-picker"', html)
+        self.assertNotIn('id="reco-detail"', html)
+        self.assertNotIn("renderRecommendations", javascript)
 
 
 if __name__ == "__main__":

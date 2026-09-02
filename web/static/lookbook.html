@@ -267,18 +267,10 @@
       <p class="lede" id="result-lede"></p>
     </div>
 
-    <div class="budget-mismatch" id="budget-mismatch" hidden>
-      <h2>입력한 예산에 맞는 상품을 찾지 못했어요</h2>
-      <p>최소·최대 예산을 조정한 뒤 다시 시도해주세요.</p>
-      <div class="panel-actions">
-        <button class="btn btn-primary" id="budget-fix-btn" type="button">예산 수정하기</button>
-      </div>
-    </div>
-
     <div class="view-tabs" role="tablist" aria-label="결과 보기 전환">
       <button class="view-tab is-active" type="button" role="tab" aria-selected="true"
               data-view="recos" id="tab-recos" aria-controls="view-recos">
-        추천 코디 <em id="reco-count"></em>
+        무신사 상품 추천
       </button>
       <button class="view-tab" type="button" role="tab" aria-selected="false"
               data-view="analysis" id="tab-analysis" aria-controls="view-analysis">
@@ -287,8 +279,6 @@
     </div>
 
     <div class="view is-active" id="view-recos" role="tabpanel" aria-labelledby="tab-recos">
-      <div class="reco-picker" id="reco-picker" role="tablist" aria-label="추천 코디 선택"></div>
-      <div class="reco-detail" id="reco-detail"></div>
       <section class="shopping-section" id="shopping-section" aria-labelledby="h-shopping" hidden>
         <div class="shopping-head">
           <div>
@@ -308,7 +298,6 @@
             <button class="figure-tab is-active" type="button" data-image="original">원본</button>
             <button class="figure-tab" type="button" data-image="landmarks">관절</button>
             <button class="figure-tab" type="button" data-image="segmentation">의류 분리</button>
-            <button class="figure-tab" type="button" data-image="preview">추천 보드</button>
           </div>
           <figure class="figure">
             <img id="figure-img" alt="분석 결과 이미지" />
@@ -358,7 +347,6 @@
     </div>
 
     <p class="disclaimer" id="result-disclaimer">
-      추천 보드는 실제 가상 피팅 결과가 아니라 코디의 분위기를 확인하기 위한 참고 이미지예요.
       무신사 상품은 실시간 검색 결과이며 가격과 재고가 달라질 수 있어요.
     </p>
   </section>

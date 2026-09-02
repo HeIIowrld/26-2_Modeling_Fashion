@@ -47,9 +47,9 @@
     {"key": "body", "label": "체형·실루엣 비율 계산"},
     {"key": "segment", "label": "상의·하의 영역 분리"},
     {"key": "attributes", "label": "색상·핏·소재 인식"},
-    {"key": "candidates", "label": "조건·예산 후보 검색"},
-    {"key": "scoring", "label": "코디 규칙·조화도 채점"},
-    {"key": "preview", "label": "1순위 예상 착장 생성"},
+    {"key": "candidates", "label": "추천 키워드 생성"},
+    {"key": "scoring", "label": "무신사 실시간 상품 검색"},
+    {"key": "preview", "label": "검색 결과 카드 준비"},
     {"key": "finalize", "label": "추천 결과 정리"}
   ]
 }

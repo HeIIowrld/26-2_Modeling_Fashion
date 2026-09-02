@@ -34,7 +34,7 @@ from outfit_analyzer import COLOR_PALETTE, OutfitAnalyzer, _dominant_palette
 from pose_analyzer import PoseAnalyzer
 from product_catalog import ProductCatalog
 from quality_checker import QualityChecker
-from recommendation_engine import CHANGE_SCOPE_MAP, PURPOSE_STYLES, RecommendationEngine, NoBudgetMatch, MinGreaterThanMax
+from recommendation_engine import CHANGE_SCOPE_MAP, PURPOSE_STYLES, RecommendationEngine
 from musinsa_live_search import MusinsaLiveSearch
 from body_shape import classify
 from schemas import GOAL_NONE, SILHOUETTE_GOAL_CHOICES, UserProfile, WardrobeItem
@@ -84,9 +84,9 @@ STAGES = [
     ("body", "체형·실루엣 비율 계산"),
     ("segment", "상의·하의 영역 분리"),
     ("attributes", "색상·핏·소재 인식"),
-    ("candidates", "조건·예산 후보 검색"),
-    ("scoring", "코디 규칙·조화도 채점"),
-    ("preview", "1순위 예상 착장 생성"),
+    ("candidates", "추천 키워드 생성"),
+    ("scoring", "무신사 실시간 상품 검색"),
+    ("preview", "검색 결과 카드 준비"),
     ("finalize", "추천 결과 정리"),
 ]
 
@@ -367,94 +367,16 @@ def run_pipeline(
             on_stage("segment")
             outfit_result, parsed = analyze_outfit(image_path, pose_result)
             on_stage("attributes")
-        tryon_context = {
-            key: parsed.get(key)
-            for key in (
-                "upper_mask",
-                "lower_mask",
-                "upper_style_mask",
-                "lower_style_mask",
-                "segmentation",
-            )
-        }
-        tryon_context.update(
-            {
-                "outfit": outfit_result,
-                "classifier": getattr(engine.outfit_analyzer, "classifier", None),
-                "pose": pose_result,
-            }
-        )
         segmentation_path = output_dir / "segmentation.jpg"
         engine.outfit_analyzer.parser.colorize(parsed["segmentation"]).save(
             segmentation_path, quality=92
         )
 
-        try:
-            recommend = engine.recommender.recommend
-            if "on_stage" in inspect.signature(recommend).parameters:
-                recommendations = recommend(
-                    profile, pose_result, outfit_result, top_k=3, on_stage=on_stage
-                )
-            else:
-                on_stage("candidates")
-                on_stage("scoring")
-                recommendations = recommend(profile, pose_result, outfit_result, top_k=3)
-        except Exception as exc:
-            # Normalize NoBudgetMatch regardless of import path by checking class name.
-            exc_name = exc.__class__.__name__
-            if exc_name == "NoBudgetMatch":
-                on_stage("preview")
-                preview_path = output_dir / "preview.jpg"
-                Image.open(image_path).convert("RGB").save(preview_path, quality=92)
-
-                pose_dict = pose_result.to_dict()
-                pose_dict.pop("landmarks", None)
-                pose_dict["body_shape_basis"] = body_shape_basis
-                on_stage("finalize")
-                payload = {
-                    "budget_match": False,
-                    "code": "NO_BUDGET_MATCH",
-                    "message": "입력한 예산 범위에 맞는 추천 상품이 없어요.",
-                    "input_quality": input_quality,
-                    "pose": pose_dict,
-                    "outfit": outfit_result.to_dict(),
-                    "outfit_summary": outfit_result.to_summary_dict(),
-                    "recommendations": [],
-                    "rules": {
-                        "implemented": len(engine.recommender.active_rule_ids),
-                        "documented": len(engine.recommender.documented_rule_ids),
-                        "scoring": len(engine.recommender.scoring_rule_ids),
-                        "unsupported": [
-                            {"id": rule_id, "reason": engine.recommender.UNSUPPORTED_RULE_REASONS[rule_id]}
-                            for rule_id in engine.recommender.unsupported_rule_ids
-                        ],
-                    },
-                    "engine": {
-                        "device": engine.device,
-                        "trained_heads": engine.trained_heads,
-                        "parser_backend": engine.parser_backend,
-                        "vton_enabled": engine.tryon.enabled,
-                        "product_color_audits": len(
-                            getattr(getattr(engine.recommender, "catalog", None), "color_audits", {})
-                        ),
-                        "product_color_overrides": getattr(
-                            getattr(engine.recommender, "catalog", None), "color_override_count", 0
-                        ),
-                    },
-                    "tryon": tryon_status(),
-                    "request": _request_summary(profile),
-                    "images": {
-                        "original": "original.jpg",
-                        "landmarks": landmark_path.name,
-                        "segmentation": segmentation_path.name,
-                        "preview": preview_path.name,
-                    },
-                }
-                return PipelineResult(payload=payload, recommendations=[], person_image=image_path)
-            # For min>max use-case and other errors, preserve the previous PipelineError behavior.
-            raise PipelineError(str(exc)) from exc
-
+        # CSV 카탈로그 추천은 더 이상 실행하지 않는다. 사진·사용자 조건에서 만든
+        # 키워드를 곧바로 무신사 실시간 검색에 전달한다.
+        on_stage("candidates")
         target_keywords = engine.recommender.generate_target_keywords(profile, pose_result, outfit_result)
+        on_stage("scoring")
         product_search = getattr(engine, "product_search", None)
         shopping_results = []
         if product_search is not None:
@@ -463,22 +385,11 @@ def run_pipeline(
                     target_keywords,
                     profile,
                     limit=3,
-                    fallback_products=engine.recommender.catalog.products,
                 )
             except Exception as exc:  # 외부 검색 장애가 본 분석까지 실패시키지 않게 격리한다.
                 print(f"[MUSINSA] live search unavailable: {exc}")
 
         on_stage("preview")
-        preview_path = output_dir / "preview.jpg"
-        if recommendations[0].products:
-            engine.tryon.generate(
-                person_image=image_path,
-                recommendation=recommendations[0],
-                output_path=preview_path,
-                context=tryon_context,
-            )
-        else:
-            Image.open(image_path).convert("RGB").save(preview_path, quality=92)
 
     on_stage("finalize")
     pose_dict = pose_result.to_dict()
@@ -489,7 +400,6 @@ def run_pipeline(
         "pose": pose_dict,
         "outfit": outfit_result.to_dict(),
         "outfit_summary": outfit_result.to_summary_dict(),
-        "recommendations": [_recommendation_dict(item) for item in recommendations],
         "shopping_results": [item.public_dict() for item in shopping_results],
         "rules": {
             "implemented": len(engine.recommender.active_rule_ids),
@@ -512,20 +422,17 @@ def run_pipeline(
                 getattr(engine.recommender, "catalog", None), "color_override_count", 0
             ),
         },
-        "tryon": tryon_status(),
         "request": _request_summary(profile),
         "images": {
             "original": "original.jpg",
             "landmarks": landmark_path.name,
             "segmentation": segmentation_path.name,
-            "preview": preview_path.name,
         },
     }
     return PipelineResult(
         payload=payload,
-        recommendations=recommendations,
+        recommendations=[],
         person_image=image_path,
-        tryon_context=tryon_context,
     )
 
 
