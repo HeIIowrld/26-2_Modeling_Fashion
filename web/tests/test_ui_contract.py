@@ -40,21 +40,11 @@ class UIContractTests(unittest.TestCase):
         javascript = (STATIC / "app.js").read_text(encoding="utf-8")
         self.assertIn('id="request-summary"', html)
         self.assertIn("renderRequestSummary(result?.request)", javascript)
-        self.assertIn("reco.ranking_tied", javascript)
-        self.assertIn("상품 이미지 확인", javascript)
-        self.assertIn("생성 품질 확인 필요", javascript)
-        self.assertIn("payload.warnings", javascript)
-
-    def test_multiple_tryon_renders_are_queued_and_switchable(self):
-        html = (STATIC / "index.html").read_text(encoding="utf-8")
-        javascript = (STATIC / "app.js").read_text(encoding="utf-8")
-        active_css = (STATIC / "lookbook.css").read_text(encoding="utf-8")
-        self.assertIn('id="tryon-batch-status"', html)
-        self.assertIn("/tryon-batch", javascript)
-        self.assertIn("moveToReadyRender", javascript)
-        self.assertIn("결과 사진 다운로드", javascript)
-        self.assertIn(".tryon-batch-status", active_css)
-        self.assertIn(".tryon-switcher", active_css)
+        self.assertIn("무신사 상품 추천", html)
+        self.assertIn("renderShoppingProducts(result.shopping_results || [])", javascript)
+        self.assertNotIn('id="reco-picker"', html)
+        self.assertNotIn('id="reco-detail"', html)
+        self.assertNotIn("renderRecommendations", javascript)
 
     def test_musinsa_products_can_be_selected_for_real_tryon(self):
         html = (STATIC / "index.html").read_text(encoding="utf-8")

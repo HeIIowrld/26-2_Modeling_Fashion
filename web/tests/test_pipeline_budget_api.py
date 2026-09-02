@@ -41,9 +41,25 @@ class FakeRecommender:
     unsupported_rule_ids = []
     UNSUPPORTED_RULE_REASONS = {}
 
+    def __init__(self):
+        self.catalog = SimpleNamespace(products=[])
+
     def recommend(self, profile, pose_result, outfit_result, top_k=3):
-        from ai_fashion_recommender.src.recommendation_engine import NoBudgetMatch
-        raise NoBudgetMatch("no match")
+        raise AssertionError("CSV 카탈로그 추천은 웹 파이프라인에서 호출하면 안 됩니다.")
+
+    def generate_target_keywords(self, profile, pose_result, outfit_result):
+        return SimpleNamespace(targets={"top": {}, "bottom": {}})
+
+
+class FakeProductSearch:
+    def __init__(self):
+        self.called = False
+
+    def search(self, targets, profile, limit=3, fallback_products=()):
+        self.called = True
+        if list(fallback_products):
+            raise AssertionError("CSV fallback 상품을 실시간 검색에 넘기면 안 됩니다.")
+        return []
 
 class FakeEngine:
     def __init__(self):
@@ -51,13 +67,14 @@ class FakeEngine:
         self.quality_checker = FakeQualityChecker()
         self.outfit_analyzer = FakeOutfitAnalyzer()
         self.recommender = FakeRecommender()
+        self.product_search = FakeProductSearch()
         self.tryon = SimpleNamespace(enabled=False, available=False, NOT_READY_REASON="")
         self.device = "cpu"
         self.trained_heads = False
         self.parser_backend = "fashn"
 
 class PipelineBudgetAPITests(unittest.TestCase):
-    def test_run_pipeline_returns_structured_budget_response(self):
+    def test_run_pipeline_uses_only_live_product_search(self):
         # Create a tiny image file
         tmpdir = Path(tempfile.mkdtemp())
         img = Image.new("RGB", (64, 128), (200,200,200))
@@ -67,7 +84,8 @@ class PipelineBudgetAPITests(unittest.TestCase):
         # Monkeypatch get_engine inside pipeline
         import pipeline
         original_get_engine = pipeline.get_engine
-        pipeline.get_engine = lambda: FakeEngine()
+        fake_engine = FakeEngine()
+        pipeline.get_engine = lambda: fake_engine
 
         profile = UserProfile(
             purpose="데일리",
@@ -87,10 +105,9 @@ class PipelineBudgetAPITests(unittest.TestCase):
             self.assertIsInstance(result, PipelineResult)
             payload = result.payload
             self.assertNotIn("target_keywords", payload)
-            self.assertIn("budget_match", payload)
-            self.assertFalse(payload["budget_match"])
-            self.assertEqual(payload["code"], "NO_BUDGET_MATCH")
-            self.assertIn("입력한 예산", payload["message"])
+            self.assertNotIn("recommendations", payload)
+            self.assertEqual(payload["shopping_results"], [])
+            self.assertTrue(fake_engine.product_search.called)
             self.assertEqual(
                 stages,
                 ["pose", "quality", "body", "segment", "attributes", "candidates", "scoring", "preview", "finalize"],

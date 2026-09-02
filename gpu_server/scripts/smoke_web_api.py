@@ -109,17 +109,9 @@ def main() -> int:
     if state.get("stage_history") != expected_stages:
         raise RuntimeError(f"진행 단계 순서가 다릅니다: {state.get('stage_history')!r}")
     result = state["result"]
-    recommendations = result.get("recommendations") or []
-    if not recommendations:
-        raise RuntimeError("추천 결과가 없습니다.")
-    for recommendation in recommendations:
-        if not recommendation.get("display_rank"):
-            raise RuntimeError("표시용 추천 순위가 없습니다.")
-        if recommendation.get("ranking_tied") and not recommendation.get("ranking_reason"):
-            raise RuntimeError("공동 순위의 설명이 없습니다.")
-        for product in recommendation.get("products") or []:
-            if product.get("color_source") not in {"catalog", "image"}:
-                raise RuntimeError("상품 색상의 출처가 응답에 없습니다.")
+    shopping_results = result.get("shopping_results") or []
+    if not shopping_results:
+        raise RuntimeError("무신사 실시간 검색 결과가 없습니다.")
     echoed = result.get("request") or {}
     for key in ("purpose", "desired_style", "change_scope", "min_budget", "max_budget"):
         if echoed.get(key) != profile[key]:
@@ -130,8 +122,7 @@ def main() -> int:
             {
                 "pose_valid": result.get("pose", {}).get("valid"),
                 "parser": result.get("engine", {}).get("parser_backend"),
-                "recommendations": len(recommendations),
-                "top_score": recommendations[0].get("total_score"),
+                "shopping_results": len(shopping_results),
             },
             ensure_ascii=False,
         ),
@@ -143,50 +134,6 @@ def main() -> int:
         if not image:
             raise RuntimeError(f"결과 이미지가 비어 있습니다: {name}")
 
-    tryon = _json_request(
-        f"{base_url}/api/jobs/{job_id}/tryon/1",
-        method="POST",
-        data=b"",
-    )
-    tryon_name = tryon["image"]
-    if not isinstance(tryon.get("warnings"), list):
-        raise RuntimeError("VTON 품질 경고 목록이 응답에 없습니다.")
-    content_type, image = _download(f"{base_url}/api/jobs/{job_id}/images/{tryon_name}")
-    print("tryon", tryon_name, content_type, len(image), "cached=" + str(tryon.get("cached")))
-    if content_type != "image/jpeg" or not image.startswith(b"\xff\xd8\xff"):
-        raise RuntimeError("VTON 결과가 유효한 JPEG가 아닙니다.")
-    if tryon_name != result["images"]["preview"] or not tryon.get("cached"):
-        raise RuntimeError("1순위 VTON이 분석 중 만든 preview를 재사용하지 않았습니다.")
-
-    batch = _json_request(
-        f"{base_url}/api/jobs/{job_id}/tryon-batch",
-        method="POST",
-        data=b"",
-    )
-    while batch.get("status") in {"queued", "running"} and time.monotonic() < deadline:
-        print("tryon-batch", batch.get("status"), f"{batch.get('ready')}/{batch.get('total')}")
-        time.sleep(1)
-        batch = _json_request(f"{base_url}/api/jobs/{job_id}/tryon-batch")
-    if batch.get("status") != "done":
-        raise RuntimeError(f"다중 VTON 배치가 완료되지 않았습니다: {batch!r}")
-    expected_renders = min(3, sum(bool(item.get("products")) for item in recommendations))
-    if batch.get("ready") != expected_renders or batch.get("total") != expected_renders:
-        raise RuntimeError(f"예상 착장샷 개수가 다릅니다: {batch!r}")
-    rendered_names = []
-    for item in batch.get("items") or []:
-        if item.get("status") != "done" or not item.get("image"):
-            raise RuntimeError(f"완료되지 않은 착장샷 항목이 있습니다: {item!r}")
-        content_type, image = _download(
-            f"{base_url}/api/jobs/{job_id}/images/{item['image']}"
-        )
-        if content_type != "image/jpeg" or not image.startswith(b"\xff\xd8\xff"):
-            raise RuntimeError(f"{item['rank']}순위 VTON 결과가 유효한 JPEG가 아닙니다.")
-        rendered_names.append(item["image"])
-        print("tryon-item", item["rank"], item["image"], len(image))
-    if len(set(rendered_names)) != expected_renders:
-        raise RuntimeError(f"순위별 VTON 이미지가 중복되었습니다: {rendered_names!r}")
-
-    shopping_results = result.get("shopping_results") or []
     available_by_category = {"top": [], "bottom": []}
     selected_by_category = {}
     for product in shopping_results:

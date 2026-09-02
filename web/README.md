@@ -87,23 +87,21 @@ cd ../web/tests && ../../.venv-web/bin/python -m unittest discover -s .
 ```
 
 `ai_fashion_recommender/tests`는 파이프라인 호환성을, `web/tests`는 게이트웨이,
-예산 API, 1순위 VTON 캐시와 UI 계약을 검사합니다.
+무신사 실시간 검색·상품 VTON과 UI 계약을 검사합니다.
 
-## 자동 다중 착장샷
+## 무신사 상품 다중 착장샷
 
-분석이 끝나면 서버가 상품이 있는 상위 추천을 최대 3개까지 자동으로 합성합니다.
-1순위가 분석 단계에서 이미 실제 VTON으로 생성됐다면 그 파일을 재사용하고, 나머지는
-GPU에서 순차 생성합니다. 한 순위가 실패해도 다른 순위는 계속 처리합니다.
+분석이 끝나면 사진·사용자 조건에서 만든 키워드로 무신사를 실시간 검색하고,
+이미지 준비가 끝난 검색 상품 조합을 GPU에서 순차 생성합니다. 한 조합이 실패해도
+다른 조합은 계속 처리합니다.
 
-- `POST /api/jobs/{job_id}/tryon-batch`: 배치를 중복 없이 시작하거나 현재 상태 반환
-- `GET /api/jobs/{job_id}/tryon-batch`: 순위별 `queued/running/done/failed` 상태 조회
 - `GET /api/jobs/{job_id}/images/{name}`: 준비된 JPEG 확인·다운로드
 - `POST /api/jobs/{job_id}/tryon-products`: 무신사 카드에서 고른 상의·하의 조합 합성
 - `POST /api/jobs/{job_id}/shopping-tryon-batch`: 검색 상품 전체 조합 배치 시작·현재 상태 반환
 - `GET /api/jobs/{job_id}/shopping-tryon-batch`: 조합별 `queued/running/done/failed` 상태 조회
 
-화면은 배치 진행률과 준비된 순위를 바로 갱신하고, 이전/다음 렌더 전환 및 순위별
-JPEG 다운로드를 제공합니다. 결과와 원본은 기존과 같이 30분 안에 삭제됩니다.
+화면은 배치 진행률과 준비된 무신사 상품 조합을 바로 갱신하고, 결과 전환과 JPEG
+다운로드를 제공합니다. 결과와 원본은 기존과 같이 30분 안에 삭제됩니다.
 
 무신사 검색 결과가 로컬 카탈로그 상품과 일치하면 저장된 상품 이미지를 그대로 쓰고,
 실시간 검색 상품은 허용된 무신사 이미지 CDN에서 현재 세션으로 안전하게 받아 합성합니다.

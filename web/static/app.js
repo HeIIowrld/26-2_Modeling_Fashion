@@ -15,14 +15,7 @@ const state = {
   maxStep: 1,
   poll: null,
   retentionMinutes: 30,
-  recommendations: [],
   profile: null,
-  selected: 0,
-  feedbackByRank: {},
-  tryonByRank: {},
-  tryonStateByRank: {},
-  tryonBatch: null,
-  tryonPoll: null,
   shoppingProducts: [],
   shoppingSelection: {},
   shoppingTryonResults: [],
@@ -65,21 +58,10 @@ function syncBudgetSlider(changed) {
   maxInput.style.zIndex = "3";
 }
 
-const SCORE_LABELS = {
-  purpose_tpo: "목적·격식",
-  weather_activity: "날씨·활동",
-  silhouette: "실루엣",
-  color: "색상 조화",
-  pattern_material_complexity: "패턴·소재",
-  preference: "취향",
-  wardrobe: "보유 옷",
-};
-
 const FIGURE_CAPTIONS = {
   original: "업로드한 원본 사진입니다.",
   landmarks: "MediaPipe가 찾은 어깨·골반·무릎·발목 관절입니다.",
   segmentation: "FASHN Human Parser가 나눈 의류 영역입니다.",
-  preview: "VTON 미연결 상태의 추천 보드입니다. 실제 합성 결과가 아닙니다.",
 };
 
 /* ── 테마 ─────────────────────────────────────────────── */
@@ -403,7 +385,6 @@ $("start-analysis").addEventListener("click", async () => {
   if (profileCandidate.min_budget > profileCandidate.max_budget) { toast("최소 예산이 최대 예산보다 큽니다"); goto(2); return; }
 
   unlock(3);
-  stopTryonBatchPolling();
   stopShoppingTryonBatchPolling();
   goto(3);
   $("error-card").hidden = true;
@@ -497,77 +478,26 @@ function renderRequestSummary(request) {
 }
 
 function renderResult(result) {
-  stopTryonBatchPolling();
   stopShoppingTryonBatchPolling();
-  state.tryonBatch = null;
-  state.tryonStateByRank = {};
   state.shoppingProducts = [];
   state.shoppingSelection = {};
   state.shoppingTryonResults = [];
   state.shoppingTryonSelected = 0;
   state.shoppingTryonBatch = null;
-  $("tryon-batch-status").hidden = true;
   $("shopping-tryon-panel").hidden = true;
+  if (result.tryon) state.tryon = result.tryon;
   renderRequestSummary(result?.request);
   const isMock = Boolean(result?.mock);
   $("result-data-badge").hidden = !isMock;
   $("result-disclaimer").textContent = isMock
     ? "현재 분석 수치와 상품은 서비스 흐름을 확인하기 위한 시연 데이터예요. 실제 모델 서버를 연결하면 실제 분석 결과로 바뀝니다."
-    : "추천 보드는 코디의 분위기를 확인하기 위한 참고 이미지이며 실제 핏을 보장하지 않습니다. 무신사 상품은 실시간 검색 결과로 가격과 재고가 달라질 수 있습니다.";
+    : "무신사 상품은 실시간 검색 결과로 가격과 재고가 달라질 수 있습니다.";
 
-  // Handle explicit budget-mismatch structured response from the server.
-  if (result && result.budget_match === false) {
-    $("result-lede").textContent = "착장 분석은 완료했지만 입력한 예산 안에서 추천 후보를 만들지 못했어요.";
-    $("reco-count").textContent = "";
-    $("budget-mismatch").hidden = false;
-    // Hide the recommendation view so the user focuses on fixing budget.
-    $("view-recos").hidden = true;
-    $("tab-recos").disabled = true;
-    // Button returns the user to page 2 (conditions) without clearing inputs.
-    $("budget-fix-btn").onclick = () => {
-      goto(2);
-      $("budget-mismatch").hidden = true;
-      $("view-recos").hidden = false;
-      $("tab-recos").disabled = false;
-    };
-
-    // Still render analysis details so user can inspect outfit while deciding budget.
-    resetPrivacyBar();
-    renderCurrentOutfit(result);
-    renderBodyStats(result.pose);
-    renderRules(result.rules);
-    renderFigures(result.images);
-    showView("analysis");
-    return;
-  }
-
-  const recommendations = Array.isArray(result.recommendations) ? result.recommendations : [];
-  const best = recommendations[0];
   resetPrivacyBar();
-  if (!best) {
-    $("result-lede").textContent = "조건에 맞는 추천 후보를 만들지 못했어요. 조건을 조금 넓혀 다시 시도해주세요.";
-    $("reco-count").textContent = "";
-    $("reco-picker").replaceChildren();
-    $("reco-detail").innerHTML = '<div class="error-card"><h2>추천 후보가 없습니다</h2><p>예산이나 코디 조건을 조정한 뒤 다시 분석해주세요.</p></div>';
-    renderCurrentOutfit(result);
-    renderBodyStats(result.pose);
-    renderRules(result.rules);
-    renderFigures(result.images);
-    showView("recos");
-    return;
-  }
-  $("result-lede").textContent = best.products.length
-    ? `점수가 가장 높은 코디부터 보여드립니다. 카드를 눌러 다른 후보를 확인하세요.`
-    : "현재 코디를 유지하는 조건이라 보완 안내만 표시합니다.";
-  $("reco-count").textContent = best.products.length ? recommendations.length : "";
-  if (result.tryon) state.tryon = result.tryon;
+  $("result-lede").textContent = "사진과 입력 조건에서 만든 키워드로 무신사 상품을 실시간 검색했습니다.";
 
   renderCurrentOutfit(result);
   renderBodyStats(result.pose);
-  renderRecommendations(recommendations);
-  if (state.tryon.available && recommendations.some((item) => item.products.length)) {
-    startTryonBatch();
-  }
   renderShoppingProducts(result.shopping_results || []);
   if (state.tryon.available && (result.shopping_results || []).some((product) => product.tryon_available)) {
     startShoppingTryonBatch();
@@ -583,8 +513,8 @@ function renderShoppingProducts(products) {
   const panel = $("shopping-tryon-panel");
   if (!section || !grid) return;
   if (!products.length) {
-    section.hidden = true;
-    grid.innerHTML = "";
+    section.hidden = false;
+    grid.innerHTML = '<div class="error-card"><h2>검색 결과가 없습니다</h2><p>예산이나 선호 조건을 조금 넓혀 다시 검색해주세요.</p></div>';
     if (panel) panel.hidden = true;
     return;
   }
@@ -966,417 +896,10 @@ function renderBodyStats(pose) {
   $("body-shape-note").textContent = `${basis} ${used}`;
 }
 
-function renderRecommendations(recommendations) {
-  state.recommendations = recommendations;
-  state.feedbackByRank = {};
-  state.tryonByRank = {};
-  state.tryonStateByRank = {};
-
-  const picker = $("reco-picker");
-  picker.innerHTML = "";
-  // 후보가 하나뿐이면(현재 코디 유지) 고를 것이 없어 선택 카드를 감춘다.
-  picker.hidden = recommendations.length < 2;
-
-  recommendations.forEach((reco, index) => {
-    const total = reco.products.reduce((sum, product) => sum + product.price, 0);
-    const card = document.createElement("button");
-    card.type = "button";
-    card.className = `pick${index === 0 ? " is-on" : ""}`;
-    card.dataset.rank = String(reco.rank);
-    card.setAttribute("role", "tab");
-    card.setAttribute("aria-selected", String(index === 0));
-    card.innerHTML = `
-      <div class="pick-top">
-        <span class="pick-rank"><span class="rank-badge">${reco.ranking_tied ? "=" : reco.rank}</span>${reco.ranking_tied ? `공동 ${reco.display_rank || reco.rank}위` : "순위"}</span>
-        <span class="pick-score">${reco.total_score.toFixed(1)}</span>
-      </div>
-      <div class="pick-swatches">
-        ${reco.products.map((p) => `<i style="background: rgb(${p.color_rgb.join(",")})"></i>`).join("")}
-      </div>
-      <div class="pick-names">${reco.products.map((p) => escapeHtml(p.name)).join("<br />")}</div>
-      <div class="pick-price">${total.toLocaleString("ko-KR")}원</div>
-      ${reco.products.length ? '<span class="pick-render-state is-queued">렌더 대기</span>' : ""}`;
-    card.addEventListener("click", () => selectRecommendation(index));
-    picker.appendChild(card);
-  });
-
-  selectRecommendation(0);
-}
-
-function selectRecommendation(index) {
-  const reco = state.recommendations[index];
-  if (!reco) return;
-  state.selected = index;
-
-  document.querySelectorAll(".pick").forEach((card, position) => {
-    card.classList.toggle("is-on", position === index);
-    card.setAttribute("aria-selected", String(position === index));
-  });
-
-  const total = reco.products.reduce((sum, product) => sum + product.price, 0);
-  const products = reco.products
-    .map(
-      (product) => `
-      <div class="product">
-        <span class="product-swatch" style="background: rgb(${product.color_rgb.join(",")})"></span>
-        <div>
-          <div class="product-name">${product.url
-            ? `<a href="${escapeHtml(product.url)}" target="_blank" rel="noopener noreferrer sponsored">${escapeHtml(product.name)} ↗</a>`
-            : escapeHtml(product.name)}</div>
-          <div class="product-meta">${escapeHtml(joinKnown([
-            product.item_type,
-            product.fit,
-            product.material,
-            product.style,
-            product.color_source === "image" ? `${product.color}·상품 이미지 확인` : product.color,
-          ]))}</div>
-        </div>
-        <span class="product-price">${product.price.toLocaleString("ko-KR")}원</span>
-      </div>`
-    )
-    .join("");
-
-  const bars = Object.entries(reco.score_breakdown)
-    .map(
-      ([key, value]) => `
-      <div class="score-bar">
-        <span>${escapeHtml(SCORE_LABELS[key] || key)}</span>
-        <span class="score-track"><span class="score-value" style="transform: scaleX(${Math.min(value, 100) / 100})"></span></span>
-        <b>${value.toFixed(0)}</b>
-      </div>`
-    )
-    .join("");
-
-  const head = reco.products.length
-    ? `<span class="reco-rank"><span class="rank-badge">${reco.ranking_tied ? "=" : reco.rank}</span>${reco.ranking_tied ? `공동 ${reco.display_rank || reco.rank}위 코디` : "추천 코디"}</span>
-       <span class="reco-score">${reco.total_score.toFixed(1)}<small>점 · ${total.toLocaleString("ko-KR")}원</small></span>`
-    : `<span class="reco-rank"><span class="rank-badge">＝</span>현재 코디 유지</span>
-       <span class="card-note">새로 구매할 상품 없음</span>`;
-
-  const chosen = state.feedbackByRank[reco.rank];
-
-  $("reco-detail").innerHTML = `
-    <article class="reco is-top">
-      <div class="reco-head">${head}</div>
-      <div class="reco-body">
-        ${reco.products.length ? tryonBlock(reco) : ""}
-        ${reco.ranking_reason ? `<p class="ranking-note">${escapeHtml(reco.ranking_reason)}</p>` : ""}
-        ${products ? `<div class="product-list">${products}</div>` : ""}
-        ${reco.reasons.length ? `<ul class="reasons">${reco.reasons.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul>` : ""}
-        ${
-          reco.styling_tips.length
-            ? `<div class="tips-block"><h3>스타일링 팁</h3><ul>${reco.styling_tips
-                .map((tip) => `<li>${escapeHtml(tip)}</li>`)
-                .join("")}</ul></div>`
-            : ""
-        }
-        ${
-          bars
-            ? `<details class="mini-disclosure"><summary>점수 상세 보기</summary>
-                 <div class="score-bars">${bars}</div>
-                 ${
-                   reco.applied_rules.length
-                     ? `<div class="rule-chips">${reco.applied_rules
-                         .map((id) => `<span class="rule-chip" title="${escapeHtml(state.ruleTitles[id] || id)}">${id}</span>`)
-                         .join("")}</div>`
-                     : ""
-                 }
-               </details>`
-            : ""
-        }
-        <div class="reco-foot">
-          <div class="feedback-group" data-rank="${reco.rank}">
-            ${["마음에 들어요", "별로예요", "저장"]
-              .map(
-                (action) =>
-                  `<button class="fb-btn${chosen === action ? " is-on" : ""}" type="button" data-action="${action}">${action}</button>`
-              )
-              .join("")}
-          </div>
-          <span class="coverage-note">${reco.products.length ? `계산 범위 ${reco.score_coverage.toFixed(0)}%` : ""}</span>
-        </div>
-      </div>
-    </article>`;
-
-  $("reco-detail").querySelector(".feedback-group").addEventListener("click", sendFeedback);
-  const tryonButton = $("reco-detail").querySelector(".tryon-btn");
-  if (tryonButton) tryonButton.addEventListener("click", () => requestTryon(reco.rank));
-  $("reco-detail").querySelectorAll("[data-render-nav]").forEach((button) => {
-    button.addEventListener("click", () => moveToReadyRender(reco.rank, Number(button.dataset.renderNav)));
-  });
-}
-
-function readyTryonIndexes() {
-  return state.recommendations
-    .map((reco, index) => (state.tryonByRank[reco.rank]?.image ? index : -1))
-    .filter((index) => index >= 0);
-}
-
-function moveToReadyRender(currentRank, direction) {
-  const ready = readyTryonIndexes();
-  if (ready.length < 2) return;
-  const current = state.recommendations.findIndex((reco) => reco.rank === currentRank);
-  const position = Math.max(0, ready.indexOf(current));
-  const target = ready[(position + direction + ready.length) % ready.length];
-  selectRecommendation(target);
-}
-
-function tryonControls(reco, imageName) {
-  const ready = readyTryonIndexes();
-  const navigation = ready.length > 1
-    ? `<div class="tryon-switcher" aria-label="생성된 착장샷 전환">
-         <button type="button" data-render-nav="-1">← 이전 렌더</button>
-         <span>${ready.indexOf(state.selected) + 1} / ${ready.length}</span>
-         <button type="button" data-render-nav="1">다음 렌더 →</button>
-       </div>`
-    : "";
-  return `<div class="tryon-actions">
-    ${navigation}
-    <a class="tryon-download" href="${API_BASE}/api/jobs/${state.jobId}/images/${imageName}"
-       download="fitta-look-${reco.rank}.jpg">결과 사진 다운로드</a>
-  </div>`;
-}
-
-/* 예상 착장샷 — 분석 직후 서버가 추천 순위별로 자동 생성한다. */
-function tryonBlock(reco) {
-  const generated = state.tryonByRank[reco.rank];
-  const done = typeof generated === "string" ? generated : generated?.image;
-  const batchItem = state.tryonStateByRank[reco.rank];
-  const warnings = generated?.warnings || (reco.rank === 1 ? state.tryon.warnings : []) || [];
-  const warningBlock = warnings.length
-    ? `<div class="tryon-warning"><strong>생성 품질 확인 필요</strong><ul>${warnings
-        .map((warning) => `<li>${escapeHtml(warning)}</li>`)
-        .join("")}</ul></div>`
-    : "";
-  if (done) {
-    return `
-      <div class="tryon is-done">
-        <img src="${API_BASE}/api/jobs/${state.jobId}/images/${done}" alt="추천 코디 예상 착장샷" />
-        <p class="tryon-note">${state.result?.mock ? "서비스 흐름 확인용 시연 이미지입니다." : "생성 모델이 만든 예상 이미지입니다. 실제 핏을 보장하지 않습니다."}</p>
-        ${tryonControls(reco, done)}
-        ${warningBlock}
-      </div>`;
-  }
-  const ready = state.tryon.available;
-  const autoWorking = ["queued", "running"].includes(batchItem?.status);
-  const failed = batchItem?.status === "failed";
-  const message = batchItem?.status === "running"
-    ? "GPU에서 이 코디를 합성하고 있어요. 준비되는 즉시 자동으로 표시됩니다."
-    : batchItem?.status === "queued"
-      ? "앞선 추천 코디 다음으로 자동 생성됩니다."
-      : failed
-        ? batchItem.error || "자동 생성에 실패했습니다. 다시 시도할 수 있어요."
-        : ready
-          ? "이 코디를 입은 모습을 생성해 봅니다."
-          : state.tryon.reason;
-  return `
-    <div class="tryon${autoWorking ? " is-working" : ready ? "" : " is-pending"}">
-      <div class="tryon-slot">
-        <div class="tryon-icon" aria-hidden="true">
-          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4"
-               stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 8l6 4 6-4 8 5-3 7-3-1v19H16V19l-3 1-3-7z" />
-          </svg>
-        </div>
-        <div class="tryon-copy">
-          <strong>예상 착장샷</strong>
-          <span>${escapeHtml(message)}</span>
-        </div>
-        ${autoWorking
-          ? '<span class="tryon-auto-badge">자동 생성 중</span>'
-          : `<button class="btn btn-ghost btn-sm tryon-btn" type="button" ${ready ? "" : "disabled"}>
-               ${failed ? "다시 생성" : ready ? "지금 생성" : "준비 중"}
-             </button>`}
-      </div>
-      ${warningBlock}
-    </div>`;
-}
-
-async function requestTryon(rank) {
-  const box = $("reco-detail").querySelector(".tryon");
-  const button = box.querySelector(".tryon-btn");
-  button.disabled = true;
-  button.textContent = "생성 중…";
-  box.classList.add("is-working");
-  try {
-    const response = await fetch(`${API_BASE}/api/jobs/${state.jobId}/tryon/${rank}`, { method: "POST" });
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.detail || "예상 착장샷을 만들지 못했습니다.");
-    state.tryonByRank[rank] = {
-      image: payload.image,
-      warnings: Array.isArray(payload.warnings) ? payload.warnings : [],
-    };
-    state.tryonStateByRank[rank] = {
-      rank,
-      status: "done",
-      image: payload.image,
-      warnings: state.tryonByRank[rank].warnings,
-      error: null,
-    };
-    await pollTryonBatch();
-    selectRecommendation(state.selected);
-  } catch (error) {
-    button.disabled = false;
-    button.textContent = "다시 시도";
-    box.classList.remove("is-working");
-    toast(error.message);
-  }
-}
-
-function stopTryonBatchPolling() {
-  clearInterval(state.tryonPoll);
-  state.tryonPoll = null;
-}
-
-function tryonStateCopy(item) {
-  return JSON.stringify([item?.status, item?.image, item?.error, item?.warnings || []]);
-}
-
-function syncPickerRenderStates() {
-  document.querySelectorAll(".pick[data-rank]").forEach((card) => {
-    const badge = card.querySelector(".pick-render-state");
-    if (!badge) return;
-    const item = state.tryonStateByRank[Number(card.dataset.rank)];
-    const labels = {
-      queued: "렌더 대기",
-      running: "렌더 생성 중",
-      done: "렌더 준비 완료",
-      failed: "렌더 재시도 필요",
-      unavailable: "렌더 불가",
-    };
-    badge.className = `pick-render-state is-${item?.status || "queued"}`;
-    badge.textContent = labels[item?.status] || "렌더 대기";
-  });
-}
-
-function renderTryonBatchStatus() {
-  const panel = $("tryon-batch-status");
-  const batch = state.tryonBatch;
-  if (!batch || !batch.total || batch.status === "unavailable") {
-    panel.hidden = true;
-    return;
-  }
-  const headlines = {
-    queued: "추천 코디를 자동 렌더링할게요",
-    running: "추천 코디를 자동 렌더링 중이에요",
-    done: "모든 결과 사진이 준비됐어요",
-    partial: "준비된 결과부터 확인할 수 있어요",
-    failed: "자동 렌더링을 마치지 못했어요",
-  };
-  const labels = {
-    queued: "대기",
-    running: "생성 중",
-    done: "보기",
-    failed: "오류",
-  };
-  const progress = batch.total ? Math.min(1, batch.finished / batch.total) : 0;
-  panel.dataset.status = batch.status;
-  panel.innerHTML = `
-    <div class="tryon-batch-copy">
-      <div><strong>${escapeHtml(headlines[batch.status] || "예상 착장샷")}</strong>
-        <span>${batch.ready} / ${batch.total}장 준비</span></div>
-      <div class="tryon-batch-progress" aria-label="착장샷 생성 진행률">
-        <span style="transform:scaleX(${progress})"></span>
-      </div>
-    </div>
-    <div class="tryon-batch-items">
-      ${batch.items.map((item) => `
-        <button type="button" data-batch-rank="${item.rank}"
-          class="is-${item.status}" ${item.status === "done" ? "" : "disabled"}>
-          ${item.rank}위 · ${labels[item.status] || item.status}
-        </button>`).join("")}
-    </div>
-    ${batch.reason && ["partial", "failed"].includes(batch.status)
-      ? `<p>${escapeHtml(batch.reason)}</p>` : ""}`;
-  panel.hidden = false;
-  panel.querySelectorAll("[data-batch-rank]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const index = state.recommendations.findIndex(
-        (reco) => reco.rank === Number(button.dataset.batchRank)
-      );
-      if (index >= 0) selectRecommendation(index);
-    });
-  });
-}
-
-function applyTryonBatch(batch) {
-  const selectedRank = state.recommendations[state.selected]?.rank;
-  const before = tryonStateCopy(state.tryonStateByRank[selectedRank]);
-  state.tryonBatch = batch;
-  (batch.items || []).forEach((item) => {
-    state.tryonStateByRank[item.rank] = item;
-    if (item.status === "done" && item.image) {
-      state.tryonByRank[item.rank] = {
-        image: item.image,
-        warnings: Array.isArray(item.warnings) ? item.warnings : [],
-      };
-    }
-  });
-  syncPickerRenderStates();
-  renderTryonBatchStatus();
-  const after = tryonStateCopy(state.tryonStateByRank[selectedRank]);
-  if (selectedRank != null && before !== after) selectRecommendation(state.selected);
-  if (["done", "partial", "failed", "unavailable"].includes(batch.status)) {
-    stopTryonBatchPolling();
-  }
-}
-
-async function pollTryonBatch() {
-  if (!state.jobId) return stopTryonBatchPolling();
-  try {
-    const response = await fetch(`${API_BASE}/api/jobs/${state.jobId}/tryon-batch`);
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.detail || "렌더링 상태를 확인하지 못했습니다.");
-    applyTryonBatch(payload);
-  } catch (error) {
-    stopTryonBatchPolling();
-    toast(error.message);
-  }
-}
-
-async function startTryonBatch() {
-  if (!state.jobId) return;
-  try {
-    const response = await fetch(`${API_BASE}/api/jobs/${state.jobId}/tryon-batch`, { method: "POST" });
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.detail || "자동 렌더링을 시작하지 못했습니다.");
-    applyTryonBatch(payload);
-    if (["queued", "running"].includes(payload.status)) {
-      stopTryonBatchPolling();
-      state.tryonPoll = setInterval(pollTryonBatch, 1200);
-    }
-  } catch (error) {
-    // 구버전 백엔드에서는 기존 순위별 '지금 생성' 버튼을 그대로 사용할 수 있다.
-    console.warn("자동 렌더링 배치를 사용할 수 없습니다:", error);
-  }
-}
-
-async function sendFeedback(event) {
-  const button = event.target.closest(".fb-btn");
-  if (!button) return;
-  const group = event.currentTarget;
-  const rank = Number(group.dataset.rank);
-  try {
-    const response = await fetch(API_BASE + "/api/feedback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rank, action: button.dataset.action }),
-    });
-    if (!response.ok) throw new Error("피드백을 저장하지 못했습니다.");
-    // 다른 후보를 봤다가 돌아와도 선택이 남아 있도록 기억한다.
-    state.feedbackByRank[rank] = button.dataset.action;
-    group.querySelectorAll(".fb-btn").forEach((el) => el.classList.remove("is-on"));
-    button.classList.add("is-on");
-    toast("피드백을 저장했습니다.");
-  } catch (error) {
-    toast(error.message);
-  }
-}
-
 function renderRules(rules) {
   $("rule-summary").innerHTML = `
     <div class="rule-metric"><span>구현된 규칙</span><b>${rules.implemented} / ${rules.documented}</b></div>
-    <div class="rule-metric"><span>순위 점수 규칙</span><b>${rules.scoring}</b></div>
+    <div class="rule-metric"><span>추천 키워드 규칙</span><b>${rules.scoring}</b></div>
     <div class="rule-metric"><span>추가 데이터 필요</span><b>${rules.unsupported.length}</b></div>`;
   $("unsupported-list").innerHTML = rules.unsupported
     .map((item) => `<li><code>${escapeHtml(item.id)}</code> — ${escapeHtml(item.reason)}</li>`)
@@ -1402,21 +925,13 @@ function showFigure(images, key) {
     original: "업로드한 원본 사진입니다.",
     landmarks: "시연용 관절 위치 화면입니다.",
     segmentation: "시연용 의류 분리 화면입니다.",
-    preview: "추천 코디의 분위기를 정리한 시연용 보드입니다.",
   };
-  const liveCaptions = {
-    ...FIGURE_CAPTIONS,
-    preview: state.result?.tryon?.preview_kind === "tryon"
-      ? "1순위 추천 코디를 합성한 예상 착장샷입니다. 실제 핏을 보장하지 않습니다."
-      : "추천 상품을 정리한 참고 보드이며 실제 합성 결과가 아닙니다.",
-  };
-  $("figure-caption").textContent = (state.result?.mock ? mockCaptions : liveCaptions)[key] || "";
+  $("figure-caption").textContent = (state.result?.mock ? mockCaptions : FIGURE_CAPTIONS)[key] || "";
 }
 
 $("delete-now").addEventListener("click", async () => {
   if (!state.jobId) return;
   try {
-    stopTryonBatchPolling();
     stopShoppingTryonBatchPolling();
     const response = await fetch(`${API_BASE}/api/jobs/${state.jobId}`, { method: "DELETE" });
     if (!response.ok) throw new Error("삭제하지 못했습니다.");
@@ -1425,15 +940,13 @@ $("delete-now").addEventListener("click", async () => {
     bar.querySelector("strong").textContent = "사진과 결과 이미지를 삭제했습니다.";
     bar.querySelector("span").textContent = "화면에 남은 분석 내용은 새로고침하면 사라집니다.";
     $("delete-now").disabled = true;
-    document.querySelectorAll(".figure img, .tryon img, .shopping-tryon-result img")
+    document.querySelectorAll(".figure img, .shopping-tryon-result img")
       .forEach((img) => img.removeAttribute("src"));
     $("figure-caption").textContent = "삭제되었습니다.";
     $("clear-image").click();
     $("clear-body-image").click();
     $("wardrobe-list").replaceChildren();
     state.jobId = null;
-    state.tryonByRank = {};
-    state.tryonStateByRank = {};
     state.shoppingProducts = [];
     state.shoppingSelection = {};
     state.shoppingTryonResults = [];
@@ -1447,15 +960,12 @@ $("delete-now").addEventListener("click", async () => {
 });
 
 $("restart").addEventListener("click", () => {
-  stopTryonBatchPolling();
   stopShoppingTryonBatchPolling();
   $("clear-image").click();
   $("clear-body-image").click();
   $("wardrobe-list").replaceChildren();
   state.result = null;
   state.jobId = null;
-  state.tryonByRank = {};
-  state.tryonStateByRank = {};
   state.shoppingProducts = [];
   state.shoppingSelection = {};
   state.shoppingTryonResults = [];
