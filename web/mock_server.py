@@ -225,6 +225,26 @@ def _build_result(profile: dict, image_seed: int) -> dict:
             "상의": "네이비 셔츠 (긴소매)",
             "하의": "그레이 슬랙스 (스트레이트, 발목 기장)",
         },
+        "current_outfit_evaluation": {
+            "total_score": 86.4,
+            "verdict": "추천 코디로 보완할 수 있어요",
+            "reliable": True,
+            "keep_threshold": 85.0,
+            "diagnostic_matrix": {
+                "top": {"body_fit": 88.0, "situation_fit": 91.0, "style_fit": 87.0},
+                "bottom": {"body_fit": 84.0, "situation_fit": 89.0, "style_fit": 86.0},
+            },
+            "pass_matrix": {
+                "top": {"body_fit": True, "situation_fit": True, "style_fit": True},
+                "bottom": {"body_fit": False, "situation_fit": True, "style_fit": True},
+            },
+            "harmony_score": 88.0,
+            "summary_points": [
+                "상의: 네이비 셔츠 — 체형 적합도 88점 · 상황 적합도 91점 · 스타일 적합도 87점.",
+                "하의: 그레이 슬랙스 — 체형 적합도 84점 · 상황 적합도 89점 · 스타일 적합도 86점.",
+                "상·하의 조화는 88점이며, 추천 코디로 보완할 수 있어요.",
+            ],
+        },
         "shopping_results": [
             {
                 "product_id": "MSMOCKTOP1",
@@ -239,6 +259,8 @@ def _build_result(profile: dict, image_seed: int) -> dict:
                 "review_score": 94,
                 "source": "mock",
                 "search_keywords": ["여유핏", "코튼", "캐주얼"],
+                "recommendation_reason": f"{purpose}·{style} 조건과 여유핏·코튼 기준이 {body_shape} 실루엣에 잘 맞아 추천했어요.",
+                "recommendation_reason_source": "rules",
                 "tryon_available": True,
                 "tryon_reason": "",
             },
@@ -255,6 +277,8 @@ def _build_result(profile: dict, image_seed: int) -> dict:
                 "review_score": 96,
                 "source": "mock",
                 "search_keywords": ["세미와이드", "데님", "풀렝스"],
+                "recommendation_reason": f"{purpose}·{style} 조건과 세미와이드·풀렝스 기준이 {body_shape}의 균형을 보완해 추천했어요.",
+                "recommendation_reason_source": "rules",
                 "tryon_available": True,
                 "tryon_reason": "",
             },

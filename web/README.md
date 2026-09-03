@@ -110,3 +110,27 @@ cd ../web/tests && ../../.venv-web/bin/python -m unittest discover -s .
 화면에 추가되며 사용자가 전환·다운로드할 수 있습니다. 특정 상·하의를 선택해 해당 조합을
 우선 요청할 수도 있고, 이미 생성된 조합은 캐시를 재사용합니다. CatVTON과 현재 파서는
 상·하의 마스크만 지원하므로 신발은 하의에 잘못 덮어쓰지 않고 미지원으로 표시합니다.
+
+## 현재 코디 점수와 추천 이유
+
+`내 착장 분석` 상단에는 `FASHION_RULES_MASTER.md`를 실행하는 기존 진단기로 계산한
+상의·하의 × 체형·상황·스타일의 2×3 점수표가 표시됩니다. 각 칸의 통과 기준은 85점이며,
+종합 점수와 현재 착장 설명 세 문장도 함께 제공합니다.
+
+무신사 상품 추천 이유는 API 키가 없어도 사용자 필터, 체형 분석, 검색 키워드를 조합해
+항상 생성됩니다. 발표 서버에서 Gemini 문장 생성을 켜려면 다음 환경 변수를 지정합니다.
+LLM 호출에는 원본 사진을 보내지 않고 구조화된 분석값만 보내며, 호출 실패 시 규칙 기반
+문장으로 자동 대체합니다.
+
+```bash
+export GEMINI_API_KEY="..."
+export FASHION_LLM_REASONS=1
+export FASHION_LLM_PROVIDER="gemini"
+# 선택: Gemini 기본값은 gemini-2.5-flash-lite
+export FASHION_LLM_MODEL="gemini-2.5-flash-lite"
+```
+
+OpenAI를 사용할 때는 `FASHION_LLM_PROVIDER=openai`, `OPENAI_API_KEY`, 원하는
+`FASHION_LLM_MODEL`을 지정합니다. 브라우저 입력란에서 받은 사용자 키는 저장하거나
+로그에 남기면 안 되므로, 차후 사용자별 연동은 세션 메모리 보관 또는 Google OAuth로
+별도 구현하는 것을 전제로 합니다.

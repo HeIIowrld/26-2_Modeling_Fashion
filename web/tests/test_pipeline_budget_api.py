@@ -50,6 +50,24 @@ class FakeRecommender:
     def generate_target_keywords(self, profile, pose_result, outfit_result):
         return SimpleNamespace(targets={"top": {}, "bottom": {}})
 
+    def evaluate_current_outfit(self, profile, pose_result, outfit_result):
+        from ai_fashion_recommender.src.schemas import CurrentOutfitEvaluation
+        matrix = {
+            "top": {"body_fit": 86.0, "situation_fit": 87.0, "style_fit": 88.0},
+            "bottom": {"body_fit": 84.0, "situation_fit": 89.0, "style_fit": 90.0},
+        }
+        return CurrentOutfitEvaluation(
+            total_score=86.7, score_breakdown={}, reasons=[], applied_rules=[],
+            score_coverage=100.0, analysis_confidence=0.8, reliable=True,
+            keep_threshold=85.0, should_keep=False, verdict="추천 코디로 보완할 수 있어요",
+            diagnostic_matrix=matrix,
+            pass_matrix={
+                "top": {"body_fit": True, "situation_fit": True, "style_fit": True},
+                "bottom": {"body_fit": False, "situation_fit": True, "style_fit": True},
+            },
+            harmony_score=88.0,
+        )
+
 
 class FakeProductSearch:
     def __init__(self):
@@ -107,6 +125,11 @@ class PipelineBudgetAPITests(unittest.TestCase):
             self.assertNotIn("target_keywords", payload)
             self.assertNotIn("recommendations", payload)
             self.assertEqual(payload["shopping_results"], [])
+            self.assertEqual(payload["current_outfit_evaluation"]["total_score"], 86.7)
+            self.assertEqual(len(payload["current_outfit_evaluation"]["summary_points"]), 3)
+            self.assertFalse(
+                payload["current_outfit_evaluation"]["pass_matrix"]["bottom"]["body_fit"]
+            )
             self.assertTrue(fake_engine.product_search.called)
             self.assertEqual(
                 stages,
