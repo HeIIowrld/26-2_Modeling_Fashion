@@ -496,6 +496,7 @@ function renderResult(result) {
   resetPrivacyBar();
   $("result-lede").textContent = "사진과 입력 조건에서 만든 키워드로 무신사 상품을 실시간 검색했습니다.";
 
+  renderCurrentOutfitEvaluation(result.current_outfit_evaluation);
   renderCurrentOutfit(result);
   renderBodyStats(result.pose);
   renderShoppingProducts(result.shopping_results || []);
@@ -548,6 +549,8 @@ function renderShoppingProducts(products) {
                   `<span class="shopping-keyword">${escapeHtml(keyword)}</span>`
                 ).join("")}
               </div>` : ""}
+            ${product.recommendation_reason ? `
+              <p class="shopping-reason"><b>추천 이유</b>${escapeHtml(product.recommendation_reason)}</p>` : ""}
             <div class="shopping-bottom">
               <strong>${Number(product.price).toLocaleString("ko-KR")}원</strong>
               <span>무신사에서 보기 ↗</span>
@@ -784,6 +787,47 @@ function showView(name) {
 document.querySelectorAll(".view-tab").forEach((tab) => {
   tab.addEventListener("click", () => showView(tab.dataset.view));
 });
+
+function renderCurrentOutfitEvaluation(evaluation) {
+  const matrixBody = $("current-score-matrix");
+  const points = $("current-outfit-points");
+  if (!evaluation) {
+    $("current-score-value").textContent = "—";
+    $("current-score-verdict").textContent = "현재 착장 점수를 계산하지 못했습니다.";
+    matrixBody.innerHTML = "";
+    points.innerHTML = "<li>분석 결과가 충분하지 않아 설명을 만들지 못했습니다.</li>";
+    return;
+  }
+
+  const score = Number(evaluation.total_score || 0);
+  $("current-score-value").textContent = score.toFixed(1);
+  $("current-score-verdict").textContent = evaluation.verdict || "Fashion Rules 기반 분석 결과입니다.";
+  const labels = {
+    body_fit: "체형 적합도",
+    situation_fit: "상황 적합도",
+    style_fit: "스타일 적합도",
+  };
+  matrixBody.innerHTML = [
+    ["top", "상의"],
+    ["bottom", "하의"],
+  ].map(([category, categoryLabel]) => {
+    const values = evaluation.diagnostic_matrix?.[category] || {};
+    const passes = evaluation.pass_matrix?.[category] || {};
+    const cells = Object.keys(labels).map((key) => {
+      const value = Number(values[key] || 0);
+      const passed = passes[key] ?? value >= 85;
+      return `<td><span class="matrix-score is-${passed ? "pass" : "fail"}"
+        aria-label="${labels[key]} ${value.toFixed(1)}점, ${passed ? "통과" : "보완 필요"}">
+        <b>${value.toFixed(1)}</b><small>${passed ? "통과" : "보완"}</small></span></td>`;
+    }).join("");
+    return `<tr><th scope="row">${categoryLabel}</th>${cells}</tr>`;
+  }).join("");
+
+  const summaryPoints = (evaluation.summary_points || []).slice(0, 3);
+  points.innerHTML = summaryPoints
+    .map((point) => `<li>${escapeHtml(point)}</li>`)
+    .join("");
+}
 
 function renderCurrentOutfit(result) {
   const { outfit_summary: summary, outfit } = result;

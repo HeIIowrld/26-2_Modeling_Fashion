@@ -299,6 +299,32 @@
     </div>
 
     <div class="view" id="view-analysis" role="tabpanel" aria-labelledby="tab-analysis" hidden>
+      <section class="current-score-panel" aria-labelledby="h-current-score">
+        <div class="current-score-head">
+          <div>
+            <span class="shopping-eyebrow">FASHION RULE SCORE</span>
+            <h2 id="h-current-score">현재 코디 점수</h2>
+            <p id="current-score-verdict"></p>
+          </div>
+          <div class="current-score-total" aria-label="현재 코디 종합 점수">
+            <strong id="current-score-value">—</strong><span>/ 100</span>
+          </div>
+        </div>
+        <div class="current-score-content">
+          <div class="score-matrix-wrap">
+            <table class="score-matrix" aria-label="상의와 하의의 체형, 상황, 스타일 적합도">
+              <thead><tr><th scope="col">구분</th><th scope="col">체형 적합도</th><th scope="col">상황 적합도</th><th scope="col">스타일 적합도</th></tr></thead>
+              <tbody id="current-score-matrix"></tbody>
+            </table>
+            <p class="score-threshold">각 항목 85점 이상이면 통과</p>
+          </div>
+          <div class="outfit-summary-block">
+            <h3>현재 코디 설명</h3>
+            <ul id="current-outfit-points"></ul>
+          </div>
+        </div>
+      </section>
+
       <div class="analysis-grid">
         <div class="analysis-visual">
           <div class="figure-tabs" id="figure-tabs">

@@ -142,6 +142,7 @@ class MusinsaLiveSearchTests(unittest.TestCase):
         self.assertNotIn("matched_keywords", payload)
         self.assertNotIn("retrieval_score", payload)
         self.assertEqual(payload["url"], "https://product")
+        self.assertIn("recommendation_reason", payload)
 
     def test_public_payload_exposes_only_three_representative_search_keywords(self):
         product = ShoppingProduct(

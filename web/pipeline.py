@@ -35,6 +35,10 @@ from config import (
 )
 from fashion_model import FashionClassifier
 from fashion_prompts import STYLE_PROMPTS
+from recommendation_explanations import (
+    add_product_recommendation_reasons,
+    build_outfit_summary_points,
+)
 from feedback_store import FeedbackStore
 from outfit_analyzer import COLOR_PALETTE, OutfitAnalyzer, _dominant_palette
 from pose_analyzer import PoseAnalyzer
@@ -482,6 +486,13 @@ def run_pipeline(
             on_stage("segment")
             outfit_result, parsed = analyze_outfit(image_path, pose_result)
             on_stage("attributes")
+
+        # Fashion Rules의 기존 2×3 진단기를 현재 착장 결과에 다시 연결한다.
+        current_outfit_evaluation = engine.recommender.evaluate_current_outfit(
+            profile,
+            pose_result,
+            outfit_result,
+        )
         # 구형 CSV 추천에는 쓰지 않지만, 사용자가 고른 무신사 상품을 VTON으로
         # 합성할 때 현재 착장의 마스크·분석 결과가 필요하다.
         tryon_context = {
@@ -522,6 +533,12 @@ def run_pipeline(
                 )
             except Exception as exc:  # 외부 검색 장애가 본 분석까지 실패시키지 않게 격리한다.
                 print(f"[MUSINSA] live search unavailable: {exc}")
+        add_product_recommendation_reasons(
+            shopping_results,
+            profile,
+            pose_result,
+            target_keywords,
+        )
         shopping_payloads, shopping_tryon_products = _shopping_tryon_payloads(
             shopping_results,
             engine.recommender.catalog.products,
@@ -540,6 +557,13 @@ def run_pipeline(
         "pose": pose_dict,
         "outfit": outfit_result.to_dict(),
         "outfit_summary": outfit_result.to_summary_dict(),
+        "current_outfit_evaluation": {
+            **current_outfit_evaluation.to_dict(),
+            "summary_points": build_outfit_summary_points(
+                outfit_result,
+                current_outfit_evaluation,
+            ),
+        },
         "shopping_results": shopping_payloads,
         "rules": {
             "implemented": len(engine.recommender.active_rule_ids),

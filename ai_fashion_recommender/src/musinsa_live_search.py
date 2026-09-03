@@ -63,6 +63,8 @@ class ShoppingProduct:
     search_keywords: list[str] = field(default_factory=list)
     matched_keywords: list[str] = field(default_factory=list)
     retrieval_score: float = 0.0
+    recommendation_reason: str = ""
+    recommendation_reason_source: str = "rules"
 
     def public_dict(self) -> dict:
         """내부 키워드와 점수는 웹 UI에 보내지 않는다."""
