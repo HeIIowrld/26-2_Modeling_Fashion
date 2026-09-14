@@ -307,6 +307,22 @@ class AspectPaddingTests(unittest.TestCase):
         restored = unpad_result(rendered, (0, 0, 768, 1024), self.TARGET, self.TARGET)
         self.assertIs(restored, rendered)
 
+    def test_matching_aspect_larger_photo_returns_to_original_size(self):
+        # 이미 3:4인 사진은 여백이 안 생기지만 렌더 크기(768x1024)와 원본 크기가 다르다.
+        # 원본 크기로 되돌리지 않으면 뒤이은 보호 영역 복원이 크기 불일치로 죽는다.
+        # 2026-09-14 평가에서 960x1280 사진 2명의 합성 96쌍이 전부 이 문제로 실패했다.
+        for size in ((960, 1280), (3024, 4032)):
+            with self.subTest(size=size):
+                person = Image.new("RGB", size, "red")
+                padded, box = pad_to_aspect(person, self.TARGET, (0, 0, 0))
+                self.assertEqual(box, (0, 0) + size)
+                rendered = padded.resize(self.TARGET, Image.LANCZOS)
+                restored = unpad_result(rendered, box, padded.size, person.size)
+                self.assertEqual(restored.size, size)
+                restore = np.zeros((size[1], size[0]), dtype=bool)
+                restore[10:60, 10:60] = True
+                self.assertEqual(_restore_original_regions(person, restored, restore).size, size)
+
 
 if __name__ == "__main__":
     unittest.main()
