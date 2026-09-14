@@ -387,7 +387,11 @@ def unpad_result(
 ) -> Image.Image:
     """레터박스로 덧댄 여백을 걷어내고 원본 크기로 되돌린다."""
     if content_box[:2] == (0, 0) and content_box[2:] == padded_size:
-        return result
+        # 여백이 없어도 렌더 크기와 원본 크기는 다를 수 있다(960x1280, 3024x4032 같은
+        # 3:4 사진). 그대로 돌려주면 뒤이은 보호 영역 복원이 크기 불일치로 실패한다.
+        if result.size == tuple(original_size):
+            return result
+        return result.resize(original_size, Image.LANCZOS)
     scale_x = result.width / padded_size[0]
     scale_y = result.height / padded_size[1]
     box = (
