@@ -51,6 +51,14 @@ class BuildProfileTests(unittest.TestCase):
         self.assertEqual(profile.preferred_colors, ["네이비"])
         self.assertEqual(profile.avoided_colors, [])
 
+    def test_gender_survives_profile_round_trip(self):
+        self.assertEqual(build_profile({"gender": "남성"}).gender, "남성")
+
+    def test_personal_tone_survives_profile_round_trip(self):
+        self.assertEqual(build_profile({"personal_tone": "웜톤"}).personal_tone, "웜톤")
+        self.assertEqual(build_profile({"personal_tone": "쿨톤"}).personal_tone, "쿨톤")
+        self.assertEqual(build_profile({"personal_tone": "잘못된 값"}).personal_tone, "")
+
     def test_material_categories_expand_to_existing_model_labels(self):
         profile = build_profile({"preferred_materials": ["면·일상 소재", "얇은 소재"]})
         self.assertEqual(
@@ -63,6 +71,9 @@ class BuildProfileTests(unittest.TestCase):
 
 
 class FormOptionTests(unittest.TestCase):
+    def test_required_gender_options_are_explicit(self):
+        self.assertEqual(form_options()["genders"], ["남성", "여성"])
+
     def test_required_style_options_use_plain_labels_and_engine_values(self):
         options = form_options()["styles"]
         labels = {option if isinstance(option, str) else option["label"] for option in options}

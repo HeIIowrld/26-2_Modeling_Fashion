@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -7,6 +8,23 @@ from PIL import Image
 
 from config import FASHION_SIGLIP_MODEL_ID
 from fashion_attribute_model import PREPROCESS_SQUASH, apply_preprocess_mode
+
+
+def _cached_open_clip_assets(model_id: str):
+    """완성된 HF 캐시가 있으면 원격 HEAD 요청 없이 모델·토크나이저 경로를 돌려준다."""
+    try:
+        from huggingface_hub import snapshot_download
+
+        model_dir = Path(snapshot_download(model_id, local_files_only=True))
+        config = json.loads((model_dir / "open_clip_config.json").read_text(encoding="utf-8"))
+        text_cfg = config.get("model_cfg", {}).get("text_cfg", {})
+        tokenizer_id = str(text_cfg.get("hf_tokenizer_name") or "")
+        if not tokenizer_id:
+            return model_dir, None, text_cfg
+        tokenizer_dir = Path(snapshot_download(tokenizer_id, local_files_only=True))
+        return model_dir, tokenizer_dir, text_cfg
+    except (OSError, ValueError, KeyError, json.JSONDecodeError):
+        return None, None, {}
 
 
 class FashionClassifier:
@@ -26,6 +44,8 @@ class FashionClassifier:
         self.preprocess = None
         self.tokenizer = None
         self.attribute_predictor = None
+        self.shoe_predictor = None
+        self._shoe_checkpoint_checked = False
         self._text_feature_cache = {}
         self.device = "cpu"
         if enabled:
@@ -34,11 +54,24 @@ class FashionClassifier:
 
             self._torch = torch
             self.device = "cuda" if device == "auto" and torch.cuda.is_available() else ("cpu" if device == "auto" else device)
+            cached_model, cached_tokenizer, text_cfg = _cached_open_clip_assets(model_id)
+            model_source = f"local-dir:{cached_model}" if cached_model else f"hf-hub:{model_id}"
             self.model, _, self.preprocess = open_clip.create_model_and_transforms(
-                f"hf-hub:{model_id}",
+                model_source,
                 device=self.device,
             )
-            self.tokenizer = open_clip.get_tokenizer(f"hf-hub:{model_id}")
+            if cached_tokenizer:
+                from open_clip.tokenizer import HFTokenizer
+
+                tokenizer_kwargs = dict(text_cfg.get("tokenizer_kwargs") or {})
+                self.tokenizer = HFTokenizer(
+                    str(cached_tokenizer),
+                    context_length=int(text_cfg.get("context_length") or 77),
+                    tokenizer_mode=text_cfg.get("tokenizer_mode"),
+                    **tokenizer_kwargs,
+                )
+            else:
+                self.tokenizer = open_clip.get_tokenizer(f"hf-hub:{model_id}")
             self.model.eval()
             if attribute_checkpoint:
                 checkpoint = Path(attribute_checkpoint).expanduser().resolve()
@@ -69,6 +102,22 @@ class FashionClassifier:
                 )
         else:
             self.layering_predictor = None
+
+    def predict_shoes(self, rgb, segmentation) -> dict:
+        import os
+        from shoe_model import ShoePredictor, shoe_crop
+        checkpoint = os.environ.get("FASHION_SHOE_CHECKPOINT")
+        if not self.enabled or not checkpoint:
+            return {"status": "not_trained", "accepted": False, "item_type": "분석 보류",
+                    "confidence": 0.0, "source": "unavailable"}
+        if not self._shoe_checkpoint_checked:
+            self.shoe_predictor = ShoePredictor(checkpoint, model_id=self.model_id, device=self.device)
+            self._shoe_checkpoint_checked = True
+        crop = shoe_crop(rgb, segmentation)
+        if crop is None:
+            return {"status": "not_visible", "accepted": False, "item_type": "분석 보류",
+                    "confidence": 0.0, "source": "unavailable"}
+        return self.shoe_predictor.predict(self._encode_image(crop))
 
     @property
     def trained_attributes_enabled(self) -> bool:

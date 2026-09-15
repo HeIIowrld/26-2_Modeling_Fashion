@@ -32,7 +32,23 @@ SCOPE_CATEGORIES = {
     "전체 변경": ("top", "bottom"),
     "현재 유지": (),
 }
-CATEGORY_LABELS = {"top": "상의", "bottom": "하의"}
+CATEGORY_LABELS = {"top": "상의", "bottom": "하의", "shoes": "신발"}
+
+
+def selected_categories(profile: UserProfile) -> tuple[str, ...]:
+    """새 체크박스 입력을 우선하고, 기존 노트북의 change_scope도 지원한다."""
+    if profile.change_categories is not None:
+        values = profile.change_categories
+        if not isinstance(values, list) or not values or any(not isinstance(value, str) or value not in CATEGORY_LABELS for value in values):
+            raise ValueError("change_categories는 top, bottom, shoes 중 하나 이상을 담은 목록이어야 합니다.")
+        return tuple(category for category in CATEGORY_LABELS if category in values)
+    return SCOPE_CATEGORIES.get(profile.change_scope, ("top", "bottom"))
+
+
+SHOE_STYLE_DEFAULTS = {
+    "스트리트": "스니커즈", "캐주얼": "스니커즈", "미니멀": "로퍼",
+    "포멀": "더비슈즈", "스포티": "러닝화", "로맨틱": "메리제인",
+}
 STYLE_DEFAULTS = {
     "스트리트": {
         "top": {"fit": ("오버핏",), "length": ("기본 기장", "롱 기장")},
@@ -76,8 +92,8 @@ class TargetKeywordResult:
 
     def brief_lines(self, max_keywords: int = 8) -> list[str]:
         priority = (
-            "fit", "length", "waistline", "structure", "silhouette",
-            "style", "material", "color", "harmony_reference_color",
+            "item_type", "fit", "length", "waistline", "structure", "silhouette",
+            "style", "material", "color", "color_temperature", "harmony_reference_color",
             "purpose", "season", "function",
         )
         lines = []
@@ -136,8 +152,7 @@ class RecommendationKeywordGenerator:
         pose: PoseAnalysis,
         outfit: OutfitAnalysis,
     ) -> TargetKeywordResult:
-        explicit_scope = self._provided(profile, "change_scope")
-        categories = SCOPE_CATEGORIES.get(profile.change_scope, ("top", "bottom")) if explicit_scope else ("top", "bottom")
+        categories = selected_categories(profile)
         targets = {category: {"category": [CATEGORY_LABELS[category]]} for category in categories}
         constraints: dict[str, Any] = {"search_categories": list(categories)}
         sources: dict[str, str] = {}
@@ -150,7 +165,11 @@ class RecommendationKeywordGenerator:
             clean = [value for value in values if self._usable(value)]
             if not clean:
                 return
-            for target in targets.values():
+            applicable = [target for category, target in targets.items()
+                          if not (category == "shoes" and attribute == "material" and source == "photo_fallback")]
+            if not applicable:
+                return
+            for target in applicable:
                 self._add(target, attribute, *clean)
             sources[attribute] = source
             used_input |= source == "user_input"
@@ -186,6 +205,16 @@ class RecommendationKeywordGenerator:
             add_all("harmony_reference_color", detected_colors, "photo_fallback")
             self._rule(rules, "R-COL-03")
 
+        if self._provided(profile, "personal_tone") and profile.personal_tone in {"웜톤", "쿨톤"}:
+            for target in targets.values():
+                self._add(target, "color_temperature", profile.personal_tone)
+            constraints["personal_tone"] = profile.personal_tone
+            sources["color_temperature"] = "user_input"
+            used_input = True
+            self._rule(rules, "R-COL-14")
+            if any("데님" in target.get("material", []) for target in targets.values()):
+                self._rule(rules, "R-COL-15")
+
         if self._provided(profile, "activity_level") and profile.activity_level == "높음":
             add_all("function", ["활동성", "통기성"], "user_input")
             self._rule(rules, "R-WEA-02")
@@ -194,7 +223,7 @@ class RecommendationKeywordGenerator:
         proportion_reliable = pose.valid and pose.full_body_score >= 0.65
         shape_reliable = pose.valid and pose.body_shape_confidence >= 0.65
         goal = profile.silhouette_goal if self._provided(profile, "silhouette_goal") else GOAL_NONE
-        if proportion_reliable or shape_reliable:
+        if ("top" in targets or "bottom" in targets) and (proportion_reliable or shape_reliable):
             if proportion_reliable and (pose.leg_ratio < 0.60 or goal in {GOAL_LONGER_LEGS, GOAL_WAISTLINE}):
                 used_photo = True
                 if "top" in targets:
@@ -247,6 +276,29 @@ class RecommendationKeywordGenerator:
             default_source = "fashion_rule_default"
         style_defaults = STYLE_DEFAULTS.get(fallback_style, STYLE_DEFAULTS["캐주얼"])
         for category, target in targets.items():
+            if category == "shoes":
+                shoe_type = SHOE_STYLE_DEFAULTS.get(fallback_style, "스니커즈")
+                # 상황과 활동성 우선. 신발에는 체형/다리 길이 보정 규칙을 적용하지 않는다.
+                if self._provided(profile, "purpose") and profile.purpose in {"면접", "비즈니스", "결혼식", "하객"}:
+                    shoe_type = "로퍼"
+                if self._provided(profile, "purpose") and profile.purpose in {"운동", "스포츠", "러닝"}:
+                    shoe_type = "러닝화"
+                if profile.dress_code in {"포멀", "비즈니스 포멀"}:
+                    shoe_type = "더비슈즈"
+                if profile.purpose == "여행" or profile.activity_level == "높음":
+                    self._add(target, "function", "장시간 보행", "착화감")
+                # 학습된 신발 종류는 명시 스타일/목적이 없는 경우에만 보충한다.
+                if (not self._provided(profile, "desired_style") and not self._provided(profile, "purpose")
+                        and not self._provided(profile, "dress_code")
+                        and outfit.shoes.get("accepted")):
+                    shoe_type = outfit.shoes["item_type"]
+                    default_source = "photo_shoe_head"
+                    used_photo = True
+                self._add(target, "item_type", shoe_type)
+                sources["shoes.item_type"] = default_source
+                self._rule(rules, "R-CTX-01")
+                self._rule(rules, "R-ACC-06")
+                continue
             defaults = style_defaults[category]
             if not target.get("fit"):
                 self._add(target, "fit", *defaults["fit"])

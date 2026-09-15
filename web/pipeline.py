@@ -54,6 +54,7 @@ RULES_PATH = PROJECT_DIR / "FASHION_RULES_MASTER.md"
 ATTRIBUTE_HEADS_PATH = FASHION_ATTRIBUTE_HEADS_PATH
 
 PURPOSES = list(PURPOSE_STYLES)
+GENDERS = ["남성", "여성"]
 STYLES = [
     "캐주얼",
     "미니멀",
@@ -313,6 +314,8 @@ def build_profile(payload: dict) -> UserProfile:
         min_budget=min_b,
         max_budget=max_b,
         change_scope=payload.get("change_scope") or "전체 변경",
+        change_categories=payload.get("change_categories"),
+        gender=str(payload.get("gender") or ""),
         height_cm=number("height_cm"),
         weight_kg=number("weight_kg"),
         chest_cm=number("chest_cm"),
@@ -330,6 +333,11 @@ def build_profile(payload: dict) -> UserProfile:
         activity_level=payload.get("activity_level") or "보통",
         preferred_colors=string_list("preferred_colors"),
         avoided_colors=string_list("avoided_colors"),
+        personal_tone=(
+            str(payload.get("personal_tone") or "")
+            if str(payload.get("personal_tone") or "") in {"웜톤", "쿨톤"}
+            else ""
+        ),
         preferred_materials=preferred_materials,
         avoided_materials=string_list("avoided_materials"),
         excluded_item_types=string_list("excluded_item_types"),
@@ -570,7 +578,13 @@ def run_pipeline(
             "documented": len(engine.recommender.documented_rule_ids),
             "scoring": len(engine.recommender.scoring_rule_ids),
             "unsupported": [
-                {"id": rule_id, "reason": engine.recommender.UNSUPPORTED_RULE_REASONS[rule_id]}
+                {
+                    "id": rule_id,
+                    "reason": engine.recommender.UNSUPPORTED_RULE_REASONS.get(
+                        rule_id,
+                        "문서에는 정의되어 있지만 실행 코드가 아직 연결되지 않았습니다.",
+                    ),
+                }
                 for rule_id in engine.recommender.unsupported_rule_ids
             ],
         },
@@ -703,13 +717,16 @@ def _request_summary(profile: UserProfile) -> dict:
     return {
         "purpose": profile.purpose,
         "desired_style": profile.desired_style,
+        "gender": profile.gender,
         "change_scope": profile.change_scope,
+        "change_categories": profile.change_categories,
         "min_budget": profile.min_budget,
         "max_budget": profile.max_budget,
         "season": profile.season,
         "activity_level": profile.activity_level,
         "preferred_colors": list(profile.preferred_colors),
         "avoided_colors": list(profile.avoided_colors),
+        "personal_tone": profile.personal_tone,
         "preferred_materials": list(profile.preferred_materials),
     }
 
@@ -729,6 +746,7 @@ def save_feedback(rank: int, action: str, note: str = "") -> dict:
 def form_options() -> dict:
     return {
         "purposes": PURPOSES,
+        "genders": GENDERS,
         "styles": STYLES,
         "change_scopes": CHANGE_SCOPES,
         "seasons": SEASONS,

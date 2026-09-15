@@ -32,6 +32,7 @@ class OutfitSummaryTests(unittest.TestCase):
         self.assertEqual(result.to_summary_dict(), {
             "상의": "화이트 폴로 셔츠 (반팔)",
             "하의": "네이비 팬츠 (풀렝스, 포켓)",
+            "신발": "신발 인식 학습 준비 중 · 입력 조건으로 추천 가능",
         })
 
     def test_summary_uses_accepted_detailed_bottom_attributes(self):

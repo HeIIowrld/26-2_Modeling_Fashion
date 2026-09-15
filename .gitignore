@@ -7,6 +7,8 @@ __pycache__/
 .ipynb_checkpoints/
 .pytest_cache/
 .venv*/
+/.env
+/.env.local
 
 # Claude Code 로컬 세션 설정
 .claude/

@@ -48,6 +48,35 @@ class RecommendationKeywordTests(unittest.TestCase):
         self.assertEqual(result.sources["style"], "user_input")
         self.assertEqual(result.mode, "mixed")  # 체형·비율은 사진에서 보충
 
+    def test_shoes_ignore_body_and_clothing_material(self):
+        profile = UserProfile(change_categories=["shoes"], desired_style="미니멀",
+                              purpose="데이트", provided_fields=["desired_style", "purpose"])
+        first = self.generator.generate(profile, self.pose, self.outfit)
+        self.pose.leg_ratio = .9
+        self.pose.body_shape = "역삼각체형"
+        second = self.generator.generate(profile, self.pose, self.outfit)
+        self.assertEqual(first.to_dict(), second.to_dict())
+        self.assertEqual(first.targets["shoes"]["item_type"], ["로퍼"])
+        self.assertNotIn("material", first.targets["shoes"])
+        self.assertFalse(any(rule.startswith("R-BOD") for rule in first.applied_rules))
+
+    def test_checkbox_combinations_override_legacy_scope(self):
+        from itertools import combinations
+        for count in (1, 2, 3):
+            for values in combinations(("top", "bottom", "shoes"), count):
+                profile = UserProfile(change_categories=list(values), change_scope="현재 유지")
+                result = self.generator.generate(profile, self.pose, self.outfit)
+                self.assertEqual(tuple(result.targets), values)
+        for invalid in ([], ["hat"], "shoes"):
+            with self.assertRaises(ValueError):
+                self.generator.generate(UserProfile(change_categories=invalid), self.pose, self.outfit)
+
+    def test_trained_shoe_photo_fallback(self):
+        self.outfit.shoes = {"accepted": True, "item_type": "부츠"}
+        result = self.generator.generate(UserProfile(change_categories=["shoes"], provided_fields=[]),
+                                         self.pose, self.outfit)
+        self.assertEqual(result.targets["shoes"]["item_type"], ["부츠"])
+
     def test_missing_inputs_fall_back_to_photo(self):
         profile = UserProfile(
             purpose="데일리",
@@ -83,6 +112,26 @@ class RecommendationKeywordTests(unittest.TestCase):
         self.assertEqual(result.constraints["excluded_colors"], ["베이지"])
         self.assertEqual(result.constraints["excluded_materials"], ["가죽"])
         self.assertNotIn("excluded_colors", result.targets["top"])
+
+    def test_personal_tone_becomes_search_constraint(self):
+        profile = UserProfile(
+            change_categories=["top"], personal_tone="웜톤",
+            provided_fields=["change_categories", "personal_tone"],
+        )
+        result = self.generator.generate(profile, self.pose, self.outfit)
+        self.assertEqual(result.targets["top"]["color_temperature"], ["웜톤"])
+        self.assertEqual(result.constraints["personal_tone"], "웜톤")
+        self.assertEqual(result.sources["color_temperature"], "user_input")
+        self.assertIn("R-COL-14", result.applied_rules)
+
+    def test_denim_personal_tone_adds_denim_rule(self):
+        profile = UserProfile(
+            change_categories=["bottom"], personal_tone="쿨톤",
+            preferred_materials=["데님"],
+            provided_fields=["change_categories", "personal_tone", "preferred_materials"],
+        )
+        result = self.generator.generate(profile, self.pose, self.outfit)
+        self.assertIn("R-COL-15", result.applied_rules)
 
     def test_brief_output_contains_no_numeric_score(self):
         result = self.generator.generate(

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import os
 import socket
 import sys
 import webbrowser
@@ -23,6 +24,39 @@ from pathlib import Path
 WEB_DIR = Path(__file__).resolve().parent
 # 분석·규칙·모델은 웹 전용이 아니라 Notebook과 공용이라 별도 폴더에 둔다.
 CORE_DIR = WEB_DIR.parent / "ai_fashion_recommender"
+ENV_FILE = WEB_DIR.parent / ".env"
+SERVER_ENV_KEYS = {
+    "GEMINI_API_KEY",
+    "OPENAI_API_KEY",
+    "FASHION_LLM_REASONS",
+    "FASHION_LLM_PROVIDER",
+    "FASHION_LLM_MODEL",
+    "FASHION_SHOE_CHECKPOINT",
+}
+
+
+def load_server_env(path: Path = ENV_FILE) -> list[str]:
+    """Git에서 제외한 서버별 .env를 읽되 기존 셸 환경변수는 덮어쓰지 않는다."""
+    if not path.is_file():
+        return []
+    loaded: list[str] = []
+    for line_number, raw_line in enumerate(path.read_text(encoding="utf-8-sig").splitlines(), 1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[7:].strip()
+        if "=" not in line:
+            raise CheckFailed(f".env {line_number}번째 줄은 KEY=VALUE 형식이어야 합니다.")
+        key, value = (part.strip() for part in line.split("=", 1))
+        if key not in SERVER_ENV_KEYS:
+            continue
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        if value and key not in os.environ:
+            os.environ[key] = value
+            loaded.append(key)
+    return loaded
 
 # mediapipe 0.10.x 휠이 제공되는 범위. 이 밖의 버전에서는 설치 자체가 실패한다.
 MIN_PYTHON = (3, 9)
@@ -152,6 +186,10 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
+        loaded_env = load_server_env()
+        if loaded_env:
+            # 키 값은 절대 출력하지 않고 로드된 변수 이름만 알린다.
+            print("서버 설정: .env에서 " + ", ".join(loaded_env) + " 로드")
         run_checks()
         if args.check:
             print("\n환경 점검을 통과했습니다. `python web/run_web.py` 로 서버를 켤 수 있습니다.")
