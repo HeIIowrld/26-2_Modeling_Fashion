@@ -23,7 +23,7 @@ from fashion_prompts import (
     UPPER_TYPE_PROMPTS,
 )
 from fashion_model import FashionClassifier
-from garment_attribute_analyzer import GarmentAttributeAnalyzer
+from garment_attribute_analyzer import GarmentAttributeAnalyzer, bottom_landmarks_visible
 from pose_analyzer import _to_rgb_array
 from schemas import OutfitAnalysis, PoseAnalysis
 from wear_state_analyzer import infer_layering_state, infer_sleeve_state
@@ -575,6 +575,12 @@ class OutfitAnalyzer:
                     pant_leg_shape = learned_pant_leg_shape.labels[0]
                     attribute_sources["pant_leg_shape"] = "trained_head"
                 learned_pant_length = learned_lower.get("pant_length")
+                # 이 헤드에는 반바지/치마 클래스가 없다(7부·앵클·풀렝스만 있음).
+                # 쇼츠에 적용하면 확신이 높아도 반드시 잘못된 긴 기장을 선택한다.
+                if attributes["lower_type"] in {"쇼츠", "스커트", "치마", "반바지"}:
+                    learned_pant_length = None
+                    pant_length = "해당 없음"
+                    attribute_sources["pant_length"] = "not_applicable"
                 if learned_pant_length and learned_pant_length.accepted:
                     pant_length = learned_pant_length.labels[0]
                     attribute_sources["pant_length"] = "trained_head"
@@ -625,6 +631,15 @@ class OutfitAnalyzer:
             upper_type_confidence = lower_type_confidence = lower_pattern_confidence = lower_material_confidence = 0.0
             lower_pattern = lower_material = "분석 보류"
             attributes["neckline"] = "분석 보류"
+
+        # 발목이 가려져도 무릎과 밑단이 보이면 짧은 기장은 측정할 수 있다.
+        # 그 관측값만 유지하고, 학습 헤드가 추정한 긴 기장으로 덮어쓰지 않는다.
+        if not bottom_landmarks_visible(pose):
+            observed = attributes.get("measurements", {}).get("visible_bottom_length", "분석 불가")
+            attributes["bottom_length"] = observed
+            pant_length = "분석 보류"
+            attribute_sources["bottom_length"] = "mask_knee" if observed != "분석 불가" else "pose_unavailable"
+            attribute_sources["pant_length"] = "pose_unavailable"
 
         sleeve = infer_sleeve_state(
             attributes.get("measurements", {}),
