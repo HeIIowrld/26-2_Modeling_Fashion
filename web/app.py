@@ -31,6 +31,7 @@ if str(WEB_DIR) not in sys.path:
     sys.path.insert(0, str(WEB_DIR))
 
 from pipeline import (  # noqa: E402
+    GENDERS,
     STAGES,
     PipelineError,
     TryOnNotReady,
@@ -578,6 +579,15 @@ async def analyze(
         payload = json.loads(profile)
     except json.JSONDecodeError as exc:
         raise HTTPException(status_code=400, detail=f"조건 값을 읽을 수 없습니다: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="조건 값은 객체여야 합니다.")
+    if payload.get("gender") not in GENDERS:
+        raise HTTPException(status_code=400, detail="성별을 남성 또는 여성으로 선택해주세요.")
+    from recommendation_keywords import selected_categories
+    try:
+        selected_categories(build_profile(payload))
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     owned_items = payload.get("owned_items") or []
     if len(wardrobe_images) > MAX_WARDROBE_IMAGES:

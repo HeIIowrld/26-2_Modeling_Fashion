@@ -2,7 +2,7 @@
 
 기본 설명은 Fashion Rule로 만든 검색 키워드와 사용자 조건만 사용해 항상
 생성한다. 운영자가 명시적으로 LLM을 켠 경우에는 사진 원본이 아닌 구조화된
-분석값만 OpenAI Responses API에 보내 자연스러운 한 문장으로 다듬는다.
+분석값만 선택한 LLM API에 보내 자연스러운 한 문장으로 다듬는다.
 """
 
 from __future__ import annotations
@@ -15,13 +15,13 @@ import urllib.request
 from typing import Any, Iterable
 
 from recommendation_keywords import TargetKeywordResult
-from schemas import CurrentOutfitEvaluation, GOAL_NONE, OutfitAnalysis, PoseAnalysis, UserProfile
+from schemas import CurrentOutfitEvaluation, OutfitAnalysis, PoseAnalysis, UserProfile
 
 
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 GEMINI_GENERATE_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 LLM_ENABLED_VALUES = {"1", "true", "yes", "on"}
-CATEGORY_LABELS = {"top": "상의", "bottom": "하의"}
+CATEGORY_LABELS = {"top": "상의", "bottom": "하의", "shoes": "신발"}
 MATRIX_LABELS = {
     "body_fit": "체형 적합도",
     "situation_fit": "상황 적합도",
@@ -57,21 +57,10 @@ def _fallback_reason(product: Any, profile: UserProfile, pose: PoseAnalysis) -> 
     keywords = list(getattr(product, "search_keywords", []) or [])[:3]
     keyword_copy = "·".join(keywords) or CATEGORY_LABELS.get(product.category, "상품")
     contexts = [value for value in (profile.purpose, profile.desired_style) if value and value != "자동"]
-    context_copy = "·".join(dict.fromkeys(contexts)) or "입력한 코디"
-
-    if profile.silhouette_goal and profile.silhouette_goal != GOAL_NONE:
-        body_copy = f"‘{profile.silhouette_goal}’ 실루엣 목표"
-    elif pose.body_shape_confidence >= 0.65 and "불" not in pose.body_shape:
-        body_copy = f"분석된 {pose.body_shape} 실루엣"
-    else:
-        body_copy = "사진에서 확인한 현재 실루엣"
-
-    budget_copy = "예산 범위에도 들어오는 " if profile.min_budget is not None or profile.max_budget is not None else ""
+    context_copy = "·".join(dict.fromkeys(contexts)) or "원하시는 분위기"
     category = CATEGORY_LABELS.get(product.category, "아이템")
-    return (
-        f"{context_copy} 조건의 {keyword_copy} 기준과 {body_copy}까지 함께 고려했고, "
-        f"{budget_copy}{category}라 추천했어요."
-    )
+    category_with_particle = f"{category}이라" if category == "신발" else f"{category}라"
+    return f"{context_copy}에 잘 어울리는 {keyword_copy} 포인트의 {category_with_particle} 추천해요."
 
 
 def _output_text(response: dict[str, Any]) -> str:
@@ -106,26 +95,26 @@ def _llm_reasons(
             "product_id": product.product_id,
             "name": product.name,
             "category": product.category,
-            "price": product.price,
-            "search_keywords": list(product.search_keywords),
-            "fact_based_draft": fallbacks[product.product_id],
+            "search_keywords": list(product.search_keywords)[:3],
         }
         for product in products
     ]
     input_payload = {
-        "user_filters": {
+        "user_context": {
+            "gender": profile.gender,
             "purpose": profile.purpose,
             "desired_style": profile.desired_style,
             "silhouette_goal": profile.silhouette_goal,
             "season": profile.season,
+            "dress_code": profile.dress_code,
             "activity_level": profile.activity_level,
             "preferred_colors": profile.preferred_colors,
+            "personal_tone": profile.personal_tone,
             "preferred_materials": profile.preferred_materials,
-            "budget": [profile.min_budget, profile.max_budget or profile.budget],
         },
         "body_analysis": {
-            "shape": pose.body_shape,
-            "confidence": pose.body_shape_confidence,
+            "body_shape": pose.body_shape,
+            "body_shape_confidence": pose.body_shape_confidence,
             "leg_ratio": pose.leg_ratio,
         },
         "fashion_rule_search_targets": targets.targets,
@@ -151,10 +140,14 @@ def _llm_reasons(
         "additionalProperties": False,
     }
     instructions = (
-        "당신은 한국 패션 추천 서비스 FITTA의 카피라이터입니다. 제공된 사실만 사용해 "
-        "각 상품의 추천 이유를 친근한 한국어 한 문장(최대 100자)으로 쓰세요. "
-        "사용자 필터, 체형 또는 실루엣 목표, 상품 키워드 중 최소 두 가지를 연결하고 "
-        "측정되지 않은 효과나 상품 속성은 만들지 마세요. 해시태그와 점수는 쓰지 마세요."
+        "당신은 고객에게 직접 옷을 추천하는 친절하고 감각적인 옷가게 점원입니다. "
+        "고객에게 말하듯 각 상품의 추천 이유를 자연스러운 한국어 한 문장으로 작성하세요. "
+        "사용자의 목적과 원하는 스타일, Fashion Rule 검색 조건, 상품의 실제 search_keywords 중 "
+        "도움이 되는 내용을 골라 상품마다 조금씩 다르게 설명하세요. 정보를 기계적으로 나열하거나 "
+        "고정된 문장 틀을 반복하지 마세요. 제공된 정보에 없는 소재·핏·기능·효과를 지어내면 안 됩니다. "
+        "예산, 가격, 할인, 가성비, 비용 등 금액과 관련된 이야기는 절대 하지 마세요. "
+        "신발은 체형이나 다리 길이를 추천 근거로 사용하지 마세요. 해시태그와 점수도 쓰지 마세요. "
+        "각 문장은 120자 이내로 작성하세요."
     )
     if provider == "gemini":
         model = os.environ.get("FASHION_LLM_MODEL", "gemini-2.5-flash-lite")
@@ -210,12 +203,20 @@ def _llm_reasons(
     except (OSError, TimeoutError, ValueError, KeyError, IndexError, json.JSONDecodeError, urllib.error.HTTPError):
         return {}
 
-    known_ids = set(fallbacks)
-    return {
-        str(item.get("product_id")): str(item.get("reason", "")).strip()[:180]
-        for item in generated.get("items", [])
-        if str(item.get("product_id")) in known_ids and str(item.get("reason", "")).strip()
-    }
+    products_by_id = {product.product_id: product for product in products}
+    accepted: dict[str, str] = {}
+    for item in generated.get("items", []):
+        product_id = str(item.get("product_id"))
+        reason = str(item.get("reason", "")).strip()[:180]
+        product = products_by_id.get(product_id)
+        if not product or not reason:
+            continue
+        forbidden = ("예산", "가격", "할인", "가성비", "비용", "만원", "원대")
+        # 말투와 구성은 LLM에 맡기고, 사용자가 금지한 금액 관련 표현만 확실히 제외한다.
+        if any(word in reason for word in forbidden):
+            continue
+        accepted[product_id] = reason
+    return accepted
 
 
 def add_product_recommendation_reasons(

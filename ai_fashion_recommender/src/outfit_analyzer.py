@@ -677,6 +677,7 @@ class OutfitAnalyzer:
             )
         return (
             OutfitAnalysis(
+                shoes=self.classifier.predict_shoes(rgb, parsed["segmentation"]),
                 parser_backend=self.parser.backend,
                 upper_color=upper_color,
                 lower_color=lower_color,

@@ -42,9 +42,24 @@ class RecommendationExplanationTests(unittest.TestCase):
         with patch.dict(os.environ, {"FASHION_LLM_REASONS": "0"}, clear=False):
             add_product_recommendation_reasons([product], self.profile, self.pose, targets)
 
-        self.assertIn("데이트·미니멀", product.recommendation_reason)
-        self.assertIn("다리가 길어 보이게", product.recommendation_reason)
+        self.assertEqual(
+            product.recommendation_reason,
+            "데이트·미니멀에 잘 어울리는 세미와이드·데님·풀렝스 포인트의 하의라 추천해요.",
+        )
+        self.assertNotIn("예산", product.recommendation_reason)
+        self.assertNotIn("체형", product.recommendation_reason)
         self.assertEqual(product.recommendation_reason_source, "rules")
+
+    def test_shoe_reason_excludes_body_correction(self):
+        product = ShoppingProduct("MS2", "블랙 로퍼", "브랜드", 59000,
+                                  "https://image", "https://product", "shoes",
+                                  search_keywords=["로퍼", "미니멀", "블랙"])
+        targets = TargetKeywordResult("user_input", {"shoes": {"item_type": ["로퍼"]}})
+        with patch.dict(os.environ, {"FASHION_LLM_REASONS": "0"}, clear=False):
+            add_product_recommendation_reasons([product], self.profile, self.pose, targets)
+        self.assertEqual(product.recommendation_reason, "데이트·미니멀에 잘 어울리는 로퍼·미니멀·블랙 포인트의 신발이라 추천해요.")
+        self.assertNotIn("다리", product.recommendation_reason)
+        self.assertNotIn("체형", product.recommendation_reason)
 
     def test_gemini_reason_replaces_fallback_when_explicitly_enabled(self):
         product = ShoppingProduct(
@@ -54,7 +69,7 @@ class RecommendationExplanationTests(unittest.TestCase):
         )
         targets = TargetKeywordResult("mixed", {"bottom": {"fit": ["세미와이드"]}})
         generated = json.dumps({
-            "items": [{"product_id": "MS1", "reason": "데이트와 미니멀 취향, 다리 보완 목표에 맞는 상품이에요."}]
+            "items": [{"product_id": "MS1", "reason": "데이트 룩에 세미와이드 핏과 데님 특유의 편안한 분위기를 더해줄 아이템이에요."}]
         }, ensure_ascii=False)
 
         class FakeResponse:
@@ -79,7 +94,61 @@ class RecommendationExplanationTests(unittest.TestCase):
             add_product_recommendation_reasons([product], self.profile, self.pose, targets)
 
         self.assertEqual(product.recommendation_reason_source, "llm")
-        self.assertIn("다리 보완 목표", product.recommendation_reason)
+        self.assertEqual(product.recommendation_reason, "데이트 룩에 세미와이드 핏과 데님 특유의 편안한 분위기를 더해줄 아이템이에요.")
+
+    def test_llm_has_freedom_to_paraphrase_without_exact_keyword(self):
+        product = ShoppingProduct(
+            "MS1", "세미 와이드 데님", "브랜드", 59_000,
+            "https://image", "https://product", "bottom",
+            search_keywords=["세미와이드", "데님"],
+        )
+        targets = TargetKeywordResult("mixed", {"bottom": {"fit": ["세미와이드"]}})
+        generated = json.dumps({
+            "items": [{"product_id": "MS1", "reason": "그냥 멋진 상품이라 추천해요."}]
+        }, ensure_ascii=False)
+
+        class FakeResponse:
+            def __enter__(self): return self
+            def __exit__(self, *_args): return False
+            def read(self):
+                return json.dumps({"candidates": [{"content": {"parts": [{"text": generated}]}}]},
+                                  ensure_ascii=False).encode("utf-8")
+
+        settings = {"FASHION_LLM_REASONS": "1", "FASHION_LLM_PROVIDER": "gemini",
+                    "GEMINI_API_KEY": "test-key"}
+        with patch.dict(os.environ, settings, clear=False), patch(
+            "recommendation_explanations.urllib.request.urlopen", return_value=FakeResponse()
+        ):
+            add_product_recommendation_reasons([product], self.profile, self.pose, targets)
+        self.assertEqual(product.recommendation_reason_source, "llm")
+        self.assertEqual(product.recommendation_reason, "그냥 멋진 상품이라 추천해요.")
+
+    def test_llm_copy_that_mentions_budget_falls_back(self):
+        product = ShoppingProduct(
+            "MS1", "세미 와이드 데님", "브랜드", 59_000,
+            "https://image", "https://product", "bottom",
+            search_keywords=["세미와이드", "데님"],
+        )
+        targets = TargetKeywordResult("mixed", {"bottom": {"fit": ["세미와이드"]}})
+        generated = json.dumps({
+            "items": [{"product_id": "MS1", "reason": "세미와이드 데님이라 예산에도 잘 맞아 추천해요."}]
+        }, ensure_ascii=False)
+
+        class FakeResponse:
+            def __enter__(self): return self
+            def __exit__(self, *_args): return False
+            def read(self):
+                return json.dumps({"candidates": [{"content": {"parts": [{"text": generated}]}}]},
+                                  ensure_ascii=False).encode("utf-8")
+
+        settings = {"FASHION_LLM_REASONS": "1", "FASHION_LLM_PROVIDER": "gemini",
+                    "GEMINI_API_KEY": "test-key"}
+        with patch.dict(os.environ, settings, clear=False), patch(
+            "recommendation_explanations.urllib.request.urlopen", return_value=FakeResponse()
+        ):
+            add_product_recommendation_reasons([product], self.profile, self.pose, targets)
+        self.assertEqual(product.recommendation_reason_source, "rules")
+        self.assertNotIn("예산", product.recommendation_reason)
 
     def test_current_outfit_summary_has_exactly_three_points(self):
         outfit = OutfitAnalysis(

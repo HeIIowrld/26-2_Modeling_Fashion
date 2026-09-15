@@ -121,6 +121,11 @@
 
         <div class="grid-2">
           <label class="field">
+            <span class="field-label">성별 <em class="badge required">필수</em></span>
+            <select name="gender" id="f-gender"></select>
+            <span class="field-hint">선택한 성별 상품과 공용 상품만 추천해요.</span>
+          </label>
+          <label class="field">
             <span class="field-label">코디 목적 <em class="badge required">필수</em></span>
             <select name="purpose" id="f-purpose"></select>
             <span class="field-hint">어떤 자리에 입을 옷인지에 따라 규칙이 달라져요.</span>
@@ -132,11 +137,15 @@
           </label>
         </div>
 
-        <label class="field">
+        <div class="field">
           <span class="field-label">바꾸고 싶은 범위 <em class="badge required">필수</em></span>
-          <select name="change_scope" id="f-scope"></select>
-          <span class="field-hint">상·하의 중 어디를 새로 추천받을지 정해요.</span>
-        </label>
+          <span class="change-categories" role="group" aria-label="바꾸고 싶은 범위">
+            <label><input type="checkbox" name="change_categories" value="top" /> 상의</label>
+            <label><input type="checkbox" name="change_categories" value="bottom" /> 하의</label>
+            <label><input type="checkbox" name="change_categories" value="shoes" /> 신발</label>
+          </span>
+          <span class="field-hint">하나 이상 선택해주세요. 선택한 카테고리마다 최대 3개씩 추천해요.</span>
+        </div>
 
         <label class="field">
           <span class="field-label">예산 <em class="badge required">필수</em></span>
@@ -157,7 +166,7 @@
               <span class="unit" aria-hidden="true">원</span>
             </label>
           </div>
-          <span class="field-hint" id="budget-hint">입력한 최소·최대 예산 범위 안에서 상품을 추천해요. 상·하의 합계 기준이에요. 30,000 ~ 500,000원</span>
+          <span class="field-hint" id="budget-hint">상품 한 개당 예산 범위예요. 30,000 ~ 500,000원</span>
         </label>
       </section>
 
@@ -189,6 +198,14 @@
         <details class="disclosure">
           <summary><span>색상·소재 선호 <em class="badge optional">선택</em></span></summary>
           <div class="disclosure-body">
+            <div class="field">
+              <span class="field-label">피부톤</span>
+              <span class="change-categories" role="group" aria-label="피부톤">
+                <label><input type="checkbox" name="personal_tone" value="웜톤" /> 웜톤</label>
+                <label><input type="checkbox" name="personal_tone" value="쿨톤" /> 쿨톤</label>
+              </span>
+              <span class="field-hint">선택한 톤과 상품 이미지 색상이 일치하는 옷만 추천해요.</span>
+            </div>
             <div class="field">
               <span class="field-label">선호 색상 <em class="selection-count" id="preferred-color-count">0개 선택</em></span>
               <div class="swatches" id="preferred-colors"></div>

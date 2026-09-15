@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from musinsa_live_search import MusinsaLiveSearch, ShoppingProduct
+from product_color_tone import COOL_TONE, WARM_TONE, ProductToneResult
 from recommendation_keywords import TargetKeywordResult
 from schemas import Product, UserProfile
 
@@ -50,6 +51,16 @@ class StubSearch(MusinsaLiveSearch):
         return self.by_category.get(category, [])
 
 
+class ToneStubSearch(StubSearch):
+    def __init__(self, by_category, tones):
+        super().__init__(by_category)
+        self.tones = tones
+
+    def _classify_tone(self, product):
+        tone, denim = self.tones[product.product_id]
+        return ProductToneResult(tone=tone, confidence=0.85, is_denim=denim)
+
+
 class MusinsaLiveSearchTests(unittest.TestCase):
     def setUp(self):
         self.targets = TargetKeywordResult(
@@ -85,7 +96,7 @@ class MusinsaLiveSearchTests(unittest.TestCase):
         self.assertIn("데님", results[0].matched_keywords)
         self.assertEqual(results[0].search_keywords, ["세미와이드", "데님", "풀렝스"])
 
-    def test_three_results_are_balanced_across_requested_categories(self):
+    def test_limit_applies_to_each_requested_category(self):
         search = StubSearch({
             "top": [item(10, "오버핏 니트"), item(11, "루즈 니트")],
             "bottom": [item(20, "세미 와이드 데님"), item(21, "와이드 데님")],
@@ -93,8 +104,21 @@ class MusinsaLiveSearchTests(unittest.TestCase):
 
         results = search.search(self.targets, self.profile, limit=3)
 
-        self.assertEqual(len(results), 3)
-        self.assertEqual([result.category for result in results], ["top", "bottom", "top"])
+        self.assertEqual(len(results), 4)  # 부족한 후보를 복제하거나 다른 카테고리로 채우지 않음
+        self.assertEqual([result.category for result in results], ["top", "top", "bottom", "bottom"])
+
+    def test_three_each_for_all_categories(self):
+        targets = TargetKeywordResult(mode="user_input", targets={
+            "top": {}, "bottom": {}, "shoes": {"item_type": ["로퍼"], "color": ["블랙"]},
+        })
+        search = StubSearch({category: [item(offset + i, "블랙 로퍼") for i in range(5)]
+                             for category, offset in (("top", 10), ("bottom", 20), ("shoes", 30))})
+        results = search.search(targets, self.profile)
+        self.assertEqual(len(results), 9)
+        for category in targets.targets:
+            self.assertEqual(sum(p.category == category for p in results), 3)
+        self.assertIn(("shoes", "블랙 로퍼"), search.calls)
+        self.assertIn("로퍼", results[-1].search_keywords)
 
     def test_budget_gender_and_exclusions_are_hard_filters(self):
         profile = UserProfile(
@@ -114,6 +138,27 @@ class MusinsaLiveSearchTests(unittest.TestCase):
         results = search.search(bottom_only, profile, limit=3)
 
         self.assertEqual([result.product_id for result in results], ["MS4"])
+
+    def test_personal_tone_filters_product_images_and_marks_denim_source(self):
+        profile = UserProfile(
+            personal_tone=WARM_TONE, max_budget=100_000,
+            provided_fields=["personal_tone", "max_budget"],
+        )
+        search = ToneStubSearch(
+            {"bottom": [item(1, "빈티지 워싱 데님"), item(2, "아이스 블루 데님")]},
+            {"MS1": (WARM_TONE, True), "MS2": (COOL_TONE, True)},
+        )
+        bottom_only = TargetKeywordResult(mode="user_input", targets={
+            "bottom": {"material": ["데님"], "color_temperature": [WARM_TONE]}
+        })
+
+        results = search.search(bottom_only, profile, limit=3)
+
+        self.assertEqual([product.product_id for product in results], ["MS1"])
+        self.assertEqual(results[0].color_temperature, WARM_TONE)
+        self.assertEqual(results[0].color_temperature_source, "denim_rule")
+        self.assertIn(WARM_TONE, results[0].search_keywords)
+        self.assertTrue(any("베이지" in query or "브라운" in query for _, query in search.calls))
 
     def test_network_failure_uses_enriched_catalog_fallback(self):
         search = StubSearch(fail=True)
@@ -143,6 +188,7 @@ class MusinsaLiveSearchTests(unittest.TestCase):
         self.assertNotIn("retrieval_score", payload)
         self.assertEqual(payload["url"], "https://product")
         self.assertIn("recommendation_reason", payload)
+        self.assertIn("color_temperature", payload)
 
     def test_public_payload_exposes_only_three_representative_search_keywords(self):
         product = ShoppingProduct(
