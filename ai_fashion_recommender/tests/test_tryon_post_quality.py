@@ -333,10 +333,12 @@ class ModelCoordinateTests(unittest.TestCase):
 
 
 class DefaultPolicyTests(unittest.TestCase):
-    def test_mask_policies_stay_native_until_validated(self):
+    def test_validated_mask_policies_are_the_defaults(self):
+        # 2026-09-15 사전 기준: 상의 agnostic 통과·채택, 하의 reference-shape 실패·기각.
         adapter = CatVTONTryOn()
-        self.assertEqual(adapter.upper_mask_policy, "native")
+        self.assertEqual(adapter.upper_mask_policy, "agnostic")
         self.assertEqual(adapter.lower_mask_policy, "native")
+        self.assertEqual(CatVTONTryOn.fast().upper_mask_policy, "agnostic")
 
     def test_unknown_policy_is_rejected(self):
         with self.assertRaises(ValueError):

@@ -1,6 +1,6 @@
 {
   "status": "잠정값·검수 필요 — 2026-09-14 평가 480쌍 분포와 재생 결과로 잡은 초기 기준. 사람 라벨로 보정한 값이 아니다.",
-  "source": "reports/vton_quality/post_quality_gate_2026-09-15.md",
+  "source": "reports/vton_quality/resolution_2026-09-15.md",
   "thresholds": {
     "outside_psnr_min": 30.0,
     "face_psnr_min": 30.0,

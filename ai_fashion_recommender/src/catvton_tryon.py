@@ -650,7 +650,7 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         skirt_guidance_scale: float | None = 1.5,
         post_quality_gate: bool = True,
         quality_thresholds: dict[str, float] | None = None,
-        upper_mask_policy: str = "native",
+        upper_mask_policy: str = "agnostic",
         lower_mask_policy: str = "native",
     ) -> None:
         super().__init__(enabled=True)
@@ -703,10 +703,14 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         # 기존 선명도 재시도로 돌아간다.
         self.post_quality_gate = post_quality_gate
         self.quality_thresholds = quality_thresholds
-        # 마스크 정책(실험 옵션, 기본은 기존 동작):
-        # upper "agnostic" = 원래 상의의 넥라인 구멍·짧은 밑단 단서를 지운 상체 마스크(골반까지 확장)
-        #       "agnostic-lower" = 같은 구멍 메우기 + 원래 하의 윗단에서 조금만 겹치게 확장
-        # lower "reference-shape" = 상품 사진의 바지통이 원래 바지보다 넓을 때만 확장
+        # 마스크 정책:
+        # upper "agnostic"(기본) = 원래 상의의 넥라인 구멍·짧은 밑단 단서를 지운 상체 마스크(골반까지 확장).
+        #       2026-09-15 상의 288쌍 사전 기준 통과: 크롭 계열 실패 -18.1%p, 자기 상품 top-1 +11.5%p,
+        #       시각 판정 48쌍 좋아짐 14·나빠짐 0. 크롭탑+치마 사진은 치마 위 갈색 띠가 남는다.
+        #       "agnostic-lower" = 하의 윗단에서만 겹치게 확장(v2). 기준은 통과했지만 새 결함 3/48로 미채택.
+        #       "native" = 원래 옷 라벨 그대로의 이전 마스크.
+        # lower "reference-shape" = 상품 사진 바지통 비율로 확장. 사전 기준 실패로 기각(실험 옵션만 유지).
+        #       reports/vton_quality/resolution_2026-09-15.md 참고.
         if upper_mask_policy not in {"native", "agnostic", "agnostic-lower"}:
             raise ValueError(f"모르는 상의 마스크 정책: {upper_mask_policy!r}")
         if lower_mask_policy not in {"native", "reference-shape"}:
