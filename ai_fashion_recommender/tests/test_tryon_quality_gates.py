@@ -1,7 +1,7 @@
 """VTON 합성 신뢰도 게이트 회귀 테스트.
 
 female_012 통제 실험(2026-08-20)에서 확인한 두 실패 모드를 고정한다:
-- 레퍼런스 coverage 0.15 → 시스루 렌더링
+- 낮은 레퍼런스 coverage는 참고 경고이며 시스루의 단독 원인이 아니다.
 - 하의 기장 gap=3 → 다리 전체가 옷 텍스처로 채워짐 (gap=1은 정상)
 """
 
@@ -22,6 +22,10 @@ from catvton_tryon import (
     UNRELIABLE_LENGTH_GAP,
     _restore_original_regions,
     bottom_length_gap,
+    bottom_length_warnings,
+    classify_reference_bottom_length,
+    current_bottom_length,
+    is_bottom_length_warning,
     evaluate_garment_reference,
     outerwear_level,
     pad_to_aspect,
@@ -120,6 +124,82 @@ class OuterwearGateTests(unittest.TestCase):
     def test_non_outerwear(self):
         for upper in ("티셔츠", "셔츠", "니트", "탑", "", None):
             self.assertIsNone(outerwear_level(upper), upper)
+
+    def test_sleeveless_single_vest_suppresses_only_ambiguous_warning(self):
+        jobs = [(None, None, SimpleNamespace(category="top"))]
+        for upper, layering, expected in (("베스트", "단일 상의", 0),
+                                          ("베스트", "레이어드", 1),
+                                          ("베스트", "판단 보류", 1),
+                                          ("코트", "단일 상의", 1),
+                                          ("가디건", "단일 상의", 1)):
+            with self.subTest(upper=upper, layering=layering):
+                tryon = CatVTONTryOn()
+                outfit = SimpleNamespace(upper_type=upper, layering_state=layering,
+                                         visible_sleeve_length="민소매")
+                self.assertEqual(tryon._apply_outerwear_policy(jobs, {"outfit": outfit}), jobs)
+                self.assertEqual(len(tryon.last_warnings), expected)
+
+
+class ReferenceLengthTests(unittest.TestCase):
+    def test_raw_reference_is_used_and_conflicting_short_length_abstains(self):
+        from unittest.mock import Mock
+        classifier = Mock(trained_attributes_enabled=True)
+        classifier.predict_trained_attributes.return_value = {
+            "category": SimpleNamespace(accepted=True, labels=["팬츠"]),
+            "lower_length": SimpleNamespace(accepted=True, labels=["쇼츠·미니 기장"]),
+        }
+        raw, cleaned = Image.new("RGB", (20, 30)), Image.new("RGB", (10, 10))
+        self.assertEqual(classify_reference_bottom_length(classifier, cleaned, source_image=raw), "")
+        self.assertIs(classifier.predict_trained_attributes.call_args.args[0], raw)
+
+    def test_explicit_short_names_work_without_classifier(self):
+        for name in ("와이드 쇼츠", "Bermuda Shorts", "Hot Pants", "Half Tights"):
+            with self.subTest(name=name):
+                self.assertEqual(classify_reference_bottom_length(
+                    None, None, product=SimpleNamespace(name=name)), "쇼츠·미니 기장")
+        self.assertEqual(classify_reference_bottom_length(
+            None, None, product=SimpleNamespace(name="와이드 팬츠", length="긴바지")), "")
+
+    def test_unknown_length_is_reported_as_unassessed_not_passed(self):
+        tryon = CatVTONTryOn()
+        tryon._check_length_gap(None, "bottom", {"outfit": SimpleNamespace(bottom_length="분석 불가")},
+                                product=SimpleNamespace(name="Shorts"))
+        self.assertEqual(len(tryon.last_warnings), 1)
+        self.assertIn("보류", tryon.last_warnings[0])
+        # 밑단이 잘린 사진이면 추가 사진이나 기장 입력을 안내한다.
+        self.assertIn("밑단이 보이게", tryon.last_warnings[0])
+
+    def test_user_length_is_used_only_when_photo_cannot_measure(self):
+        # 2026-09-15: 밑단이 잘린 1-model_3·model_5·model_7의 72조합은 사진만으로 비교 불가.
+        shorts = SimpleNamespace(name="Bermuda Shorts", product_id="MS_SHORTS")
+        tryon = CatVTONTryOn()
+        tryon._check_length_gap(None, "bottom", {
+            "outfit": SimpleNamespace(bottom_length="분석 불가"), "user_bottom_length": "긴바지",
+        }, product=shorts)
+        self.assertEqual(len(tryon.last_warnings), 1)
+        self.assertIn("기장 차이가 큽니다", tryon.last_warnings[0])
+        self.assertIn("입력한 현재 기장 기준", tryon.last_warnings[0])
+        self.assertEqual(tryon.reference_bottom_lengths["MS_SHORTS"], "쇼츠·미니 기장")
+
+        measured = CatVTONTryOn()
+        measured._check_length_gap(None, "bottom", {
+            "outfit": SimpleNamespace(bottom_length="반바지"), "user_bottom_length": "긴바지",
+        }, product=shorts)
+        self.assertEqual(measured.last_warnings, [])  # 사진값(반바지)이 입력보다 우선
+
+    def test_invalid_user_length_is_ignored(self):
+        self.assertEqual(current_bottom_length(SimpleNamespace(bottom_length="분석 불가"),
+                                               {"user_bottom_length": "발목 위 3cm"}), ("", ""))
+        self.assertEqual(current_bottom_length(SimpleNamespace(bottom_length="긴바지 추정"), {}),
+                         ("긴바지", "photo"))
+
+    def test_length_warnings_are_recognizable_for_refresh(self):
+        hold = bottom_length_warnings("", "", "쇼츠·미니 기장")[0]
+        gap = bottom_length_warnings("긴바지", "user", "쇼츠·미니 기장")[0]
+        self.assertTrue(is_bottom_length_warning(hold))
+        self.assertTrue(is_bottom_length_warning(gap))
+        self.assertFalse(is_bottom_length_warning("합성 품질 점검: 합성된 하의가 흐릿합니다."))
+        self.assertEqual(bottom_length_warnings("무릎 기장", "user", "쇼츠·미니 기장"), [])
 
     def test_skirt_reference_falls_back_to_product_name(self):
         tryon = CatVTONTryOn(skirt_guidance_scale=2.0)

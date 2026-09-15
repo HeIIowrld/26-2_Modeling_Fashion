@@ -1,0 +1,16 @@
+{
+  "status": "잠정값·검수 필요 — 2026-09-14 평가 480쌍 분포와 재생 결과로 잡은 초기 기준. 사람 라벨로 보정한 값이 아니다.",
+  "source": "reports/vton_quality/post_quality_gate_2026-09-15.md",
+  "thresholds": {
+    "outside_psnr_min": 30.0,
+    "face_psnr_min": 30.0,
+    "coverage_min": 0.5,
+    "torso_skin_inside_max": 0.08,
+    "torso_skin_outside_max": 0.05,
+    "garment_leak_max": 0.05,
+    "fidelity_delta_min": -0.03,
+    "color_de_max": 25.0,
+    "sharpness_min": 25.0,
+    "length_gap_max": 1.0
+  }
+}
