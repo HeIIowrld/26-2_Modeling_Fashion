@@ -81,6 +81,9 @@ class ShoppingProduct:
     color_temperature: str = ""
     color_temperature_confidence: float = 0.0
     color_temperature_source: str = ""
+    fit_evidence: list[str] = field(default_factory=list)
+    fit_evidence_labels: list[str] = field(default_factory=list)
+    reason_rule_ids: list[str] = field(default_factory=list)
 
     def public_dict(self) -> dict:
         """내부 키워드와 점수는 웹 UI에 보내지 않는다."""

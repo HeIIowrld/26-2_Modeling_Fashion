@@ -86,6 +86,7 @@ class TargetKeywordResult:
     constraints: dict[str, Any] = field(default_factory=dict)
     sources: dict[str, str] = field(default_factory=dict)
     applied_rules: list[str] = field(default_factory=list)
+    keyword_rules: dict[str, dict[str, list[str]]] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -324,10 +325,40 @@ class RecommendationKeywordGenerator:
             constraints["excluded_item_types"] = list(dict.fromkeys(profile.excluded_item_types))
 
         mode = "mixed" if used_input and used_photo else "user_input" if used_input else "photo_fallback"
+        keyword_rules = {category: {} for category in targets}
+        body_rule_values = {
+            "R-BOD-05": {"허리선", "기본 기장", "미드라이즈", "하이라이즈", "스트레이트", "세미와이드", "풀렝스"},
+            "R-BOD-01": {"어깨 구조", "넥라인 포인트", "스트레이트", "세미와이드"},
+            "R-BOD-06": {"어깨 구조", "넥라인 포인트", "레귤러", "여유핏"},
+            "R-BOD-02": {"레귤러", "정돈된 핏", "스트레이트", "세미와이드", "와이드"},
+            "R-BOD-03": {"허리 기준점", "세미핏", "스트레이트", "세미와이드"},
+        }
+        for category, attributes in targets.items():
+            for attribute, values in attributes.items():
+                for value in values:
+                    rule_ids = []
+                    if attribute == "purpose" and "R-CTX-01" in rules:
+                        rule_ids.append("R-CTX-01")
+                    if attribute in {"material", "season"} and "R-MAT-01" in rules:
+                        rule_ids.append("R-MAT-01")
+                    if attribute == "color" and "R-COL-08" in rules:
+                        rule_ids.append("R-COL-08")
+                    if attribute == "function" and "R-WEA-02" in rules:
+                        rule_ids.append("R-WEA-02")
+                    if attribute == "fit" and sources.get(f"{category}.fit") in {"user_style_rule", "photo_style_rule", "fashion_rule_default"} and "R-SIL-01" in rules:
+                        rule_ids.append("R-SIL-01")
+                    if attribute == "length" and sources.get(f"{category}.length") in {"user_style_rule", "photo_style_rule", "fashion_rule_default"} and "R-SIL-03" in rules:
+                        rule_ids.append("R-SIL-03")
+                    for rule_id, rule_values in body_rule_values.items():
+                        if value in rule_values and rule_id in rules:
+                            rule_ids.append(rule_id)
+                    if rule_ids:
+                        keyword_rules[category][value] = list(dict.fromkeys(rule_ids))
         return TargetKeywordResult(
             mode=mode,
             targets=targets,
             constraints=constraints,
             sources=sources,
             applied_rules=rules,
+            keyword_rules=keyword_rules,
         )

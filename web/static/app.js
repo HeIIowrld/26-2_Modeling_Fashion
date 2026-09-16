@@ -18,6 +18,7 @@ const state = {
   profile: null,
   shoppingProducts: [],
   shoppingSelection: {},
+  shoppingEvidenceOpen: new Set(),
   shoppingTryonResults: [],
   shoppingTryonSelected: 0,
   shoppingTryonBatch: null,
@@ -573,6 +574,7 @@ function renderShoppingProducts(products) {
             </div>
           </div>
         </a>
+        ${renderShoppingEvidence(product)}
         <div class="shopping-tryon-choice">
           <button type="button" data-shopping-select="${escapeHtml(product.product_id)}"
             aria-pressed="${selected}" ${tryonReady ? "" : "disabled"}
@@ -592,8 +594,28 @@ function renderShoppingProducts(products) {
   grid.querySelectorAll("[data-shopping-select]").forEach((button) => {
     button.addEventListener("click", () => toggleShoppingSelection(button.dataset.shoppingSelect));
   });
+  grid.querySelectorAll("[data-evidence-for]").forEach((details) => {
+    details.addEventListener("toggle", () => {
+      if (details.open) state.shoppingEvidenceOpen.add(details.dataset.evidenceFor);
+      else state.shoppingEvidenceOpen.delete(details.dataset.evidenceFor);
+    });
+  });
   renderShoppingTryonPanel();
   section.hidden = false;
+}
+
+function renderShoppingEvidence(product) {
+  const evidence = (product.fit_evidence || []).slice(0, 3);
+  if (!evidence.length) return "";
+  const labels = product.fit_evidence_labels || [];
+  const ruleIds = (product.reason_rule_ids || []).join(" ");
+  const open = state.shoppingEvidenceOpen.has(product.product_id);
+  return `<details class="shopping-evidence" data-evidence-for="${escapeHtml(product.product_id)}" data-reason-rule-ids="${escapeHtml(ruleIds)}"${open ? " open" : ""}>
+    <summary>왜 추천했나요? <span aria-hidden="true">▼</span></summary>
+    <div class="shopping-evidence-body"><strong>추천 근거</strong><ul>
+      ${evidence.map((text, index) => `<li>${labels[index] ? `<b>${escapeHtml(labels[index])}</b>` : ""}<span>${escapeHtml(text)}</span></li>`).join("")}
+    </ul></div>
+  </details>`;
 }
 
 function toggleShoppingSelection(productId) {

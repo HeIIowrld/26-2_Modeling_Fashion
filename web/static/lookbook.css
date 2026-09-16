@@ -748,6 +748,11 @@ select {
   color: var(--ink-soft); font-size: .76rem; line-height: 1.55;
 }
 .shopping-reason b { display: block; margin-bottom: 3px; color: var(--ink); font-size: .7rem; }
+.shopping-evidence { margin: 0 15px 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+.shopping-evidence summary { cursor: pointer; font-size: .78rem; font-weight: 800; }
+.shopping-evidence-body { padding-top: 8px; color: var(--ink-soft); font-size: .74rem; line-height: 1.5; }
+.shopping-evidence-body ul { margin: 6px 0 0; padding-left: 18px; }
+.shopping-evidence-body li { display: flex; gap: 6px; margin-top: 5px; }
 .shopping-bottom {
   display: flex; align-items: end; justify-content: space-between; gap: 10px; margin-top: 14px;
 }
