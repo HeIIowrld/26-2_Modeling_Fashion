@@ -12,16 +12,97 @@ import os
 import urllib.error
 import urllib.parse
 import urllib.request
+from dataclasses import dataclass
 from typing import Any, Iterable
 
-from recommendation_keywords import TargetKeywordResult
-from schemas import CurrentOutfitEvaluation, OutfitAnalysis, PoseAnalysis, UserProfile
+from recommendation_keywords import RecommendationKeywordGenerator, TargetKeywordResult
+from schemas import ALL_BODY_SHAPES, BODY_SHAPES, CurrentOutfitEvaluation, OutfitAnalysis, PoseAnalysis, UserProfile
 
 
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 GEMINI_GENERATE_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 LLM_ENABLED_VALUES = {"1", "true", "yes", "on"}
 CATEGORY_LABELS = {"top": "상의", "bottom": "하의", "shoes": "신발"}
+MAX_EVIDENCE = 3
+BODY_SHAPE_CONFIDENCE_THRESHOLD = 0.65
+SHORT_LEG_RATIO = 0.60
+BODY_SHAPE_RULES = {"R-BOD-01": "삼각체형", "R-BOD-06": "삼각체형", "R-BOD-02": "역삼각체형", "R-BOD-03": "사각체형"}
+BODY_SHAPE_TEMPLATES = {
+    "역삼각체형": {"top": "역삼각체형으로 분석되어 상체가 단순하고 정돈되어 보이는 '{keywords}' 상의를 우선했습니다.", "bottom": "역삼각체형으로 분석되어 상·하체 균형을 위해 하체에 구조감을 더하는 '{keywords}' 실루엣을 우선했습니다."},
+    "삼각체형": {"top": "삼각체형으로 분석되어 상체 라인에 구조감을 더해 시선을 위쪽으로 모을 수 있는 '{keywords}' 상의를 우선했습니다.", "bottom": "삼각체형으로 분석되어 하체 볼륨이 과하게 강조되지 않도록 정돈된 '{keywords}' 실루엣을 우선했습니다."},
+    "사각체형": {"top": "사각체형으로 분석되어 상·하체 볼륨을 한쪽씩 나눠 줄 '{keywords}' 상의를 우선했습니다.", "bottom": "사각체형으로 분석되어 상의와 볼륨이 겹치지 않도록 정돈된 '{keywords}' 실루엣을 우선했습니다."},
+}
+MATCHABLE_ATTRIBUTES = ("fit", "length", "waistline", "material", "color", "style", "structure", "silhouette", "function", "purpose")
+
+
+@dataclass(frozen=True)
+class ProductEvidence:
+    kind: str
+    label: str
+    text: str
+    rule_ids: tuple[str, ...] = ()
+    basis: str = ""
+
+
+def _shape_is_confident(pose: PoseAnalysis) -> bool:
+    return bool(getattr(pose, "valid", False)) and getattr(pose, "body_shape", "") in BODY_SHAPES and float(getattr(pose, "body_shape_confidence", 0.0)) >= BODY_SHAPE_CONFIDENCE_THRESHOLD
+
+
+def build_product_evidence(product: Any, profile: UserProfile, pose: PoseAnalysis, targets: TargetKeywordResult) -> list[ProductEvidence]:
+    category = getattr(product, "category", "")
+    attributes = (getattr(targets, "targets", None) or {}).get(category, {}) or {}
+    keyword_rules = (getattr(targets, "keyword_rules", None) or {}).get(category, {}) or {}
+    applied = set(getattr(targets, "applied_rules", None) or [])
+    sources = getattr(targets, "sources", None) or {}
+    matched = list(dict.fromkeys(getattr(product, "matched_keywords", None) or []))
+
+    def attribute_of(keyword: str) -> str:
+        return next((name for name in MATCHABLE_ATTRIBUTES if keyword in attributes.get(name, [])), "")
+
+    def rules_of(keyword: str) -> list[str]:
+        return [rule_id for rule_id in keyword_rules.get(keyword, []) if rule_id in applied]
+
+    def quoted(values: list[str]) -> str:
+        return "·".join(values)
+
+    evidence: list[ProductEvidence] = []
+    cited: set[str] = set()
+    shape_keywords = [keyword for keyword in matched if any(rule in BODY_SHAPE_RULES for rule in rules_of(keyword))]
+    if shape_keywords:
+        rule_ids = tuple(dict.fromkeys(rule for keyword in shape_keywords for rule in rules_of(keyword) if rule in BODY_SHAPE_RULES))
+        shapes = {BODY_SHAPE_RULES[rule] for rule in rule_ids}
+        if _shape_is_confident(pose) and shapes == {pose.body_shape}:
+            text = BODY_SHAPE_TEMPLATES[pose.body_shape].get(category, "{shape}으로 분석되어 균형을 고려한 '{keywords}' 실루엣을 우선했습니다.").format(shape=pose.body_shape, keywords=quoted(shape_keywords))
+            basis = "체형"
+        else:
+            text = f"사진에서 추정된 상·하체 비율을 참고해 균형감 있는 '{quoted(shape_keywords)}' 실루엣을 우선했습니다."
+            basis = "체형 비율"
+        evidence.append(ProductEvidence("body_shape", "체형", text, rule_ids, basis))
+        cited.update(shape_keywords)
+
+    proportion = [keyword for keyword in matched if keyword not in cited and "R-BOD-05" in rules_of(keyword)]
+    if proportion:
+        goal = profile.silhouette_goal if RecommendationKeywordGenerator._provided(profile, "silhouette_goal") else ""
+        if goal or (getattr(pose, "valid", False) and 0 < pose.leg_ratio < SHORT_LEG_RATIO):
+            basis = f"‘{goal}’ 목표" if goal else "다리 비율"
+            text = f"{basis}에 맞춰 허리선과 세로선이 길게 이어지는 '{quoted(proportion)}' 디자인을 우선했습니다."
+            evidence.append(ProductEvidence("proportion", "비율", text, ("R-BOD-05",), basis))
+            cited.update(proportion)
+
+    style_keywords = [keyword for keyword in matched if keyword not in cited and attribute_of(keyword) == "style"]
+    if style_keywords:
+        evidence.append(ProductEvidence("style", "스타일", f"선택한 {style_keywords[0]} 스타일과 잘 맞는 상품입니다.", tuple(rules_of(style_keywords[0]))))
+        cited.update(style_keywords)
+    purpose_keywords = [keyword for keyword in matched if keyword not in cited and attribute_of(keyword) == "purpose" and "R-CTX-01" in rules_of(keyword)]
+    if purpose_keywords:
+        evidence.append(ProductEvidence("purpose", "목적", f"선택한 {purpose_keywords[0]} 목적에 맞는 상품입니다.", ("R-CTX-01",)))
+        cited.update(purpose_keywords)
+    details = [(keyword, attribute_of(keyword)) for keyword in matched if keyword not in cited and attribute_of(keyword) in {"material", "color", "function"}]
+    if details:
+        labels = {"material": "소재", "color": "색상", "function": "기능"}
+        names = "·".join(keyword if attr == "function" else f"{keyword} {labels[attr]}" for keyword, attr in details)
+        evidence.append(ProductEvidence("detail", "·".join(dict.fromkeys(labels[attr] for _, attr in details)), f"선택한 {names} 조건에 맞는 상품입니다.", tuple(dict.fromkeys(rule for keyword, _ in details for rule in rules_of(keyword)))))
+    return evidence[:MAX_EVIDENCE]
 MATRIX_LABELS = {
     "body_fit": "체형 적합도",
     "situation_fit": "상황 적합도",
@@ -53,7 +134,16 @@ def build_outfit_summary_points(
     ]
 
 
-def _fallback_reason(product: Any, profile: UserProfile, pose: PoseAnalysis) -> str:
+def _fallback_reason(product: Any, profile: UserProfile, pose: PoseAnalysis, evidence: Iterable[ProductEvidence] = (), targets: TargetKeywordResult | None = None) -> str:
+    evidence = list(evidence)
+    if evidence:
+        bases = [item.basis for item in evidence if item.basis]
+        attributes = (getattr(targets, "targets", None) or {}).get(product.category, {}) if targets else {}
+        style = next(iter(attributes.get("style", [])), "")
+        subjects = bases[:1] + ([f"{style} 스타일"] if style else [])
+        if subjects:
+            category = CATEGORY_LABELS.get(product.category, "상품")
+            return f"{'과 '.join(subjects)} 조건에 잘 맞는 {category}라 추천했어요."
     keywords = list(getattr(product, "search_keywords", []) or [])[:3]
     keyword_copy = "·".join(keywords) or CATEGORY_LABELS.get(product.category, "상품")
     contexts = [value for value in (profile.purpose, profile.desired_style) if value and value != "자동"]
@@ -227,11 +317,19 @@ def add_product_recommendation_reasons(
 ) -> None:
     """검색 상품 객체에 항상 표시 가능한 추천 이유와 생성 출처를 붙인다."""
     product_list = list(products)
+    evidence = {
+        product.product_id: build_product_evidence(product, profile, pose, targets)
+        for product in product_list
+    }
     fallbacks = {
-        product.product_id: _fallback_reason(product, profile, pose)
+        product.product_id: _fallback_reason(product, profile, pose, evidence[product.product_id], targets)
         for product in product_list
     }
     generated = _llm_reasons(product_list, profile, pose, targets, fallbacks)
     for product in product_list:
         product.recommendation_reason = generated.get(product.product_id, fallbacks[product.product_id])
         product.recommendation_reason_source = "llm" if product.product_id in generated else "rules"
+        items = evidence[product.product_id]
+        product.fit_evidence = [item.text for item in items]
+        product.fit_evidence_labels = [item.label for item in items]
+        product.reason_rule_ids = list(dict.fromkeys(rule for item in items for rule in item.rule_ids))
