@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from typing import Any, Iterable
 
 from recommendation_keywords import RecommendationKeywordGenerator, TargetKeywordResult
-from schemas import BODY_SHAPES, CurrentOutfitEvaluation, OutfitAnalysis, PoseAnalysis, UserProfile
+from schemas import ALL_BODY_SHAPES, CurrentOutfitEvaluation, OutfitAnalysis, PoseAnalysis, UserProfile
 
 
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
@@ -26,11 +26,21 @@ MAX_EVIDENCE = 3
 BODY_SHAPE_CONFIDENCE_THRESHOLD = 0.65
 PROPORTION_CONFIDENCE_THRESHOLD = 0.65
 SHORT_LEG_RATIO = 0.60
-BODY_SHAPE_RULES = {"R-BOD-01": "삼각체형", "R-BOD-06": "삼각체형", "R-BOD-02": "역삼각체형", "R-BOD-03": "사각체형"}
+BODY_SHAPE_RULES = {
+    "R-BOD-01": "삼각체형",
+    "R-BOD-06": "삼각체형",
+    "R-BOD-02": "역삼각체형",
+    "R-BOD-03": {"사각체형", "모래시계체형"},
+    "R-BOD-07": "둥근체형",
+    "R-BOD-08": "마름모꼴체형",
+}
 BODY_SHAPE_TEMPLATES = {
     "역삼각체형": {"top": "역삼각체형으로 분석되어 상체가 단순하고 정돈되어 보이는 '{keywords}' 상의를 우선했습니다.", "bottom": "역삼각체형으로 분석되어 상·하체 균형을 위해 하체에 구조감을 더하는 '{keywords}' 실루엣을 우선했습니다."},
     "삼각체형": {"top": "삼각체형으로 분석되어 상체 라인에 구조감을 더해 시선을 위쪽으로 모을 수 있는 '{keywords}' 상의를 우선했습니다.", "bottom": "삼각체형으로 분석되어 하체 볼륨이 과하게 강조되지 않도록 정돈된 '{keywords}' 실루엣을 우선했습니다."},
     "사각체형": {"top": "사각체형으로 분석되어 상·하체 볼륨을 한쪽씩 나눠 줄 '{keywords}' 상의를 우선했습니다.", "bottom": "사각체형으로 분석되어 상의와 볼륨이 겹치지 않도록 정돈된 '{keywords}' 실루엣을 우선했습니다."},
+    "모래시계체형": {"top": "모래시계체형으로 분석되어 허리 기준점을 만들고 상·하체 볼륨을 나눠 줄 '{keywords}' 상의를 우선했습니다.", "bottom": "모래시계체형으로 분석되어 상·하체 볼륨을 한쪽씩 나눠 줄 '{keywords}' 실루엣을 우선했습니다."},
+    "둥근체형": {"top": "둥근체형으로 분석되어 상체에 세로 방향과 정돈된 여유를 더할 '{keywords}' 상의를 우선했습니다.", "bottom": "둥근체형으로 분석되어 하체를 정돈할 '{keywords}' 실루엣을 우선했습니다."},
+    "마름모꼴체형": {"top": "마름모꼴체형으로 분석되어 어깨와 넥라인에 구조를 더할 '{keywords}' 상의를 우선했습니다.", "bottom": "마름모꼴체형으로 분석되어 상·하체 균형을 정돈할 '{keywords}' 실루엣을 우선했습니다."},
 }
 MATCHABLE_ATTRIBUTES = (
     "item_type", "fit", "length", "waistline", "material", "color",
@@ -56,7 +66,7 @@ class ProductEvidence:
 
 
 def _shape_is_confident(pose: PoseAnalysis) -> bool:
-    return bool(getattr(pose, "valid", False)) and getattr(pose, "body_shape", "") in BODY_SHAPES and float(getattr(pose, "body_shape_confidence", 0.0)) >= BODY_SHAPE_CONFIDENCE_THRESHOLD
+    return bool(getattr(pose, "valid", False)) and getattr(pose, "body_shape", "") in ALL_BODY_SHAPES and float(getattr(pose, "body_shape_confidence", 0.0)) >= BODY_SHAPE_CONFIDENCE_THRESHOLD
 
 
 def build_product_evidence(product: Any, profile: UserProfile, pose: PoseAnalysis, targets: TargetKeywordResult) -> list[ProductEvidence]:
@@ -87,8 +97,11 @@ def build_product_evidence(product: Any, profile: UserProfile, pose: PoseAnalysi
     ]
     if category != "shoes" and shape_keywords and _shape_is_confident(pose):
         rule_ids = tuple(dict.fromkeys(rule for keyword in shape_keywords for rule in rules_of(keyword) if rule in BODY_SHAPE_RULES))
-        shapes = {BODY_SHAPE_RULES[rule] for rule in rule_ids}
-        if shapes == {pose.body_shape}:
+        shapes = set()
+        for rule_id in rule_ids:
+            mapped_shapes = BODY_SHAPE_RULES[rule_id]
+            shapes.update(mapped_shapes if isinstance(mapped_shapes, set) else {mapped_shapes})
+        if pose.body_shape in shapes:
             text = BODY_SHAPE_TEMPLATES[pose.body_shape].get(category, "{shape}으로 분석되어 균형을 고려한 '{keywords}' 실루엣을 우선했습니다.").format(shape=pose.body_shape, keywords=quoted(shape_keywords))
             evidence.append(ProductEvidence(
                 "body_shape", "체형", text, rule_ids, "체형",

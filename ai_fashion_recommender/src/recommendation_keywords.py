@@ -16,8 +16,11 @@ from schemas import (
     GOAL_NONE,
     GOAL_UPPER_FOCUS,
     GOAL_WAISTLINE,
+    SHAPE_DIAMOND,
+    SHAPE_HOURGLASS,
     SHAPE_INVERTED_TRIANGLE,
     SHAPE_RECTANGLE,
+    SHAPE_ROUND,
     SHAPE_TRIANGLE,
     OutfitAnalysis,
     PoseAnalysis,
@@ -253,6 +256,35 @@ class RecommendationKeywordGenerator:
                     self._add(targets["bottom"], "fit", "스트레이트", "세미와이드")
                 sources["body_shape"] = "photo_fallback"
                 self._rule(rules, "R-BOD-03")
+            elif shape_reliable and balance_goal and pose.body_shape == SHAPE_HOURGLASS:
+                used_photo = True
+                if "top" in targets:
+                    self._add(targets["top"], "silhouette", "허리 기준점", "세미핏")
+                if "bottom" in targets:
+                    self._add(targets["bottom"], "fit", "스트레이트", "세미와이드")
+                sources["body_shape"] = "photo_fallback"
+                self._rule(rules, "R-BOD-03")
+            elif shape_reliable and balance_goal and pose.body_shape == SHAPE_ROUND:
+                used_photo = True
+                if "top" in targets:
+                    self._add(targets["top"], "structure", "V넥", "넥라인 포인트")
+                    self._add(targets["top"], "fit", "레귤러", "여유핏")
+                    self._add(targets["top"], "length", "기본 기장")
+                if "bottom" in targets:
+                    self._add(targets["bottom"], "fit", "스트레이트", "세미와이드")
+                    self._add(targets["bottom"], "length", "풀렝스")
+                sources["body_shape"] = "photo_fallback"
+                self._rule(rules, "R-BOD-07")
+            elif shape_reliable and balance_goal and pose.body_shape == SHAPE_DIAMOND:
+                used_photo = True
+                if "top" in targets:
+                    self._add(targets["top"], "structure", "어깨 구조", "넥라인 포인트")
+                    self._add(targets["top"], "fit", "레귤러", "여유핏")
+                if "bottom" in targets:
+                    self._add(targets["bottom"], "fit", "스트레이트", "세미와이드")
+                    self._add(targets["bottom"], "length", "풀렝스")
+                sources["body_shape"] = "photo_fallback"
+                self._rule(rules, "R-BOD-08")
 
         # 사진 신뢰도가 낮거나 대응 체형 규칙이 없어도 검색 속성이 빈 채로 끝나지
         # 않게 한다. 사용자 스타일 → 사진 스타일 → 캐주얼 순으로 기본 실루엣을 고른다.
@@ -322,6 +354,8 @@ class RecommendationKeywordGenerator:
             "R-BOD-06": {"어깨 구조", "넥라인 포인트", "레귤러", "여유핏"},
             "R-BOD-02": {"레귤러", "정돈된 핏", "스트레이트", "세미와이드", "와이드"},
             "R-BOD-03": {"허리 기준점", "세미핏", "스트레이트", "세미와이드"},
+            "R-BOD-07": {"V넥", "넥라인 포인트", "레귤러", "여유핏", "기본 기장", "스트레이트", "세미와이드", "풀렝스"},
+            "R-BOD-08": {"어깨 구조", "넥라인 포인트", "레귤러", "여유핏", "스트레이트", "세미와이드", "풀렝스"},
         }
         for category, attributes in targets.items():
             for attribute, values in attributes.items():

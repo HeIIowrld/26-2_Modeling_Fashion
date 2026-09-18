@@ -17,7 +17,15 @@ from recommendation_explanations import (
     build_outfit_summary_points,
 )
 from recommendation_keywords import TargetKeywordResult
-from schemas import CurrentOutfitEvaluation, OutfitAnalysis, PoseAnalysis, UserProfile
+from schemas import (
+    CurrentOutfitEvaluation,
+    OutfitAnalysis,
+    PoseAnalysis,
+    SHAPE_DIAMOND,
+    SHAPE_HOURGLASS,
+    SHAPE_ROUND,
+    UserProfile,
+)
 
 
 class RecommendationExplanationTests(unittest.TestCase):
@@ -56,6 +64,32 @@ class RecommendationExplanationTests(unittest.TestCase):
         self.assertNotIn("데이트", product.recommendation_reason)
         self.assertNotIn("체형", product.recommendation_reason)
         self.assertEqual(product.recommendation_reason_source, "rules")
+
+    def test_new_body_shape_reasons_require_applied_rule_and_match(self):
+        cases = (
+            (SHAPE_HOURGLASS, "R-BOD-03", "세미핏"),
+            (SHAPE_ROUND, "R-BOD-07", "넥라인 포인트"),
+            (SHAPE_DIAMOND, "R-BOD-08", "어깨 구조"),
+        )
+        for shape, rule_id, keyword in cases:
+            with self.subTest(shape=shape):
+                product = ShoppingProduct(
+                    "MS-" + rule_id, keyword, "브랜드", 59_000,
+                    "https://image", "https://product", "top",
+                    matched_keywords=[keyword], search_keywords=[keyword],
+                )
+                targets = TargetKeywordResult(
+                    "photo_fallback",
+                    {"top": {"fit": [keyword]}},
+                    applied_rules=[rule_id],
+                    keyword_rules={"top": {keyword: [rule_id]}},
+                )
+                pose = PoseAnalysis(
+                    True, 0.9, shape, 0.9, 0.66, 0.55, "정면", 0.8,
+                )
+                add_product_recommendation_reasons([product], self.profile, pose, targets)
+                self.assertIn(rule_id, product.reason_rule_ids)
+                self.assertTrue(any(shape in text and keyword in text for text in product.fit_evidence))
 
     def test_shoe_reason_excludes_body_correction(self):
         product = ShoppingProduct("MS2", "블랙 로퍼", "브랜드", 59000,

@@ -7,7 +7,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from recommendation_keywords import RecommendationKeywordGenerator
-from schemas import OutfitAnalysis, PoseAnalysis, UserProfile
+from schemas import (
+    OutfitAnalysis,
+    PoseAnalysis,
+    SHAPE_DIAMOND,
+    SHAPE_HOURGLASS,
+    SHAPE_ROUND,
+    UserProfile,
+)
 
 
 class RecommendationKeywordTests(unittest.TestCase):
@@ -113,6 +120,43 @@ class RecommendationKeywordTests(unittest.TestCase):
         self.assertEqual(result.constraints["excluded_colors"], ["베이지"])
         self.assertEqual(result.constraints["excluded_materials"], ["가죽"])
         self.assertNotIn("excluded_colors", result.targets["top"])
+
+    def test_circumference_shapes_generate_body_rules_and_provenance(self):
+        expected = {
+            SHAPE_HOURGLASS: ("R-BOD-03", {"허리 기준점", "세미핏", "스트레이트", "세미와이드"}),
+            SHAPE_ROUND: ("R-BOD-07", {"V넥", "넥라인 포인트", "레귤러", "여유핏", "기본 기장", "스트레이트", "세미와이드", "풀렝스"}),
+            SHAPE_DIAMOND: ("R-BOD-08", {"어깨 구조", "넥라인 포인트", "레귤러", "여유핏", "스트레이트", "세미와이드", "풀렝스"}),
+        }
+        for shape, (rule_id, keywords) in expected.items():
+            with self.subTest(shape=shape):
+                pose = PoseAnalysis(
+                    True, 0.95, shape, 0.88, 0.66, 0.55,
+                    "정면에 가까움", body_shape_confidence=0.9,
+                )
+                result = self.generator.generate(UserProfile(), pose, self.outfit)
+                self.assertIn(rule_id, result.applied_rules)
+                tagged = {
+                    keyword
+                    for category in result.keyword_rules.values()
+                    for keyword, rules in category.items()
+                    if rule_id in rules
+                }
+                self.assertTrue(keywords <= tagged)
+
+    def test_circumference_body_rules_require_confidence(self):
+        for shape, rule_id in (
+            (SHAPE_HOURGLASS, "R-BOD-03"),
+            (SHAPE_ROUND, "R-BOD-07"),
+            (SHAPE_DIAMOND, "R-BOD-08"),
+        ):
+            with self.subTest(shape=shape):
+                pose = PoseAnalysis(
+                    True, 0.95, shape, 0.88, 0.66, 0.55,
+                    "정면에 가까움", body_shape_confidence=0.64,
+                )
+                result = self.generator.generate(UserProfile(), pose, self.outfit)
+                self.assertNotIn(rule_id, result.applied_rules)
+                self.assertFalse(any(rule_id in rules for category in result.keyword_rules.values() for rules in category.values()))
 
     def test_brief_output_contains_no_numeric_score(self):
         result = self.generator.generate(

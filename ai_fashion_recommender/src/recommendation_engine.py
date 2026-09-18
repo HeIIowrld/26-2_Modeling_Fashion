@@ -170,7 +170,7 @@ class RecommendationEngine:
         "R-COL-01", "R-COL-02", "R-COL-03", "R-COL-04", "R-COL-05",
         "R-COL-08", "R-COL-10", "R-COL-11", "R-COL-13",
         "R-PAT-01", "R-PAT-03", "R-PAT-04", "R-MAT-01", "R-MAT-02", "R-CMP-01", "R-CMP-02", "R-CMP-03",
-        "R-BOD-01", "R-BOD-02", "R-BOD-03", "R-BOD-04", "R-BOD-05", "R-BOD-06",
+        "R-BOD-01", "R-BOD-02", "R-BOD-03", "R-BOD-04", "R-BOD-05", "R-BOD-06", "R-BOD-07", "R-BOD-08",
         "R-WEA-01", "R-WEA-02", "R-WEA-03", "R-WEA-04",
         "R-OWN-01",
     }
