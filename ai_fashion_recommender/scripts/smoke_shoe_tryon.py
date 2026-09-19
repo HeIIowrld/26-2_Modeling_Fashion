@@ -27,8 +27,17 @@ def main():
     cli.add_argument('--output', type=Path, required=True)
     cli.add_argument('--shoe-manifest', type=Path)
     cli.add_argument('--prepare-only', action='store_true')
+    cli.add_argument('--people-limit', type=int, default=2)
+    cli.add_argument('--shoe-limit', type=int, default=2)
+    cli.add_argument('--skip-outfit', action='store_true', help='의류+신발 전체 조합 1건을 생략한다')
+    cli.add_argument('--prompt-file', type=Path, help='프롬프트 A/B용. 비교 실행에만 쓴다')
+    cli.add_argument('--dump-parse', action='store_true', help='발 마스크 규칙을 GPU 없이 비교하려고 파싱 라벨을 저장한다')
     args = cli.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
+    if args.prompt_file:
+        import shoe_tryon
+        shoe_tryon.PROMPT = args.prompt_file.read_text(encoding='utf-8').strip()
+        (args.output / 'prompt.txt').write_text(shoe_tryon.PROMPT, encoding='utf-8')
     catalog = ProductCatalog(args.catalog).products
     shoes = [p for p in catalog if p.category == 'shoes' and garment_image_path(p.image_path).is_file()]
     if args.shoe_manifest:
@@ -36,11 +45,11 @@ def main():
     # Different products on the same person test actual reference conditioning.
     selected = []
     for item in shoes:
-        if not selected or item.color != selected[0].color:
+        if not selected or all(item.color != chosen.color for chosen in selected):
             selected.append(item)
-        if len(selected) == 2:
+        if len(selected) == args.shoe_limit:
             break
-    if len(selected) < 2:
+    if len(selected) < min(2, args.shoe_limit):
         raise RuntimeError('Two real shoe references with distinct catalog colors are required')
     parser = ClothingParser(use_fashn=True)
     pose_analyzer = PoseAnalyzer()
@@ -53,9 +62,14 @@ def main():
             parsed = parser.parse(path, pose)
             mask = foot_edit_mask(parsed['segmentation'], pose)
             eligible.append((path, pose, parsed, mask))
+            if args.dump_parse:
+                Image.fromarray(np.asarray(parsed['segmentation']).astype(np.uint8)).save(
+                    args.output / f'{path.stem}_parse.png')
+                (args.output / f'{path.stem}_pose.json').write_text(
+                    json.dumps({k: list(map(float, v)) for k, v in pose.landmarks.items()}), encoding='utf-8')
         except Exception as exc:
             rejected.append({'person': path.name, 'reason': str(exc)})
-        if len(eligible) == 2:
+        if len(eligible) == args.people_limit:
             break
     pose_analyzer.close()
     (args.output / 'inputs.json').write_text(json.dumps({
@@ -100,6 +114,11 @@ def main():
             (args.output / 'results.json').write_text(json.dumps(records, ensure_ascii=False, indent=2))
             print(json.dumps(record, ensure_ascii=False), flush=True)
     # One complete outfit verifies that the two generators can share the GPU.
+    if args.skip_outfit:
+        (args.output / 'results.json').write_text(json.dumps(records, ensure_ascii=False, indent=2))
+        if any('error' in r for r in records):
+            raise RuntimeError('Some real GPU smoke cases failed; see results.json')
+        return
     person, pose, parsed, _ = eligible[0]
     clothes = [next(p for p in catalog if p.category == c and garment_image_path(p.image_path).is_file())
                for c in ('top', 'bottom')]

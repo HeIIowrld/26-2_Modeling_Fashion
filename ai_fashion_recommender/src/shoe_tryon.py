@@ -19,10 +19,13 @@ from virtual_tryon import TryOnNotReady, VirtualTryOnAdapter
 
 MODEL_ID = "black-forest-labs/FLUX.2-klein-4B"
 MODEL_REVISION = "e7b7dc27f91deacad38e78976d1f2b499d76a294"
+# 표현은 같은 24쌍에 A/B로 고른 것이다. 청결 문장은 때 탄 밑창을 줄였고,
+# 반대로 '양말을 넣지 말라'는 문장은 없던 양말을 오히려 만들어 기각했다. gpu_server/SHOES_VTON.md 참고.
 PROMPT = (
     "Replace the footwear in the masked region with a matching left and right pair "
     "of the exact shoes in the reference product image. Match the reference color, "
-    "material, sole and design. Fit each shoe to the existing foot direction and "
+    "material, sole and design. The shoes are brand new and clean: no dirt, no scuff "
+    "marks, no worn or aged texture. Fit each shoe to the existing foot direction and "
     "perspective. Keep the same two feet, ankle positions, legs, trousers and floor. "
     "Respect trouser hems overlapping the shoes. Natural contact shadows and lighting. "
     "A realistic worn pair of shoes, not a pasted product photograph. No extra feet or shoes."
