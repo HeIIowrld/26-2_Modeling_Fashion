@@ -57,6 +57,56 @@ def test_missing_foot_segmentation_is_not_replaced_with_a_leg_mask():
         foot_edit_mask(**ctx)
 
 
+def test_one_visible_shoe_cannot_supply_both_feet():
+    ctx = context()
+    ctx['segmentation'][176:189, 75:95] = 0
+    ctx['pose'].landmarks['right_foot'] = (.45, .92, .99)
+    with pytest.raises(TryOnNotReady, match='양쪽 발'):
+        foot_edit_mask(**ctx)
+
+
+def test_touching_shoes_are_allowed_when_both_toes_have_pixel_support():
+    ctx = context()
+    ctx['segmentation'][180:185, 45:75] = 15
+    mask = foot_edit_mask(**ctx)
+    assert mask[184, 35] and mask[184, 85]
+
+
+@pytest.mark.parametrize('index', ['[]', '{"weight_map": []}', '{"weight_map": null}'])
+def test_malformed_checkpoint_index_is_unavailable(tmp_path, index):
+    files = [
+        'model_index.json', 'transformer/diffusion_pytorch_model.safetensors',
+        'transformer/config.json', 'vae/diffusion_pytorch_model.safetensors',
+        'vae/config.json', 'text_encoder/config.json', 'text_encoder/model.safetensors.index.json',
+        'scheduler/scheduler_config.json', 'tokenizer/tokenizer_config.json', 'tokenizer/tokenizer.json',
+    ]
+    for name in files:
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('{}')
+    (tmp_path / 'text_encoder/model.safetensors.index.json').write_text(index)
+    assert not ShoeTryOn(tmp_path).available
+
+
+def test_failed_offload_setup_is_not_cached_and_next_request_can_retry(tmp_path, monkeypatch):
+    import torch
+    failed, ready = Mock(), Mock()
+    failed.enable_model_cpu_offload.side_effect = RuntimeError('offload setup failed')
+    factory = Mock(side_effect=[failed, ready])
+    monkeypatch.setitem(sys.modules, 'diffusers', SimpleNamespace(
+        Flux2KleinInpaintPipeline=SimpleNamespace(from_pretrained=factory)))
+    monkeypatch.setattr(torch.cuda, 'is_available', lambda: True)
+    monkeypatch.setattr(ShoeTryOn, 'available', property(lambda self: True))
+    model = ShoeTryOn(tmp_path)
+    with pytest.raises(RuntimeError, match='offload setup failed'):
+        model._load_pipeline()
+    assert model._pipeline is None
+    assert model._load_pipeline() is ready
+    assert factory.call_count == 2
+    assert model._load_pipeline() is ready
+    assert factory.call_count == 2
+
+
 @pytest.mark.parametrize('fail_shoes', [False, True])
 def test_three_item_request_uses_actual_shoe_reference_and_commits_only_complete_output(tmp_path, fail_shoes):
     ctx = context()
