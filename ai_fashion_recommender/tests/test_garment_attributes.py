@@ -57,6 +57,9 @@ class GarmentAttributeTests(unittest.TestCase):
             def predict_layering(self, *args):
                 return None
 
+            def predict_shoes(self, *args):
+                return {}
+
             def analyze_crop(self, image, *, tasks, prompt_groups, **kwargs):
                 learned = {"pant_length": AttributePrediction(["풀렝스"], {"풀렝스": 0.99}, 0.99, True)} if "pant_length" in tasks else {}
                 if self.short and "pant_length" in tasks:

@@ -73,6 +73,21 @@ class ShoppingTryOnResolutionTests(unittest.TestCase):
         self.assertFalse(pipeline._shopping_image_host_allowed("http://image.msscdn.net/a.jpg"))
         self.assertFalse(pipeline._shopping_image_host_allowed("https://msscdn.net.evil.example/a.jpg"))
 
+    def test_shoes_require_both_model_capability_and_visible_feet(self):
+        with tempfile.TemporaryDirectory() as directory:
+            image = Path(directory) / "1.jpg"
+            image.write_bytes(b"shoe")
+            for reason in ("", "양쪽 발이 보이지 않습니다."):
+                with patch("web.pipeline.garment_image_path", return_value=image):
+                    payloads, resolved = pipeline._shopping_tryon_payloads(
+                        [shopping_product("S", "shoes")], [catalog_product("S", "shoes")], Path(directory),
+                        adapter_available=True, supported_categories={"top", "bottom", "shoes"},
+                        shoe_unavailable_reason=reason,
+                    )
+                self.assertEqual(payloads[0]["tryon_available"], not bool(reason))
+                self.assertEqual(bool(resolved), not bool(reason))
+                self.assertEqual(payloads[0]["tryon_reason"], reason)
+
 
 if __name__ == "__main__":
     unittest.main()

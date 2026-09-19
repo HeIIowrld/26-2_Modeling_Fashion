@@ -16,6 +16,7 @@ import tempfile
 import threading
 import time
 import uuid
+from itertools import product as cartesian_product
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
 from pathlib import Path
@@ -74,7 +75,7 @@ SESSION_TTL = timedelta(minutes=30)
 MAX_SESSIONS = 20
 SWEEP_INTERVAL_SECONDS = 300
 TRYON_BATCH_LIMIT = 3
-TRYON_PRODUCT_LIMIT = 2
+TRYON_PRODUCT_LIMIT = 3
 TRYON_BATCH_ACTIVE_STATES = {"queued", "running"}
 
 app = FastAPI(title="AI 코디 추천", docs_url=None, redoc_url=None)
@@ -223,10 +224,10 @@ def _session_dir(job_id: str) -> Path:
 
 
 def _generate_product_tryon_for_job(job_id: str, product_ids: list[str]) -> dict:
-    """사용자가 무신사 카드에서 고른 상의·하의 조합을 실제 상품 이미지로 합성한다."""
+    """무신사 카드에서 고른 상의·하의·신발을 실제 상품 이미지로 합성한다."""
     selected_ids = list(dict.fromkeys(str(product_id) for product_id in product_ids))
     if not selected_ids or len(selected_ids) > TRYON_PRODUCT_LIMIT:
-        raise ValueError("상의와 하의를 합쳐 최대 2개까지 선택할 수 있습니다.")
+        raise ValueError("상의·하의·신발을 카테고리별 하나씩, 최대 3개까지 선택할 수 있습니다.")
     if any(not PRODUCT_ID_PATTERN.fullmatch(product_id) for product_id in selected_ids):
         raise ValueError("잘못된 상품 번호가 포함되어 있습니다.")
 
@@ -249,11 +250,11 @@ def _generate_product_tryon_for_job(job_id: str, product_ids: list[str]) -> dict
                 )
             products = [available[product_id] for product_id in selected_ids]
             categories = [product.category for product in products]
-            if any(category not in {"top", "bottom"} for category in categories):
-                raise TryOnNotReady("현재 실제 상품 합성은 상의와 하의만 지원합니다.")
+            if any(category not in {"top", "bottom", "shoes"} for category in categories):
+                raise TryOnNotReady("현재 실제 상품 합성은 상의·하의·신발만 지원합니다.")
             if len(categories) != len(set(categories)):
-                raise ValueError("상의와 하의는 카테고리별로 한 개씩만 선택할 수 있습니다.")
-            products.sort(key=lambda product: 0 if product.category == "top" else 1)
+                raise ValueError("상의·하의·신발은 카테고리별로 한 개씩만 선택할 수 있습니다.")
+            products.sort(key=lambda product: {"top": 0, "bottom": 1, "shoes": 2}[product.category])
             person_image = job["person_image"]
             tryon_context = job.get("tryon_context")
 
@@ -350,7 +351,7 @@ def _read_shopping_tryon_batch(job_id: str) -> dict | None:
 
 
 def _initialize_shopping_tryon_batch(job_id: str) -> dict | None:
-    """파싱에 성공한 무신사 상·하의의 가능한 모든 조합을 큐에 넣는다."""
+    """합성 가능한 상의·하의·신발의 카테고리별 조합을 큐에 넣는다."""
     with _jobs_lock:
         job = _jobs.get(job_id)
         if job is None:
@@ -364,17 +365,15 @@ def _initialize_shopping_tryon_batch(job_id: str) -> dict | None:
             product = prepared.get(product_id)
             if product is None or product_id in seen_ids:
                 continue
-            if product.category not in {"top", "bottom"}:
+            if product.category not in {"top", "bottom", "shoes"}:
                 continue
             seen_ids.add(product_id)
             ordered_products.append(product)
 
-        tops = [product for product in ordered_products if product.category == "top"]
-        bottoms = [product for product in ordered_products if product.category == "bottom"]
-        if tops and bottoms:
-            combinations = [[top, bottom] for top in tops for bottom in bottoms]
-        else:
-            combinations = [[product] for product in tops or bottoms]
+        groups = [[p for p in ordered_products if p.category == category]
+                  for category in ("top", "bottom", "shoes")]
+        groups = [group for group in groups if group]
+        combinations = [list(items) for items in cartesian_product(*groups)] if groups else []
 
         items = {
             index: {

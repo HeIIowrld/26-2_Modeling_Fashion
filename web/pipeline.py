@@ -192,12 +192,18 @@ def _build_tryon() -> VirtualTryOnAdapter:
 
         preset = os.environ.get("FASHION_VTON_PRESET", "standard").strip().lower()
         if preset == "fast":
-            return CatVTONTryOn.fast()
-        if preset in {"high", "high_detail"}:
-            return CatVTONTryOn.high_detail()
-        if preset not in {"", "standard"}:
-            print(f"[VTON] 알 수 없는 프리셋 {preset!r}; standard를 사용합니다.")
-        return CatVTONTryOn()
+            adapter = CatVTONTryOn.fast()
+        elif preset in {"high", "high_detail"}:
+            adapter = CatVTONTryOn.high_detail()
+        else:
+            if preset not in {"", "standard"}:
+                print(f"[VTON] 알 수 없는 프리셋 {preset!r}; standard를 사용합니다.")
+            adapter = CatVTONTryOn()
+        shoe_model = os.environ.get("FASHION_SHOE_MODEL_PATH", "").strip()
+        if shoe_model:
+            from shoe_tryon import OutfitTryOn, ShoeTryOn
+            return OutfitTryOn(adapter, ShoeTryOn(shoe_model))
+        return adapter
     except Exception as error:  # 저장소 없음·의존성 없음·GPU 없음 모두 여기로 온다
         print(f"[VTON] 생성 모델을 켜지 못해 비활성으로 실행합니다: {type(error).__name__}: {error}")
         return VirtualTryOnAdapter(enabled=False)
@@ -410,6 +416,8 @@ def _shopping_tryon_payloads(
     output_dir: Path,
     *,
     adapter_available: bool,
+    supported_categories: set[str] | None = None,
+    shoe_unavailable_reason: str = "",
 ) -> tuple[list[dict], dict[str, Product]]:
     """검색 상품을 공개 응답과 실제 VTON에 쓸 수 있는 Product 객체로 나눈다."""
     catalog_by_id = {product.product_id: product for product in catalog_products}
@@ -419,8 +427,11 @@ def _shopping_tryon_payloads(
         payload = item.public_dict()
         resolved = catalog_by_id.get(item.product_id)
         reason = ""
-        if item.category not in TRYON_PRODUCT_CATEGORIES:
+        if item.category not in (supported_categories if supported_categories is not None else TRYON_PRODUCT_CATEGORIES):
             reason = "현재 실제 합성은 상의와 하의만 지원합니다."
+            resolved = None
+        elif item.category == "shoes" and shoe_unavailable_reason:
+            reason = shoe_unavailable_reason
             resolved = None
         elif not adapter_available:
             reason = "현재 합성 GPU를 사용할 수 없습니다."
@@ -556,11 +567,21 @@ def run_pipeline(
             pose_result,
             target_keywords,
         )
+        supported_categories = set(getattr(engine.tryon, "supported_categories", TRYON_PRODUCT_CATEGORIES))
+        shoe_reason = ""
+        if "shoes" in supported_categories:
+            from shoe_tryon import foot_edit_mask
+            try:
+                foot_edit_mask(parsed["segmentation"], pose_result)
+            except TryOnNotReady as exc:
+                shoe_reason = str(exc)
         shopping_payloads, shopping_tryon_products = _shopping_tryon_payloads(
             shopping_results,
             engine.recommender.catalog.products,
             output_dir,
             adapter_available=engine.tryon.available,
+            supported_categories=supported_categories,
+            shoe_unavailable_reason=shoe_reason,
         )
 
         on_stage("preview")

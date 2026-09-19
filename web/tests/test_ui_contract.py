@@ -62,7 +62,8 @@ class UIContractTests(unittest.TestCase):
         self.assertIn("/shopping-tryon-batch", javascript)
         self.assertIn("toggleShoppingSelection", javascript)
         self.assertIn("모든 조합 입어보기", javascript)
-        self.assertIn("신발은 전용 마스크와 모델이 없어", javascript)
+        self.assertNotIn("신발은 전용 마스크와 모델이 없어", javascript)
+        self.assertIn('["top", "bottom", "shoes"]', javascript)
         self.assertIn(".shopping-tryon-panel", active_css)
         self.assertIn(".shopping-batch", active_css)
 
