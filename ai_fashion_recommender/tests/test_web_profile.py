@@ -12,6 +12,18 @@ from pipeline import build_profile, form_options
 
 
 class BuildProfileTests(unittest.TestCase):
+    def test_reference_garment_is_kept_separate_from_body_measurements(self):
+        profile = build_profile({"chest_cm": 94, "reference_measurements": {
+            "top": {"chest_width_cm": "54.5", "length_cm": "70"},
+            "bottom": {"waist_width_cm": None, "length_cm": ""},
+        }})
+        self.assertEqual(profile.chest_cm, 94)
+        self.assertEqual(profile.reference_measurements, {"top": {"chest_width_cm": 54.5, "length_cm": 70.0}})
+
+    def test_nonfinite_reference_measurement_is_rejected(self):
+        with self.assertRaises(ValueError):
+            build_profile({"reference_measurements": {"top": {"length_cm": "NaN"}}})
+
     def test_empty_payload_uses_dataclass_defaults(self):
         profile = build_profile({})
         self.assertEqual(profile.purpose, "데일리")

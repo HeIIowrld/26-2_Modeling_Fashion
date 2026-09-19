@@ -1191,6 +1191,7 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         best = None  # ((벌점, -선명도), 이미지, 검사 결과)
         attempts = 0
         assess_seconds = 0.0
+        unassessed_attempts = []
         for attempt in range(self.max_retries + 1):
             attempts += 1
             generator = torch.Generator(device=self.device).manual_seed(self.seed + attempt)
@@ -1215,18 +1216,29 @@ class CatVTONTryOn(VirtualTryOnAdapter):
                 except Exception as exc:  # 검사 실패가 합성 결과 전달을 막아서는 안 된다.
                     print(f"[VTON] 합성 후 품질 검사를 건너뜁니다: {type(exc).__name__}: {exc}")
                 assess_seconds += time.perf_counter() - started
-            key = (report.penalty() if report is not None else 0.0, -score)
+                if report is None or report.skipped or not report.checks:
+                    from tryon_quality import TryOnQualityReport
+
+                    reason = report.skipped if report is not None else "검사기 사용 불가 또는 실행 오류"
+                    report = TryOnQualityReport(quality["category"], skipped=reason or "검사 항목 없음")
+                    unassessed_attempts.append({"attempt": attempts, "reason": report.skipped})
+            # 미검사 결과를 통과(벌점 0)로 취급해 검사가 끝난 결과를 대체하지 않는다.
+            key = (float("inf") if report is not None and report.skipped else
+                   report.penalty() if report is not None else 0.0, -score)
             if best is None or key < best[0]:
                 best = (key, repainted, report)
-            if report is None:
+            if report is None or report.skipped:
                 if -best[0][1] >= self.min_sharpness:
                     break
             elif not report.retry_recommended:
                 break
 
         _, result, report = best
+        if unassessed_attempts:
+            self._add_warning("합성 품질 검사를 완료하지 못한 시도가 있습니다. 결과를 직접 확인해 주세요.")
         if report is not None:
             self.last_quality_reports.append({**report.to_dict(), "attempts": attempts,
+                                              "unassessed_attempts": unassessed_attempts,
                                               "assess_seconds": round(assess_seconds, 3)})
             failed = report.warnings()
             if failed:

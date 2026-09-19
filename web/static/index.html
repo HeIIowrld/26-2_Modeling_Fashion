@@ -219,6 +219,20 @@
         </details>
 
         <details class="disclosure">
+          <summary><span>잘 맞는 옷과 사이즈 비교 <em class="badge optional">선택</em></span></summary>
+          <div class="disclosure-body">
+            <p class="field-hint section-hint">비슷한 종류와 핏의 옷을 기준으로 입력해주세요. 옷을 평평하게 놓고 한쪽 끝에서 반대쪽 끝까지 잰 단면과 총장을 cm로 비교해요.</p>
+            <div class="grid-2 paired-fields">
+              <label class="field"><span class="field-label">기준 상의 가슴단면 (cm)</span><input type="number" name="reference_top_chest_cm" min="1" max="250" step="0.1" placeholder="예: 54" /></label>
+              <label class="field"><span class="field-label">기준 상의 총장 (cm)</span><input type="number" name="reference_top_length_cm" min="1" max="250" step="0.1" placeholder="예: 70" /></label>
+              <label class="field"><span class="field-label">기준 하의 허리단면 (cm)</span><input type="number" name="reference_bottom_waist_cm" min="1" max="250" step="0.1" placeholder="예: 38" /></label>
+              <label class="field"><span class="field-label">기준 하의 총장 (cm)</span><input type="number" name="reference_bottom_length_cm" min="1" max="250" step="0.1" placeholder="예: 102" /></label>
+            </div>
+            <p class="field-hint">신체 둘레나 키를 넣는 칸이 아니에요. 실측이 있는 상품만 비교하며 소재와 신축성에 따라 착용감은 달라질 수 있어요.</p>
+          </div>
+        </details>
+
+        <details class="disclosure">
           <summary><span>현재 보유 옷 활용 <em class="badge optional">선택</em></span></summary>
           <div class="disclosure-body">
             <p class="field-hint section-hint">상의·하의만 구분하고 사진을 넣어주세요. 색상과 스타일은 FITTA가 사진에서 판단해요.</p>
@@ -381,6 +395,7 @@
 
     <p class="disclaimer" id="result-disclaimer">
       무신사 상품은 실시간 검색 결과이며 가격과 재고가 달라질 수 있어요.
+      예상 착장샷은 실제 핏을 보장하지 않아요.
     </p>
   </section>
 </main>

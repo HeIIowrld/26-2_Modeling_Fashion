@@ -41,7 +41,7 @@ class UIContractTests(unittest.TestCase):
         self.assertIn('id="request-summary"', html)
         self.assertIn("renderRequestSummary(result?.request)", javascript)
         self.assertIn("무신사 상품 추천", html)
-        self.assertIn("renderShoppingProducts(result.shopping_results || [])", javascript)
+        self.assertIn("renderShoppingProducts(shoppingResults)", javascript)
         self.assertIn('id="current-score-matrix"', html)
         self.assertIn('id="current-outfit-points"', html)
         self.assertIn("renderCurrentOutfitEvaluation(result.current_outfit_evaluation)", javascript)
@@ -49,6 +49,9 @@ class UIContractTests(unittest.TestCase):
         self.assertNotIn('id="reco-picker"', html)
         self.assertNotIn('id="reco-detail"', html)
         self.assertNotIn("renderRecommendations", javascript)
+        self.assertNotIn('data-image="preview"', html)
+        self.assertIn("예상 착장샷은 실제 핏을 보장하지", html)
+        self.assertIn("예상 착장샷은 실제 핏을 보장하지", javascript)
 
     def test_musinsa_products_can_be_selected_for_real_tryon(self):
         html = (STATIC / "index.html").read_text(encoding="utf-8")
