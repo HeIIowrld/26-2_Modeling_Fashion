@@ -594,7 +594,11 @@ async def analyze(
         raise HTTPException(status_code=400, detail=f"조건 값을 읽을 수 없습니다: {exc}") from exc
     if not isinstance(payload, dict):
         raise HTTPException(status_code=400, detail="조건 값은 객체여야 합니다.")
-    if payload.get("gender") not in GENDERS:
+    # The deployed legacy gateway sends change_scope and has no gender field.
+    # Keep that client working during rollout; modern/category requests still require gender.
+    legacy_profile = ("change_categories" not in payload and "gender" not in payload
+                      and payload.get("change_scope") in {"전체 변경", "상의만 변경", "하의만 변경"})
+    if not legacy_profile and payload.get("gender") not in GENDERS:
         raise HTTPException(status_code=400, detail="성별을 남성 또는 여성으로 선택해주세요.")
     from recommendation_keywords import selected_categories
     try:
