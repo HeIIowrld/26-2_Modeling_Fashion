@@ -180,6 +180,85 @@ class MusinsaLiveSearchTests(unittest.TestCase):
 
         self.assertEqual(results[0].url, "https://www.musinsa.com/products/77")
 
+    def test_body_shape_multiplier_one_matches_existing_score(self):
+        targets = TargetKeywordResult(
+            mode="mixed",
+            targets={"top": {"fit": ["여유핏"], "style": ["캐주얼"]}},
+            keyword_rules={"top": {"여유핏": ["R-BOD-07"]}},
+        )
+        search = MusinsaLiveSearch()
+        product = item(101, "여유핏 캐주얼 재킷")
+
+        base, body, final, matched, body_keywords = search.score_with_body_shape(
+            product, targets.targets["top"], 0, "top", targets, 1.0
+        )
+
+        self.assertEqual(final, base)
+        self.assertEqual(body, 4.0)
+        self.assertEqual(matched, ["여유핏", "캐주얼"])
+        self.assertEqual(body_keywords, ["여유핏"])
+
+    def test_body_shape_multiplier_zero_removes_only_r_bod_score(self):
+        targets = TargetKeywordResult(
+            mode="mixed",
+            targets={"top": {"fit": ["여유핏"], "style": ["캐주얼"]}},
+            keyword_rules={"top": {"여유핏": ["R-BOD-07"], "캐주얼": ["R-SIL-01"]}},
+        )
+        search = MusinsaLiveSearch()
+        product = item(102, "여유핏 캐주얼 재킷")
+
+        base, body, final, _, _ = search.score_with_body_shape(
+            product, targets.targets["top"], 0, "top", targets, 0.0
+        )
+
+        self.assertEqual(body, 4.0)
+        self.assertEqual(final, base - body)
+
+    def test_increasing_multiplier_changes_only_r_bod_match(self):
+        targets = TargetKeywordResult(
+            mode="mixed",
+            targets={"top": {"fit": ["여유핏"]}},
+            keyword_rules={"top": {"여유핏": ["R-BOD-07"]}},
+        )
+        search = MusinsaLiveSearch()
+        bod_product = item(103, "여유핏 재킷")
+        other_product = item(104, "기본 재킷")
+
+        bod_low = search.score_with_body_shape(
+            bod_product, targets.targets["top"], 0, "top", targets, 1.0
+        )
+        bod_high = search.score_with_body_shape(
+            bod_product, targets.targets["top"], 0, "top", targets, 2.0
+        )
+        other_low = search.score_with_body_shape(
+            other_product, targets.targets["top"], 0, "top", targets, 1.0
+        )
+        other_high = search.score_with_body_shape(
+            other_product, targets.targets["top"], 0, "top", targets, 2.0
+        )
+
+        self.assertGreater(bod_high[2], bod_low[2])
+        self.assertEqual(other_high[2], other_low[2])
+
+    def test_keyword_without_r_bod_is_not_scaled(self):
+        targets = TargetKeywordResult(
+            mode="mixed",
+            targets={"top": {"fit": ["여유핏"]}},
+            keyword_rules={"top": {"여유핏": ["R-SIL-01"]}},
+        )
+        search = MusinsaLiveSearch()
+        product = item(105, "여유핏 재킷")
+
+        score_one = search.score_with_body_shape(
+            product, targets.targets["top"], 0, "top", targets, 1.0
+        )
+        score_three = search.score_with_body_shape(
+            product, targets.targets["top"], 0, "top", targets, 3.0
+        )
+
+        self.assertEqual(score_one[1], 0.0)
+        self.assertEqual(score_one[2], score_three[2])
+
 
 if __name__ == "__main__":
     unittest.main()

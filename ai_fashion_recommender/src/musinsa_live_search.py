@@ -10,6 +10,7 @@ from dataclasses import asdict, dataclass, field
 from functools import partial
 from typing import Iterable
 
+from body_shape_scoring import active_r_bod_keywords, semantic_body_shape_score
 from product_measurements import ProductMeasurementClient
 from recommendation_keywords import TargetKeywordResult
 from schemas import Product, UserProfile
@@ -56,6 +57,7 @@ KEYWORD_ALIASES = {
     "가죽": ("레더", "가죽", "leather"),
     "린넨": ("린넨", "리넨", "linen"),
 }
+BODY_SHAPE_RULE_PREFIX = "R-BOD-"
 @dataclass
 class ShoppingProduct:
     product_id: str
@@ -78,6 +80,10 @@ class ShoppingProduct:
     fit_evidence: list[str] = field(default_factory=list)
     fit_evidence_labels: list[str] = field(default_factory=list)
     reason_rule_ids: list[str] = field(default_factory=list)
+    base_score: float = 0.0
+    body_shape_score: float = 0.0
+    final_score: float = 0.0
+    body_shape_keywords: list[str] = field(default_factory=list)
 
     def public_dict(self) -> dict:
         """내부 키워드와 점수는 웹 UI에 보내지 않는다."""
@@ -208,18 +214,67 @@ class MusinsaLiveSearch:
         return not any(self._normalized(value) in text for value in blocked if value)
 
     def _score(self, item: dict, attributes: dict[str, list[str]], rank: int) -> tuple[float, list[str]]:
+        score, _, matched, _ = self._score_components(item, attributes, rank)
+        return score, matched
+
+    def _score_components(
+        self,
+        item: dict,
+        attributes: dict[str, list[str]],
+        rank: int,
+        *,
+        category: str = "",
+        keyword_rules: dict[str, dict[str, list[str]]] | None = None,
+        body_shape_mode: str = "binary",
+    ) -> tuple[float, float, list[str], list[str]]:
         text = self._normalized(
             " ".join(str(item.get(key) or "") for key in ("goodsName", "brandName", "brand"))
         )
         score = 0.0
+        body_shape_score = 0.0
         matched: list[str] = []
+        body_shape_keywords: list[str] = []
         for attribute, weight in ATTRIBUTE_WEIGHTS.items():
             for keyword in attributes.get(attribute, []):
                 if any(self._normalized(alias) in text for alias in self._aliases(keyword)):
                     score += weight
                     matched.append(keyword)
+                    rules = (keyword_rules or {}).get(category, {}).get(keyword, [])
+                    if any(rule_id.startswith(BODY_SHAPE_RULE_PREFIX) for rule_id in rules):
+                        body_shape_score += weight
+                        body_shape_keywords.append(keyword)
                     break
-        return score, matched
+        if body_shape_mode == "semantic_group":
+            category_rules = (keyword_rules or {}).get(category, {})
+            body_shape_score, _ = semantic_body_shape_score(
+                active_r_bod_keywords(category_rules), body_shape_keywords
+            )
+        elif body_shape_mode != "binary":
+            raise ValueError(f"Unsupported body_shape_mode: {body_shape_mode}")
+        return score, body_shape_score, matched, body_shape_keywords
+
+    def score_with_body_shape(
+        self,
+        item: dict,
+        attributes: dict[str, list[str]],
+        rank: int,
+        category: str,
+        targets: TargetKeywordResult,
+        body_shape_multiplier: float = 1.0,
+        *,
+        body_shape_mode: str = "binary",
+    ) -> tuple[float, float, float, list[str], list[str]]:
+        """Return base, body-shape, and final scores for a fixed product candidate."""
+        base_score, body_shape_score, matched, body_shape_keywords = self._score_components(
+            item,
+            attributes,
+            rank,
+            category=category,
+            keyword_rules=getattr(targets, "keyword_rules", None),
+            body_shape_mode=body_shape_mode,
+        )
+        final_score = base_score + body_shape_score * (body_shape_multiplier - 1.0)
+        return base_score, body_shape_score, final_score, matched, body_shape_keywords
 
     @staticmethod
     def _representative_keywords(

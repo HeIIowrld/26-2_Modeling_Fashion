@@ -21,6 +21,9 @@ __pycache__/
 /packages/*.zip
 /packages/PACKAGE_CHECKSUMS.json
 
+# Local recommendation experiment outputs and cached artifacts.
+/outputs/
+
 # 이미지 자산은 재배포 금지 — 코드와 메타데이터(CSV)만 커밋한다
 /datasets/people/
 /datasets/garments/
