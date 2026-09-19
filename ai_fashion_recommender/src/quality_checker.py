@@ -28,6 +28,17 @@ class QualityChecker:
         pose = pose or self.pose_analyzer.analyze(rgb)
         height, width = rgb.shape[:2]
         issues = list(pose.warnings)
+        # 전체 포즈 점수가 높아도 발이 프레임 밖이면 전신사진으로 통과시키지 않는다.
+        # 가림으로 신뢰도가 낮은 좌표는 잘림의 근거로 사용하지 않는다.
+        framing_points = [pose.landmarks.get(name) for name in
+                          ("left_ankle", "right_ankle", "left_foot", "right_foot")]
+        confident = [p for p in framing_points if p is not None and np.isfinite(p).all() and p[2] >= 0.5]
+        cropped = any(not (0 <= p[0] < 1 and 0 <= p[1] < 1) for p in confident)
+        framing = "cropped" if cropped else "visible" if len(confident) == len(framing_points) else "uncertain"
+        if cropped:
+            issues.append("발목 또는 발끝이 사진 밖에 있습니다. 발끝까지 들어오는 전신사진으로 다시 촬영해 주세요.")
+        elif framing == "uncertain":
+            issues.append("발목·발끝이 가려져 전신 구도를 확정하지 못했습니다. 하의 기장 검사는 별도 확인이 필요합니다.")
         if min(width, height) < MIN_INPUT_SHORT_SIDE:
             issues.append(
                 f"짧은 변이 {MIN_INPUT_SHORT_SIDE}px보다 작아 세부 의류 분석이 불안정할 수 있습니다."
@@ -37,12 +48,14 @@ class QualityChecker:
         return {
             "passed": (
                 pose.valid
+                and not cropped
                 and min(width, height) >= MIN_INPUT_SHORT_SIDE
                 and sharpness >= MIN_INPUT_SHARPNESS
             ),
             "resolution": [width, height],
             "sharpness": round(sharpness, 2),
             "full_body_score": pose.full_body_score,
+            "lower_body_framing": framing,
             "issues": issues,
         }
 

@@ -16,6 +16,7 @@ import tempfile
 import threading
 import time
 import uuid
+from itertools import product as cartesian_product
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
 from pathlib import Path
@@ -33,6 +34,7 @@ if str(WEB_DIR) not in sys.path:
 from pipeline import (  # noqa: E402
     GENDERS,
     STAGES,
+    USER_BOTTOM_LENGTH_OPTIONS,
     PipelineError,
     TryOnNotReady,
     analyze_wardrobe_items,
@@ -40,6 +42,9 @@ from pipeline import (  # noqa: E402
     form_options,
     generate_tryon_with_warnings,
     get_engine,
+    length_check_status,
+    reference_bottom_lengths,
+    refresh_bottom_length_warnings,
     run_pipeline,
     rule_titles,
     save_feedback,
@@ -70,7 +75,7 @@ SESSION_TTL = timedelta(minutes=30)
 MAX_SESSIONS = 20
 SWEEP_INTERVAL_SECONDS = 300
 TRYON_BATCH_LIMIT = 3
-TRYON_PRODUCT_LIMIT = 2
+TRYON_PRODUCT_LIMIT = 3
 TRYON_BATCH_ACTIVE_STATES = {"queued", "running"}
 
 app = FastAPI(title="AI 코디 추천", docs_url=None, redoc_url=None)
@@ -219,10 +224,10 @@ def _session_dir(job_id: str) -> Path:
 
 
 def _generate_product_tryon_for_job(job_id: str, product_ids: list[str]) -> dict:
-    """사용자가 무신사 카드에서 고른 상의·하의 조합을 실제 상품 이미지로 합성한다."""
+    """무신사 카드에서 고른 상의·하의·신발을 실제 상품 이미지로 합성한다."""
     selected_ids = list(dict.fromkeys(str(product_id) for product_id in product_ids))
     if not selected_ids or len(selected_ids) > TRYON_PRODUCT_LIMIT:
-        raise ValueError("상의와 하의를 합쳐 최대 2개까지 선택할 수 있습니다.")
+        raise ValueError("상의·하의·신발을 카테고리별 하나씩, 최대 3개까지 선택할 수 있습니다.")
     if any(not PRODUCT_ID_PATTERN.fullmatch(product_id) for product_id in selected_ids):
         raise ValueError("잘못된 상품 번호가 포함되어 있습니다.")
 
@@ -245,11 +250,11 @@ def _generate_product_tryon_for_job(job_id: str, product_ids: list[str]) -> dict
                 )
             products = [available[product_id] for product_id in selected_ids]
             categories = [product.category for product in products]
-            if any(category not in {"top", "bottom"} for category in categories):
-                raise TryOnNotReady("현재 실제 상품 합성은 상의와 하의만 지원합니다.")
+            if any(category not in {"top", "bottom", "shoes"} for category in categories):
+                raise TryOnNotReady("현재 실제 상품 합성은 상의·하의·신발만 지원합니다.")
             if len(categories) != len(set(categories)):
-                raise ValueError("상의와 하의는 카테고리별로 한 개씩만 선택할 수 있습니다.")
-            products.sort(key=lambda product: 0 if product.category == "top" else 1)
+                raise ValueError("상의·하의·신발은 카테고리별로 한 개씩만 선택할 수 있습니다.")
+            products.sort(key=lambda product: {"top": 0, "bottom": 1, "shoes": 2}[product.category])
             person_image = job["person_image"]
             tryon_context = job.get("tryon_context")
 
@@ -284,9 +289,17 @@ def _generate_product_tryon_for_job(job_id: str, product_ids: list[str]) -> dict
             context=tryon_context,
         )
         warnings = list(warnings)
+        reference_lengths = reference_bottom_lengths()
         with _jobs_lock:
             current = _jobs.get(job_id)
             if current is not None:
+                # 합성 도중 사용자가 현재 기장을 알려줬다면 그 값으로 기장 경고를 맞춘다.
+                latest = current.get("tryon_context") or {}
+                refreshed = refresh_bottom_length_warnings(
+                    warnings, products, latest.get("outfit"), latest, reference_lengths
+                )
+                if refreshed is not None:
+                    warnings = refreshed
                 current.setdefault("product_tryon_warnings", {})[cache_key] = warnings
         return {
             "image": Path(generated).name,
@@ -338,7 +351,7 @@ def _read_shopping_tryon_batch(job_id: str) -> dict | None:
 
 
 def _initialize_shopping_tryon_batch(job_id: str) -> dict | None:
-    """파싱에 성공한 무신사 상·하의의 가능한 모든 조합을 큐에 넣는다."""
+    """합성 가능한 상의·하의·신발의 카테고리별 조합을 큐에 넣는다."""
     with _jobs_lock:
         job = _jobs.get(job_id)
         if job is None:
@@ -352,17 +365,15 @@ def _initialize_shopping_tryon_batch(job_id: str) -> dict | None:
             product = prepared.get(product_id)
             if product is None or product_id in seen_ids:
                 continue
-            if product.category not in {"top", "bottom"}:
+            if product.category not in {"top", "bottom", "shoes"}:
                 continue
             seen_ids.add(product_id)
             ordered_products.append(product)
 
-        tops = [product for product in ordered_products if product.category == "top"]
-        bottoms = [product for product in ordered_products if product.category == "bottom"]
-        if tops and bottoms:
-            combinations = [[top, bottom] for top in tops for bottom in bottoms]
-        else:
-            combinations = [[product] for product in tops or bottoms]
+        groups = [[p for p in ordered_products if p.category == category]
+                  for category in ("top", "bottom", "shoes")]
+        groups = [group for group in groups if group]
+        combinations = [list(items) for items in cartesian_product(*groups)] if groups else []
 
         items = {
             index: {
@@ -554,6 +565,8 @@ def health() -> dict:
         "trained_heads": engine.trained_heads,
         "parser_backend": engine.parser_backend,
         "vton_enabled": engine.tryon.enabled,
+        "tryon_categories": sorted(getattr(engine.tryon, "supported_categories", {"top", "bottom"}))
+        if engine.tryon.available else [],
         "product_count": len(engine.recommender.catalog.products),
         "product_color_audits": len(engine.recommender.catalog.color_audits),
         "product_color_overrides": engine.recommender.catalog.color_override_count,
@@ -581,7 +594,11 @@ async def analyze(
         raise HTTPException(status_code=400, detail=f"조건 값을 읽을 수 없습니다: {exc}") from exc
     if not isinstance(payload, dict):
         raise HTTPException(status_code=400, detail="조건 값은 객체여야 합니다.")
-    if payload.get("gender") not in GENDERS:
+    # The deployed legacy gateway sends change_scope and has no gender field.
+    # Keep that client working during rollout; modern/category requests still require gender.
+    legacy_profile = ("change_categories" not in payload and "gender" not in payload
+                      and payload.get("change_scope") in {"전체 변경", "상의만 변경", "하의만 변경"})
+    if not legacy_profile and payload.get("gender") not in GENDERS:
         raise HTTPException(status_code=400, detail="성별을 남성 또는 여성으로 선택해주세요.")
     from recommendation_keywords import selected_categories
     try:
@@ -758,6 +775,52 @@ def start_shopping_tryon_batch(job_id: str) -> dict:
     return _start_shopping_tryon_batch(job_id) or {
         "status": "idle", "reason": "", "total": 0, "ready": 0, "finished": 0, "items": []
     }
+
+
+@app.post("/api/jobs/{job_id}/current-bottom-length")
+def set_current_bottom_length(job_id: str, payload: dict) -> dict:
+    """사진에서 잴 수 없던 현재 하의 기장을 사용자 입력으로 받아 기장 경고에 반영한다.
+
+    이후 합성은 이 값을 쓰고, 이미 끝난 조합은 캐시한 상품 기장으로 경고만 다시 계산한다.
+    사진에서 기장을 잰 경우에는 입력을 받아도 사진값이 우선이다.
+    """
+    if not JOB_ID_PATTERN.match(job_id):
+        raise HTTPException(status_code=400, detail="잘못된 요청입니다.")
+    length = str(payload.get("length") or "").strip()
+    if length and length not in USER_BOTTOM_LENGTH_OPTIONS:
+        raise HTTPException(status_code=400, detail="지원하지 않는 기장 값입니다.")
+    reference_lengths = reference_bottom_lengths()
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None or job["status"] != "done" or job.get("cancelled"):
+            raise HTTPException(status_code=404, detail="분석 결과를 찾을 수 없습니다.")
+        context = job.setdefault("tryon_context", {})
+        context["user_bottom_length"] = length
+        outfit = context.get("outfit")
+        result = job.get("result") or {}
+        previous = result.get("length_check") or {}
+        status = length_check_status(outfit, has_bottom=previous.get("status") != "no_bottom", context=context)
+        result["length_check"] = status
+        prepared = job.get("shopping_tryon_products") or {}
+        stored = job.setdefault("product_tryon_warnings", {})
+        for cache_key, warnings in list(stored.items()):
+            products = [prepared[pid] for pid in cache_key.split("|") if pid in prepared]
+            refreshed = refresh_bottom_length_warnings(warnings, products, outfit, context, reference_lengths)
+            if refreshed is not None:
+                stored[cache_key] = refreshed
+        for item in ((job.get("shopping_tryon_batch") or {}).get("items") or {}).values():
+            if item.get("status") != "done":
+                continue
+            products = [prepared[pid] for pid in item.get("product_ids") or [] if pid in prepared]
+            refreshed = refresh_bottom_length_warnings(
+                item.get("warnings") or [], products, outfit, context, reference_lengths
+            )
+            if refreshed is not None:
+                item["warnings"] = refreshed
+        return {
+            "length_check": status,
+            "shopping_tryon_batch": _shopping_tryon_batch_snapshot_locked(job),
+        }
 
 
 @app.delete("/api/jobs/{job_id}")

@@ -781,6 +781,13 @@ select {
   color: var(--ink-soft); font-size: .73rem;
 }
 .shopping-selection b { color: var(--ink); }
+.length-check {
+  display: grid; gap: 8px; padding: 14px 20px 16px;
+  border-top: 1px solid var(--line); background: var(--panel);
+}
+.length-check strong { font-size: .84rem; }
+.length-check p { margin: 0; color: var(--ink-soft); font-size: .76rem; line-height: 1.5; }
+.length-check[data-status="needs_input"] { background: color-mix(in srgb, var(--warn) 8%, var(--panel)); }
 .shopping-batch {
   display: grid; gap: 10px; padding: 14px 20px 18px;
   border-top: 1px solid var(--line); background: var(--panel);

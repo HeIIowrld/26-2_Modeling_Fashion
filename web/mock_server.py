@@ -93,6 +93,27 @@ def _prune_jobs() -> None:
             JOBS.pop(job_id, None)
 
 
+MOCK_BOTTOM_LENGTHS = ("반바지", "무릎 기장", "7부 기장", "긴바지")
+MOCK_LENGTH_HOLD = "하의 기장 비교를 보류했습니다. 밑단이 보이게 찍은 전신사진을 쓰거나, 지금 입은 하의 기장을 알려주시면 비교할 수 있어요."
+
+
+MOCK_LENGTH_PROMPT = (
+    "사진에서 하의 밑단이 잘려 지금 입은 옷의 기장을 확인하지 못했어요. "
+    "기장을 알려주시면 기장 차이로 합성이 어색해질 조합을 미리 표시해요. "
+    "밑단이 보이게 다시 찍으면 자동으로 판정해요."
+)
+
+
+def _mock_length_warnings(job: dict, categories: list[str]) -> list[str]:
+    """실제 서버의 기장 경고 흐름을 흉내 낸다.
+
+    시연 상품의 하의는 모두 긴바지라 현재 기장이 무엇이든 '더 짧아지는' 경고는 없다.
+    """
+    if "bottom" not in categories or job.get("user_bottom_length"):
+        return []
+    return [MOCK_LENGTH_HOLD]
+
+
 def _mock_shopping_tryon_batch(job: dict) -> dict:
     """검색된 mock 상·하의의 전체 조합 배치를 재현한다."""
     products = [
@@ -125,7 +146,8 @@ def _mock_shopping_tryon_batch(job: dict) -> dict:
                 "status": status,
                 "image": image,
                 "cached": False,
-                "warnings": [],
+                "warnings": _mock_length_warnings(job, [item["category"] for item in products_for_look])
+                if status == "done" else [],
                 "error": None,
             }
         )
@@ -299,6 +321,13 @@ def _build_result(profile: dict, image_seed: int) -> dict:
             "vton_enabled": True,
         },
         "tryon": {"available": True, "reason": "", "warnings": []},
+        # 시연용: 사진에서 바지 밑단이 잘려 현재 기장을 확인하지 못한 상태를 보여준다.
+        "length_check": {
+            "status": "needs_input",
+            "value": "",
+            "options": list(MOCK_BOTTOM_LENGTHS),
+            "message": MOCK_LENGTH_PROMPT,
+        },
         "images": {
             "original": "original",
             "landmarks": "landmarks",
@@ -583,6 +612,23 @@ class MockHandler(SimpleHTTPRequestHandler):
                 self._json({"detail": "분석 결과를 찾을 수 없습니다."}, HTTPStatus.NOT_FOUND)
                 return
             self._json(_mock_shopping_tryon_batch(job))
+            return
+
+        match = re.fullmatch(r"/api/jobs/([0-9a-f]{32})/current-bottom-length", path)
+        if match:
+            job = self._job(match.group(1))
+            if job is None:
+                self._json({"detail": "분석 결과를 찾을 수 없습니다."}, HTTPStatus.NOT_FOUND)
+                return
+            length = str(self._read_json().get("length") or "").strip()
+            if length and length not in MOCK_BOTTOM_LENGTHS:
+                self._json({"detail": "지원하지 않는 기장 값입니다."}, HTTPStatus.BAD_REQUEST)
+                return
+            job["user_bottom_length"] = length
+            check = job["result"]["length_check"]
+            check.update(value=length, status="user_input" if length else "needs_input",
+                         message="입력한 현재 하의 기장으로 기장 차이를 확인해요." if length else MOCK_LENGTH_PROMPT)
+            self._json({"length_check": check, "shopping_tryon_batch": _mock_shopping_tryon_batch(job)})
             return
 
         match = re.fullmatch(r"/api/jobs/([0-9a-f]{32})/tryon-products", path)

@@ -579,7 +579,7 @@ function renderShoppingProducts(products) {
           <button type="button" data-shopping-select="${escapeHtml(product.product_id)}"
             aria-pressed="${selected}" ${tryonReady ? "" : "disabled"}
             title="${escapeHtml(tryonReady ? "이 상품을 실제 합성 조합에 넣습니다." : tryonReason)}">
-            ${product.category === "shoes" ? "신발은 가상 피팅 미지원" : selected ? "✓ 입어보기 선택됨" : tryonReady ? "입어보기 선택" : "합성 이미지 준비 안 됨"}
+            ${selected ? "✓ 입어보기 선택됨" : tryonReady ? "입어보기 선택" : "합성 불가"}
           </button>
           <small>${escapeHtml(tryonReady ? "상품 이미지 파싱·VTON 가능" : tryonReason)}</small>
         </div>
@@ -630,7 +630,7 @@ function toggleShoppingSelection(productId) {
 }
 
 function selectedShoppingProducts() {
-  return ["top", "bottom"]
+  return ["top", "bottom", "shoes"]
     .map((category) => state.shoppingProducts.find(
       (product) => product.product_id === state.shoppingSelection[category]
     ))
@@ -644,7 +644,7 @@ function renderShoppingTryonPanel() {
   const active = state.shoppingTryonResults[state.shoppingTryonSelected];
   const batch = state.shoppingTryonBatch;
   const selectedCopy = selected.length
-    ? selected.map((product) => `<span><b>${product.category === "top" ? "상의" : "하의"}</b> ${escapeHtml(product.name)}</span>`).join("")
+    ? selected.map((product) => `<span><b>${({top: "상의", bottom: "하의", shoes: "신발"})[product.category]}</b> ${escapeHtml(product.name)}</span>`).join("")
     : "<span>아래 전체 조합은 자동 생성됩니다. 특정 조합을 먼저 보려면 상품을 선택하세요.</span>";
   const history = state.shoppingTryonResults.length > 1
     ? `<div class="shopping-tryon-history" aria-label="무신사 상품 합성 결과 전환">
@@ -681,6 +681,20 @@ function renderShoppingTryonPanel() {
     ? `<div class="tryon-warning"><strong>생성 품질 확인 필요</strong><ul>${active.warnings
         .map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul></div>`
     : "";
+  // 사진에서 하의 밑단이 잘리면 기장 차이를 잴 수 없다. 추측하지 않고 사용자에게 묻는다.
+  const lengthCheck = state.result?.length_check;
+  const lengthPrompt = lengthCheck && ["needs_input", "user_input"].includes(lengthCheck.status)
+    ? `<div class="length-check" data-status="${escapeHtml(lengthCheck.status)}">
+         <strong>지금 입은 하의 기장</strong>
+         <p>${escapeHtml(lengthCheck.message)}</p>
+         <div class="pills" role="group" aria-label="지금 입은 하의 기장">
+           ${(lengthCheck.options || []).map((option) => `
+             <button type="button" class="pill ${lengthCheck.value === option ? "is-on" : ""}"
+               data-bottom-length="${escapeHtml(option)}"
+               aria-pressed="${lengthCheck.value === option}">${escapeHtml(option)}</button>`).join("")}
+         </div>
+       </div>`
+    : "";
   const result = active
     ? `<div class="shopping-tryon-result">
          ${history}
@@ -699,15 +713,19 @@ function renderShoppingTryonPanel() {
       <div>
         <strong>검색된 무신사 상품의 모든 조합 입어보기</strong>
         <div class="shopping-selection">${selectedCopy}</div>
-        <p>파싱 가능한 상의×하의 조합을 모두 자동 생성하고, 완성되는 즉시 아래에서 전환할 수 있습니다. 신발은 전용 마스크와 모델이 없어 아직 합성하지 않습니다.</p>
+        <p>입어보기 가능한 상품을 카테고리별로 하나씩 조합해 생성합니다. 신발은 양쪽 발이 보이고 신발 합성 모델이 준비된 경우에 포함됩니다.</p>
       </div>
       <button class="btn btn-primary" id="shopping-tryon-generate" type="button"
         ${selected.length ? "" : "disabled"}>선택 조합 렌더링</button>
     </div>
+    ${lengthPrompt}
     ${batchProgress}
     ${result}`;
   panel.hidden = false;
   $("shopping-tryon-generate").addEventListener("click", requestShoppingTryon);
+  panel.querySelectorAll("[data-bottom-length]").forEach((button) => {
+    button.addEventListener("click", () => submitCurrentBottomLength(button.dataset.bottomLength));
+  });
   panel.querySelectorAll("[data-shopping-result]").forEach((button) => {
     button.addEventListener("click", () => {
       state.shoppingTryonSelected = Number(button.dataset.shoppingResult);
@@ -747,6 +765,32 @@ async function requestShoppingTryon() {
   } catch (error) {
     button.disabled = false;
     button.textContent = "다시 렌더링";
+    toast(error.message);
+  }
+}
+
+async function submitCurrentBottomLength(length) {
+  if (!state.jobId) return;
+  try {
+    const response = await fetch(`${API_BASE}/api/jobs/${state.jobId}/current-bottom-length`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ length }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "하의 기장을 반영하지 못했습니다.");
+    state.result.length_check = payload.length_check;
+    // 이미 끝난 조합의 기장 경고도 새 기준으로 바뀌므로 수동 결과까지 함께 맞춘다.
+    const refreshed = new Map((payload.shopping_tryon_batch?.items || [])
+      .filter((item) => item.status === "done")
+      .map((item) => [(item.product_ids || []).join("|"), item.warnings || []]));
+    state.shoppingTryonResults.forEach((result) => {
+      if (refreshed.has(result.key)) result.warnings = refreshed.get(result.key);
+    });
+    if (payload.shopping_tryon_batch) applyShoppingTryonBatch(payload.shopping_tryon_batch);
+    else renderShoppingTryonPanel();
+    toast(`지금 입은 하의를 '${length}'로 반영했어요.`);
+  } catch (error) {
     toast(error.message);
   }
 }

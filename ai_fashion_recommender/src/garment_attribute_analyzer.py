@@ -17,6 +17,14 @@ def _mask_area(segmentation: np.ndarray, labels: list[int]) -> int:
     return int(np.isin(segmentation, labels).sum())
 
 
+def bottom_landmarks_visible(pose: PoseAnalysis, *, end_joint: str = "ankle") -> bool:
+    """기장의 기준점인 골반과 발목(또는 무릎)이 실제로 관측되는지 확인한다."""
+    points = [pose.landmarks.get(f"{side}_{joint}")
+              for side in ("left", "right") for joint in ("hip", end_joint)]
+    return all(p is not None and np.isfinite(p).all() and p[2] >= 0.5
+               and 0 <= p[0] < 1 and 0 <= p[1] < 1 for p in points)
+
+
 class GarmentAttributeAnalyzer:
     """의류 픽셀 마스크의 끝점과 MediaPipe 관절을 결합해 길이를 추정한다.
 
@@ -88,6 +96,7 @@ class GarmentAttributeAnalyzer:
                 },
                 # 설계상 길이가 아니라 사진에서 현재 보이는 소매 길이다.
                 "visible_sleeve_length": sleeve_length,
+                "visible_bottom_length": bottom_length,
                 "mask_pixel_areas": areas,
             },
         }
@@ -156,8 +165,36 @@ class GarmentAttributeAnalyzer:
         return "롱 기장"
 
     def _bottom_length(self, mask: np.ndarray, pose: PoseAnalysis, garment_type: str) -> str:
+        ankles_visible = bottom_landmarks_visible(pose)
+        if not ankles_visible and not bottom_landmarks_visible(pose, end_joint="knee"):
+            return "분석 불가"
+        # 신발의 작은 오라벨 조각이 전체 픽셀의 2%를 넘으면 98백분위 밑단이
+        # 발목으로 이동한다. 기장 측정에만 작은 분리 조각을 제외한다.
+        # 양쪽 바짓단이 분리된 경우를 위해 최대 성분 하나만 고르지는 않는다.
+        count, components, stats, _ = cv2.connectedComponentsWithStats(
+            (mask > 0).astype(np.uint8), connectivity=8
+        )
+        if count > 1:
+            areas = stats[1:, cv2.CC_STAT_AREA]
+            keep = np.flatnonzero(areas >= areas.max() * 0.05) + 1
+            mask = np.isin(components, keep)
         height, _ = mask.shape
         hip_y = np.mean([pose.landmarks["left_hip"][1], pose.landmarks["right_hip"][1]]) * height
+        if not ankles_visible:
+            # 사진 경계에서 잘린 옷의 끝을 실제 밑단으로 간주하지 않는다.
+            margin = max(2, int(height * 0.01))
+            if mask[-margin:].any():
+                return "분석 불가"
+            knee_y = np.mean([pose.landmarks["left_knee"][1], pose.landmarks["right_knee"][1]]) * height
+            ratio = self._vertical_ratio(mask, hip_y, knee_y)
+            if ratio is None or ratio < 0 or ratio > 1.1:
+                return "분석 불가"
+            # 발목 없이 구분할 수 있는 무릎 위/무릎 부근까지만 판정한다.
+            if garment_type == "바지":
+                return "반바지" if ratio < 0.8 else "무릎 기장 바지"
+            if garment_type in {"치마", "원피스"}:
+                return "미니 기장" if ratio < 0.8 else "무릎 기장"
+            return "분석 불가"
         ankle_y = np.mean([pose.landmarks["left_ankle"][1], pose.landmarks["right_ankle"][1]]) * height
         ratio = self._vertical_ratio(mask, hip_y, ankle_y)
         if ratio is None:
