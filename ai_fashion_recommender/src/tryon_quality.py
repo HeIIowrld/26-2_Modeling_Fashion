@@ -42,9 +42,10 @@ DEFAULT_THRESHOLDS = {
 
 FACE_LABELS = (1, 2)
 TORSO_SKIN_LABEL = 16
-# 배를 드러내는 게 상품의 의도인 경우. 이름은 판매자가 붙인 사실상의 정답이다.
+# 배 노출을 의도한 상품명의 단서. 색상·브랜드의 '브라'는 제외한다.
 EXPOSED_MIDRIFF_NAME = re.compile(
-    r"크롭|crop|브라|bra\b|bralette|뷔스티에|bustier|컷아웃|cut-?out|튜브|tube", re.IGNORECASE
+    r"크롭|\bcrop(?:ped)?\b|브라(?:렛|탑|(?=$|[\s\W]))|\bbra\b|\bbralette\b|"
+    r"뷔스티에|\bbustier\b|컷아웃|\bcut-?out\b|튜브|\btube\b", re.IGNORECASE
 )
 
 
@@ -231,7 +232,7 @@ def assess_tryon(
                          value >= limits["outside_psnr_min"], False,
                          "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."))
     if before_seg is not None:
-        face = np.isin(before_seg, FACE_LABELS) & ~edit
+        face = np.isin(before_seg, FACE_LABELS)
         value = region_psnr(before, after, face)
         if value is not None:
             add(QualityCheck("face_preservation", round(value, 2), limits["face_psnr_min"],
@@ -240,9 +241,10 @@ def assess_tryon(
 
     target_after = np.isin(after_seg, target_labels)
     band = body_band(landmarks_px, edit.shape, category)
+    exposed_midriff = category == "top" and bool(EXPOSED_MIDRIFF_NAME.search(product_name or ""))
 
     # 2) 옷이 몸통 핵심 영역을 덮었는가
-    if band is not None and (band & edit).sum() >= 200:
+    if band is not None and (band & edit).sum() >= 200 and not exposed_midriff:
         core = band & edit
         value = float(target_after[core].mean())
         add(QualityCheck("garment_coverage", round(value, 4), limits["coverage_min"],
@@ -251,7 +253,7 @@ def assess_tryon(
 
     # 3) 상의 크롭화: 의도하지 않은 배 노출. 마스크 안(생성 실패)과 밖(마스크 구조)을 나눈다.
     if category == "top" and band is not None and band.sum() >= 200 \
-            and not EXPOSED_MIDRIFF_NAME.search(product_name or ""):
+            and not exposed_midriff:
         skin = after_seg == TORSO_SKIN_LABEL
         inside = float((skin & band & edit).sum()) / float(band.sum())
         outside_skin = float((skin & band & ~edit).sum()) / float(band.sum())
