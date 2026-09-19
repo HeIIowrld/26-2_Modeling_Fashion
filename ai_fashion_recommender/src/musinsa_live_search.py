@@ -12,14 +12,21 @@ from typing import Iterable
 
 from product_measurements import ProductMeasurementClient
 from recommendation_keywords import TargetKeywordResult
+from product_color_tone import (
+    COOL_TONE,
+    VALID_PERSONAL_TONES,
+    WARM_TONE,
+    ProductToneResult,
+    classify_product_tone_url,
+)
 from schemas import Product, UserProfile
 from shopping_http import bounded_results, fetch_json
 from size_fit import compare_sizes
 
 
 API_URL = "https://api.musinsa.com/api2/dp/v2/plp/goods"
-CATEGORY_CODES = {"top": "001", "bottom": "003"}
-CATEGORY_FALLBACK_QUERY = {"top": "베이직 상의", "bottom": "팬츠"}
+CATEGORY_CODES = {"top": "001", "bottom": "003", "shoes": "103"}
+CATEGORY_FALLBACK_QUERY = {"top": "베이직 상의", "bottom": "팬츠", "shoes": "신발"}
 SORT_CODES = ("POPULAR", "NEW")
 PAGE_SIZE = 100
 # 입력 속성과 관련 있는 세부 분류만 추가한다. 무관한 품목은 검색하지 않는다.
@@ -28,6 +35,7 @@ SUBCATEGORIES = {
     "bottom": {"데님": "003002", "슬랙스": "003008", "쇼츠": "003009"},
 }
 ATTRIBUTE_WEIGHTS = {
+    "item_type": 5.0,
     "fit": 4.0,
     "length": 3.0,
     "waistline": 3.0,
@@ -55,6 +63,10 @@ KEYWORD_ALIASES = {
     "가죽": ("레더", "가죽", "leather"),
     "린넨": ("린넨", "리넨", "linen"),
 }
+TONE_SEARCH_COLORS = {
+    WARM_TONE: ("베이지", "브라운", "카키", "아이보리"),
+    COOL_TONE: ("네이비", "블루", "그레이", "라벤더"),
+}
 
 
 @dataclass
@@ -76,6 +88,12 @@ class ShoppingProduct:
     recommendation_reason: str = ""
     recommendation_reason_source: str = "rules"
     size_fit: dict = field(default_factory=dict)
+    color_temperature: str = ""
+    color_temperature_confidence: float = 0.0
+    color_temperature_source: str = ""
+    fit_evidence: list[str] = field(default_factory=list)
+    fit_evidence_labels: list[str] = field(default_factory=list)
+    reason_rule_ids: list[str] = field(default_factory=list)
 
     def public_dict(self) -> dict:
         """내부 키워드와 점수는 웹 UI에 보내지 않는다."""
@@ -106,6 +124,7 @@ class MusinsaLiveSearch:
         self._cache_lock = threading.Lock()
         self._executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="fitta-products")
         self.last_search_stats: dict = {}
+        self._tone_cache: dict[str, ProductToneResult] = {}
 
     def close(self) -> None:
         self._executor.shutdown(wait=False, cancel_futures=True)
@@ -126,7 +145,22 @@ class MusinsaLiveSearch:
         value = values[0]
         return MusinsaLiveSearch._aliases(value)[0]
 
-    def _queries(self, category: str, attributes: dict[str, list[str]]) -> list[str]:
+    def _queries(
+        self,
+        category: str,
+        attributes: dict[str, list[str]],
+        personal_tone: str = "",
+    ) -> list[str]:
+        if category == "shoes":
+            item_type = self._preferred_term(attributes, "item_type") or "스니커즈"
+            color = self._preferred_term(attributes, "color")
+            material = self._preferred_term(attributes, "material")
+            candidates = list(dict.fromkeys(" ".join(filter(None, terms)) for terms in (
+                (color, item_type), (material, item_type), (item_type,),
+            )))
+            if personal_tone in VALID_PERSONAL_TONES and not color:
+                candidates.extend(f"{tone_color} {item_type}" for tone_color in TONE_SEARCH_COLORS[personal_tone][:2])
+            return list(dict.fromkeys(candidates))
         fit = self._preferred_term(attributes, "fit")
         material = self._preferred_term(attributes, "material")
         style = self._preferred_term(attributes, "style")
@@ -138,7 +172,9 @@ class MusinsaLiveSearch:
         candidates = [primary, f"{material} {noun}" if material else noun,
                       f"{alternative_fit or fit} {noun}" if fit else "",
                       " ".join(value for value in (color or style, material or noun) if value), noun]
-        return list(dict.fromkeys(value.strip() for value in candidates if value.strip()))[:4]
+        if personal_tone in VALID_PERSONAL_TONES and not color:
+            candidates.extend(f"{tone_color} {noun}" for tone_color in TONE_SEARCH_COLORS[personal_tone][:2])
+        return list(dict.fromkeys(value.strip() for value in candidates if value.strip()))[:6 if personal_tone in VALID_PERSONAL_TONES else 4]
 
     def _fetch(
         self, category: str, query: str, size: int = PAGE_SIZE, *,
@@ -215,7 +251,7 @@ class MusinsaLiveSearch:
     ) -> list[str]:
         """내부 전체 조건 대신 검색을 대표하는 키워드만 고른다."""
         candidates = list(matched)
-        for attribute in ("fit", "material", "length", "style", "color", "silhouette", "function"):
+        for attribute in ("item_type", "fit", "material", "length", "style", "color", "silhouette", "function"):
             candidates.extend(attributes.get(attribute, []))
         return list(dict.fromkeys(keyword for keyword in candidates if keyword))[:limit]
 
@@ -225,16 +261,16 @@ class MusinsaLiveSearch:
         return (-(product.retrieval_score + bonus), -product.review_score,
                 -product.review_count, product.product_id)
 
-    def _search_plan(self, targets: TargetKeywordResult) -> list[tuple[str, str, str, str]]:
+    def _search_plan(self, targets: TargetKeywordResult, personal_tone: str = "") -> list[tuple[str, str, str, str]]:
         plans = {}
         for category, attributes in targets.targets.items():
             if category not in CATEGORY_CODES:
                 continue
             words = " ".join(word for values in attributes.values() for word in values)
-            subcategory = next((code for term, code in SUBCATEGORIES[category].items() if term in words), None)
+            subcategory = next((code for term, code in SUBCATEGORIES.get(category, {}).items() if term in words), None)
             plans[category] = [
                 (category, query, sort_code, subcategory if index == 1 and subcategory else CATEGORY_CODES[category])
-                for index, query in enumerate(self._queries(category, attributes))
+                for index, query in enumerate(self._queries(category, attributes, personal_tone))
                 for sort_code in SORT_CODES
             ]
         # 상의가 느려도 하의 검색에 기회가 돌아가도록 요청을 교차 배치한다.
@@ -243,7 +279,7 @@ class MusinsaLiveSearch:
 
     def collect_candidates(self, targets: TargetKeywordResult, profile: UserProfile) -> dict[str, list[ShoppingProduct]]:
         started = time.monotonic()
-        plan = self._search_plan(targets)
+        plan = self._search_plan(targets, profile.personal_tone)
         batches = bounded_results(self._executor, [
             partial(self._fetch, category, query, sort_code=sort_code, category_code=code)
             for category, query, sort_code, code in plan
@@ -265,7 +301,8 @@ class MusinsaLiveSearch:
                         product_id=f"MS{goods_no}", name=str(item.get("goodsName") or "상품명 없음"),
                         brand=str(item.get("brandName") or item.get("brand") or ""),
                         price=int(item.get("finalPrice") or item.get("price") or 0),
-                        image_url=str(item.get("thumbnail") or ""),
+                        image_url=("https:" + str(item["thumbnail"]) if str(item.get("thumbnail") or "").startswith("//")
+                                   else str(item.get("thumbnail") or "")),
                         url=f"https://www.musinsa.com/products/{goods_no}", category=category,
                         gender=str(item.get("displayGenderText") or "공용"),
                         review_count=int(item.get("reviewCount") or 0), review_score=float(item.get("reviewScore") or 0),
@@ -292,7 +329,7 @@ class MusinsaLiveSearch:
             return
         # 최종 3개를 고르기 전에 카테고리별 상위 후보의 실측을 비교한다.
         shortlist = [products[index] for index in range(self.measurement_candidates)
-                     for products in grouped.values() if index < len(products)]
+                     for category, products in grouped.items() if category in {"top", "bottom"} and index < len(products)]
         records = bounded_results(self._executor, [partial(self.measurements.get, p.product_id) for p in shortlist],
                                   time.monotonic() + self.measurement_budget)
         for index, product in enumerate(shortlist):
@@ -303,6 +340,44 @@ class MusinsaLiveSearch:
         self.last_search_stats["measurement_tables"] = sum(bool(r and r.get("sizes")) for r in records)
         for products in grouped.values():
             products.sort(key=self._sort_key)
+
+    def _classify_tone(self, product: ShoppingProduct) -> ProductToneResult:
+        cached = self._tone_cache.get(product.image_url)
+        if cached is not None:
+            return cached
+        result = classify_product_tone_url(
+            product.image_url,
+            product.name,
+            product.search_keywords,
+            timeout=min(self.timeout, 2.8),
+        )
+        self._tone_cache[product.image_url] = result
+        return result
+
+    def _tone_filtered(
+        self,
+        products: list[ShoppingProduct],
+        personal_tone: str,
+        pool_size: int = 15,
+    ) -> list[ShoppingProduct]:
+        """선택한 피부톤과 이미지 판정이 일치하는 상품만 남긴다."""
+        if personal_tone not in VALID_PERSONAL_TONES:
+            return products
+        candidates = products[:pool_size]
+        with ThreadPoolExecutor(max_workers=min(8, max(1, len(candidates)))) as executor:
+            analyses = list(executor.map(self._classify_tone, candidates))
+        matched: list[ShoppingProduct] = []
+        for product, analysis in zip(candidates, analyses):
+            if not analysis.matches(personal_tone):
+                continue
+            product.color_temperature = analysis.tone
+            product.color_temperature_confidence = analysis.confidence
+            product.color_temperature_source = "denim_rule" if analysis.is_denim else "product_image"
+            product.retrieval_score += analysis.confidence * 0.75
+            if analysis.tone not in product.search_keywords:
+                product.search_keywords = [*product.search_keywords[:2], analysis.tone]
+            matched.append(product)
+        return sorted(matched, key=lambda product: (-product.retrieval_score, -product.review_count))
 
     def _local_fallback(
         self,
@@ -358,29 +433,20 @@ class MusinsaLiveSearch:
             for category in grouped:
                 if not grouped[category]:
                     grouped[category] = fallback.get(category, [])
+        grouped = {category: self._tone_filtered(products, profile.personal_tone)
+                   for category, products in grouped.items()}
         self._compare_shortlist(grouped, profile)
-
-        # 상·하의를 모두 찾을 때 한 카테고리만 세 장을 독점하지 않도록 교차 선택한다.
-        selected: list[ShoppingProduct] = []
-        seen_ids: set[str] = set()
-        brand_counts: dict[str, int] = {}
-        categories = list(targets.targets)
-        while len(selected) < limit:
-            added = False
-            for category in categories:
+        # 최신 화면 계약: 카테고리마다 최대 limit개. 실측 기반 재정렬도 유지한다.
+        selected, seen_ids, brand_counts = [], set(), {}
+        for category in targets.targets:
+            for _ in range(limit):
                 products = [p for p in grouped.get(category, []) if p.product_id not in seen_ids]
                 if not products:
-                    continue
+                    break
                 best = products[0]
-                # 같은 적합도인 후보 중에서는 이미 두 번 나온 브랜드를 피한다.
                 tied = [p for p in products if self._sort_key(p)[0] == self._sort_key(best)[0]]
                 best = next((p for p in tied if not p.brand or brand_counts.get(p.brand, 0) < 2), best)
                 selected.append(best)
                 seen_ids.add(best.product_id)
                 brand_counts[best.brand] = brand_counts.get(best.brand, 0) + 1
-                added = True
-                if len(selected) >= limit:
-                    break
-            if not added:
-                break
         return selected

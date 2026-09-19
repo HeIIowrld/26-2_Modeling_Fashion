@@ -227,7 +227,7 @@ def _build_result(profile: dict, image_seed: int) -> dict:
         "attribute_confidence": 0.88,
         "notes": ["목업 분석 결과입니다."],
     }
-    return {
+    result = {
         "mock": True,
         "input_quality": {"passed": True, "issues": [], "score": 0.94},
         "pose": {
@@ -334,6 +334,26 @@ def _build_result(profile: dict, image_seed: int) -> dict:
             "segmentation": "segmentation",
         },
     }
+    categories = profile.get("change_categories")
+    if categories is None:
+        categories = {"상의만 변경": ["top"], "하의만 변경": ["bottom"],
+                      "현재 유지": []}.get(profile.get("change_scope"), ["top", "bottom"])
+    templates = {item["category"]: item for item in result["shopping_results"]}
+    templates["shoes"] = {
+        **templates["top"], "name": "신발 UI 확인용 샘플", "category": "shoes",
+        "search_keywords": ["스니커즈", style, purpose], "tryon_available": False,
+        "tryon_reason": "신발은 가상 피팅 미지원",
+        "recommendation_reason": f"{purpose}·{style} 조건으로 찾는 신발 예시예요.",
+    }
+    result["shopping_results"] = [
+        {**templates[category], "product_id": f"MSMOCK{category.upper()}{index}",
+         "name": f"{templates[category]['name']} {index}"}
+        for category in ("top", "bottom", "shoes") if category in categories
+        for index in range(1, 4)
+    ]
+    result["request"] = profile
+    result["outfit_summary"]["신발"] = "신발 인식 학습 준비 중 · 입력 조건으로 추천 가능"
+    return result
 
 
 def _svg_for(job: dict, name: str) -> bytes:

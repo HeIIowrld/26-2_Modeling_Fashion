@@ -18,6 +18,7 @@ const state = {
   profile: null,
   shoppingProducts: [],
   shoppingSelection: {},
+  shoppingEvidenceOpen: new Set(),
   shoppingTryonResults: [],
   shoppingTryonSelected: 0,
   shoppingTryonBatch: null,
@@ -213,6 +214,15 @@ $("to-step-2").addEventListener("click", () => { unlock(2); goto(2); });
 $("back-to-1").addEventListener("click", () => goto(1));
 
 /* ── 2단계: 조건 ──────────────────────────────────────── */
+document.querySelectorAll('input[name="personal_tone"]').forEach((input) => {
+  input.addEventListener("change", () => {
+    if (!input.checked) return;
+    document.querySelectorAll('input[name="personal_tone"]').forEach((other) => {
+      if (other !== input) other.checked = false;
+    });
+  });
+});
+
 function fillSelect(id, values) {
   // 문자열 목록과 {value, label} 목록을 모두 받는다.
   const select = $(id);
@@ -326,8 +336,9 @@ function collectProfile() {
   };
   return {
     purpose: data.get("purpose"),
+    gender: data.get("gender"),
     desired_style: data.get("desired_style"),
-    change_scope: data.get("change_scope"),
+    change_categories: data.getAll("change_categories"),
     season: data.get("season"),
     min_budget: min_b,
     max_budget: max_b,
@@ -339,6 +350,7 @@ function collectProfile() {
       top: { chest_width_cm: numeric("reference_top_chest_cm"), length_cm: numeric("reference_top_length_cm") },
       bottom: { waist_width_cm: numeric("reference_bottom_waist_cm"), length_cm: numeric("reference_bottom_length_cm") },
     },
+    personal_tone: data.get("personal_tone") || "",
     preferred_colors: [...state.preferredColors],
     avoided_colors: [...state.avoidedColors],
     preferred_materials: [...state.preferredMaterials],
@@ -381,10 +393,11 @@ function updateProgress(stageKey) {
 $("start-analysis").addEventListener("click", async () => {
   if (!state.file) { toast("먼저 전신사진을 올려주세요."); goto(1); return; }
   const profileCandidate = collectProfile();
-  // required fields: purpose, desired style, change scope, budget range
+  // required fields: gender, purpose, desired style, change scope, budget range
+  if (!profileCandidate.gender) { toast("성별을 선택해주세요"); goto(2); return; }
   if (!profileCandidate.purpose) { toast("코디 목적을 선택해주세요"); goto(2); return; }
   if (!profileCandidate.desired_style) { toast("원하는 스타일을 선택해주세요"); goto(2); return; }
-  if (!profileCandidate.change_scope) { toast("바꾸고 싶은 범위를 선택해주세요"); goto(2); return; }
+  if (!profileCandidate.change_categories.length) { toast("바꾸고 싶은 부분을 하나 이상 선택해주세요"); goto(2); return; }
   if (profileCandidate.min_budget == null || profileCandidate.max_budget == null) { toast("예산 범위를 선택해주세요"); goto(2); return; }
   if (profileCandidate.min_budget > profileCandidate.max_budget) { toast("최소 예산이 최대 예산보다 큽니다"); goto(2); return; }
 
@@ -463,9 +476,11 @@ function renderRequestSummary(request) {
   const values = request || state.profile;
   if (!values) { summary.hidden = true; return; }
   const chips = [
+    ["성별", values.gender],
     ["목적", values.purpose],
     ["스타일", values.desired_style],
-    ["변경", values.change_scope],
+    ["피부톤", values.personal_tone],
+    ["변경", values.change_categories ? values.change_categories.map((category) => ({top: "상의", bottom: "하의", shoes: "신발"})[category]).join(" · ") : values.change_scope],
     ["예산", values.min_budget != null && values.max_budget != null
       ? `${Number(values.min_budget).toLocaleString("ko-KR")}~${Number(values.max_budget).toLocaleString("ko-KR")}원`
       : ""],
@@ -556,8 +571,8 @@ function renderShoppingProducts(products) {
     if (panel) panel.hidden = true;
     return;
   }
-  state.shoppingProducts = products.slice(0, 3);
-  grid.innerHTML = state.shoppingProducts.map((product) => {
+  state.shoppingProducts = products;
+  grid.innerHTML = state.shoppingProducts.map((product, index) => {
     const reviews = product.review_count
       ? `리뷰 ${Number(product.review_count).toLocaleString("ko-KR")}`
       : "";
@@ -568,13 +583,15 @@ function renderShoppingProducts(products) {
     const tryonReady = Boolean(product.tryon_available && state.tryon.available);
     const tryonReason = product.tryon_reason || state.tryon.reason || "상품 이미지를 준비하지 못했습니다.";
     return `
+      ${index === 0 || state.shoppingProducts[index - 1].category !== product.category
+        ? `<h3 class="shopping-category-heading">${({top: "상의", bottom: "하의", shoes: "신발"})[product.category] || "상품"} 추천 · ${state.shoppingProducts.filter((item) => item.category === product.category).length}개</h3>` : ""}
       <article class="shopping-card${selected ? " is-selected" : ""}">
         <a class="shopping-link" href="${escapeHtml(product.url)}" target="_blank"
            rel="noopener noreferrer sponsored" aria-label="무신사에서 ${escapeHtml(product.name)} 보기">
           <div class="shopping-image-wrap">
             <img class="shopping-image" src="${escapeHtml(product.image_url)}"
                  alt="${escapeHtml(product.name)} 상품 사진" loading="lazy" referrerpolicy="no-referrer" />
-            <span class="shopping-category">${product.category === "top" ? "상의" : product.category === "bottom" ? "하의" : "미지원"}</span>
+            <span class="shopping-category">${({top: "상의", bottom: "하의", shoes: "신발"})[product.category] || "미지원"}</span>
           </div>
           <div class="shopping-copy">
             <span class="shopping-brand">${escapeHtml(product.brand || "MUSINSA")}</span>
@@ -595,21 +612,48 @@ function renderShoppingProducts(products) {
           </div>
         </a>
         ${renderSizeFit(product.size_fit)}
+        ${renderShoppingEvidence(product)}
         <div class="shopping-tryon-choice">
           <button type="button" data-shopping-select="${escapeHtml(product.product_id)}"
             aria-pressed="${selected}" ${tryonReady ? "" : "disabled"}
             title="${escapeHtml(tryonReady ? "이 상품을 실제 합성 조합에 넣습니다." : tryonReason)}">
-            ${selected ? "✓ 입어보기 선택됨" : tryonReady ? "입어보기 선택" : "합성 이미지 준비 안 됨"}
+            ${selected ? "✓ 입어보기 선택됨" : tryonReady ? "입어보기 선택" : "합성 불가"}
           </button>
           <small>${escapeHtml(tryonReady ? "상품 이미지 파싱·VTON 가능" : tryonReason)}</small>
         </div>
       </article>`;
   }).join("");
+  const requested = state.result?.request?.change_categories || [];
+  const shortages = requested.filter((category) => products.filter((product) => product.category === category).length < 3);
+  if (shortages.length) {
+    grid.insertAdjacentHTML("beforeend", `<p class="shopping-category-heading">${shortages.map((category) =>
+      ({top: "상의", bottom: "하의", shoes: "신발"})[category]).filter(Boolean).join(" · ")}: 조건에 맞는 상품이 3개보다 적거나 검색이 원활하지 않습니다. 예산·조건을 조정해 다시 검색해보세요.</p>`);
+  }
   grid.querySelectorAll("[data-shopping-select]").forEach((button) => {
     button.addEventListener("click", () => toggleShoppingSelection(button.dataset.shoppingSelect));
   });
+  grid.querySelectorAll("[data-evidence-for]").forEach((details) => {
+    details.addEventListener("toggle", () => {
+      if (details.open) state.shoppingEvidenceOpen.add(details.dataset.evidenceFor);
+      else state.shoppingEvidenceOpen.delete(details.dataset.evidenceFor);
+    });
+  });
   renderShoppingTryonPanel();
   section.hidden = false;
+}
+
+function renderShoppingEvidence(product) {
+  const evidence = (product.fit_evidence || []).slice(0, 3);
+  if (!evidence.length) return "";
+  const labels = product.fit_evidence_labels || [];
+  const ruleIds = (product.reason_rule_ids || []).join(" ");
+  const open = state.shoppingEvidenceOpen.has(product.product_id);
+  return `<details class="shopping-evidence" data-evidence-for="${escapeHtml(product.product_id)}" data-reason-rule-ids="${escapeHtml(ruleIds)}"${open ? " open" : ""}>
+    <summary>왜 추천했나요? <span aria-hidden="true">▼</span></summary>
+    <div class="shopping-evidence-body"><strong>추천 근거</strong><ul>
+      ${evidence.map((text, index) => `<li>${labels[index] ? `<b>${escapeHtml(labels[index])}</b>` : ""}<span>${escapeHtml(text)}</span></li>`).join("")}
+    </ul></div>
+  </details>`;
 }
 
 function toggleShoppingSelection(productId) {
@@ -624,7 +668,7 @@ function toggleShoppingSelection(productId) {
 }
 
 function selectedShoppingProducts() {
-  return ["top", "bottom"]
+  return ["top", "bottom", "shoes"]
     .map((category) => state.shoppingProducts.find(
       (product) => product.product_id === state.shoppingSelection[category]
     ))
@@ -638,7 +682,7 @@ function renderShoppingTryonPanel() {
   const active = state.shoppingTryonResults[state.shoppingTryonSelected];
   const batch = state.shoppingTryonBatch;
   const selectedCopy = selected.length
-    ? selected.map((product) => `<span><b>${product.category === "top" ? "상의" : "하의"}</b> ${escapeHtml(product.name)}</span>`).join("")
+    ? selected.map((product) => `<span><b>${({top: "상의", bottom: "하의", shoes: "신발"})[product.category]}</b> ${escapeHtml(product.name)}</span>`).join("")
     : "<span>아래 전체 조합은 자동 생성됩니다. 특정 조합을 먼저 보려면 상품을 선택하세요.</span>";
   const history = state.shoppingTryonResults.length > 1
     ? `<div class="shopping-tryon-history" aria-label="무신사 상품 합성 결과 전환">
@@ -707,7 +751,7 @@ function renderShoppingTryonPanel() {
       <div>
         <strong>검색된 무신사 상품의 모든 조합 입어보기</strong>
         <div class="shopping-selection">${selectedCopy}</div>
-        <p>파싱 가능한 상의×하의 조합을 모두 자동 생성하고, 완성되는 즉시 아래에서 전환할 수 있습니다. 신발은 전용 마스크와 모델이 없어 아직 합성하지 않습니다.</p>
+        <p>입어보기 가능한 상품을 카테고리별로 하나씩 조합해 생성합니다. 신발은 양쪽 발이 보이고 신발 합성 모델이 준비된 경우에 포함됩니다.</p>
       </div>
       <button class="btn btn-primary" id="shopping-tryon-generate" type="button"
         ${selected.length ? "" : "disabled"}>선택 조합 렌더링</button>
@@ -927,6 +971,10 @@ function renderCurrentOutfit(result) {
         <div class="outfit-desc">${escapeHtml(summary["하의"])}</div>
         <div class="outfit-meta">${escapeHtml(joinKnown([outfit.lower_fit, outfit.lower_material]))}</div>
       </div>
+    </div>
+    <div class="outfit-row">
+      <span class="outfit-tag">신발</span>
+      <div class="outfit-desc">${escapeHtml(summary["신발"] || "신발 인식 학습 준비 중 · 입력 조건으로 추천 가능")}</div>
     </div>
     <div class="outfit-row">
       <span class="outfit-tag">조합</span>
@@ -1165,12 +1213,12 @@ function showPreviewOnly(detail) {
   syncBudgetSlider();
 
   fillSelect("f-purpose", options.purposes);
+  fillSelect("f-gender", options.genders);
   fillSelect("f-style", options.styles);
-  fillSelect("f-scope", options.change_scopes);
   fillSelect("f-season", options.seasons);
   fillSelect("f-activity", options.activity_levels);
   // Do not pre-select required fields. Insert placeholder for required selects.
-  ["f-purpose", "f-style", "f-scope"].forEach((id) => {
+  ["f-gender", "f-purpose", "f-style"].forEach((id) => {
     const sel = $(id);
     if (sel) {
       sel.insertAdjacentHTML('afterbegin', '<option value="">선택해주세요</option>');

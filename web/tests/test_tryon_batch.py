@@ -116,6 +116,31 @@ class TryOnBatchTests(unittest.TestCase):
                 self.job_id, {"product_ids": ["MS_TOP_1", "MS_TOP_2"]}
             )
 
+    def test_three_categories_and_shoe_choice_have_distinct_cached_results(self):
+        self.job["shopping_tryon_products"] = {
+            pid: shopping_product(pid, category)
+            for pid, category in [("T", "top"), ("B", "bottom"), ("S1", "shoes"), ("S2", "shoes")]
+        }
+        calls = []
+
+        def generate(_person, reco, output, *, context):
+            calls.append([p.product_id for p in reco.products])
+            output.write_bytes(b"full outfit")
+            return output, []
+
+        with patch.object(web_app, "_session_dir", return_value=self.session), patch.object(
+            web_app, "generate_tryon_with_warnings", side_effect=generate
+        ):
+            first = web_app.create_product_tryon(self.job_id, {"product_ids": ["S1", "B", "T"]})
+            cached = web_app.create_product_tryon(self.job_id, {"product_ids": ["T", "S1", "B"]})
+            second = web_app.create_product_tryon(self.job_id, {"product_ids": ["T", "B", "S2"]})
+        self.assertEqual(calls, [["T", "B", "S1"], ["T", "B", "S2"]])
+        self.assertTrue(cached["cached"])
+        self.assertNotEqual(first["image"], second["image"])
+        self.job["result"]["shopping_results"] = [{"product_id": pid} for pid in self.job["shopping_tryon_products"]]
+        batch = web_app._initialize_shopping_tryon_batch(self.job_id)
+        self.assertEqual([i["product_ids"] for i in batch["items"]], [["T", "B", "S1"], ["T", "B", "S2"]])
+
     def test_uncached_live_musinsa_product_is_not_faked(self):
         self.job["shopping_tryon_products"] = {}
         with self.assertRaisesRegex(Exception, "준비하지 못했습니다"):

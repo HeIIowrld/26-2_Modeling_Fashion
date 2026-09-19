@@ -168,10 +168,12 @@ class RecommendationTests(unittest.TestCase):
 
     def test_rules_markdown_is_loaded(self):
         self.assertEqual(self.engine.rules_source.name, "FASHION_RULES_MASTER.md")
-        self.assertEqual(len(self.engine.documented_rule_ids), 55)
-        self.assertEqual(len(self.engine.active_rule_ids), 48)
+        self.assertEqual(len(self.engine.documented_rule_ids), 57)
+        self.assertEqual(len(self.engine.active_rule_ids), 50)
         self.assertEqual(len(self.engine.scoring_rule_ids), 36)
         self.assertIn("R-SIL-01", self.engine.active_rule_ids)
+        self.assertIn("R-COL-14", self.engine.active_rule_ids)
+        self.assertIn("R-COL-15", self.engine.active_rule_ids)
         self.assertEqual(
             set(self.engine.unsupported_rule_ids),
             {"R-SIL-02", "R-SIL-04", "R-COL-06", "R-COL-07", "R-COL-12", "R-ACC-03", "R-TREND-01"},

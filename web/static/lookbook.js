@@ -47,9 +47,9 @@
   /* ── 2. 2단계 잠금 ────────────────────────────────────── */
 
   const REQUIRED = [
+    ["f-gender", "성별"],
     ["f-purpose", "코디 목적"],
     ["f-style", "원하는 스타일"],
-    ["f-scope", "바꾸고 싶은 범위"],
     ["f-min-budget", "최소 예산"],
     ["f-max-budget", "최대 예산"],
   ];
@@ -61,7 +61,9 @@
       const el = document.getElementById(id);
       if (!el) return false;
       return el.tagName === "SELECT" ? !el.value : !digits(el.value);
-    }).map(([, label]) => label);
+    }).map(([, label]) => label).concat(
+      document.querySelector('input[name="change_categories"]:checked') ? [] : ["바꾸고 싶은 범위"]
+    );
   }
 
   function budgetOrderProblem() {

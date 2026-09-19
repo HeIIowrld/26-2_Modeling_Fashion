@@ -107,6 +107,17 @@ class CandidateGenerationTests(unittest.TestCase):
             result = self.search.search(self.targets, self.profile, limit=1)
         self.assertEqual(result[0].size_fit["status"], "unavailable")
 
+    def test_shoes_share_search_without_using_clothing_size_measurements(self):
+        self.targets.targets["shoes"] = {"item_type": ["로퍼"]}
+        self.search.measurements = Mock()
+        self.search.measurements.get.return_value = {"status": "unavailable"}
+        with patch.object(self.search, "_fetch", side_effect=lambda c, *a, **kw:
+                          [item(1, "니트")] if c == "top" else [item(2, "로퍼")]):
+            result = self.search.search(self.targets, self.profile, limit=1)
+        self.assertEqual([p.category for p in result], ["top", "shoes"])
+        self.search.measurements.get.assert_called_once_with("MS1")
+        self.assertEqual(result[1].size_fit, {})
+
     def test_partial_category_failure_can_use_explicit_fallback(self):
         self.targets.targets["bottom"] = {"material": ["데님"]}
         fallback = Product("MS2", "데님 팬츠", "bottom", "블루", "캐주얼", [], [], 50000, "사계절", True,

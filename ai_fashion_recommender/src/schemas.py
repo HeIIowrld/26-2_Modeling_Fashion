@@ -94,8 +94,7 @@ class UserProfile:
     min_budget: int | None = None
     max_budget: int | None = None
     change_scope: str = "전체 변경"
-    # 변경 범위는 추천 엔진이 정하고, 사용자는 반드시 유지할 아이템만 고정한다.
-    # 기존 change_scope는 웹/노트북 호환을 위해 당분간 유지한다.
+    # change_scope는 기존 호출 호환용. 새 입력은 change_categories를 우선한다.
     items_to_keep: list[str] = field(default_factory=list)
     height_cm: float | None = None
     weight_kg: float | None = None
@@ -112,6 +111,8 @@ class UserProfile:
     activity_level: str = "보통"
     preferred_colors: list[str] = field(default_factory=list)
     avoided_colors: list[str] = field(default_factory=list)
+    # 사용자가 직접 고르는 간단한 퍼스널 컬러. 빈 문자열이면 추천에 반영하지 않는다.
+    personal_tone: str = ""  # "웜톤" / "쿨톤"
     preferred_materials: list[str] = field(default_factory=list)
     avoided_materials: list[str] = field(default_factory=list)
     excluded_item_types: list[str] = field(default_factory=list)
@@ -128,6 +129,7 @@ class UserProfile:
     provided_fields: list[str] | None = None
     # 같은 방식으로 평평하게 재어 입력한 '잘 맞는 옷'의 실측. 신체 둘레와 별개다.
     reference_measurements: dict[str, dict[str, float]] = field(default_factory=dict)
+    change_categories: list[str] | None = None
 
     @property
     def has_circumferences(self) -> bool:
@@ -202,12 +204,16 @@ class OutfitAnalysis:
     lower_palette: list[dict[str, Any]] = field(default_factory=list)
     attribute_confidence: float = 0.0
     notes: list[str] = field(default_factory=list)
+    shoes: dict[str, Any] = field(default_factory=lambda: {
+        "status": "not_trained", "accepted": False, "item_type": "분석 보류",
+        "confidence": 0.0, "source": "unavailable",
+    })
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     def to_summary_dict(self) -> dict[str, str]:
-        """Notebook에서 바로 읽을 수 있는 상·하의 두 줄 요약을 만든다."""
+        """Notebook에서 읽을 수 있는 상·하의와 신발 인식 상태를 요약한다."""
 
         def usable(value: str) -> bool:
             blocked = ("분석 보류", "분석 불가", "불확실", "해당 없음")
@@ -246,6 +252,10 @@ class OutfitAnalysis:
                 lower_name,
                 [lower_shape, lower_length, *self.lower_details[:2]],
             ),
+            "신발": self.shoes.get("item_type", "분석 보류") if self.shoes.get("accepted") else {
+                "not_trained": "신발 인식 학습 준비 중 · 입력 조건으로 추천 가능",
+                "not_visible": "사진에서 신발 영역을 확인하지 못했습니다",
+            }.get(self.shoes.get("status"), "신발 종류를 확실하게 구분하지 못했습니다"),
         }
 
 

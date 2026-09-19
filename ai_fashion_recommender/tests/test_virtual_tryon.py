@@ -219,24 +219,20 @@ class TryOnEndpointTests(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertIsNone(web_app.IMAGE_NAME_PATTERN.match(name))
 
+    # 추천 순위별 합성 엔드포인트(create_tryon)는 무신사 상품 합성으로 대체됐다.
+    # 같은 입력 검증(없는 작업 404, 경로 조작 400)을 현재 엔드포인트에서 지킨다.
     def test_unknown_job_is_not_found(self):
         from fastapi import HTTPException
 
         with self.assertRaises(HTTPException) as caught:
-            web_app.create_product_tryon(
-                "f" * 32,
-                {"product_ids": ["TOP001"]},
-            )
+            web_app.create_product_tryon("f" * 32, {"product_ids": ["MS1"]})
         self.assertEqual(caught.exception.status_code, 404)
 
     def test_malformed_job_id_is_rejected(self):
         from fastapi import HTTPException
 
         with self.assertRaises(HTTPException) as caught:
-            web_app.create_product_tryon(
-                "../../etc",
-                {"product_ids": ["TOP001"]},
-            )
+            web_app.create_product_tryon("../../etc", {"product_ids": ["MS1"]})
         self.assertEqual(caught.exception.status_code, 400)
 
 

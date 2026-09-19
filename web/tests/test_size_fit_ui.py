@@ -40,10 +40,14 @@ class SizeFitUITests(unittest.TestCase):
 const $ = () => ({});
 const state = {preferredColors: [], avoidedColors: [], preferredMaterials: []};
 const wardrobeRowsWithImages = () => [];
-class FormData { get(key) {return ({height_cm: '175', reference_top_chest_cm: '54.5', reference_top_length_cm: '70'})[key] ?? null;} }
+class FormData {
+  get(key) {return ({height_cm: '175', reference_top_chest_cm: '54.5', reference_top_length_cm: '70'})[key] ?? null;}
+  getAll(key) {return key === 'change_categories' ? ['top', 'bottom', 'shoes'] : [];}
+}
 """ + function + "\nconsole.log(JSON.stringify(collectProfile()));"
         payload = self.run_js(code)
         self.assertEqual(payload["height_cm"], 175)
+        self.assertEqual(payload["change_categories"], ["top", "bottom", "shoes"])
         self.assertEqual(payload["reference_measurements"]["top"], {"chest_width_cm": 54.5, "length_cm": 70})
         self.assertIsNone(payload["reference_measurements"]["bottom"]["length_cm"])
 

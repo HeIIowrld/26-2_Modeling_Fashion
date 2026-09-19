@@ -62,6 +62,7 @@ RULES_PATH = PROJECT_DIR / "FASHION_RULES_MASTER.md"
 ATTRIBUTE_HEADS_PATH = FASHION_ATTRIBUTE_HEADS_PATH
 
 PURPOSES = list(PURPOSE_STYLES)
+GENDERS = ["남성", "여성"]
 STYLES = [
     "캐주얼",
     "미니멀",
@@ -193,12 +194,18 @@ def _build_tryon() -> VirtualTryOnAdapter:
 
         preset = os.environ.get("FASHION_VTON_PRESET", "standard").strip().lower()
         if preset == "fast":
-            return CatVTONTryOn.fast()
-        if preset in {"high", "high_detail"}:
-            return CatVTONTryOn.high_detail()
-        if preset not in {"", "standard"}:
-            print(f"[VTON] 알 수 없는 프리셋 {preset!r}; standard를 사용합니다.")
-        return CatVTONTryOn()
+            adapter = CatVTONTryOn.fast()
+        elif preset in {"high", "high_detail"}:
+            adapter = CatVTONTryOn.high_detail()
+        else:
+            if preset not in {"", "standard"}:
+                print(f"[VTON] 알 수 없는 프리셋 {preset!r}; standard를 사용합니다.")
+            adapter = CatVTONTryOn()
+        shoe_model = os.environ.get("FASHION_SHOE_MODEL_PATH", "").strip()
+        if shoe_model:
+            from shoe_tryon import OutfitTryOn, ShoeTryOn
+            return OutfitTryOn(adapter, ShoeTryOn(shoe_model))
+        return adapter
     except Exception as error:  # 저장소 없음·의존성 없음·GPU 없음 모두 여기로 온다
         print(f"[VTON] 생성 모델을 켜지 못해 비활성으로 실행합니다: {type(error).__name__}: {error}")
         return VirtualTryOnAdapter(enabled=False)
@@ -324,6 +331,8 @@ def build_profile(payload: dict) -> UserProfile:
         min_budget=min_b,
         max_budget=max_b,
         change_scope=payload.get("change_scope") or "전체 변경",
+        change_categories=payload.get("change_categories"),
+        gender=str(payload.get("gender") or ""),
         height_cm=number("height_cm"),
         weight_kg=number("weight_kg"),
         chest_cm=number("chest_cm"),
@@ -342,6 +351,11 @@ def build_profile(payload: dict) -> UserProfile:
         activity_level=payload.get("activity_level") or "보통",
         preferred_colors=string_list("preferred_colors"),
         avoided_colors=string_list("avoided_colors"),
+        personal_tone=(
+            str(payload.get("personal_tone") or "")
+            if str(payload.get("personal_tone") or "") in {"웜톤", "쿨톤"}
+            else ""
+        ),
         preferred_materials=preferred_materials,
         avoided_materials=string_list("avoided_materials"),
         excluded_item_types=string_list("excluded_item_types"),
@@ -405,6 +419,8 @@ def _shopping_tryon_payloads(
     output_dir: Path,
     *,
     adapter_available: bool,
+    supported_categories: set[str] | None = None,
+    shoe_unavailable_reason: str = "",
 ) -> tuple[list[dict], dict[str, Product]]:
     """검색 상품을 공개 응답과 실제 VTON에 쓸 수 있는 Product 객체로 나눈다."""
     catalog_by_id = {product.product_id: product for product in catalog_products}
@@ -414,8 +430,11 @@ def _shopping_tryon_payloads(
         payload = item.public_dict()
         resolved = catalog_by_id.get(item.product_id)
         reason = ""
-        if item.category not in TRYON_PRODUCT_CATEGORIES:
+        if item.category not in (supported_categories if supported_categories is not None else TRYON_PRODUCT_CATEGORIES):
             reason = "현재 실제 합성은 상의와 하의만 지원합니다."
+            resolved = None
+        elif item.category == "shoes" and shoe_unavailable_reason:
+            reason = shoe_unavailable_reason
             resolved = None
         elif not adapter_available:
             reason = "현재 합성 GPU를 사용할 수 없습니다."
@@ -551,11 +570,21 @@ def run_pipeline(
             pose_result,
             target_keywords,
         )
+        supported_categories = set(getattr(engine.tryon, "supported_categories", TRYON_PRODUCT_CATEGORIES))
+        shoe_reason = ""
+        if "shoes" in supported_categories:
+            from shoe_tryon import foot_edit_mask
+            try:
+                foot_edit_mask(parsed["segmentation"], pose_result)
+            except TryOnNotReady as exc:
+                shoe_reason = str(exc)
         shopping_payloads, shopping_tryon_products = _shopping_tryon_payloads(
             shopping_results,
             engine.recommender.catalog.products,
             output_dir,
             adapter_available=engine.tryon.available,
+            supported_categories=supported_categories,
+            shoe_unavailable_reason=shoe_reason,
         )
 
         on_stage("preview")
@@ -582,7 +611,13 @@ def run_pipeline(
             "documented": len(engine.recommender.documented_rule_ids),
             "scoring": len(engine.recommender.scoring_rule_ids),
             "unsupported": [
-                {"id": rule_id, "reason": engine.recommender.UNSUPPORTED_RULE_REASONS[rule_id]}
+                {
+                    "id": rule_id,
+                    "reason": engine.recommender.UNSUPPORTED_RULE_REASONS.get(
+                        rule_id,
+                        "문서에는 정의되어 있지만 실행 코드가 아직 연결되지 않았습니다.",
+                    ),
+                }
                 for rule_id in engine.recommender.unsupported_rule_ids
             ],
         },
@@ -780,13 +815,16 @@ def _request_summary(profile: UserProfile) -> dict:
     return {
         "purpose": profile.purpose,
         "desired_style": profile.desired_style,
+        "gender": profile.gender,
         "change_scope": profile.change_scope,
+        "change_categories": profile.change_categories,
         "min_budget": profile.min_budget,
         "max_budget": profile.max_budget,
         "season": profile.season,
         "activity_level": profile.activity_level,
         "preferred_colors": list(profile.preferred_colors),
         "avoided_colors": list(profile.avoided_colors),
+        "personal_tone": profile.personal_tone,
         "preferred_materials": list(profile.preferred_materials),
     }
 
@@ -806,6 +844,7 @@ def save_feedback(rank: int, action: str, note: str = "") -> dict:
 def form_options() -> dict:
     return {
         "purposes": PURPOSES,
+        "genders": GENDERS,
         "styles": STYLES,
         "change_scopes": CHANGE_SCOPES,
         "seasons": SEASONS,
