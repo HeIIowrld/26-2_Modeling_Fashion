@@ -54,12 +54,21 @@ class RecordingAttributePredictor:
 
 
 class EfficiencyTests(unittest.TestCase):
+    @staticmethod
+    def _detected_landmarks():
+        return {
+            "left_shoulder": (0.35, 0.25, 0.95),
+            "right_shoulder": (0.65, 0.25, 0.95),
+            "left_hip": (0.42, 0.55, 0.95),
+            "right_hip": (0.58, 0.55, 0.95),
+        }
+
     def test_quality_checker_reuses_pose(self):
         analyzer = CountingPoseAnalyzer()
         checker = QualityChecker(analyzer)
         checkerboard = (np.indices((600, 600)).sum(axis=0) % 2 * 255).astype(np.uint8)
         image = Image.fromarray(np.repeat(checkerboard[:, :, None], 3, axis=2))
-        pose = PoseAnalysis(True, 0.95, "사각체형", 1.0, 0.5, 0.5, "정면")
+        pose = PoseAnalysis(True, 0.95, "사각체형", 1.0, 0.5, 0.5, "정면", landmarks=self._detected_landmarks())
         result = checker.check_input(image, pose=pose)
         self.assertTrue(result["passed"])
         self.assertEqual(analyzer.calls, 0)
@@ -67,7 +76,7 @@ class EfficiencyTests(unittest.TestCase):
     def test_quality_checker_accepts_320px_short_side_but_rejects_under_it(self):
         analyzer = CountingPoseAnalyzer()
         checker = QualityChecker(analyzer)
-        pose = PoseAnalysis(True, 0.95, "사각체형", 1.0, 0.5, 0.5, "정면")
+        pose = PoseAnalysis(True, 0.95, "사각체형", 1.0, 0.5, 0.5, "정면", landmarks=self._detected_landmarks())
 
         def checkerboard(width, height):
             values = (np.indices((height, width)).sum(axis=0) % 2 * 255).astype(np.uint8)
@@ -82,7 +91,7 @@ class EfficiencyTests(unittest.TestCase):
     def test_quality_checker_accepts_mild_blur_under_relaxed_threshold(self):
         analyzer = CountingPoseAnalyzer()
         checker = QualityChecker(analyzer)
-        pose = PoseAnalysis(True, 0.70, "사각체형", 1.0, 0.5, 0.5, "정면")
+        pose = PoseAnalysis(True, 0.70, "사각체형", 1.0, 0.5, 0.5, "정면", landmarks=self._detected_landmarks())
         y, x = np.indices((400, 400))
         coarse_checkerboard = (((x // 16 + y // 16) % 2) * 255).astype(np.uint8)
         mildly_blurred = cv2.GaussianBlur(coarse_checkerboard, (21, 21), 0)

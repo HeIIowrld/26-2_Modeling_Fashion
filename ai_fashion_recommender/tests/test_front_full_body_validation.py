@@ -40,9 +40,9 @@ def landmarks() -> dict[str, tuple[float, float, float]]:
     }
 
 
-def checked(landmark_map: dict) -> dict:
+def checked(landmark_map: dict | None, *, valid: bool = True) -> dict:
     pose = SimpleNamespace(
-        valid=True,
+        valid=valid,
         warnings=[],
         full_body_score=0.95,
         landmarks=landmark_map,
@@ -53,7 +53,38 @@ def checked(landmark_map: dict) -> dict:
     return QualityChecker(None).check_input(image, pose=pose)
 
 
+def checked_pose(pose) -> dict:
+    image = Image.fromarray(
+        np.random.default_rng(7).integers(0, 256, (600, 400, 3), dtype=np.uint8)
+    )
+    return QualityChecker(None).check_input(image, pose=pose)
+
+
 class FrontFullBodyValidationTests(unittest.TestCase):
+    def test_invalid_pose_is_rejected(self):
+        result = checked(landmarks(), valid=False)
+        self.assertFalse(result["passed"])
+        self.assertIn("정면 전신", result["issues"][0])
+
+    def test_none_pose_is_rejected(self):
+        result = checked_pose(None)
+        self.assertFalse(result["passed"])
+
+    def test_empty_landmarks_are_rejected(self):
+        result = checked({})
+        self.assertFalse(result["passed"])
+
+    def test_missing_core_torso_landmark_is_rejected(self):
+        current = landmarks()
+        del current["left_hip"]
+        result = checked(current)
+        self.assertFalse(result["passed"])
+
+    def test_all_nan_landmarks_are_rejected(self):
+        current = {name: (np.nan, np.nan, np.nan) for name in landmarks()}
+        result = checked(current)
+        self.assertFalse(result["passed"])
+
     def test_normal_front_full_body_passes(self):
         result = checked(landmarks())
         self.assertTrue(result["passed"])

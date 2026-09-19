@@ -77,6 +77,15 @@ class UIContractTests(unittest.TestCase):
         ):
             self.assertIn(text, html)
 
+    def test_photo_preflight_blocks_step_two_until_server_validation(self):
+        javascript = (STATIC / "app.js").read_text(encoding="utf-8")
+        self.assertIn('/api/validate-photo', javascript)
+        self.assertIn('사진을 확인하고 있어요', javascript)
+        self.assertIn('note.dataset.tone = "bad"', javascript)
+        self.assertIn('unlock(2);', javascript)
+        self.assertIn('goto(2);', javascript)
+        self.assertIn('state.photoValidation', javascript)
+
     def test_musinsa_products_can_be_selected_for_real_tryon(self):
         html = (STATIC / "index.html").read_text(encoding="utf-8")
         javascript = (STATIC / "app.js").read_text(encoding="utf-8")

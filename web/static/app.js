@@ -31,6 +31,7 @@ const state = {
   avoidedColors: new Set(),
   preferredMaterials: new Set(),
   wardrobe: [],
+  photoValidation: false,
 };
 
 const BUDGET_MIN = 30000;
@@ -149,6 +150,7 @@ fileInput.addEventListener("change", () => {
 $("clear-image").addEventListener("click", (event) => {
   event.stopPropagation();
   state.file = null;
+  state.photoValidation = false;
   fileInput.value = "";
   $("dropzone-preview").hidden = true;
   $("dropzone-empty").hidden = false;
@@ -177,6 +179,7 @@ function acceptFile(file) {
     return;
   }
   state.file = file;
+  state.photoValidation = false;
   $("preview-img").src = URL.createObjectURL(file);
   $("dropzone-empty").hidden = true;
   $("dropzone-preview").hidden = false;
@@ -223,7 +226,48 @@ $("clear-body-image").addEventListener("click", (event) => {
   $("body-dz-empty").hidden = false;
 });
 
-$("to-step-2").addEventListener("click", () => { unlock(2); goto(2); });
+async function validatePhotoBeforeNext() {
+  if (!state.file || state.photoValidation) return;
+  const file = state.file;
+  const button = $("to-step-2");
+  const note = $("photo-gate-note");
+  state.photoValidation = true;
+  button.disabled = true;
+  button.textContent = "사진을 확인하고 있어요";
+  note.textContent = "사진을 확인하고 있어요. 잠시만 기다려 주세요.";
+  note.dataset.tone = "wait";
+  try {
+    const body = new FormData();
+    body.append("image", file);
+    const response = await fetch(API_BASE + "/api/validate-photo", { method: "POST", body });
+    let payload;
+    try {
+      payload = await response.json();
+    } catch {
+      throw new Error("서버 응답을 읽을 수 없습니다.");
+    }
+    if (state.file !== file) return;
+    if (!response.ok) throw new Error(payload.detail || "사진 확인에 실패했어요. 잠시 후 다시 시도해 주세요.");
+    if (!payload.valid) {
+      note.textContent = (payload.issues || []).join(" ") || "사진에서 사람의 정면 전신을 확인할 수 없습니다. 다시 촬영해 주세요.";
+      note.dataset.tone = "bad";
+      return;
+    }
+    note.textContent = "사진이 확인됐어요. 조건을 입력해주세요.";
+    note.dataset.tone = "ok";
+    unlock(2);
+    goto(2);
+  } catch (error) {
+    note.textContent = error.message || "사진 확인 중 서버 오류가 발생했어요. 잠시 후 다시 시도해 주세요.";
+    note.dataset.tone = "error";
+  } finally {
+    state.photoValidation = false;
+    button.textContent = "다음: 조건 입력";
+    button.disabled = !state.file;
+  }
+}
+
+$("to-step-2").addEventListener("click", validatePhotoBeforeNext);
 $("back-to-1").addEventListener("click", () => goto(1));
 
 /* ── 2단계: 조건 ──────────────────────────────────────── */

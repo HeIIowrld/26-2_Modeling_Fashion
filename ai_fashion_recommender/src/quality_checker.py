@@ -31,18 +31,35 @@ ARM_CROSSING_MARGIN = 0.08
 ARM_RAISED_MARGIN = 0.08
 ARM_OPEN_MARGIN = 0.25
 ARM_MAX_OUTWARD_RATIO = 1.5
+PERSON_DETECTION_ERROR = "사진에서 사람의 정면 전신을 확인할 수 없습니다. 머리부터 발끝까지 한 명만 나오도록 다시 촬영해 주세요."
+CORE_TORSO_LANDMARKS = ("left_shoulder", "right_shoulder", "left_hip", "right_hip")
 
 
 def _landmark(landmarks: dict, name: str) -> tuple[float, float, float] | None:
     point = landmarks.get(name)
     if point is None or len(point) < 3:
         return None
-    values = tuple(float(value) for value in point[:3])
+    try:
+        values = tuple(float(value) for value in point[:3])
+    except (TypeError, ValueError):
+        return None
     return values if np.isfinite(values).all() else None
 
 
 def _reliable(point: tuple[float, float, float] | None, threshold: float) -> bool:
     return point is not None and point[2] >= threshold
+
+
+def _has_detected_person(pose: PoseAnalysis | None) -> bool:
+    if pose is None or not getattr(pose, "valid", False):
+        return False
+    landmarks = getattr(pose, "landmarks", None)
+    if not isinstance(landmarks, dict) or not landmarks:
+        return False
+    usable = {name: _landmark(landmarks, name) for name in landmarks}
+    if not any(point is not None for point in usable.values()):
+        return False
+    return all(_landmark(landmarks, name) is not None for name in CORE_TORSO_LANDMARKS)
 
 
 def assess_head_framing(
@@ -201,9 +218,23 @@ class QualityChecker:
         rgb = _to_rgb_array(image)
         gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
         sharpness = float(cv2.Laplacian(gray, cv2.CV_64F).var())
-        pose = pose or self.pose_analyzer.analyze(rgb)
+        if pose is None and self.pose_analyzer is not None:
+            pose = self.pose_analyzer.analyze(rgb)
         height, width = rgb.shape[:2]
         landmarks = getattr(pose, "landmarks", None) or {}
+        if not _has_detected_person(pose):
+            return {
+                "passed": False,
+                "resolution": [width, height],
+                "sharpness": round(sharpness, 2),
+                "full_body_score": float(getattr(pose, "full_body_score", 0.0) or 0.0),
+                "head_framing": "uncertain",
+                "lower_body_framing": "uncertain",
+                "full_body_framing": "uncertain",
+                "front_pose": {"status": "uncertain", "metrics": {}},
+                "arm_pose": {"status": "uncertain", "metrics": {}},
+                "issues": [PERSON_DETECTION_ERROR],
+            }
         head = assess_head_framing(landmarks)
         lower = assess_lower_body_framing(landmarks)
         full = assess_full_body_framing(head["status"], lower["status"])

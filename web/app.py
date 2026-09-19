@@ -256,6 +256,27 @@ def _session_dir(job_id: str) -> Path:
     return SESSION_ROOT / job_id
 
 
+async def _store_uploaded_image(upload: UploadFile, target: Path) -> None:
+    raw = await upload.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="이미지 파일이 비어 있습니다.")
+    if len(raw) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="이미지 용량은 12MB 이하만 지원합니다.")
+    try:
+        with Image.open(BytesIO(raw)) as opened:
+            if opened.format not in ALLOWED_FORMATS:
+                raise HTTPException(status_code=400, detail="JPG, PNG, WEBP 이미지만 지원합니다.")
+            opened.convert("RGB").save(target, "JPEG", quality=95)
+    except UnidentifiedImageError as exc:
+        raise HTTPException(status_code=400, detail="이미지 파일을 해석할 수 없습니다.") from exc
+
+
+def _validate_photo_path(image_path: Path) -> dict:
+    engine = get_engine()
+    pose = engine.pose_analyzer.analyze(image_path)
+    return engine.quality_checker.check_input(image_path, pose=pose)
+
+
 def _generate_product_tryon_for_job(job_id: str, product_ids: list[str]) -> dict:
     """무신사 카드에서 고른 상의·하의·신발을 실제 상품 이미지로 합성한다."""
     selected_ids = list(dict.fromkeys(str(product_id) for product_id in product_ids))
@@ -628,6 +649,24 @@ def health() -> dict:
 @app.get("/api/rules")
 def rules() -> dict:
     return {"titles": rule_titles()}
+
+@app.post("/api/validate-photo")
+async def validate_photo(image: UploadFile = File(...)) -> JSONResponse:
+    """조건 입력 전에 사진만 검사하고, 검사 파일은 즉시 삭제한다."""
+    validation_id = uuid.uuid4().hex
+    session = _session_dir(validation_id)
+    session.mkdir(parents=True, exist_ok=True)
+    image_path = session / "photo.jpg"
+    try:
+        await _store_uploaded_image(image, image_path)
+        quality = _validate_photo_path(image_path)
+        return JSONResponse({
+            "valid": bool(quality["passed"]),
+            "issues": quality.get("issues", []),
+            "quality": quality,
+        })
+    finally:
+        shutil.rmtree(session, ignore_errors=True)
 
 
 @app.post("/api/analyze")

@@ -4,6 +4,10 @@
 
 추천 분석 전에 사용자가 정면 전신사진을 올리도록 안내하고, MediaPipe landmark가 충분히 신뢰되는 경우에만 명확한 머리·발 프레이밍, 비정면 자세, 팔 자세 위반을 재촬영 대상으로 판정한다. visibility가 낮거나 신호가 서로 충돌하면 `uncertain`으로 남겨 hard rejection을 피한다.
 
+사진 자체를 확인할 수 없는 경우는 예외다. 사람이 감지되지 않거나 pose가 유효하지 않으면 hard failure로 처리하며, 양쪽 어깨와 골반 등 핵심 torso landmark가 없거나 비어 있거나 모두 NaN이어도 hard failure로 처리한다. 사람은 감지되었지만 발·손목 등 일부 landmark visibility만 낮은 경우에는 기존처럼 `uncertain`을 유지한다.
+
+사진 선택 직후에는 미리보기만 표시한다. 사용자가 사진 단계에서 다음을 누르면 `POST /api/validate-photo`가 기존 `PoseAnalyzer`와 `QualityChecker`로 preflight 검증을 수행하고, 부적합하면 조건 입력 단계로 이동하지 않고 업로드 영역에 재촬영 메시지를 표시한다. 적합한 사진만 조건 입력 단계로 이동한다. 전체 `/api/analyze` 경로에서도 동일한 검증을 다시 수행해 preflight를 우회한 요청을 차단한다.
+
 ## UI 입력 가이드
 
 첫 화면 `STEP 01` 업로드 영역 옆에 `web/static/assets/full-body-guide.png`를 표시한다.
@@ -61,6 +65,12 @@
 - 팔 위반: 팔을 몸 옆에 자연스럽게 내리고 몸통을 가리지 않도록 다시 촬영
 
 기존 `/api/jobs/{job_id}`의 `error`와 웹 error card 전달 구조는 유지한다.
+
+사람을 확인할 수 없는 경우에는 다음 취지의 메시지를 사용한다.
+
+- 사진에서 사람의 정면 전신을 확인할 수 없습니다. 머리부터 발끝까지 한 명만 나오도록 다시 촬영해 주세요.
+
+preflight의 정상 전신사진 통과, 부적합 사진 차단, 검증 중 상태 표시, 업로드 영역 오류 표시, 새 사진 선택 시 오류 초기화는 웹 테스트에서 확인한다.
 
 ## 한계
 

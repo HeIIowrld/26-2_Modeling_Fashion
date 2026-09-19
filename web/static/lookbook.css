@@ -266,6 +266,8 @@ input, textarea, select { caret-color: var(--signal); }
   font-size: .82rem; color: var(--ink-soft);
 }
 .photo-gate-note[data-tone="ok"] { color: var(--good); font-weight: 500; }
+.photo-gate-note[data-tone="bad"],
+.photo-gate-note[data-tone="error"] { color: var(--bad); font-weight: 700; }
 
 /* ── 폼 ───────────────────────────────────────────────── */
 .form { display: flex; flex-direction: column; gap: 0; }
