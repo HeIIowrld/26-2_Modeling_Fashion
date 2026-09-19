@@ -565,6 +565,8 @@ def health() -> dict:
         "trained_heads": engine.trained_heads,
         "parser_backend": engine.parser_backend,
         "vton_enabled": engine.tryon.enabled,
+        "tryon_categories": sorted(getattr(engine.tryon, "supported_categories", {"top", "bottom"}))
+        if engine.tryon.available else [],
         "product_count": len(engine.recommender.catalog.products),
         "product_color_audits": len(engine.recommender.catalog.color_audits),
         "product_color_overrides": engine.recommender.catalog.color_override_count,
