@@ -197,6 +197,20 @@ input, textarea, select { caret-color: var(--signal); }
 }
 .headline-line { display: block; }
 
+.full-body-guide {
+  display: grid; grid-template-columns: 96px 1fr; gap: 16px;
+  align-items: center; margin: 24px 0 4px; padding: 12px;
+  border: 1px solid var(--line); background: var(--panel-2);
+}
+.full-body-guide img {
+  width: 96px; height: 132px; object-fit: cover; object-position: center top;
+  display: block; border: 1px solid var(--line-strong);
+}
+.full-body-guide h2 { font-size: .92rem; margin: 0 0 8px; }
+.full-body-guide ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.full-body-guide li { color: var(--ink-soft); font-size: .78rem; line-height: 1.45; }
+.full-body-guide li::before { content: "•"; color: var(--signal); margin-right: 6px; }
+
 .dropzone {
   flex: 1; position: relative;
   display: flex; align-items: center; justify-content: center;
@@ -1175,6 +1189,10 @@ select {
 }
 
 @media (max-width: 520px) {
+  .full-body-guide { grid-template-columns: 76px 1fr; gap: 12px; padding: 10px; }
+  .full-body-guide img { width: 76px; height: 108px; }
+  .full-body-guide li { font-size: .74rem; }
+
   .step { gap: 5px; padding: 0 9px; font-size: .8rem; }
   .step-num { font-size: .76rem; }
   .reco-picker {
