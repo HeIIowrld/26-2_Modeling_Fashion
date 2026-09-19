@@ -9,27 +9,17 @@ from pathlib import Path
 
 import numpy as np
 
+from vton_eval_utils import cluster_ci, is_short_bottom, load_dedup
+
 HERE = Path(sys.argv[1] if len(sys.argv) > 1 else ".")
 RESULTS = HERE / (sys.argv[2] if len(sys.argv) > 2 else "results.jsonl")
 REFS = HERE / (sys.argv[3] if len(sys.argv) > 3 else "refs.json")
-rng = np.random.default_rng(20260914)
 
 SELLER = {"슬림핏": 0, "레귤러핏": 1, "여유핏": 2, "오버핏": 3}
 UPPER_W = {"슬림핏": 0, "레귤러핏": 1, "여유핏": 2, "오버핏": 3}
 LOWER_W = {"슬림핏": 0, "테이퍼드핏": 1, "스트레이트핏": 1, "플레어핏": 2, "와이드핏": 3}
 FIT_TASK = {"top": ("upper_fit", UPPER_W), "bottom": ("lower_fit", LOWER_W)}
 BAND = {"top": "chest", "bottom": "shin"}
-
-def load_dedup(path: Path) -> tuple[list[dict], list[dict]]:
-    """같은 쌍을 다시 돌린 기록은 마지막 성공을 쓴다. 성공이 없으면 오류로 남긴다."""
-    latest: dict[str, dict] = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        record = json.loads(line)
-        if "error" not in record or "error" in latest.get(record["pair"], {"error": 1}):
-            latest[record["pair"]] = record
-    values = list(latest.values())
-    return [r for r in values if "error" not in r], [r for r in values if "error" in r]
-
 
 rows, errors = load_dedup(RESULTS)
 refs = {r["product_id"]: r for r in json.loads(REFS.read_text(encoding="utf-8"))}
@@ -65,24 +55,6 @@ def spearman(x, y) -> float:
     if len(x) < 3 or x.std() == 0 or y.std() == 0:
         return float("nan")
     return float(np.corrcoef(rank(x), rank(y))[0, 1])
-
-
-def cluster_ci(items: list[dict], stat, key="person", n=2000):
-    """사람 단위로 다시 뽑아 통계량의 95% 구간을 낸다."""
-    groups = defaultdict(list)
-    for item in items:
-        groups[item[key]].append(item)
-    names = list(groups)
-    point = stat(items)
-    samples = []
-    for _ in range(n):
-        pick = rng.choice(len(names), len(names), replace=True)
-        sample = [row for i in pick for row in groups[names[i]]]
-        value = stat(sample)
-        if value == value:
-            samples.append(value)
-    lo, hi = np.percentile(samples, [2.5, 97.5]) if samples else (float("nan"),) * 2
-    return point, lo, hi
 
 
 def fmt(triple, digits=2):
@@ -136,8 +108,8 @@ for category in ("top", "bottom"):
         r["W_res"], r["W_orig"] = wr, wo
         r["dW"] = None if wo is None or wr is None else wr - wo
         r["fill"] = None if wr is None or not wm else wr / wm
-    # 반바지(카탈로그 기장 '반바지')는 기장까지 바뀌어 핏 판단을 흐린다 → 핏 지표에서만 뺀다.
-    shorts = {pid for pid, v in refs.items() if v["category"] == category and v.get("catalog_length") == "반바지"}
+    # 판매자 상품명·카테고리의 반바지는 기장까지 바뀌어 핏 판단을 흐린다 → 핏 지표에서만 뺀다.
+    shorts = {pid for pid, v in refs.items() if v["category"] == category and is_short_bottom(v)}
     for r in items:
         r["is_shorts"] = r["product_id"] in shorts
     fit_items = [r for r in items if None not in (r["E_ref"], r["E_orig"], r["E_res"]) and not r["is_shorts"]]
@@ -147,9 +119,9 @@ for category in ("top", "bottom"):
     print(f"\n## {category} — {len(items)}쌍 (핏 판정 가능 {len(fit_items)})")
 
     # 1) 채점자(속성 헤드)가 레퍼런스 사진에서 판매자 태그를 얼마나 읽나 — 천장
-    ref_rows = [v for v in refs.values() if v["category"] == category and v.get("catalog_length") != "반바지"]
+    ref_rows = [v for v in refs.values() if v["category"] == category and not is_short_bottom(v)]
     ref_E = [(SELLER[v["seller_fit"]], looseness(v["judge"], category)) for v in ref_rows if v["judge"]]
-    print(f"[채점자 천장] 레퍼런스 {len(ref_E)}개: Spearman(판매자 태그, 레퍼런스 판정) = "
+    print(f"[레퍼런스 상관 기준: 수학적 천장 아님] 레퍼런스 {len(ref_E)}개: Spearman(판매자 태그, 레퍼런스 판정) = "
           f"{spearman(*zip(*ref_E)):.2f}")
     if category == "top":
         acc = np.mean([argmax(v["judge"], task) == v["seller_fit"] for v in ref_rows if v["judge"]])

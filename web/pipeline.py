@@ -49,6 +49,12 @@ from musinsa_live_search import MusinsaLiveSearch
 from body_shape import classify
 from schemas import GOAL_NONE, SILHOUETTE_GOAL_CHOICES, Product, UserProfile, WardrobeItem
 from virtual_tryon import TryOnNotReady, VirtualTryOnAdapter
+from catvton_tryon import (
+    USER_BOTTOM_LENGTH_OPTIONS,
+    bottom_length_warnings,
+    current_bottom_length,
+    is_bottom_length_warning,
+)
 
 RULES_PATH = PROJECT_DIR / "FASHION_RULES_MASTER.md"
 ATTRIBUTE_HEADS_PATH = FASHION_ATTRIBUTE_HEADS_PATH
@@ -117,6 +123,9 @@ __all__ = [
     "generate_tryon",
     "generate_tryon_with_warnings",
     "get_engine",
+    "length_check_status",
+    "reference_bottom_lengths",
+    "refresh_bottom_length_warnings",
     "run_pipeline",
     "rule_titles",
     "save_feedback",
@@ -601,6 +610,10 @@ def run_pipeline(
             ),
         },
         "tryon": _adapter_tryon_status(engine.tryon),
+        "length_check": length_check_status(
+            outfit_result,
+            has_bottom=parsed.get("lower_mask") is not None and bool(np.any(parsed.get("lower_mask"))),
+        ),
         "request": _request_summary(profile),
         "images": {
             "original": "original.jpg",
@@ -615,6 +628,67 @@ def run_pipeline(
         tryon_context=tryon_context,
         shopping_tryon_products=shopping_tryon_products,
     )
+
+
+def length_check_status(outfit, has_bottom: bool, context: dict | None = None) -> dict:
+    """현재 하의 기장을 사진에서 쟀는지, 사용자 입력이 필요한지를 화면에 알린다.
+
+    사진 밖으로 밑단이 잘리면 기장 차이 경고를 낼 근거가 없다. 추측해서 통과시키지 않고
+    밑단이 보이는 사진이나 사용자 입력을 요청한다.
+    """
+    current, source = current_bottom_length(outfit, context)
+    if not has_bottom:
+        status, message = "no_bottom", ""
+    elif source == "photo":
+        status, message = "measured", ""
+    elif source == "user":
+        status, message = "user_input", "입력한 현재 하의 기장으로 기장 차이를 확인해요."
+    else:
+        status = "needs_input"
+        message = (
+            "사진에서 하의 밑단이 잘려 지금 입은 옷의 기장을 확인하지 못했어요. "
+            "기장을 알려주시면 기장 차이로 합성이 어색해질 조합을 미리 표시해요. "
+            "밑단이 보이게 다시 찍으면 자동으로 판정해요."
+        )
+    return {
+        "status": status,
+        "value": current,
+        "options": list(USER_BOTTOM_LENGTH_OPTIONS),
+        "message": message,
+    }
+
+
+def reference_bottom_lengths() -> dict[str, str]:
+    """합성 어댑터가 캐시한 상품 기장. 엔진이 아직 없으면 적재하지 않고 빈 값을 준다."""
+    engine = _engine
+    if engine is None:
+        return {}
+    return dict(getattr(engine.tryon, "reference_bottom_lengths", {}) or {})
+
+
+def refresh_bottom_length_warnings(
+    warnings: list[str],
+    products: list[Product],
+    outfit,
+    context: dict | None,
+    reference_lengths: dict[str, str],
+) -> list[str] | None:
+    """이미 만든 합성 결과의 기장 경고만 새 현재 기장 기준으로 다시 계산한다.
+
+    reference_lengths는 합성할 때 어댑터가 캐시한 상품 기장이라 모델 추론이나 재합성이
+    없다. 캐시가 없는 결과는 None을 돌려 기존 경고를 그대로 두게 한다.
+    """
+    bottoms = [product for product in products if product.category == "bottom"]
+    if not bottoms:
+        return list(warnings)
+    cache = reference_lengths
+    if any(product.product_id not in cache for product in bottoms):
+        return None
+    current, source = current_bottom_length(outfit, context)
+    kept = [message for message in warnings if not is_bottom_length_warning(message)]
+    for product in bottoms:
+        kept.extend(bottom_length_warnings(current, source, cache[product.product_id]))
+    return kept
 
 
 def _adapter_tryon_status(

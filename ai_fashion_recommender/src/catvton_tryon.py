@@ -23,7 +23,9 @@ CatVTON(비상업 CC BY-NC-SA 4.0)의 디퓨전 파이프라인으로 추천 상
 """
 
 import json
+import re
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -100,6 +102,49 @@ LOW_COVERAGE_NECKLINES = ("라운드", "V넥", "스퀘어", "보트", "오프숄
 # 옷 텍스처로 채워지는 실패. gap=2는 미검증이라 보수적으로 경고에 포함한다.
 UNRELIABLE_LENGTH_GAP = 2
 
+# 사진에서 하의 밑단이 잘리면 현재 기장을 잴 수 없다(2026-09-15 하의 192조합 중 72조합).
+# 이때만 사용자가 고른 기장을 쓴다. 사진 판정값이 있으면 항상 사진값이 우선이다.
+USER_BOTTOM_LENGTH_OPTIONS = ("반바지", "무릎 기장", "7부 기장", "긴바지")
+BOTTOM_LENGTH_ORDER.setdefault("7부 기장", 2)
+LENGTH_HOLD_MESSAGE = (
+    "하의 기장 비교를 보류했습니다. 현재 사진 또는 상품의 기장을 확인할 수 없어 기장 변화에 따른 "
+    "합성 품질을 평가하지 못했습니다."
+)
+LENGTH_HOLD_PHOTO_HINT = (
+    " 밑단이 보이게 찍은 전신사진을 쓰거나, 지금 입은 하의 기장을 알려주시면 비교할 수 있어요."
+)
+LENGTH_GAP_PREFIX = "하의 기장 차이가 큽니다"
+
+
+def current_bottom_length(outfit, context: dict | None) -> tuple[str, str]:
+    """(현재 하의 기장, 근거)를 돌려준다. 근거는 'photo' | 'user' | ''."""
+    photo = (getattr(outfit, "bottom_length", "") or "").replace(" 추정", "")
+    if photo in BOTTOM_LENGTH_ORDER:
+        return photo, "photo"
+    user = ((context or {}).get("user_bottom_length") or "").strip()
+    if user in USER_BOTTOM_LENGTH_OPTIONS:
+        return user, "user"
+    return "", ""
+
+
+def bottom_length_warnings(current: str, source: str, target: str) -> list[str]:
+    """하의 기장 비교 결과를 사용자 경고 문장으로 만든다. 경고가 없으면 빈 목록."""
+    gap = bottom_length_gap(current, target)
+    if gap is None:
+        hint = LENGTH_HOLD_PHOTO_HINT if not current else ""
+        return [LENGTH_HOLD_MESSAGE + hint]
+    if gap >= UNRELIABLE_LENGTH_GAP:
+        basis = " 입력한 현재 기장 기준입니다." if source == "user" else ""
+        return [
+            f"{LENGTH_GAP_PREFIX}(현재보다 {gap}단계 짧음: → {target}). "
+            f"마스크가 원래 옷 모양이라 다리 영역이 옷 텍스처로 채워질 수 있습니다.{basis}"
+        ]
+    return []
+
+
+def is_bottom_length_warning(message: str) -> bool:
+    return message.startswith(LENGTH_HOLD_MESSAGE[:12]) or message.startswith(LENGTH_GAP_PREFIX)
+
 
 def _length_gap(order: dict[str, int], current: str, target: str) -> int | None:
     first = order.get((current or "").replace(" 추정", ""))
@@ -126,22 +171,33 @@ def sleeve_length_gap(current_length: str, target_length: str) -> int | None:
     return _length_gap(SLEEVE_LENGTH_ORDER, current_length, target_length)
 
 
-def classify_reference_bottom_length(classifier, image) -> str:
-    """상품 레퍼런스 이미지의 하의 기장을 학습된 속성 헤드로 추정한다.
+def classify_reference_bottom_length(classifier, image, *, product=None, source_image=None) -> str:
+    """명시적 반바지 상품명 → 원본 사진의 category/lower_length 순서로 판정한다.
 
-    상품 crop에서는 category 헤드가 가장 신뢰도가 높고(쇼츠 0.92), lower_length는
-    보조로만 쓴다. 판정하지 못하면 빈 문자열을 돌려 게이트를 건너뛴다.
+    원본이 전달되면 정제 crop의 왜곡을 피한다. 헤드 간 충돌이나 판정 불가는
+    빈 문자열로 반환한다. 호출자는 이를 검사 보류로 취급해야 한다.
     """
+    # 모델이 추정한 Product.length를 정답처럼 재사용하지 않는다.
+    name = (getattr(product, "name", "") or "").casefold()
+    if any(word in name for word in ("반바지", "쇼츠", "숏팬츠", "버뮤다")) or re.search(
+        r"\b(shorts?|hot\s+pants|half\s+tights)\b", name
+    ):
+        return "쇼츠·미니 기장"
     if classifier is None or not getattr(classifier, "trained_attributes_enabled", False):
         return ""
     prediction = classifier.predict_trained_attributes(
-        image, tasks=["category", "lower_length"]
+        source_image if source_image is not None else image,
+        tasks=["category", "lower_length"]
     )
     category = prediction.get("category")
     if category and category.accepted and category.labels[0] in SHORT_BOTTOM_CATEGORIES:
         return "쇼츠·미니 기장"
     length = prediction.get("lower_length")
     if length and length.accepted:
+        # '팬츠'는 긴바지의 증거는 아니지만, 쇼츠와 충돌하면 기장을 보류한다.
+        if (category and category.accepted and category.labels[0] == "팬츠"
+                and length.labels[0] == "쇼츠·미니 기장"):
+            return ""
         return length.labels[0]
     return ""
 
@@ -224,6 +280,166 @@ def split_outerwear_mask(
     if not overhang.any():
         return None
     return upper_mask.astype(bool) & ~overhang, lower_mask.astype(bool) | overhang
+
+
+def landmarks_to_pixels(
+    landmarks: dict | None, width: int, height: int, min_visibility: float = 0.5
+) -> dict[str, tuple[float, float]]:
+    """보이는 관절만 픽셀 좌표로 바꾼다. 화면 밖으로 추정된 관절은 버린다."""
+    points = {}
+    for name, value in (landmarks or {}).items():
+        x, y = value[0] * width, value[1] * height
+        if value[2] >= min_visibility and 0 <= x < width and 0 <= y < height:
+            points[name] = (x, y)
+    return points
+
+
+def agnostic_upper_mask(
+    style_mask: np.ndarray,
+    segmentation: np.ndarray,
+    landmarks_px: dict[str, tuple[float, float]],
+    *,
+    extend_hem: bool = True,
+    hem_margin: float = 0.10,
+    hem_mode: str = "hip",
+    lower_overlap: float = 0.08,
+) -> np.ndarray | None:
+    """원래 상의의 윤곽 단서를 지운 상체 마스크를 만든다.
+
+    원래 옷 라벨로 만든 마스크는 옷의 모양을 그대로 담는다. 트인 셔츠의 V 구멍·스쿱넥
+    구멍은 마스크 밖으로 남아 새 옷도 같은 모양으로 트이고, 크롭탑 밑단에서 끝나는
+    마스크는 긴 후드도 그 위치에서 자른다(2026-09-15 demo_2·2-model_4·1-model_3 확인).
+
+    - 어깨선 아래 몸통 피부(16)를 채워 넥라인·배 구멍을 없앤다. 목 윗부분은 남긴다.
+    - extend_hem: 몸통 폭 안의 사람 픽셀(하의·피부)을 넣어 기본 기장 상의가 밑단을 그릴
+      공간을 준다. 배경은 넣지 않는다.
+      hem_mode="hip"은 골반 관절+여유까지 넣는다. 2026-09-15 중간 점검에서 치마 윗부분을
+      깊게 덮어 갈색 띠·페플럼 같은 새 결함이 생겨, "lower"는 원래 하의 윗단에서
+      lower_overlap(몸통 길이 비율)만큼만 겹치게 한다.
+    어깨·골반 관절이 없으면 None(적용 불가)을 돌려준다.
+    """
+    names = ("left_shoulder", "right_shoulder", "left_hip", "right_hip")
+    if any(name not in landmarks_px for name in names):
+        return None
+    shoulder_y = (landmarks_px["left_shoulder"][1] + landmarks_px["right_shoulder"][1]) / 2
+    hip_y = (landmarks_px["left_hip"][1] + landmarks_px["right_hip"][1]) / 2
+    if hip_y <= shoulder_y:
+        return None
+    torso = hip_y - shoulder_y
+    height, width = style_mask.shape[:2]
+    rows = np.arange(height)[:, None]
+    mask = style_mask.astype(bool).copy()
+    neck_base = shoulder_y - 0.05 * torso
+    mask |= (segmentation == 16) & (rows >= neck_base)
+    if extend_hem:
+        hip_xs = (landmarks_px["left_hip"][0], landmarks_px["right_hip"][0])
+        shoulder_xs = (landmarks_px["left_shoulder"][0], landmarks_px["right_shoulder"][0])
+        x1 = int(max(0, round(min(min(hip_xs), min(shoulder_xs)) - 0.15 * abs(hip_xs[0] - hip_xs[1]))))
+        x2 = int(min(width, round(max(max(hip_xs), max(shoulder_xs)) + 0.15 * abs(hip_xs[0] - hip_xs[1]))))
+        y1 = int(max(0, round(shoulder_y)))
+        y2 = int(min(height, round(hip_y + hem_margin * torso)))
+        if hem_mode == "lower":
+            counts = np.isin(segmentation[:, x1:x2], (5, 6)).sum(axis=1)
+            if counts.max() > 0:
+                # 하의 윗단: 하의 픽셀이 가장 많은 행의 30% 이상인 첫 행(작은 오라벨 조각 무시).
+                # 그 아래로 조금만 겹치고, 골반 기준 한도는 넘지 않는다.
+                lower_top = int(np.argmax(counts >= 0.3 * counts.max()))
+                y2 = int(min(y2, round(lower_top + lower_overlap * torso)))
+        band = np.zeros_like(mask)
+        band[y1:y2, x1:x2] = True
+        # 발·손·가방 같은 보호 라벨은 generate()에서 다시 뺀다. 배경만 여기서 제외한다.
+        mask |= band & (segmentation != 0)
+    return mask
+
+
+def pants_flare_ratio(mask: np.ndarray) -> float | None:
+    """바지 마스크의 밑단 폭 / 허리 폭. 슬림은 작고 와이드는 1에 가깝다.
+
+    행마다 좌우 끝 사이의 폭(span)을 쓴다. 두 다리가 떨어진 착용컷도 바지통 전체를
+    보게 하려는 것이다. 위 5~15% 행을 허리, 아래 80~92% 행을 밑단으로 본다.
+    밑단 바로 끝 행은 접힘·신발로 흔들려 제외한다.
+    """
+    ys = np.where(mask.any(axis=1))[0]
+    if len(ys) < 40:
+        return None
+    top, bottom = ys.min(), ys.max()
+    span = bottom - top
+
+    def band_width(a: float, b: float) -> float | None:
+        widths = []
+        for y in range(int(top + a * span), int(top + b * span) + 1):
+            xs = np.where(mask[y])[0]
+            if len(xs):
+                widths.append(xs.max() - xs.min() + 1)
+        return float(np.median(widths)) if widths else None
+
+    waist, hem = band_width(0.05, 0.15), band_width(0.80, 0.92)
+    if not waist or not hem or waist < 10:
+        return None
+    return hem / waist
+
+
+def shape_lower_mask(
+    lower_mask: np.ndarray,
+    landmarks_px: dict[str, tuple[float, float]],
+    target_ratio: float,
+    current_ratio: float | None,
+    *,
+    min_gain: float = 0.10,
+) -> np.ndarray | None:
+    """상품 바지통이 원래 바지보다 넓을 때만 무릎 아래로 갈수록 마스크를 넓힌다.
+
+    상품명 키워드로 넓히던 정책은 슬림·레귤러 태그 상품까지 넓혀 기각됐다
+    (review_2026-09-15). 여기서는 상품 사진에서 잰 밑단/허리 비율이 원래 바지보다
+    min_gain 이상 클 때만, 그 차이만큼 행 폭을 넓힌다. 좁히지는 않는다.
+    골반 관절이 없거나 넓힐 근거가 없으면 None.
+    """
+    if current_ratio is None or target_ratio < current_ratio + min_gain:
+        return None
+    if "left_hip" not in landmarks_px or "right_hip" not in landmarks_px:
+        return None
+    hip_y = (landmarks_px["left_hip"][1] + landmarks_px["right_hip"][1]) / 2
+    ys = np.where(lower_mask.any(axis=1))[0]
+    if len(ys) < 40:
+        return None
+    bottom = ys.max()
+    if bottom <= hip_y:
+        return None
+    height, width = lower_mask.shape[:2]
+    shaped = lower_mask.astype(bool).copy()
+    waist_row = int(max(ys.min(), round(hip_y)))
+    xs = np.where(lower_mask[waist_row])[0]
+    if len(xs) < 2:
+        return None
+    waist_width = xs.max() - xs.min() + 1
+    extra = (target_ratio - current_ratio) * waist_width
+    for y in range(waist_row, bottom + 1):
+        xs = np.where(lower_mask[y])[0]
+        if not len(xs):
+            continue
+        # 허리에서는 그대로 두고, 밑단으로 갈수록 비율 차이만큼 폭을 더한다.
+        progress = (y - waist_row) / max(1, bottom - waist_row)
+        pad = int(round(progress * extra / 2))
+        if pad:
+            shaped[y, max(0, xs.min() - pad):min(width, xs.max() + pad + 1)] = True
+    return shaped
+
+
+def _labels_to_model(labels: np.ndarray, target: tuple[int, int]) -> np.ndarray:
+    """원본 좌표의 라벨 맵을 사람 사진과 같은 방식(여백→리사이즈)으로 모델 좌표에 옮긴다."""
+    padded, _ = pad_to_aspect(Image.fromarray(labels.astype(np.uint8)), target, 0)
+    return np.asarray(padded.resize(target, Image.NEAREST))
+
+
+def _points_to_model(
+    points: dict[str, tuple[float, float]],
+    content_box: tuple[int, int, int, int],
+    padded_size: tuple[int, int],
+    target: tuple[int, int],
+) -> dict[str, tuple[float, float]]:
+    scale_x, scale_y = target[0] / padded_size[0], target[1] / padded_size[1]
+    return {name: ((x + content_box[0]) * scale_x, (y + content_box[1]) * scale_y)
+            for name, (x, y) in points.items()}
 
 
 def _restore_original_regions(
@@ -432,6 +648,10 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         protect_restore: bool = True,
         pipeline_recarve: bool = False,
         skirt_guidance_scale: float | None = 1.5,
+        post_quality_gate: bool = True,
+        quality_thresholds: dict[str, float] | None = None,
+        upper_mask_policy: str = "agnostic",
+        lower_mask_policy: str = "native",
     ) -> None:
         super().__init__(enabled=True)
         self.num_inference_steps = num_inference_steps
@@ -478,8 +698,32 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         # 재현): 1.5에서 시스루 최소·실루엣 붕괴(치마 슬릿) 해소, 비용은 복잡한
         # 패턴의 퇴색. 스커트가 아닌 하의에는 절대 발동하지 않는다.
         self.skirt_guidance_scale = skirt_guidance_scale
+        # 합성 후 품질 검사(tryon_quality). 재생성 대상 실패가 있으면 max_retries 안에서
+        # 시드를 바꿔 다시 만들고, 실패가 가장 적은 결과를 고른다. FASHN 파서가 없으면
+        # 기존 선명도 재시도로 돌아간다.
+        self.post_quality_gate = post_quality_gate
+        self.quality_thresholds = quality_thresholds
+        # 마스크 정책:
+        # upper "agnostic"(기본) = 원래 상의의 넥라인 구멍·짧은 밑단 단서를 지운 상체 마스크(골반까지 확장).
+        #       2026-09-15 상의 288쌍 사전 기준 통과: 크롭 계열 실패 -18.1%p, 자기 상품 top-1 +11.5%p,
+        #       시각 판정 48쌍 좋아짐 14·나빠짐 0. 크롭탑+치마 사진은 치마 위 갈색 띠가 남는다.
+        #       "agnostic-lower" = 하의 윗단에서만 겹치게 확장(v2). 기준은 통과했지만 새 결함 3/48로 미채택.
+        #       "native" = 원래 옷 라벨 그대로의 이전 마스크.
+        # lower "reference-shape" = 상품 사진 바지통 비율로 확장. 사전 기준 실패로 기각(실험 옵션만 유지).
+        #       reports/vton_quality/resolution_2026-09-15.md 참고.
+        if upper_mask_policy not in {"native", "agnostic", "agnostic-lower"}:
+            raise ValueError(f"모르는 상의 마스크 정책: {upper_mask_policy!r}")
+        if lower_mask_policy not in {"native", "reference-shape"}:
+            raise ValueError(f"모르는 하의 마스크 정책: {lower_mask_policy!r}")
+        self.upper_mask_policy = upper_mask_policy
+        self.lower_mask_policy = lower_mask_policy
         self.reference_reports: dict[str, dict[str, float]] = {}
+        self.reference_bottom_lengths: dict[str, str] = {}
+        self._reference_masks: dict[str, np.ndarray | None] = {}
         self.last_warnings: list[str] = []
+        self.last_quality_reports: list[dict] = []
+        self.last_mask_notes: list[str] = []
+        self.last_raw_masks: dict[str, np.ndarray] = {}
         self._quality_cache_data: dict[str, dict[str, float]] | None = None
         self._device_request = device
         self._pipeline = None
@@ -669,7 +913,8 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         self.last_warnings.append(message)
         print(message)
 
-    def _check_length_gap(self, garment: Image.Image, category: str, context: dict) -> None:
+    def _check_length_gap(self, garment: Image.Image, category: str, context: dict,
+                          *, product=None, source_image=None) -> None:
         """새 옷이 원래 옷보다 짧으면 마스크 모양 프라이어로 합성이 깨진다는 것을 알린다.
 
         마스크는 원래 옷 기준으로 만들어지므로, 더 짧은 옷을 넣으면 모델이 남는
@@ -678,12 +923,20 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         """
         classifier = context.get("classifier")
         outfit = context.get("outfit")
-        if classifier is None or outfit is None:
+        if outfit is None:
             return
         if category == "bottom":
-            target = classify_reference_bottom_length(classifier, garment)
-            gap = bottom_length_gap(getattr(outfit, "bottom_length", ""), target)
-            label, unit = "하의 기장", "다리"
+            current, source = current_bottom_length(outfit, context)
+            target = classify_reference_bottom_length(
+                classifier, garment, product=product, source_image=source_image
+            )
+            # 사용자가 나중에 현재 기장을 알려주면 재추론 없이 경고를 다시 계산할 수 있게 둔다.
+            product_id = getattr(product, "product_id", None)
+            if product_id:
+                self.reference_bottom_lengths[product_id] = target
+            for message in bottom_length_warnings(current, source, target):
+                self._add_warning(message)
+            return
         else:
             target = classify_reference_sleeve_length(classifier, garment)
             gap = sleeve_length_gap(getattr(outfit, "sleeve_length", ""), target)
@@ -735,6 +988,12 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         if level is None or not has_top:
             return jobs
         if level == "soft":
+            # 베스트와 민소매 탑은 혼동되기 쉽다. 단일 민소매라는 추가 근거가
+            # 있을 때만 경고를 생략하고, 실제 레이어드/불명확한 경우는 유지한다.
+            if ("베스트" in upper_type
+                    and getattr(outfit, "layering_state", "") == "단일 상의"
+                    and getattr(outfit, "visible_sleeve_length", "") == "민소매"):
+                return jobs
             self._add_warning(
                 f"아우터 가능성({upper_type}): 마스크가 원래 옷 실루엣 기준이라 "
                 "합성이 깨질 수 있습니다."
@@ -776,6 +1035,45 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         reassigned.sort(key=lambda job: job[2].category != "top")
         return reassigned
 
+    def _apply_mask_policy(self, raw_mask, category, garment_path, garment, product,
+                           segmentation, landmarks_px, context):
+        """upper/lower_mask_policy를 원본 좌표의 마스크에 적용한다. 불가하면 원래 마스크."""
+        if segmentation is None:
+            return raw_mask
+        name = getattr(product, "name", "") or ""
+        if category == "top" and self.upper_mask_policy in {"agnostic", "agnostic-lower"}:
+            from tryon_quality import EXPOSED_MIDRIFF_NAME
+
+            shaped = agnostic_upper_mask(
+                raw_mask, segmentation, landmarks_px,
+                extend_hem=not EXPOSED_MIDRIFF_NAME.search(name),
+                hem_mode="lower" if self.upper_mask_policy == "agnostic-lower" else "hip",
+            )
+            self.last_mask_notes.append(
+                f"upper:{self.upper_mask_policy}" if shaped is not None else "upper:native(관절 부족)"
+            )
+            return raw_mask if shaped is None else shaped
+        if category == "bottom" and self.lower_mask_policy == "reference-shape":
+            pants_now = segmentation == 6
+            ref_mask = self._reference_mask(garment_path.name, garment, "bottom")
+            ref_seg_is_pants = ref_mask is not None and not self._is_skirt_reference(garment, product, context)
+            # 밑단이 화면에서 잘린 사진은 원래 바지통 비율을 잴 수 없다.
+            cut = pants_now.any() and np.where(pants_now.any(axis=1))[0].max() >= segmentation.shape[0] - 2
+            if not ref_seg_is_pants or pants_now.sum() < 400 or cut:
+                self.last_mask_notes.append("lower:native(비교 불가)")
+                return raw_mask
+            target_ratio = pants_flare_ratio(ref_mask)
+            current_ratio = pants_flare_ratio(pants_now)
+            shaped = None if target_ratio is None else shape_lower_mask(
+                raw_mask, landmarks_px, target_ratio, current_ratio
+            )
+            note = f"lower:{'shaped' if shaped is not None else 'native'}"
+            if target_ratio is not None and current_ratio is not None:
+                note += f"(상품 {target_ratio:.2f} / 현재 {current_ratio:.2f})"
+            self.last_mask_notes.append(note)
+            return raw_mask if shaped is None else shaped
+        return raw_mask
+
     def _blur_mask(self, mask: Image.Image, radius: int) -> Image.Image:
         return mask.filter(ImageFilter.GaussianBlur(radius)) if radius > 0 else mask
 
@@ -816,6 +1114,57 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         gray = cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2GRAY)
         return float(cv2.Laplacian(gray, cv2.CV_64F)[mask_np].var())
 
+    def _reference_mask(self, name: str, garment: Image.Image, category: str) -> np.ndarray | None:
+        """정제 레퍼런스에서 대상 옷 픽셀을 다시 찾는다. 상품마다 한 번만 파싱한다."""
+        key = f"{category}:{name}"
+        if key not in self._reference_masks:
+            parser = self._get_garment_parser()
+            mask = None
+            if parser is not None and parser.backend == "fashn-human-parser":
+                segmentation = parser.parse(garment, pose=None)["segmentation"]
+                mask = np.isin(segmentation, GARMENT_TARGET_LABELS[category])
+                if mask.sum() < 400:
+                    mask = None
+            self._reference_masks[key] = mask
+        return self._reference_masks[key]
+
+    def _assess_attempt(self, person: Image.Image, result: Image.Image, mask: Image.Image,
+                        sharpness: float, quality: dict):
+        """합성 한 번의 결과를 모델 좌표에서 점검한다. 검사할 수 없으면 None."""
+        from tryon_quality import assess_tryon, load_thresholds
+
+        parser = quality.get("parser") or self._get_garment_parser()
+        if parser is None or parser.backend != "fashn-human-parser":
+            return None
+        if self.quality_thresholds is None:
+            self.quality_thresholds = load_thresholds()
+        after = np.asarray(result)
+        classifier = quality.get("classifier")
+        embed = None
+        if classifier is not None and getattr(classifier, "enabled", False) \
+                and getattr(classifier, "model", None) is not None:
+            from fashion_attribute_model import PREPROCESS_SQUASH
+
+            embed = lambda image: classifier._encode_image(image, PREPROCESS_SQUASH).cpu().numpy()[0]  # noqa: E731
+        garment = quality["garment"]
+        return assess_tryon(
+            category=quality["category"],
+            before=np.asarray(person),
+            after=after,
+            edit_mask=np.asarray(mask) > 127,
+            after_seg=parser.parse(after, pose=None)["segmentation"],
+            target_labels=GARMENT_TARGET_LABELS[quality["category"]],
+            before_seg=quality.get("segmentation"),
+            landmarks_px=quality.get("landmarks"),
+            product_name=quality.get("product_name", ""),
+            reference_rgb=np.asarray(garment),
+            reference_mask=quality.get("reference_mask"),
+            embed=embed,
+            sharpness=sharpness,
+            reference_length=self.reference_bottom_lengths.get(quality.get("product_id", ""), ""),
+            thresholds=self.quality_thresholds,
+        )
+
     def _tryon_once(
         self,
         person: Image.Image,
@@ -823,6 +1172,7 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         mask: Image.Image,
         guidance_scale: float | None = None,
         protect_model: np.ndarray | None = None,
+        quality: dict | None = None,
     ) -> Image.Image:
         import torch
 
@@ -838,8 +1188,11 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             person.size[1], self.repaint_blur_divisor if self.repaint_inset else 50
         )
 
-        best_result, best_score = None, -1.0
+        best = None  # ((벌점, -선명도), 이미지, 검사 결과)
+        attempts = 0
+        assess_seconds = 0.0
         for attempt in range(self.max_retries + 1):
+            attempts += 1
             generator = torch.Generator(device=self.device).manual_seed(self.seed + attempt)
             raw = pipeline(
                 image=person,
@@ -854,11 +1207,33 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             )[0]
             repainted = self._repaint(person, mask, raw, repaint_radius)
             score = self._garment_sharpness(repainted, mask)
-            if score > best_score:
-                best_result, best_score = repainted, score
-            if best_score >= self.min_sharpness:
+            report = None
+            if quality is not None and self.post_quality_gate:
+                started = time.perf_counter()
+                try:
+                    report = self._assess_attempt(person, repainted, mask, score, quality)
+                except Exception as exc:  # 검사 실패가 합성 결과 전달을 막아서는 안 된다.
+                    print(f"[VTON] 합성 후 품질 검사를 건너뜁니다: {type(exc).__name__}: {exc}")
+                assess_seconds += time.perf_counter() - started
+            key = (report.penalty() if report is not None else 0.0, -score)
+            if best is None or key < best[0]:
+                best = (key, repainted, report)
+            if report is None:
+                if -best[0][1] >= self.min_sharpness:
+                    break
+            elif not report.retry_recommended:
                 break
-        return best_result
+
+        _, result, report = best
+        if report is not None:
+            self.last_quality_reports.append({**report.to_dict(), "attempts": attempts,
+                                              "assess_seconds": round(assess_seconds, 3)})
+            failed = report.warnings()
+            if failed:
+                prefix = "합성 품질 점검" + (f"(다시 생성 {attempts - 1}회 후)" if attempts > 1 else "")
+                for message in failed:
+                    self._add_warning(f"{prefix}: {message}")
+        return result
 
     def generate(
         self,
@@ -883,6 +1258,9 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         """
         context = context or {}
         self.last_warnings = []
+        self.last_quality_reports = []
+        self.last_mask_notes = []
+        self.last_raw_masks = {}  # 정책 적용 후 원본 좌표 마스크(평가 측정용)
         self.last_render_kind = ""
         person = Image.open(person_image).convert("RGB")
 
@@ -953,10 +1331,21 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             )
             protect_model = np.asarray(resize_and_crop(protect_padded, target)) > 127
         result = resize_and_crop(person_padded, target)
+        pose = context.get("pose")
+        landmarks_px = landmarks_to_pixels(getattr(pose, "landmarks", None), *person.size)
+        segmentation_model = (
+            _labels_to_model(segmentation, target) if segmentation is not None else None
+        )
+        landmarks_model = _points_to_model(landmarks_px, content_box, padded_size, target)
         for garment_path, raw_mask, product in jobs:
             category = product.category
             garment = self._prepare_garment_reference(garment_path, category)
-            self._check_length_gap(garment, category, context)
+            source_image = None
+            if category == "bottom":
+                with Image.open(garment_path) as source:
+                    source_image = source.convert("RGB")
+            self._check_length_gap(garment, category, context,
+                                   product=product, source_image=source_image)
             if category == "top":
                 self._check_neckline_gap(product, context)
             guidance_override = None
@@ -970,15 +1359,36 @@ class CatVTONTryOn(VirtualTryOnAdapter):
                     f"스커트 레퍼런스({product.product_id}): guidance_scale "
                     f"{self.guidance_scale} → {guidance_override} (시스루 완화)"
                 )
+            raw_mask = self._apply_mask_policy(
+                raw_mask, category, garment_path, garment, product, segmentation, landmarks_px, context
+            )
+            self.last_raw_masks[category] = np.asarray(raw_mask).astype(bool)
             mask_np = _dilate_mask(_solidify_mask(raw_mask))
             if protect is not None:
                 mask_np[protect] = 0
             # 여백은 합성 대상이 아니므로 마스크는 0으로 채운다.
             mask_padded, _ = pad_to_aspect(Image.fromarray(mask_np).convert("L"), target, 0)
             mask = resize_and_crop(mask_padded, target)
+            quality = None
+            if self.post_quality_gate:
+                quality = {
+                    "category": category,
+                    "garment": garment,
+                    "product_name": getattr(product, "name", "") or "",
+                    "product_id": getattr(product, "product_id", "") or "",
+                    "segmentation": segmentation_model,
+                    "landmarks": landmarks_model,
+                    "classifier": context.get("classifier"),
+                    "parser": context.get("parser"),
+                }
+                try:
+                    quality["reference_mask"] = self._reference_mask(garment_path.name, garment, category)
+                except Exception as exc:  # 레퍼런스 파싱 실패는 색 검사만 건너뛴다.
+                    print(f"[VTON] 레퍼런스 옷 영역을 찾지 못했습니다({garment_path.name}): {exc}")
             result = self._tryon_once(
                 result, garment, mask,
                 guidance_scale=guidance_override, protect_model=protect_model,
+                quality=quality,
             )
 
         result = unpad_result(result, content_box, padded_size, person.size)

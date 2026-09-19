@@ -38,6 +38,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from vton_eval_utils import file_digest, is_short_bottom, is_wide_bottom, verify_run_manifest
+
 ROOT = Path(os.environ["EVAL_ROOT"])
 REPO = ROOT / "repo" / "ai_fashion_recommender"
 sys.path.insert(0, str(REPO / "src"))
@@ -46,8 +48,9 @@ import cv2  # noqa: E402
 
 from catvton_tryon import (  # noqa: E402
     GARMENT_TARGET_LABELS, PROTECT_LABELS, CatVTONTryOn, _dilate_mask,
-    _largest_component, _refine_garment_mask, _solidify_mask,
+    _largest_component, _refine_garment_mask, _solidify_mask, landmarks_to_pixels,
 )
+from tryon_quality import assess_tryon, load_thresholds  # noqa: E402
 from clothing_parser import ClothingParser  # noqa: E402
 from fashion_attribute_model import PREPROCESS_SQUASH  # noqa: E402
 from fashion_model import FashionClassifier  # noqa: E402
@@ -79,8 +82,18 @@ UPPER_ONLY_PEOPLE = {"demo_1.jpg", "demo_2.jpg", "demo_3.jpg", "demo_4.jpg"}
 
 
 # ────────────────────────── 상품 선택 ──────────────────────────
-def select_garments(per_class: int) -> dict[str, list[dict]]:
+def select_garments(per_class: int, selection_refs: Path | None = None) -> dict[str, list[dict]]:
     rows = list(csv.DictReader(open(CATALOG, encoding="utf-8-sig")))
+    if selection_refs is not None:
+        selected = json.loads(selection_refs.read_text(encoding="utf-8"))
+        lookup = {r["product_id"]: r for r in rows}
+        chosen = {"top": [], "bottom": []}
+        for ref in selected:
+            row = lookup[ref["product_id"]]
+            if row["category"] != ref["category"] or row["detail_fit"] != ref["seller_fit"]:
+                raise ValueError(f"고정 입력의 카테고리/판매자 태그 변경: {ref['product_id']}")
+            chosen[row["category"]].append(row)
+        return chosen
     rng = random.Random(SEED)
     chosen: dict[str, list[dict]] = {"top": [], "bottom": []}
     for category, types in (("top", TOP_TYPES), ("bottom", BOTTOM_TYPES)):
@@ -91,6 +104,7 @@ def select_garments(per_class: int) -> dict[str, list[dict]]:
                 and row["detail_fit"] == fit
                 and row["item_type"] in types
                 and not any(word in row["name"] for word in SHORT_WORDS)
+                and not (category == "bottom" and is_short_bottom(row))
                 and (GARMENT_RAW / Path(row["image_path"]).name).is_file()
             ]
             # 종류가 한쪽으로 쏠리지 않게 종류별로 돌아가며 뽑는다.
@@ -237,13 +251,27 @@ def widen_lower_mask(mask: np.ndarray, pose, pad_ratio: float = 0.25) -> np.ndar
     return wide
 
 
-def edit_mask(parsed: dict, category: str) -> np.ndarray:
-    """generate()가 실제로 쓰는 인페인팅 마스크를 원본 좌표에서 다시 만든다."""
-    key = ("upper_style_mask", "upper_mask") if category == "top" else ("lower_style_mask", "lower_mask")
-    raw = next(parsed[k] for k in key if parsed.get(k) is not None and np.any(parsed[k]))
+def edit_mask(parsed: dict, category: str, raw: np.ndarray | None = None) -> np.ndarray:
+    """generate()가 실제로 쓰는 인페인팅 마스크를 원본 좌표에서 다시 만든다.
+
+    raw가 주어지면(마스크 정책 적용 후 generate가 남긴 마스크) 그것을 쓴다.
+    """
+    if raw is None:
+        key = ("upper_style_mask", "upper_mask") if category == "top" else ("lower_style_mask", "lower_mask")
+        raw = next(parsed[k] for k in key if parsed.get(k) is not None)
+    if not np.any(raw):
+        raise ValueError("운영 경로에서 합성할 수 없는 빈 마스크")
     mask = _dilate_mask(_solidify_mask(raw)) > 0
     mask[np.isin(parsed["segmentation"], PROTECT_LABELS)] = False
     return mask
+
+
+def pick_evenly(rows: list[dict], limit: int) -> list[dict]:
+    """핏 순서로 정렬된 상품 목록에서 핏별로 고르게 limit개를 뽑는다."""
+    if not limit or limit >= len(rows):
+        return rows
+    step = len(rows) / limit
+    return [rows[int(i * step)] for i in range(limit)]
 
 
 # ────────────────────────── 실행 ──────────────────────────
@@ -253,14 +281,34 @@ def main() -> None:
     ap.add_argument("--smoke", action="store_true")
     ap.add_argument("--offset", type=int, default=0)
     ap.add_argument("--limit", type=int, default=0)
-    ap.add_argument("--mask-mode", choices=("native", "wide"), default="native",
-                    help="wide: 하의만, 마스크를 넓힌 대조 실험")
+    ap.add_argument("--mask-mode", choices=("native", "wide", "selective-wide", "upper-torso",
+                                            "upper-agnostic", "upper-agnostic-lower", "lower-shape"), default="native",
+                    help="wide: 하의만, 마스크를 넓힌 대조 실험 / upper-agnostic, lower-shape: 운영 마스크 정책 옵션")
+    ap.add_argument("--selection-refs", type=Path,
+                    help="기존 refs.json의 상품 순서를 고정해 선택 규칙 변경으로 비교군이 바뀌지 않게 함")
+    ap.add_argument("--seed", type=int, default=42, help="생성 시드(시드 반복 실험)")
+    ap.add_argument("--quality-gate", action="store_true",
+                    help="합성 후 품질 검사 실패 시 1회 재생성(운영과 같은 정책). 기본은 기록만 하고 재생성 안 함")
+    ap.add_argument("--people-dir", type=Path, help="사람 사진 폴더(기본 EVAL_ROOT/people)")
+    ap.add_argument("--product-limit", type=int, default=0, help="카테고리마다 핏별로 고르게 N개만")
+    ap.add_argument("--tag", default="", help="결과 파일 이름 꼬리표")
+    ap.add_argument("--pairs-file", type=Path, help="이 파일에 한 줄씩 적힌 pair만 실행(재생성 효과 실험)")
     opts = ap.parse_args()
     wide = opts.mask_mode == "wide"
+    only_category = {"wide": "bottom", "lower-shape": "bottom",
+                     "upper-torso": "top", "upper-agnostic": "top",
+                     "upper-agnostic-lower": "top"}.get(opts.mask_mode)
+    suffix = "" if opts.mask_mode == "native" else "_" + opts.mask_mode.replace("-", "_")
+    if opts.seed != 42:
+        suffix += f"_seed{opts.seed}"
+    if opts.quality_gate:
+        suffix += "_retry"
+    if opts.tag:
+        suffix += "_" + opts.tag
 
     (OUT / "images").mkdir(parents=True, exist_ok=True)
     (OUT / "refs").mkdir(parents=True, exist_ok=True)
-    results_path = OUT / ("smoke.jsonl" if opts.smoke else "results_wide.jsonl" if wide else "results.jsonl")
+    results_path = OUT / (("smoke" if opts.smoke else "results") + suffix + ".jsonl")
     done = set()
     if results_path.is_file():
         for line in results_path.read_text(encoding="utf-8").splitlines():
@@ -275,17 +323,43 @@ def main() -> None:
         enabled=True, attribute_checkpoint=os.environ["FASHION_ATTRIBUTE_HEADS_PATH"]
     )
     analyzer = OutfitAnalyzer(parser, classifier)
-    vton = CatVTONTryOn.fast(max_retries=0, garment_cache_dir=OUT / "ref_cache")
+    # 품질 검사는 항상 기록한다. 재생성은 --quality-gate일 때만(그래야 기본 결과가 기존과 같다).
+    vton = CatVTONTryOn.fast(
+        max_retries=1 if opts.quality_gate else 0, garment_cache_dir=OUT / "ref_cache",
+        seed=opts.seed, post_quality_gate=True,
+        upper_mask_policy={"upper-agnostic": "agnostic",
+                           "upper-agnostic-lower": "agnostic-lower"}.get(opts.mask_mode, "native"),
+        lower_mask_policy="reference-shape" if opts.mask_mode == "lower-shape" else "native",
+    )
     vton._garment_parser = parser
     print(f"[준비] 모델 로드 {time.time() - t0:.1f}s · device={classifier.device} · "
           f"heads={classifier.trained_attributes_enabled} · parser={parser.backend} · "
           f"preset steps={vton.num_inference_steps} scheduler={vton.scheduler}", flush=True)
 
-    garments = select_garments(opts.per_class)
-    people = sorted(p for p in PEOPLE.iterdir() if p.suffix.lower() in {".jpg", ".png"})
+    garments = select_garments(opts.per_class, opts.selection_refs)
+    garments = {c: pick_evenly(rows, opts.product_limit) for c, rows in garments.items()}
+    people = sorted(p for p in (opts.people_dir or PEOPLE).iterdir() if p.suffix.lower() in {".jpg", ".png"})
     if opts.smoke:
-        garments = {c: [g for i, g in enumerate(v) if i % (len(v) // 2) == 0][:2] for c, v in garments.items()}
+        garments = {c: [g for i, g in enumerate(v) if i % max(1, len(v) // 2) == 0][:2] for c, v in garments.items()}
         people = [p for p in people if p.name in {"model_5.png", "049713_0.jpg"}]
+
+    if not classifier.trained_attributes_enabled or parser.backend != "fashn-human-parser":
+        raise RuntimeError("정식 속성 헤드와 FASHN 파서가 필요합니다. fallback 결과로 평가하지 않습니다.")
+    verify_run_manifest(results_path, {
+        "mask_mode": opts.mask_mode, "seed": vton.seed, "steps": vton.num_inference_steps,
+        "max_retries": vton.max_retries,
+        "quality_thresholds": file_digest(REPO / "data" / "tryon_quality_thresholds.json"),
+        "scheduler": vton.scheduler, "guidance_scale": vton.guidance_scale,
+        "checkpoint_sha256": file_digest(Path(os.environ["FASHION_ATTRIBUTE_HEADS_PATH"])),
+        "code": {p.name: file_digest(p) for p in sorted((REPO / "src").glob("*.py"))},
+        "evaluator_sha256": file_digest(Path(__file__)),
+        "helpers_sha256": file_digest(Path(__file__).with_name("vton_eval_utils.py")),
+        "people": {p.name: file_digest(p) for p in people},
+        "products": [{"id": r["product_id"], "name": r["name"], "category": c,
+                      "seller_fit": r["detail_fit"], "detail_category": r.get("detail_category", ""),
+                      "image_sha256": file_digest(GARMENT_RAW / Path(r["image_path"]).name)}
+                     for c, rows in garments.items() for r in rows],
+    })
 
     # ── 레퍼런스: 정제 이미지·마스크·판정·임베딩을 한 번씩만 ──
     refs: dict[str, dict] = {}
@@ -297,8 +371,10 @@ def main() -> None:
             cleaned = vton._prepare_garment_reference(Path(product.image_path), category)
             mask = reference_mask(parser, raw, category)
             raw_rgb = np.asarray(raw)
+            clean_seg = parser.parse(cleaned, pose=None)["segmentation"]
             info = {
                 "product": product, "cleaned": cleaned,
+                "clean_mask": np.isin(clean_seg, GARMENT_TARGET_LABELS[category]),
                 "judge": judge(classifier, raw_rgb, mask, TASKS[category]) if mask is not None else {},
                 "emb": embed(classifier, cleaned),
                 "color": _dominant_rgb(raw_rgb, mask) if mask is not None else None,
@@ -323,8 +399,11 @@ def main() -> None:
     pairs = [(person, category, row) for person in people
              for category, rows in garments.items()
              if not (category == "bottom" and person.name in UPPER_ONLY_PEOPLE)
-             and not (wide and category != "bottom")
+             and not (only_category and category != only_category)
              for row in rows]
+    if opts.pairs_file:
+        wanted = set(opts.pairs_file.read_text(encoding="utf-8").split())
+        pairs = [p for p in pairs if f"{p[0].stem}__{p[2]['product_id']}" in wanted]
     end = opts.offset + opts.limit if opts.limit else len(pairs)
     pairs = pairs[opts.offset:end]
     print(f"[쌍] {len(pairs)}개 (사람 {len(people)}명)", flush=True)
@@ -358,12 +437,23 @@ def main() -> None:
                     raise RuntimeError("포즈 무효")
 
                 product = refs[pid]["product"]
-                if wide:
+                native_parsed = parsed
+                applied_wide = category == "bottom" and (opts.mask_mode == "wide" or
+                    (opts.mask_mode == "selective-wide" and is_wide_bottom(row)))
+                if applied_wide:
                     parsed = dict(parsed)
                     for key in ("lower_style_mask", "lower_mask"):
                         parsed[key] = widen_lower_mask(parsed[key], pose)
+                if opts.mask_mode == "upper-torso" and category == "top":
+                    parsed = dict(parsed)
+                    parsed["upper_style_mask"] = np.logical_or(
+                        parsed["upper_style_mask"], parsed["segmentation"] == 16)
                 record["mask_mode"] = opts.mask_mode
-                out_path = OUT / "images" / f"{'wide__' if wide else ''}{pair_id}.jpg"
+                record["mask_widened"] = applied_wide
+                record["seed"] = vton.seed
+                record["current_bottom_length"] = person["outfit"].bottom_length
+                # 변종·시드·재생성 조건마다 파일이 겹치지 않게 결과 꼬리표를 접두어로 쓴다.
+                out_path = OUT / "images" / f"{suffix.lstrip('_') + '__' if suffix else ''}{pair_id}.jpg"
                 context = {k: parsed.get(k) for k in (
                     "upper_mask", "lower_mask", "upper_style_mask", "lower_style_mask", "segmentation")}
                 context.update({"outfit": person["outfit"], "classifier": classifier, "pose": pose})
@@ -374,11 +464,25 @@ def main() -> None:
                 record["synth_sec"] = round(time.time() - synth_start, 2)
                 record["render_kind"] = vton.last_render_kind
                 record["warnings"] = list(vton.last_warnings)
+                record["mask_notes"] = list(vton.last_mask_notes)
+                record["quality_model"] = list(vton.last_quality_reports)
 
                 res = np.asarray(Image.open(out_path).convert("RGB"))
                 parsed_res = parser.parse(res, pose)
                 seg_o, seg_r = parsed["segmentation"], parsed_res["segmentation"]
-                edit = edit_mask(parsed, category)
+                edit = edit_mask(parsed, category, vton.last_raw_masks.get(category))
+                # 운영 검사와 같은 정의를 원본 해상도에서 다시 잰다(기존 결과 재생과 비교 가능).
+                h, w = orig.shape[:2]
+                record["quality_orig"] = assess_tryon(
+                    category=category, before=orig, after=res, edit_mask=edit, after_seg=seg_r,
+                    before_seg=seg_o, target_labels=GARMENT_TARGET_LABELS[category],
+                    landmarks_px=landmarks_to_pixels(pose.landmarks, w, h),
+                    product_name=row["name"], reference_rgb=np.asarray(refs[pid]["cleaned"]),
+                    reference_mask=refs[pid]["clean_mask"] if refs[pid]["clean_mask"].sum() >= 400 else None,
+                    embed=lambda image: embed(classifier, image),
+                    sharpness=sharpness(res, edit), thresholds=load_thresholds(),
+                    reference_length=vton.reference_bottom_lengths.get(pid, ""),
+                ).to_dict()
                 garment_key = "upper_mask" if category == "top" else "lower_mask"
                 # 원래 옷은 넓힌 마스크가 아니라 실제 분할 결과로 잰다.
                 g_orig, g_res = person["parsed"][garment_key], parsed_res[garment_key]
@@ -393,6 +497,12 @@ def main() -> None:
                 # ── 품질: 보존 ──
                 margin = cv2.dilate(edit.astype(np.uint8), np.ones((15, 15), np.uint8)) > 0
                 outside = ~margin
+                # 모든 변종에서 같은 영역을 사용한다. 각 변종의 마스크 밖 PSNR만
+                # 비교하면 확장으로 제외된 픽셀의 손상을 놓친다.
+                native_edit = edit_mask(native_parsed, category)
+                native_outside = ~(cv2.dilate(native_edit.astype(np.uint8), np.ones((15, 15), np.uint8)) > 0)
+                record["native_outside_psnr"] = psnr(orig, res, native_outside)
+                record["native_outside_ssim"] = ssim_region(orig, res, native_outside)
                 record["outside_psnr"] = psnr(orig, res, outside)
                 record["outside_ssim"] = ssim_region(orig, res, outside)
                 record["face_psnr"] = psnr(orig, res, np.isin(seg_o, (1, 2)))
@@ -432,7 +542,7 @@ def main() -> None:
                 record["reference_report"] = refs[pid]["report"]
 
                 # 결과 분할 맵은 사후 분석용으로 압축 저장
-                np.savez_compressed(OUT / "images" / f"{'wide__' if wide else ''}{pair_id}_seg.npz",
+                np.savez_compressed(out_path.with_name(out_path.stem + "_seg.npz"),
                                     orig=seg_o.astype(np.uint8), res=seg_r.astype(np.uint8),
                                     edit=edit)
             except Exception as error:  # 한 쌍의 실패가 배치를 멈추지 않게 기록만 한다

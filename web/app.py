@@ -33,6 +33,7 @@ if str(WEB_DIR) not in sys.path:
 from pipeline import (  # noqa: E402
     GENDERS,
     STAGES,
+    USER_BOTTOM_LENGTH_OPTIONS,
     PipelineError,
     TryOnNotReady,
     analyze_wardrobe_items,
@@ -40,6 +41,9 @@ from pipeline import (  # noqa: E402
     form_options,
     generate_tryon_with_warnings,
     get_engine,
+    length_check_status,
+    reference_bottom_lengths,
+    refresh_bottom_length_warnings,
     run_pipeline,
     rule_titles,
     save_feedback,
@@ -284,9 +288,17 @@ def _generate_product_tryon_for_job(job_id: str, product_ids: list[str]) -> dict
             context=tryon_context,
         )
         warnings = list(warnings)
+        reference_lengths = reference_bottom_lengths()
         with _jobs_lock:
             current = _jobs.get(job_id)
             if current is not None:
+                # 합성 도중 사용자가 현재 기장을 알려줬다면 그 값으로 기장 경고를 맞춘다.
+                latest = current.get("tryon_context") or {}
+                refreshed = refresh_bottom_length_warnings(
+                    warnings, products, latest.get("outfit"), latest, reference_lengths
+                )
+                if refreshed is not None:
+                    warnings = refreshed
                 current.setdefault("product_tryon_warnings", {})[cache_key] = warnings
         return {
             "image": Path(generated).name,
@@ -758,6 +770,52 @@ def start_shopping_tryon_batch(job_id: str) -> dict:
     return _start_shopping_tryon_batch(job_id) or {
         "status": "idle", "reason": "", "total": 0, "ready": 0, "finished": 0, "items": []
     }
+
+
+@app.post("/api/jobs/{job_id}/current-bottom-length")
+def set_current_bottom_length(job_id: str, payload: dict) -> dict:
+    """사진에서 잴 수 없던 현재 하의 기장을 사용자 입력으로 받아 기장 경고에 반영한다.
+
+    이후 합성은 이 값을 쓰고, 이미 끝난 조합은 캐시한 상품 기장으로 경고만 다시 계산한다.
+    사진에서 기장을 잰 경우에는 입력을 받아도 사진값이 우선이다.
+    """
+    if not JOB_ID_PATTERN.match(job_id):
+        raise HTTPException(status_code=400, detail="잘못된 요청입니다.")
+    length = str(payload.get("length") or "").strip()
+    if length and length not in USER_BOTTOM_LENGTH_OPTIONS:
+        raise HTTPException(status_code=400, detail="지원하지 않는 기장 값입니다.")
+    reference_lengths = reference_bottom_lengths()
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job is None or job["status"] != "done" or job.get("cancelled"):
+            raise HTTPException(status_code=404, detail="분석 결과를 찾을 수 없습니다.")
+        context = job.setdefault("tryon_context", {})
+        context["user_bottom_length"] = length
+        outfit = context.get("outfit")
+        result = job.get("result") or {}
+        previous = result.get("length_check") or {}
+        status = length_check_status(outfit, has_bottom=previous.get("status") != "no_bottom", context=context)
+        result["length_check"] = status
+        prepared = job.get("shopping_tryon_products") or {}
+        stored = job.setdefault("product_tryon_warnings", {})
+        for cache_key, warnings in list(stored.items()):
+            products = [prepared[pid] for pid in cache_key.split("|") if pid in prepared]
+            refreshed = refresh_bottom_length_warnings(warnings, products, outfit, context, reference_lengths)
+            if refreshed is not None:
+                stored[cache_key] = refreshed
+        for item in ((job.get("shopping_tryon_batch") or {}).get("items") or {}).values():
+            if item.get("status") != "done":
+                continue
+            products = [prepared[pid] for pid in item.get("product_ids") or [] if pid in prepared]
+            refreshed = refresh_bottom_length_warnings(
+                item.get("warnings") or [], products, outfit, context, reference_lengths
+            )
+            if refreshed is not None:
+                item["warnings"] = refreshed
+        return {
+            "length_check": status,
+            "shopping_tryon_batch": _shopping_tryon_batch_snapshot_locked(job),
+        }
 
 
 @app.delete("/api/jobs/{job_id}")
