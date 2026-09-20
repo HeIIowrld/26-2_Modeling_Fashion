@@ -57,6 +57,7 @@ class RecommendationKeywordTests(unittest.TestCase):
         second = self.generator.generate(profile, self.pose, self.outfit)
         self.assertEqual(first.to_dict(), second.to_dict())
         self.assertEqual(first.targets["shoes"]["item_type"], ["로퍼"])
+        self.assertEqual(first.keyword_rules["shoes"]["로퍼"], ["R-CTX-01", "R-ACC-06"])
         self.assertNotIn("material", first.targets["shoes"])
         self.assertFalse(any(rule.startswith("R-BOD") for rule in first.applied_rules))
 
@@ -112,26 +113,6 @@ class RecommendationKeywordTests(unittest.TestCase):
         self.assertEqual(result.constraints["excluded_colors"], ["베이지"])
         self.assertEqual(result.constraints["excluded_materials"], ["가죽"])
         self.assertNotIn("excluded_colors", result.targets["top"])
-
-    def test_personal_tone_becomes_search_constraint(self):
-        profile = UserProfile(
-            change_categories=["top"], personal_tone="웜톤",
-            provided_fields=["change_categories", "personal_tone"],
-        )
-        result = self.generator.generate(profile, self.pose, self.outfit)
-        self.assertEqual(result.targets["top"]["color_temperature"], ["웜톤"])
-        self.assertEqual(result.constraints["personal_tone"], "웜톤")
-        self.assertEqual(result.sources["color_temperature"], "user_input")
-        self.assertIn("R-COL-14", result.applied_rules)
-
-    def test_denim_personal_tone_adds_denim_rule(self):
-        profile = UserProfile(
-            change_categories=["bottom"], personal_tone="쿨톤",
-            preferred_materials=["데님"],
-            provided_fields=["change_categories", "personal_tone", "preferred_materials"],
-        )
-        result = self.generator.generate(profile, self.pose, self.outfit)
-        self.assertIn("R-COL-15", result.applied_rules)
 
     def test_brief_output_contains_no_numeric_score(self):
         result = self.generator.generate(

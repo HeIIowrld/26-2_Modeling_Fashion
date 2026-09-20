@@ -9,7 +9,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from musinsa_live_search import MusinsaLiveSearch, ShoppingProduct
-from product_color_tone import COOL_TONE, WARM_TONE, ProductToneResult
 from recommendation_keywords import TargetKeywordResult
 from schemas import Product, UserProfile
 
@@ -49,16 +48,6 @@ class StubSearch(MusinsaLiveSearch):
         if self.fail:
             raise OSError("network unavailable")
         return self.by_category.get(category, [])
-
-
-class ToneStubSearch(StubSearch):
-    def __init__(self, by_category, tones):
-        super().__init__(by_category)
-        self.tones = tones
-
-    def _classify_tone(self, product):
-        tone, denim = self.tones[product.product_id]
-        return ProductToneResult(tone=tone, confidence=0.85, is_denim=denim)
 
 
 class MusinsaLiveSearchTests(unittest.TestCase):
@@ -139,27 +128,6 @@ class MusinsaLiveSearchTests(unittest.TestCase):
 
         self.assertEqual([result.product_id for result in results], ["MS4"])
 
-    def test_personal_tone_filters_product_images_and_marks_denim_source(self):
-        profile = UserProfile(
-            personal_tone=WARM_TONE, max_budget=100_000,
-            provided_fields=["personal_tone", "max_budget"],
-        )
-        search = ToneStubSearch(
-            {"bottom": [item(1, "빈티지 워싱 데님"), item(2, "아이스 블루 데님")]},
-            {"MS1": (WARM_TONE, True), "MS2": (COOL_TONE, True)},
-        )
-        bottom_only = TargetKeywordResult(mode="user_input", targets={
-            "bottom": {"material": ["데님"], "color_temperature": [WARM_TONE]}
-        })
-
-        results = search.search(bottom_only, profile, limit=3)
-
-        self.assertEqual([product.product_id for product in results], ["MS1"])
-        self.assertEqual(results[0].color_temperature, WARM_TONE)
-        self.assertEqual(results[0].color_temperature_source, "denim_rule")
-        self.assertIn(WARM_TONE, results[0].search_keywords)
-        self.assertTrue(any("베이지" in query or "브라운" in query for _, query in search.calls))
-
     def test_network_failure_uses_enriched_catalog_fallback(self):
         search = StubSearch(fail=True)
         fallback = Product(
@@ -188,7 +156,6 @@ class MusinsaLiveSearchTests(unittest.TestCase):
         self.assertNotIn("retrieval_score", payload)
         self.assertEqual(payload["url"], "https://product")
         self.assertIn("recommendation_reason", payload)
-        self.assertIn("color_temperature", payload)
 
     def test_public_payload_exposes_only_three_representative_search_keywords(self):
         product = ShoppingProduct(

@@ -351,7 +351,7 @@ def _read_shopping_tryon_batch(job_id: str) -> dict | None:
 
 
 def _initialize_shopping_tryon_batch(job_id: str) -> dict | None:
-    """합성 가능한 상의·하의·신발의 카테고리별 조합을 큐에 넣는다."""
+    """추천된 세 코디를 우선 합성하고, 구형 결과만 카테고리 곱집합으로 처리한다."""
     with _jobs_lock:
         job = _jobs.get(job_id)
         if job is None:
@@ -370,10 +370,24 @@ def _initialize_shopping_tryon_batch(job_id: str) -> dict | None:
             seen_ids.add(product_id)
             ordered_products.append(product)
 
-        groups = [[p for p in ordered_products if p.category == category]
-                  for category in ("top", "bottom", "shoes")]
-        groups = [group for group in groups if group]
-        combinations = [list(items) for items in cartesian_product(*groups)] if groups else []
+        combinations = []
+        seen_combinations: set[tuple[str, ...]] = set()
+        for outfit in result.get("shopping_outfits") or []:
+            products = [
+                prepared[product_id]
+                for product_id in outfit.get("product_ids") or []
+                if product_id in prepared
+            ]
+            key = tuple(product.product_id for product in products)
+            if products and key not in seen_combinations:
+                seen_combinations.add(key)
+                combinations.append(products)
+
+        if not combinations:
+            groups = [[p for p in ordered_products if p.category == category]
+                      for category in ("top", "bottom", "shoes")]
+            groups = [group for group in groups if group]
+            combinations = [list(items) for items in cartesian_product(*groups)] if groups else []
 
         items = {
             index: {

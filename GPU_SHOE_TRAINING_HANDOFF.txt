@@ -1,8 +1,8 @@
-FITTA 신발 인식 GPU 학습 인수인계서
-작성일: 2026-09-15
+FITTA 신발 인식 GPU 학습 실행 가이드
+작성일: 2026-09-20
 프로젝트: 26-2_Modeling_Fashion
-기준 브랜치: main
-기준 커밋: f578cce (이후 아래 수정사항은 로컬 미커밋 상태)
+기준 브랜치: codex/outfit-combination-shoe-training
+기준 커밋: 이 파일과 코드 변경을 같은 커밋으로 push한 뒤 git log -1로 확인
 
 ======================================================================
 0. 가장 먼저 확인할 점
@@ -10,6 +10,8 @@ FITTA 신발 인식 GPU 학습 인수인계서
 
 현재 신발 인식은 "학습 가능한 헤드와 웹 추론 연결부"까지만 구현되어 있다.
 실제 신발 데이터, 학습 완료 가중치, 데이터 전처리 CLI, 전체 학습 CLI는 아직 없다.
+GPU PC에 데이터만 복사한다고 바로 학습되는 상태는 아니며, 아래 계약대로 두 학습 스크립트를
+먼저 구현해야 한다. 구현 전에는 라벨 순서와 crop 정책부터 확정한다.
 
 따라서 GPU PC에서는 다음 두 파일을 추가로 만드는 작업이 먼저 필요하다.
 
@@ -28,9 +30,8 @@ FITTA 신발 인식 GPU 학습 인수인계서
 현재 상태에서 해당 스크립트에 신발 데이터를 바로 넣으면 안 된다.
 신발 헤드는 기존 의류 헤드 체크포인트와 별도로 유지한다.
 
-현재 수정사항은 아직 Git에 commit/push하지 않았다.
-GPU PC로 옮기기 전 전체 프로젝트 폴더를 복사하거나, 별도 브랜치에 commit/push해야 한다.
-미추적 파일(src/shoe_model.py 등)을 빠뜨리지 않도록 git status를 반드시 확인한다.
+이 가이드를 포함한 브랜치를 GPU PC에서 clone/pull한다. 데이터와 학습 체크포인트는 용량·저작권
+문제 때문에 Git에 넣지 않는다. 데이터 원본 경로, manifest, metrics, 체크섬만 별도 보관한다.
 
 ======================================================================
 1. 지금까지 반영한 기능
@@ -43,15 +44,16 @@ GPU PC로 옮기기 전 전체 프로젝트 폴더를 복사하거나, 별도 �
 - 성별(남성/여성)을 필수 선택으로 추가했다.
 - 무신사 검색은 선택 성별 상품과 공용 상품만 허용한다.
 
-[무신사 검색]
+[무신사 검색 및 코디 조합]
 - 무신사 신발 대분류 코드 103을 연결했다.
-- 선택한 카테고리별로 최대 3개씩 반환한다.
-  예: 상의+하의+신발을 선택하면 최대 9개다.
+- 선택한 카테고리별 후보를 최대 6개 검색한 뒤 Fashion Rules 조화 점수로 코디 조합 3개를 만든다.
+- 예: 상의+신발 변경이면 현재 하의를 고정하고 상의 1개+신발 1개를 묶은 LOOK 3개를 추천한다.
 - 특정 카테고리 결과가 부족해도 다른 카테고리 상품으로 억지로 채우지 않는다.
 - 신발 검색 키워드는 사용자 목적, 원하는 스타일, 색상, 계절/활동 조건으로 생성한다.
 - 신발에는 체형이나 다리 길이 보정 규칙을 적용하지 않는다.
 - 신발 추천 이유에서도 체형 보정을 근거로 사용하지 않는다.
-- 신발은 CatVTON 가상 피팅 미지원으로 표시한다. 하의 마스크로 잘못 합성하지 않는다.
+- 신발 가상 피팅은 전용 모델 체크포인트가 준비된 경우에만 실험 기능으로 활성화한다.
+- 의류 CatVTON의 하의 마스크로 신발을 잘못 합성하지 않는다.
 
 [신발 인식]
 - src/shoe_model.py에 FashionSigLIP 임베딩용 독립 MLP 헤드를 추가했다.
@@ -68,14 +70,11 @@ GPU PC로 옮기기 전 전체 프로젝트 폴더를 복사하거나, 별도 �
 - 새 호출은 UserProfile(change_categories=["top", "bottom", "shoes"]) 형식을 우선한다.
 - 기존 상의/하의 2x3 현재 코디 점수표는 유지한다. 신발은 체형 점수표에 넣지 않았다.
 
-[피부톤]
-- 웜톤/쿨톤 기능은 논의만 했으며 아직 코드에 구현하지 않았다.
-
 [LLM 추천 이유 설정]
 - 저장소 루트의 .env를 서버 시작 때 자동으로 읽는다.
 - API 키는 Git에서 제외하며 로그에 출력하지 않는다.
-- Gemini에는 옷을 추천하는 옷가게 점원처럼 자연스러운 한 문장을 쓰도록 지시한다.
-- 고정 문장 형식은 강제하지 않고, 사용자 조건과 실제 검색 키워드 중 필요한 내용을 골라 쓴다.
+- Gemini에는 서버가 검증한 적용 규칙과 상품명 매칭 키워드만 전달한다.
+- 코디 조합의 순위는 규칙 기반 코드가 결정하고 LLM은 근거를 자연스러운 한 문장으로 다듬는다.
 - 예산·가격·할인·가성비 등 금액을 언급한 문장은 규칙 기반 문장으로 대체한다.
 - 신발 추천에는 체형이나 다리 길이를 근거로 사용하지 않는다.
 - .env.example은 설정 형식만 제공하고 실제 키를 포함하지 않는다.
@@ -175,9 +174,17 @@ GPU PC로 옮기기 전 전체 프로젝트 폴더를 복사하거나, 별도 �
 권장 폴더 예시
 
 datasets/shoes/
-  source/                  원본 전신 착장 사진
+  source/                  원본 전신 착장 사진(가능하면 저장소 밖 별도 디스크)
+    ut_zap50k/
+    aihub/
+    modanet/
+    lip/
+    deepfashion_multimodal/
+    consented_own/
   crops/                   shoe_crop으로 만든 양발 crop
   annotations.csv
+  rejected.csv             crop 실패·가림·라벨 불일치 표본
+  dataset_card.md          출처/라이선스/버전/수량/담당자
   caches/
     train.pt
     val.pt
@@ -185,11 +192,11 @@ datasets/shoes/
 
 annotations.csv 권장 컬럼
 
-image_path,subject_id,session_id,product_id,shoe_label,split,quality,notes
+image_path,crop_path,source,source_id,subject_id,session_id,product_id,shoe_label,split,quality,license,notes
 
 예시
-crops/000001.jpg,P001,S001,SKU001,스니커즈,train,ok,
-crops/000002.jpg,P002,S004,SKU015,로퍼,val,ok,바짓단 일부 가림
+source/a.jpg,crops/000001.jpg,own,OWN0001,P001,S001,SKU001,스니커즈,train,ok,consented,
+source/b.jpg,crops/000002.jpg,modanet,12345,P002,S004,SKU015,로퍼,val,ok,CC-BY-NC-4.0,바짓단 일부 가림
 
 필수 원칙
 1) 전신 착장 사진을 반드시 포함한다.
@@ -200,6 +207,8 @@ crops/000002.jpg,P002,S004,SKU015,로퍼,val,ok,바짓단 일부 가림
 4) 신발 종류별 표본 수를 가능한 한 균형 있게 맞춘다.
 5) 성별은 추천 상품 필터용 정보다. 신발 종류 헤드의 정답 라벨로 사용하지 않는다.
 6) 검증/테스트 데이터는 학습 중 augmentation이나 threshold 선택에 사용하지 않는다.
+7) 원본 URL 대신 source의 공식 ID와 이용조건을 기록한다. 이미지 파일 자체는 Git에 넣지 않는다.
+8) 동일/근접 중복 이미지는 pHash로 제거하고, 같은 상품·사람은 하나의 split에만 둔다.
 
 권장 초기 규모(절대 기준은 아님)
 - 파이프라인 확인용 pilot: 클래스당 100~200개 이상의 유효 착장 crop
@@ -213,6 +222,155 @@ crops/000002.jpg,P002,S004,SKU015,로퍼,val,ok,바짓단 일부 가림
 - 신발이 너무 작으면 현재 조건(len(xs)<64, 폭/높이<8px)에서 not_visible이 된다.
 
 ======================================================================
+4-A. 비영리 연구용 대규모 데이터 확보처
+======================================================================
+
+핵심 전략
+- 상품 단독 신발 사진: 종류의 모양을 배우는 사전학습/워밍업 데이터로 사용한다.
+- 실제 전신 착장 사진: 작은 신발, 바짓단 가림, 배경, 조명에 적응하는 주 학습 데이터로 사용한다.
+- 최종 validation/test: 반드시 학습에 없던 사람과 신발 상품의 실제 전신 착장 사진으로 만든다.
+- 공개 데이터의 원본 이미지는 저장소에 commit하거나 다시 배포하지 않는다.
+- 각 데이터셋의 최신 이용약관을 다운로드 당일 다시 확인하고, 출처/버전/다운로드일을 기록한다.
+
+[1순위] UT Zappos50K: 신발 종류 사전학습
+- 공식: https://vision.cs.utexas.edu/projects/finegrained/utzap50k/
+- 규모: 상품 단독 신발 이미지 50,025장.
+- 큰 분류: shoes, sandals, slippers, boots. 세부 functional type과 메타데이터가 있다.
+- 이용 조건: 공식 페이지에 ACADEMIC USE ONLY, academic/non-commercial use only로 명시되어 있다.
+- 장점: 신발이 크고 배경·방향이 일정해 12종 형태를 빠르게 학습시키기 좋다.
+- 한계: 흰 배경 상품 사진이라 실제 전신사진 도메인과 크게 다르다. 이것만으로 최종 헤드를
+  학습하면 안 되고, 전체 학습 샘플의 20~30% 이하 또는 초기 warm-up 용도로 제한한다.
+- 다운로드: 공식 페이지의 ut-zap50k-images.zip과 메타데이터를 직접 받는다. 제3자 Kaggle/HF
+  미러보다 공식 아카이브를 우선한다.
+
+[1순위] AI Hub '의류 가상착용 3D 이미지': 국내 착용/상품 데이터 후보
+- 공식: https://www.aihub.or.kr/aihubdata/data/view.do?aihubDataSe=realm&dataSetSn=75
+- 공식 설명상 상의·하의·신발·모자·액세서리 상품을 포함하고, 2D/3D 신체 및 착용/미착용
+  상품 데이터를 대규모로 제공한다. 2D 학습 세트만 신체 약 101만 장, 착용 상품 약 69만 장,
+  미착용 상품 약 111만 장으로 안내되어 있다.
+- 장점: 국내 서비스 도메인과 가깝고 착용/미착용 데이터를 같이 확보할 가능성이 높다.
+- 주의: 온라인 안심존/신청 절차와 반출 조건이 적용될 수 있다. GPU 장비로 원본을 가져갈 수
+  있는지, 신발 세부 종류 라벨이 실제 JSON에 있는지 샘플·설명서를 먼저 확인한다.
+- 세부 12종 라벨이 없다면 신발 영역 crop 생성용으로만 쓰고 별도 사람 검수 라벨을 붙인다.
+
+[2순위] ModaNet: 실제 거리 착장 적응
+- 공식: https://github.com/eBay/modanet
+- 규모: 약 55,176장의 street-fashion 이미지에 polygon/bbox가 있다.
+- 신발 라벨: boots와 footwear 두 종류만 제공한다.
+- 이용 조건: annotation은 CC BY-NC 4.0. 원본은 PaperDoll/Chictopia 이미지이므로 이미지의
+  별도 이용조건도 확인해야 한다.
+- 사용법: boots/footwear polygon으로 신발 crop을 뽑은 뒤 FITTA 12종으로 사람이 재라벨링한다.
+- 장점: 실제 착장, 작은 신발, 가림, 복잡한 배경을 포함해 도메인 적응용으로 가치가 높다.
+- 한계: boots/footwear만으로는 스니커즈·로퍼 등을 자동 구분할 수 없다.
+
+[2순위] LIP (Look Into Person): 발 위치와 가림 조건 적응
+- 공식 프로젝트: http://www.sysu-hcp.net/lip/
+- 논문: https://arxiv.org/abs/1804.01984
+- 규모: 50,000장 이상의 single-person 실세계 이미지로 알려져 있다.
+- left-shoe/right-shoe human-parsing 라벨이 있어 양발 영역을 찾는 데 유용하다.
+- 신발 종류 라벨은 없으므로 crop 후 사람이 12종을 붙여야 한다.
+- 공식 배포처의 현재 이용조건을 확인한 뒤 비영리 연구 범위에서 사용한다.
+
+[2순위] DeepFashion-MultiModal: 고품질 전신 이미지 적응
+- 공식: https://github.com/yumingj/DeepFashion-MultiModal
+- 계약: https://github.com/yumingj/DeepFashion-MultiModal/blob/main/LICENSE
+- human parsing·keypoint·설명 라벨이 있는 고품질 human dataset이다.
+- 이용 조건: non-commercial research only. 이미지와 파생 데이터의 복제·재배포가 금지된다.
+- 신발 세부 12종 정답 데이터로 바로 쓰지 말고, 발이 보이는 표본을 추출해 내부 검수 라벨을
+  붙이는 보조 데이터로 사용한다.
+
+[보조/평가] Fashionpedia
+- 공식: https://fashionpedia.github.io/
+- 라이선스: https://fashionpedia.github.io/home/data_license.html
+- annotation/ontology는 CC BY 4.0이지만 이미지는 Fashionpedia 소유가 아니며 Flickr, Unsplash,
+  Pexels 등 각 원출처 약관을 따라야 한다.
+- 이미지별 권리 조건이 복잡하므로 대량 학습의 1순위보다 내부 연구/평가·온톨로지 참고용으로 쓴다.
+
+[가장 중요한 자체 데이터] 동의받은 실제 전신사진
+- 팀원/모집 참가자에게 연구 목적, 보관 기간, 철회·삭제 방법을 고지하고 동의를 받는다.
+- 같은 신발을 정면/사선/측면, 실내/실외, 밝은/어두운 바닥, 롱팬츠/쇼츠 조건으로 촬영한다.
+- 얼굴이 필요 없으면 수집 즉시 얼굴을 비식별화하되 원본과 비식별본의 접근권한을 분리한다.
+- 공개 데이터와 달리 FITTA 웹 입력 분포를 정확히 반영하므로 최종 test set은 자체 데이터 중심으로 만든다.
+
+사용하지 않을 수집 방식
+- Google/Naver 이미지 검색 결과를 자동 저장해 출처 없이 학습하지 않는다.
+- Instagram, YouTube, 블로그 사진을 무단 다운로드하지 않는다.
+- 무신사 상품 이미지는 사이트 약관·권리자 허락 없이 대량 저장/재배포/모델학습에 사용하지 않는다.
+- robots.txt 허용은 저작권이나 학습 허락을 뜻하지 않는다.
+- Kaggle/Hugging Face 미러는 편리해도 원 데이터 라이선스와 동일한지 확인되지 않으면 쓰지 않는다.
+
+======================================================================
+4-B. FITTA 12종 라벨 매핑 기준
+======================================================================
+
+0 스니커즈
+- 일상/라이프스타일 운동화. 캔버스화, 코트화, 패션 스니커즈 포함.
+
+1 러닝화
+- 출처 메타데이터가 running으로 명시되거나 러닝용 기능화임이 확실한 경우만 사용한다.
+- 단순히 스포티하게 생겼다는 이유로 러닝화 라벨을 붙이지 않는다.
+
+2 로퍼
+- 끈 없이 발등을 덮는 slip-on 정장화. 페니/태슬/비트 로퍼 포함.
+
+3 더비슈즈
+- open-lacing 구조의 포멀 레이스업을 원칙으로 한다.
+- Oxford를 같은 서비스 라벨로 합칠지 학습 전에 팀에서 결정한다. 합치지 않으면 Oxford는 기타 신발.
+
+4 메리제인
+- 발등 스트랩이 분명한 Mary Jane. 굽 높이는 무관하다.
+
+5 펌프스
+- 발등이 열리고 앞·뒤가 닫힌 구두형 여성화. Mary Jane 스트랩이 있으면 메리제인으로 보낸다.
+
+6 샌들
+- 스트랩/오픈토 구조이며 뒤꿈치 고정 구조가 있는 경우를 우선한다.
+
+7 슬리퍼
+- 뒤꿈치 고정 없이 쉽게 신고 벗는 slide/flip-flop/실내용 slipper.
+
+8 부츠
+- ankle/Chelsea/knee/high boots 등 일반 부츠.
+
+9 워커
+- combat/work/hiking 계열처럼 두꺼운 밑창·레이스업·보호 구조가 분명한 부츠.
+
+10 기타 신발
+- 위 10종에 안정적으로 들어가지 않는 clog, aqua shoes, 특수 작업화, 혼합형 등.
+- 품질 불량/가림 표본을 기타 신발로 보내지 않는다. 그런 표본은 quality=reject로 별도 제외한다.
+
+11 맨발
+- 맨발과 양말만 착용한 경우. predictor에서 실제 신발로 accepted되지 않는 안전 음성 클래스다.
+
+애매한 표본 처리
+- 좌우 신발 종류가 다름: 기본적으로 reject 또는 기타 신발. 한쪽 라벨을 임의로 고르지 않는다.
+- 발이 잘리거나 70% 이상 가림: quality=reject. 학습에서는 제외하고 별도 stress test에 둔다.
+- 라벨러가 확신하지 못함: label=-1/needs_review. 다수결 또는 선임 검수 후 확정한다.
+- 같은 이미지의 좌우 반전/색변환은 같은 split 안에서만 생성한다.
+
+======================================================================
+4-C. 권장 데이터 물량과 혼합 비율
+======================================================================
+
+파일럿
+- 실제 착장 crop: 클래스당 300장 이상
+- validation: 클래스당 80장 이상
+- test: 클래스당 100장 이상, 사람과 상품 모두 train과 중복 금지
+
+1차 서비스 목표
+- 실제 착장 crop: 주요 클래스 2,000~5,000장, 희소 클래스 최소 800~1,500장
+- 상품 단독 crop: 클래스당 최대 3,000장만 사용해 catalog 도메인이 학습을 지배하지 않게 한다.
+- 맨발: 최소 2,000장. 기타 신발: 최소 1,000장.
+- reject/stress set: 가림·저해상도·검정 배경 등 최소 2,000장.
+- 전체 권장 규모: 검수 완료 착장 crop 20,000~40,000장부터 시작해 오류 곡선을 보고 추가한다.
+
+권장 학습 혼합
+- 1단계 warm-up: UT Zappos 등 상품 단독 이미지, 1~3 epoch.
+- 2단계 mixed: 실제 착장 70~80%, 상품 단독 20~30%로 10~20 epoch.
+- 3단계 domain finish: 실제 착장과 hard case만 사용해 3~8 epoch.
+- synthetic 합성 이미지는 train의 20%를 넘기지 않고 validation/test에는 절대 넣지 않는다.
+
+======================================================================
 5. GPU 환경 준비
 ======================================================================
 
@@ -221,8 +379,11 @@ Linux/Conda 예시
 conda create -n fitta-shoes python=3.11 -y
 conda activate fitta-shoes
 cd /path/to/26-2_Modeling_Fashion
+git checkout codex/outfit-combination-shoe-training
+git pull origin codex/outfit-combination-shoe-training
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install -r ai_fashion_recommender/requirements.txt
+python -m pip install scikit-learn pandas seaborn
 
 CUDA 확인
 
@@ -231,6 +392,14 @@ python -c "import torch; print(torch.__version__); print(torch.cuda.is_available
 
 torch.cuda.is_available()가 False면 학습을 시작하지 말고 CUDA/PyTorch 설치를 먼저 고친다.
 PyTorch 설치 명령은 GPU 드라이버/CUDA 조합에 맞게 PyTorch 공식 설치 선택기를 사용한다.
+
+데이터 디스크 예시
+
+export FITTA_SHOE_DATA="/data/fitta_shoes"
+mkdir -p "$FITTA_SHOE_DATA"/{source,crops,caches,reports}
+
+환경변수는 예시이며 /data는 실제 대용량 SSD 경로로 바꾼다. 데이터 폴더를 저장소 내부에
+만들었다면 .gitignore 적용 여부를 먼저 확인한다.
 
 ======================================================================
 6. 데이터 전처리 및 임베딩 캐시 구현 순서
@@ -244,6 +413,25 @@ PyTorch 설치 명령은 GPU 드라이버/CUDA 조합에 맞게 PyTorch 공식 �
 6) FashionSigLIP preprocess 적용
 7) model.encode_image(image_tensor, normalize=True)로 정규화 임베딩 생성
 8) 임베딩, 라벨 인덱스, 원본 ID, split을 캐시에 저장
+
+prepare_shoe_dataset.py가 가져야 할 최소 CLI 계약
+
+python ai_fashion_recommender/scripts/prepare_shoe_dataset.py \
+  --manifest "$FITTA_SHOE_DATA/annotations.csv" \
+  --output "$FITTA_SHOE_DATA/caches" \
+  --model-id Marqo/marqo-fashionSigLIP \
+  --device cuda \
+  --batch-size 128 \
+  --verify-images \
+  --dedupe-phash
+
+필수 검증
+- shoe_label이 SHOE_LABELS에 없으면 즉시 실패한다.
+- split이 비어 있거나 동일 subject_id/product_id가 여러 split에 있으면 즉시 실패한다.
+- crop을 새로 만들 때는 반드시 src/shoe_model.py의 shoe_crop을 호출한다.
+- crop_path가 이미 있으면 원본과 crop의 checksum을 기록한다.
+- RGB 변환 실패, 지나치게 작은 crop, 극단적 aspect ratio는 rejected.csv에 이유와 함께 남긴다.
+- 데이터셋별 성공/실패/crop 크기 분포를 reports/preparation_summary.json에 기록한다.
 
 권장 캐시 내용
 
@@ -274,6 +462,9 @@ PyTorch 설치 명령은 GPU 드라이버/CUDA 조합에 맞게 PyTorch 공식 �
 - dropout: 0.15
 - early stopping: validation macro-F1 기준 patience 5
 - seed: 최소 3개 seed 결과를 함께 기록
+- mixed precision: torch.autocast + GradScaler 권장
+- gradient clipping: 1.0
+- scheduler: ReduceLROnPlateau 또는 cosine decay 중 하나를 고정하고 기록
 
 핵심 인터페이스
 
@@ -300,6 +491,29 @@ for features, labels in train_loader:
 클래스 불균형이 크면 먼저 WeightedRandomSampler 또는 균형 배치를 사용한다.
 현재 shoe_classification_loss에는 class weight 인자가 없으므로, 가중 loss가 필요하면
 함수 시그니처와 테스트를 함께 변경한다.
+
+train_shoe_heads.py가 가져야 할 최소 CLI 계약
+
+python ai_fashion_recommender/scripts/train_shoe_heads.py \
+  --cache-dir "$FITTA_SHOE_DATA/caches" \
+  --output ai_fashion_recommender/models/shoe_heads.pt \
+  --report-dir "$FITTA_SHOE_DATA/reports/run_001" \
+  --epochs 30 \
+  --batch-size 128 \
+  --learning-rate 1e-3 \
+  --hidden-dim 256 \
+  --dropout 0.15 \
+  --seeds 17 42 2026 \
+  --device cuda
+
+이 CLI는 현재 저장소에 아직 없으므로 GPU 학습 전에 구현해야 한다. 구현 완료 기준은 다음과 같다.
+- train 캐시로만 optimizer를 갱신한다.
+- validation macro-F1로 early stopping/best epoch를 고른다.
+- seed별 결과와 평균±표준편차를 저장한다.
+- 최종 threshold는 validation prediction으로만 고른다.
+- test는 모델·threshold가 확정된 뒤 한 번 평가한다.
+- best state_dict만 save_shoe_checkpoint로 저장한다.
+- 학습 재개용 optimizer checkpoint와 서비스용 shoe_heads.pt를 분리한다.
 
 ======================================================================
 8. 검증과 confidence threshold 결정
@@ -415,10 +629,10 @@ python -m unittest discover -s tests -t .
 4) 남성 선택 시 여성 전용 상품이 나오지 않는지 확인한다.
 5) 여성 선택 시 남성 전용 상품이 나오지 않는지 확인한다.
 6) 공용 상품은 양쪽에 나오는지 확인한다.
-7) 신발만 체크하면 신발 상품 최대 3개가 나오는지 확인한다.
-8) 상의+하의+신발이면 카테고리별 최대 3개인지 확인한다.
+7) 신발만 체크하면 서로 다른 신발 상품을 사용한 LOOK이 최대 3개 나오는지 확인한다.
+8) 상의+신발이면 현재 하의를 유지한 상의 1개+신발 1개 조합이 최대 3개인지 확인한다.
 9) 신발 추천 이유에 체형/다리 길이 보정 문구가 없는지 확인한다.
-10) 신발이 CatVTON 하의 합성 대상으로 들어가지 않는지 확인한다.
+10) 신발 전용 VTON이 없을 때 신발을 CatVTON 하의 합성 대상으로 잘못 넣지 않는지 확인한다.
 
 ======================================================================
 12. 현재 테스트 및 알려진 제한
@@ -429,7 +643,7 @@ python -m unittest discover -s tests -t .
 - 맨발 accepted 방지
 - 기존 의류 체크포인트 스키마 불변
 - 상의/하의/신발 체크 7개 조합
-- 카테고리별 최대 3개 반환
+- 현재 착장과 교체 상품을 묶은 코디 조합 최대 3개 반환
 - 신발 키워드의 체형 독립성
 - 신발 추천 이유의 체형 표현 제외
 - 성별 프로필 전달과 무신사 성별/공용 필터
@@ -442,26 +656,26 @@ python -m unittest discover -s tests -t .
 - FASHN feet mask가 신발 종류를 직접 구분하는 것은 아니다.
 - 신발 crop은 양발을 함께 포함한다.
 - 작은 신발과 바짓단 가림에서 crop 품질이 낮을 수 있다.
-- 신발 가상 피팅은 지원하지 않는다.
+- 신발 가상 피팅은 별도 모델 체크포인트가 있을 때만 활성화되는 실험 기능이다.
 - 무신사 상품 성별 메타데이터가 공용으로 잘못 기재된 경우는 별도 상품명 휴리스틱이 필요할 수 있다.
-- 웜톤/쿨톤 추천은 아직 구현하지 않았다.
 
 ======================================================================
 13. 권장 작업 순서 요약
 ======================================================================
 
-1) 현재 로컬 수정사항을 별도 브랜치에 commit/push
-2) GPU PC에서 해당 브랜치 clone/pull
-3) 신발 데이터 라벨 체계 확정
-4) subject/product 기준 train/val/test split
-5) prepare_shoe_dataset.py 구현 및 crop 사람 검수
-6) FashionSigLIP 임베딩 캐시 생성
-7) train_shoe_heads.py 구현 및 3개 seed 학습
-8) validation으로 threshold 선택
-9) test set 최종 평가와 metrics.json 저장
-10) shoe_heads.pt를 models에 배치
-11) FASHION_SHOE_CHECKPOINT 환경변수 지정
-12) 실제 사진으로 웹 E2E QA
-13) 성능이 부족한 혼동 클래스/가림 조건을 중심으로 데이터 추가
+1) GPU PC에서 codex/outfit-combination-shoe-training 브랜치 clone/pull
+2) UT Zappos50K로 상품 단독 seed data 확보
+3) AI Hub 이용 가능 여부와 신발 세부 라벨 schema 확인
+4) ModaNet/LIP/DeepFashion-MultiModal 중 허가 가능한 실제 착장 데이터를 확보
+5) FITTA 12종 라벨 정책 확정 후 annotations.csv 생성
+6) pHash 중복 제거, subject/product 기준 train/val/test split
+7) prepare_shoe_dataset.py 구현 및 crop 사람 검수
+8) FashionSigLIP 임베딩 캐시 생성
+9) train_shoe_heads.py 구현 및 3개 seed 학습
+10) validation으로 best epoch와 global threshold 선택
+11) test set 최종 1회 평가와 metrics.json/checksum 저장
+12) shoe_heads.pt를 models에 배치하고 FASHION_SHOE_CHECKPOINT 지정
+13) 실제 사진으로 웹 E2E QA
+14) 혼동 클래스·가림 조건 중심으로 active-learning 데이터 추가
 
 끝.
