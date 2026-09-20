@@ -7,7 +7,10 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --oversubscribe
-#SBATCH --time=08:00:00
+# 시간이 끝나면 작업을 놓고 우선순위 최하위로 다시 줄을 선다. 8시간이면 하루 세 번
+# 이 추첨을 겪는데, 같은 노드의 다른 사용자는 12~24시간을 쓴다. 같은 24시간으로 맞춰
+# 재배치 횟수를 하루 한 번으로 줄인다. 더 늘리지 않는 건 공용 노드이기 때문이다.
+#SBATCH --time=24:00:00
 #SBATCH --chdir=/mnt/data1/dsl01
 #SBATCH --output=/mnt/data1/dsl01/logs/fitta_web_%j.out
 #SBATCH --error=/mnt/data1/dsl01/logs/fitta_web_%j.out
