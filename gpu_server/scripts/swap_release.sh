@@ -61,10 +61,22 @@ case "$MODE" in
   *) do_restart=$need_restart ;;
 esac
 
+# 대기 중인 작업은 아직 아무 코드도 읽지 않았다. 시작할 때 fitta_current 를 보므로
+# 새 릴리스를 알아서 집는다. 여기서 재시작하면 큐에서 쌓은 대기 시간만 버린다.
+state=$(squeue -u "$USER" -h -n fitta-web -o "%T" | head -1)
+if [ "$do_restart" = yes ] && [ "$state" = "PENDING" ] && [ "$MODE" != "--restart" ]; then
+  echo "작업이 아직 대기 중입니다. 시작할 때 새 릴리스를 읽으므로 재시작하지 않습니다."
+  echo "굳이 재제출하려면 --restart 를 붙이세요(쌓인 대기 시간을 잃습니다)."
+  do_restart=no
+fi
+
 if [ "$do_restart" = yes ]; then
   echo "fitta-web 을 재시작합니다. GPU 를 놓고 다시 줄을 섭니다."
   systemctl --user restart fitta-web.service
-  squeue -u "$USER" -n fitta-web -o "%.8i %.2t %R"
+  sleep 3
+  squeue -u "$USER" -n fitta-web -o "%.8i %.2t %.12l %R"
+elif [ "$need_restart" = yes ]; then
+  echo "재시작하지 않았습니다."
 else
   echo "재시작하지 않았습니다. 실행 중인 작업이 그대로 새 화면을 서빙합니다."
 fi
