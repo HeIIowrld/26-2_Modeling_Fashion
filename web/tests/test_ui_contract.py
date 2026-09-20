@@ -43,7 +43,11 @@ class UIContractTests(unittest.TestCase):
         self.assertIn("무신사 상품 추천", html)
         self.assertIn("renderShoppingProducts(result.shopping_results || [], result.shopping_outfits || [])", javascript)
         self.assertIn("왜 이 조합인가요?", javascript)
-        self.assertIn("추천 코디 ${index + 1}", javascript)
+        # 룩 번호는 탭이 들고, 탭 하나에 상품 카드와 합성 사진이 함께 있어야 한다.
+        self.assertIn('role="tablist" aria-label="추천 코디 조합"', javascript)
+        self.assertIn("LOOK ${index + 1}", javascript)
+        self.assertIn('class="look-render"', javascript)
+        self.assertIn('class="look-products"', javascript)
         self.assertIn('id="current-score-matrix"', html)
         self.assertIn('id="current-outfit-points"', html)
         self.assertIn("renderCurrentOutfitEvaluation(result.current_outfit_evaluation)", javascript)
