@@ -49,13 +49,23 @@ def foot_edit_mask(segmentation, pose):
     foot_pixels = (seg == 15).astype(np.uint8)
     count, components, stats, centers = cv2.connectedComponentsWithStats(foot_pixels, 8)
     selected = np.zeros_like(foot_pixels)
+    selected_ids = []
     for x, y in feet:
-        candidates = [(float(np.linalg.norm(centers[i] - (x, y))), i) for i in range(1, count)
+        candidates = [(0.0 if components[y, x] == i else float(np.linalg.norm(centers[i] - (x, y))), i)
+                      for i in range(1, count)
                       if stats[i, cv2.CC_STAT_AREA] >= max(8, height * width * 0.00005)]
         if not candidates or min(candidates)[0] > height * 0.12:
             raise TryOnNotReady("발이 가려져 신발 영역을 안정적으로 구분하지 못했습니다.")
-        selected[components == min(candidates)[1]] = 1
+        component_id = min(candidates)[1]
+        selected_ids.append(component_id)
+        selected[components == component_id] = 1
     radius = max(2, round(height * 0.012))
+    if len(set(selected_ids)) == 1:
+        # Touching shoes can share a component, but a single visible shoe must
+        # not stand in for a hidden foot merely because its centroid is nearby.
+        supported = cv2.dilate(selected, np.ones((2 * radius + 1,) * 2, np.uint8))
+        if not all(supported[y, x] for x, y in feet):
+            raise TryOnNotReady("양쪽 발의 신발 영역을 구분하지 못했습니다. 발이 겹치지 않는 사진을 사용해 주세요.")
     mask = cv2.dilate(selected, np.ones((2 * radius + 1,) * 2, np.uint8)).astype(bool)
     # A small amount of leg/floor context is editable; trousers and skin elsewhere are not.
     mask &= np.isin(seg, (0, 14, 15))
@@ -105,7 +115,7 @@ class ShoeTryOn:
             index = json.loads((self.model_path / "text_encoder/model.safetensors.index.json").read_text())
             shards = set(index["weight_map"].values())
             return bool(shards) and all((self.model_path / "text_encoder" / p).is_file() for p in shards)
-        except (OSError, ValueError, KeyError, TypeError):
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
             return False
 
     def _load_pipeline(self):
@@ -114,9 +124,10 @@ class ShoeTryOn:
             from diffusers import Flux2KleinInpaintPipeline
             if not self.available or not torch.cuda.is_available():
                 raise TryOnNotReady("신발 합성 모델 또는 GPU가 준비되지 않았습니다.")
-            self._pipeline = Flux2KleinInpaintPipeline.from_pretrained(
+            pipeline = Flux2KleinInpaintPipeline.from_pretrained(
                 str(self.model_path), torch_dtype=torch.bfloat16, local_files_only=True)
-            self._pipeline.enable_model_cpu_offload()
+            pipeline.enable_model_cpu_offload()
+            self._pipeline = pipeline
         return self._pipeline
 
     def generate(self, person, reference, mask):
