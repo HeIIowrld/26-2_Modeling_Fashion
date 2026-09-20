@@ -186,6 +186,13 @@ gpu_server/scripts/swap_release.sh fitta_20260920_look_tabs
 `scancel`하기보다 `systemctl --user stop fitta-web.service`로 종료한다. 웹 패키지는 모델 패키지와 분리한
 `/data1/dsl01/web-site-packages`에서 읽는다.
 
+아이폰 HEIC 업로드에는 `pillow-heif` 가 필요하다. 계산 노드는 인터넷이 없으므로 마스터에서
+`--target` 으로 넣는다. 없어도 서버는 뜨고 JPG·PNG·WEBP 만 받는다.
+
+```bash
+/data1/dsl01/opt/python/cpython-3.11.16-linux-x86_64-gnu/bin/python3.11   -m pip install --target /data1/dsl01/web-site-packages --upgrade pillow-heif
+```
+
 ## 공개 웹 게이트웨이 (`192.168.0.110`)
 
 홈페이지와 외부 API는 GPU 서버가 아니라 `.110` 컨테이너에서 실행한다.

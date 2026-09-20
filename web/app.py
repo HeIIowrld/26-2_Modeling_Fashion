@@ -25,7 +25,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 WEB_DIR = Path(__file__).resolve().parent
 if str(WEB_DIR) not in sys.path:
@@ -72,8 +72,33 @@ SESSION_ROOT = Path(
 LEGACY_SESSION_ROOT = WEB_DIR.parent / "ai_fashion_recommender" / "outputs" / "web_sessions"
 
 MAX_UPLOAD_BYTES = 12 * 1024 * 1024
+
+def _save_upload(raw: bytes, destination: Path, subject: str) -> None:
+    """업로드 사진을 JPEG 로 정규화해 저장한다.
+
+    휴대폰은 센서 방향 그대로 저장하고 "돌려서 보라"는 EXIF 태그만 붙이는 경우가
+    많다. 그 태그를 버리고 저장하면 사진이 누운 채로 분석에 들어가 어깨·골반
+    위치가 어긋나고, 체형 판정이 조용히 틀린다. 저장 전에 회전을 실제 화소에
+    적용해 이후 단계가 방향을 신경 쓰지 않게 한다.
+    """
+    with Image.open(BytesIO(raw)) as opened:
+        if opened.format not in ALLOWED_FORMATS:
+            raise HTTPException(status_code=400, detail=f"{subject}은 {ALLOWED_FORMATS_LABEL} 이미지만 지원합니다.")
+        ImageOps.exif_transpose(opened).convert("RGB").save(destination, "JPEG", quality=95)
+
 MAX_WARDROBE_IMAGES = 8
-ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
+# 아이폰 기본 설정으로 찍으면 HEIC 로 저장된다. pillow-heif 가 있으면 읽고,
+# 없으면 기존 세 형식만 받는다(서버에 설치가 빠져도 나머지 기능은 살아 있어야 한다).
+try:
+    from pillow_heif import register_heif_opener
+
+    register_heif_opener()
+    HEIF_READY = True
+except ImportError:  # pragma: no cover - 설치 여부에 따라 갈린다
+    HEIF_READY = False
+
+ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"} | ({"HEIF", "HEIC", "AVIF"} if HEIF_READY else set())
+ALLOWED_FORMATS_LABEL = "JPG, PNG, WEBP" + (", HEIC" if HEIF_READY else "")
 JOB_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 IMAGE_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*\.jpg$")
 PRODUCT_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
@@ -647,10 +672,7 @@ async def analyze(
     session.mkdir(parents=True, exist_ok=True)
     image_path = session / "original.jpg"
     try:
-        with Image.open(BytesIO(raw)) as opened:
-            if opened.format not in ALLOWED_FORMATS:
-                raise HTTPException(status_code=400, detail="JPG, PNG, WEBP 이미지만 지원합니다.")
-            opened.convert("RGB").save(image_path, "JPEG", quality=95)
+        _save_upload(raw, image_path, "전신 사진")
     except UnidentifiedImageError as exc:
         shutil.rmtree(session, ignore_errors=True)
         raise HTTPException(status_code=400, detail="이미지 파일을 해석할 수 없습니다.") from exc
@@ -667,11 +689,8 @@ async def analyze(
                 shutil.rmtree(session, ignore_errors=True)
                 raise HTTPException(status_code=413, detail="이미지 용량은 12MB 이하만 지원합니다.")
             try:
-                with Image.open(BytesIO(body_raw)) as opened:
-                    if opened.format not in ALLOWED_FORMATS:
-                        raise HTTPException(status_code=400, detail="JPG, PNG, WEBP 이미지만 지원합니다.")
-                    body_path = session / "body.jpg"
-                    opened.convert("RGB").save(body_path, "JPEG", quality=95)
+                body_path = session / "body.jpg"
+                _save_upload(body_raw, body_path, "체형 사진")
             except UnidentifiedImageError as exc:
                 shutil.rmtree(session, ignore_errors=True)
                 raise HTTPException(status_code=400, detail="체형 사진을 해석할 수 없습니다.") from exc
@@ -690,10 +709,7 @@ async def analyze(
             raise HTTPException(status_code=413, detail="보유 옷 사진은 장당 12MB 이하만 지원합니다.")
         wardrobe_path = session / f"wardrobe_{index}.jpg"
         try:
-            with Image.open(BytesIO(wardrobe_raw)) as opened:
-                if opened.format not in ALLOWED_FORMATS:
-                    raise HTTPException(status_code=400, detail="보유 옷 사진은 JPG, PNG, WEBP만 지원합니다.")
-                opened.convert("RGB").save(wardrobe_path, "JPEG", quality=95)
+            _save_upload(wardrobe_raw, wardrobe_path, "보유 옷 사진")
         except UnidentifiedImageError as exc:
             shutil.rmtree(session, ignore_errors=True)
             raise HTTPException(status_code=400, detail="보유 옷 사진을 해석할 수 없습니다.") from exc
