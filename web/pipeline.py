@@ -47,6 +47,8 @@ from product_catalog import ProductCatalog
 from quality_checker import QualityChecker
 from recommendation_engine import CHANGE_SCOPE_MAP, PURPOSE_STYLES, RecommendationEngine
 from musinsa_live_search import MusinsaLiveSearch
+from product_measurements import ProductMeasurementClient
+from size_fit import validate_references
 from body_shape import classify
 from schemas import GOAL_NONE, SILHOUETTE_GOAL_CHOICES, Product, UserProfile, WardrobeItem
 from virtual_tryon import TryOnNotReady, VirtualTryOnAdapter
@@ -226,7 +228,7 @@ def _build_engine() -> Engine:
         quality_checker=QualityChecker(pose_analyzer),
         outfit_analyzer=OutfitAnalyzer(clothing_parser, classifier),
         recommender=RecommendationEngine(RULES_PATH, catalog),
-        product_search=MusinsaLiveSearch(),
+        product_search=MusinsaLiveSearch(measurements=ProductMeasurementClient(DATA_DIR / "cache" / "product_measurements")),
         tryon=_build_tryon(),
         device=classifier.device,
         trained_heads=classifier.trained_attributes_enabled,
@@ -339,6 +341,7 @@ def build_profile(payload: dict) -> UserProfile:
         hip_cm=number("hip_cm"),
         usual_top_size=payload.get("usual_top_size"),
         usual_bottom_size=payload.get("usual_bottom_size"),
+        reference_measurements=validate_references(payload.get("reference_measurements")),
         season=(
             current_season()
             if payload.get("season") in (None, "", "자동")

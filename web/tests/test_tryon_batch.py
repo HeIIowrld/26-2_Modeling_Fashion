@@ -3,6 +3,7 @@ import threading
 import time
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import web.app as web_app
@@ -53,6 +54,27 @@ class TryOnBatchTests(unittest.TestCase):
         with web_app._jobs_lock:
             web_app._jobs.pop(self.job_id, None)
         self.tempdir.cleanup()
+
+    def test_analysis_only_auto_starts_live_shopping_renders(self):
+        outcome = SimpleNamespace(
+            payload=self.job["result"],
+            recommendations=[],
+            person_image=self.job["person_image"],
+            tryon_context=self.job["tryon_context"],
+            shopping_tryon_products={},
+        )
+        with (
+            patch.object(web_app, "get_engine"),
+            patch.object(web_app, "analyze_wardrobe_items"),
+            patch.object(web_app, "run_pipeline", return_value=outcome),
+            patch.object(web_app, "_initialize_shopping_tryon_batch") as shopping_initialize,
+            patch.object(web_app, "_start_shopping_tryon_batch") as shopping_start,
+            patch.object(web_app, "sweep_now"),
+        ):
+            web_app._worker(self.job_id, self.job["person_image"], SimpleNamespace())
+
+        shopping_initialize.assert_called_once_with(self.job_id)
+        shopping_start.assert_called_once_with(self.job_id)
 
     def test_selected_musinsa_top_and_bottom_are_composited_and_cached(self):
         self.job["shopping_tryon_products"] = {

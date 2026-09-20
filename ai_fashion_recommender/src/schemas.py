@@ -126,6 +126,8 @@ class UserProfile:
     # 웹에서는 실제 payload에 존재한 필드만 넣어 기본값과 사용자 입력을 구분한다.
     provided_fields: list[str] | None = None
     change_categories: list[str] | None = None
+    # 같은 방식으로 평평하게 재어 입력한 '잘 맞는 옷'의 실측. 신체 둘레와 별개다.
+    reference_measurements: dict[str, dict[str, float]] = field(default_factory=dict)
 
     @property
     def has_circumferences(self) -> bool:

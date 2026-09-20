@@ -558,6 +558,8 @@ def _worker(
             tryon_context=outcome.tryon_context,
             shopping_tryon_products=outcome.shopping_tryon_products,
         )
+        # 예전 로컬 고정 추천 세트는 더 이상 화면에 표시하지 않는다.
+        # 실제 무신사 검색 상품 조합만 자동 합성한다.
         _initialize_shopping_tryon_batch(job_id)
         _start_shopping_tryon_batch(job_id)
     finally:
