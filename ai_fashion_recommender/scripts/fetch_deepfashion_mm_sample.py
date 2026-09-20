@@ -75,7 +75,11 @@ class HttpRangeFile(io.RawIOBase):
             request = urllib.request.Request(self.url, headers={"Range": f"bytes={self.position}-{end}"})
             try:
                 with urllib.request.urlopen(request, timeout=120) as response:
+                    if response.status != 206:
+                        raise OSError("Server did not honor the byte-range request")
                     data = response.read()
+                if len(data) != end - self.position + 1:
+                    raise OSError("Incomplete byte-range response")
                 break
             except OSError:
                 if attempt == 4:
@@ -124,7 +128,7 @@ def main() -> None:
     segm_names = {Path(n).name: n for n in segm.namelist() if n.endswith(".png")}
     print(f"[목차] 이미지 {len(image_names)} · 파싱 {len(segm_names)}", flush=True)
 
-    # 사람(id)마다 한 장만 뽑아 같은 인물이 표본을 채우지 않게 한다.
+    # 의류 ID마다 한 장을 뽑는다. 이 ID로 서로 다른 사람임을 보장할 수 없다.
     strata: dict[tuple[str, int], dict[str, str]] = defaultdict(dict)
     for name, shape in labels.items():
         if "_full" not in name or name not in image_names:
