@@ -31,6 +31,14 @@ WEB_DIR = Path(__file__).resolve().parent
 if str(WEB_DIR) not in sys.path:
     sys.path.insert(0, str(WEB_DIR))
 
+# 화면 파일만은 심볼릭 링크를 풀지 않은 경로로 읽는다. 운영은 releases/fitta_current
+# 링크를 바꿔 배포하는데, 여기서 경로를 풀면 기동 시점의 릴리스 폴더에 묶여 링크를
+# 바꿔도 옛 화면이 나간다. Starlette는 요청마다 경로를 다시 풀므로(StaticFiles.
+# lookup_path), 풀지 않은 경로를 주면 재시작 없이 새 릴리스의 화면이 나간다.
+# 파이썬 코드는 이미 적재돼 있어 이 방법으로 바뀌지 않는다 — 코드가 바뀐 배포는
+# 반드시 재시작해야 한다. gpu_server/scripts/swap_release.sh 가 그 판단을 돕는다.
+STATIC_DIR = Path(__file__).parent / "static"
+
 from pipeline import (  # noqa: E402
     GENDERS,
     STAGES,
@@ -891,7 +899,7 @@ class NoCacheStaticFiles(StaticFiles):
         return response
 
 
-app.mount("/", NoCacheStaticFiles(directory=WEB_DIR / "static", html=True), name="static")
+app.mount("/", NoCacheStaticFiles(directory=STATIC_DIR, html=True), name="static")
 
 
 if __name__ == "__main__":

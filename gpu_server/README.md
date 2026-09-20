@@ -167,6 +167,19 @@ squeue -u "$USER"
 `192.168.0.110` 컨테이너의 비공개 SSH 터널을 통한 요청만 받는다. GPU 노드에
 외부 80번을 매핑하지 않는다.
 
+화면 파일(`web/static`)만 바뀐 배포는 **재시작하지 않는다**. `web/app.py`의 `STATIC_DIR`이
+심볼릭 링크를 풀지 않은 경로라, `releases/fitta_current`를 바꾸면 실행 중인 작업이 그대로 새
+화면을 서빙한다. 파이썬 코드가 바뀌었으면 이미 적재된 모듈은 그대로이므로 반드시 재시작해야
+한다. `gpu_server/scripts/swap_release.sh`가 바뀐 파일을 보고 그 판단을 대신 해 준다.
+
+```bash
+gpu_server/scripts/swap_release.sh fitta_20260920_look_tabs
+```
+
+재시작은 Slurm 작업을 놓고 다시 줄을 선다는 뜻이다. 이 클러스터의 우선순위는 대기 시간
+(`PriorityWeightAge=2000`)과 작업 크기(`1000`)로만 매겨지고 공정공유는 꺼져 있어, 재제출하면
+우선순위가 최하위로 초기화된다. 2026-09-20에 이 때문에 약 10시간을 기다렸다.
+
 기본 Slurm 실행 시간은 8시간이다. 로그는
 `/data1/dsl01/logs/fitta_web_<JobID>.out`이다. 서비스로 실행한 작업은 직접
 `scancel`하기보다 `systemctl --user stop fitta-web.service`로 종료한다. 웹 패키지는 모델 패키지와 분리한
