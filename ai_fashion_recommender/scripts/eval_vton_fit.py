@@ -282,7 +282,7 @@ def main() -> None:
     ap.add_argument("--offset", type=int, default=0)
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--mask-mode", choices=("native", "wide", "selective-wide", "upper-torso",
-                                            "upper-agnostic", "upper-agnostic-lower", "lower-shape"), default="native",
+                                            "upper-agnostic", "upper-agnostic-lower", "lower-shape", "production"), default="native",
                     help="wide: 하의만, 마스크를 넓힌 대조 실험 / upper-agnostic, lower-shape: 운영 마스크 정책 옵션")
     ap.add_argument("--selection-refs", type=Path,
                     help="기존 refs.json의 상품 순서를 고정해 선택 규칙 변경으로 비교군이 바뀌지 않게 함")
@@ -327,7 +327,7 @@ def main() -> None:
     vton = CatVTONTryOn.fast(
         max_retries=1 if opts.quality_gate else 0, garment_cache_dir=OUT / "ref_cache",
         seed=opts.seed, post_quality_gate=True,
-        upper_mask_policy={"upper-agnostic": "agnostic",
+        upper_mask_policy={"upper-agnostic": "agnostic", "production": "agnostic",
                            "upper-agnostic-lower": "agnostic-lower"}.get(opts.mask_mode, "native"),
         lower_mask_policy="reference-shape" if opts.mask_mode == "lower-shape" else "native",
     )
@@ -433,6 +433,13 @@ def main() -> None:
                     }
                 person = person_cache[person_path.name]
                 pose, parsed, orig = person["pose"], person["parsed"], person["rgb"]
+                if opts.mask_mode == "production":
+                    from quality_checker import QualityChecker
+                    record["input_quality"] = QualityChecker(pose_analyzer).check_input(person_path, pose=pose)
+                    record["input_pose"] = pose.to_dict()
+                    if not record["input_quality"]["passed"]:
+                        record["failure_stage"] = "input_rejected"
+                        raise RuntimeError("운영 입력 사진 검증에서 거절")
                 if not pose.valid:
                     raise RuntimeError("포즈 무효")
 

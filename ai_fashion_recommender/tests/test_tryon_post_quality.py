@@ -116,6 +116,24 @@ class AssessTryOnTests(unittest.TestCase):
                               after_seg=after_seg, before_seg=seg, target_labels=(3, 4, 10),
                               landmarks_px=LANDMARKS, product_name="베이직 쿨 헨리넥 크롭 반팔 니트")
         self.assertNotIn("torso_skin_inside_mask", [c.name for c in report.checks])
+        self.assertNotIn("garment_coverage", [c.name for c in report.checks])
+
+    def test_brown_and_brand_names_do_not_exempt_midriff_checks(self):
+        from tryon_quality import EXPOSED_MIDRIFF_NAME
+        for name in ("브라운 니트", "브라이트 셔츠", "브랜드 티셔츠", "zebra shirt"):
+            with self.subTest(name=name):
+                self.assertIsNone(EXPOSED_MIDRIFF_NAME.search(name))
+        for name in ("스포츠브라", "브라탑", "브라렛", "크롭 니트", "sports bra"):
+            with self.subTest(name=name):
+                self.assertIsNotNone(EXPOSED_MIDRIFF_NAME.search(name))
+
+    def test_face_accidentally_inside_edit_mask_is_still_checked(self):
+        before, after, edit, seg, after_seg = _scene()
+        edit[seg == 1] = True
+        after[seg == 1] = 0
+        report = assess_tryon(category="top", before=before, after=after, edit_mask=edit,
+                              after_seg=after_seg, before_seg=seg, target_labels=(3,))
+        self.assertFalse(_check(report, "face_preservation").passed)
 
     def test_shifted_result_fails_preservation(self):
         before, after, edit, seg, after_seg = _scene()
@@ -246,6 +264,22 @@ class RetryPolicyTests(unittest.TestCase):
         self._run(adapter)
         self.assertEqual(pipeline.calls, 1)
         self.assertEqual(adapter.last_quality_reports, [])
+
+    def test_unassessed_retry_cannot_replace_assessed_result(self):
+        bad = TryOnQualityReport("top", [QualityCheck("coverage", 0.2, 0.5, False, True, "덜 덮음")])
+        for unknown in (None, TryOnQualityReport("top", skipped="해상도 불일치")):
+            with self.subTest(unknown=unknown):
+                adapter, pipeline = self._adapter([bad, unknown])
+                self._run(adapter)
+                self.assertEqual(pipeline.calls, 2)
+                self.assertEqual(adapter.last_quality_reports[0]["checks"][0]["name"], "coverage")
+                self.assertTrue(any("완료하지 못" in w for w in adapter.last_warnings))
+
+    def test_missing_parser_is_reported_as_unassessed(self):
+        adapter, pipeline = self._adapter([None])
+        self._run(adapter)
+        self.assertTrue(adapter.last_quality_reports[0]["skipped"])
+        self.assertTrue(any("완료하지 못" in w for w in adapter.last_warnings))
 
 
 class AgnosticUpperMaskTests(unittest.TestCase):
