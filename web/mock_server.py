@@ -115,19 +115,13 @@ def _mock_length_warnings(job: dict, categories: list[str]) -> list[str]:
 
 
 def _mock_shopping_tryon_batch(job: dict) -> dict:
-    """검색된 mock 상·하의의 전체 조합 배치를 재현한다."""
-    products = [
-        item
-        for item in job["result"].get("shopping_results", [])
-        if item.get("tryon_available") and item.get("category") in {"top", "bottom"}
+    """추천 코디 하나에 합성 한 장. 실제 서버와 같은 단위로 배치를 재현한다."""
+    by_id = {item["product_id"]: item for item in job["result"].get("shopping_results", [])}
+    combinations = [
+        [by_id[product_id] for product_id in outfit.get("product_ids", []) if product_id in by_id]
+        for outfit in job["result"].get("shopping_outfits", [])
     ]
-    tops = [item for item in products if item["category"] == "top"]
-    bottoms = [item for item in products if item["category"] == "bottom"]
-    combinations = (
-        [[top, bottom] for top in tops for bottom in bottoms]
-        if tops and bottoms
-        else [[item] for item in tops or bottoms]
-    )
+    combinations = [products for products in combinations if products]
     elapsed = max(0.0, time.monotonic() - job["created"] - 3.2)
     ready = min(len(combinations), int(elapsed / 0.9))
     items = []
@@ -246,6 +240,7 @@ def _build_result(profile: dict, image_seed: int) -> dict:
         "outfit_summary": {
             "상의": "네이비 셔츠 (긴소매)",
             "하의": "그레이 슬랙스 (스트레이트, 발목 기장)",
+            "신발": "신발 인식 학습 준비 중 · 입력 조건으로 추천 가능",
         },
         "current_outfit_evaluation": {
             "total_score": 86.4,
@@ -391,7 +386,6 @@ def _build_result(profile: dict, image_seed: int) -> dict:
         for index in range(1, 4)
     ]
     result["request"] = profile
-    result["outfit_summary"]["신발"] = "신발 인식 학습 준비 중 · 입력 조건으로 추천 가능"
     return result
 
 
