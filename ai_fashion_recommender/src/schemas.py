@@ -111,8 +111,6 @@ class UserProfile:
     activity_level: str = "보통"
     preferred_colors: list[str] = field(default_factory=list)
     avoided_colors: list[str] = field(default_factory=list)
-    # 사용자가 직접 고르는 간단한 퍼스널 컬러. 빈 문자열이면 추천에 반영하지 않는다.
-    personal_tone: str = ""  # "웜톤" / "쿨톤"
     preferred_materials: list[str] = field(default_factory=list)
     avoided_materials: list[str] = field(default_factory=list)
     excluded_item_types: list[str] = field(default_factory=list)

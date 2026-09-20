@@ -54,11 +54,6 @@ class BuildProfileTests(unittest.TestCase):
     def test_gender_survives_profile_round_trip(self):
         self.assertEqual(build_profile({"gender": "남성"}).gender, "남성")
 
-    def test_personal_tone_survives_profile_round_trip(self):
-        self.assertEqual(build_profile({"personal_tone": "웜톤"}).personal_tone, "웜톤")
-        self.assertEqual(build_profile({"personal_tone": "쿨톤"}).personal_tone, "쿨톤")
-        self.assertEqual(build_profile({"personal_tone": "잘못된 값"}).personal_tone, "")
-
     def test_material_categories_expand_to_existing_model_labels(self):
         profile = build_profile({"preferred_materials": ["면·일상 소재", "얇은 소재"]})
         self.assertEqual(

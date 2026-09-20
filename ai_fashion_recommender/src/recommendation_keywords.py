@@ -94,7 +94,7 @@ class TargetKeywordResult:
     def brief_lines(self, max_keywords: int = 8) -> list[str]:
         priority = (
             "item_type", "fit", "length", "waistline", "structure", "silhouette",
-            "style", "material", "color", "color_temperature", "harmony_reference_color",
+            "style", "material", "color", "harmony_reference_color",
             "purpose", "season", "function",
         )
         lines = []
@@ -205,16 +205,6 @@ class RecommendationKeywordGenerator:
             detected_colors = [outfit.upper_color, outfit.lower_color]
             add_all("harmony_reference_color", detected_colors, "photo_fallback")
             self._rule(rules, "R-COL-03")
-
-        if self._provided(profile, "personal_tone") and profile.personal_tone in {"웜톤", "쿨톤"}:
-            for target in targets.values():
-                self._add(target, "color_temperature", profile.personal_tone)
-            constraints["personal_tone"] = profile.personal_tone
-            sources["color_temperature"] = "user_input"
-            used_input = True
-            self._rule(rules, "R-COL-14")
-            if any("데님" in target.get("material", []) for target in targets.values()):
-                self._rule(rules, "R-COL-15")
 
         if self._provided(profile, "activity_level") and profile.activity_level == "높음":
             add_all("function", ["활동성", "통기성"], "user_input")
@@ -345,6 +335,11 @@ class RecommendationKeywordGenerator:
                         rule_ids.append("R-COL-08")
                     if attribute == "function" and "R-WEA-02" in rules:
                         rule_ids.append("R-WEA-02")
+                    if attribute == "item_type":
+                        rule_ids.extend(
+                            rule_id for rule_id in ("R-CTX-01", "R-ACC-06")
+                            if rule_id in rules
+                        )
                     if attribute == "fit" and sources.get(f"{category}.fit") in {"user_style_rule", "photo_style_rule", "fashion_rule_default"} and "R-SIL-01" in rules:
                         rule_ids.append("R-SIL-01")
                     if attribute == "length" and sources.get(f"{category}.length") in {"user_style_rule", "photo_style_rule", "fashion_rule_default"} and "R-SIL-03" in rules:
