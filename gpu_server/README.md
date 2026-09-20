@@ -180,7 +180,8 @@ gpu_server/scripts/swap_release.sh fitta_20260920_look_tabs
 (`PriorityWeightAge=2000`)과 작업 크기(`1000`)로만 매겨지고 공정공유는 꺼져 있어, 재제출하면
 우선순위가 최하위로 초기화된다. 2026-09-20에 이 때문에 약 10시간을 기다렸다.
 
-기본 Slurm 실행 시간은 8시간이다. 로그는
+기본 Slurm 실행 시간은 24시간이다. 8시간이던 것을 올린 이유는 위의 초기화를 하루 세 번에서
+한 번으로 줄이기 위해서다. 같은 노드의 다른 사용자는 12~24시간을 쓴다. 로그는
 `/data1/dsl01/logs/fitta_web_<JobID>.out`이다. 서비스로 실행한 작업은 직접
 `scancel`하기보다 `systemctl --user stop fitta-web.service`로 종료한다. 웹 패키지는 모델 패키지와 분리한
 `/data1/dsl01/web-site-packages`에서 읽는다.
