@@ -157,9 +157,19 @@ $("clear-image").addEventListener("click", (event) => {
   $("photo-gate-note").dataset.tone = "wait";
 });
 
+/* 아이폰 기본 저장 형식(HEIC)을 받는다. iOS 가 형식을 비워 보내는 경우가 있어
+   확장자로도 한 번 본다. 최종 판정은 서버가 다시 한다. */
+const IMAGE_TYPES = /^image\/(jpeg|png|webp|heic|heif)$/;
+const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|heic|heif)$/i;
+const IMAGE_HINT = "JPG, PNG, WEBP, HEIC 이미지만 지원합니다.";
+
+function isSupportedImage(file) {
+  return IMAGE_TYPES.test(file.type) || (!file.type && IMAGE_EXTENSIONS.test(file.name || ""));
+}
+
 function acceptFile(file) {
-  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
-    toast("JPG, PNG, WEBP 이미지만 지원합니다.");
+  if (!isSupportedImage(file)) {
+    toast(IMAGE_HINT);
     return;
   }
   if (file.size > 12 * 1024 * 1024) {
@@ -186,7 +196,7 @@ bodyDropzone.addEventListener("keydown", (event) => {
   if (event.key === "Enter" || event.key === " ") { event.preventDefault(); bodyFileInput.click(); }
 });
 function acceptBodyFile(file) {
-  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return toast("JPG, PNG, WEBP 이미지만 지원합니다.");
+  if (!isSupportedImage(file)) return toast(IMAGE_HINT);
   if (file.size > 12 * 1024 * 1024) return toast("이미지 용량은 12MB 이하만 지원합니다.");
   state.bodyFile = file;
   $("body-preview-img").src = URL.createObjectURL(file);
@@ -278,7 +288,7 @@ function addWardrobeRow() {
   row.innerHTML = `
     <select class="w-category"><option value="top">상의</option><option value="bottom">하의</option></select>
     <label class="wardrobe-upload">
-      <input class="w-image" type="file" accept="image/jpeg,image/png,image/webp" hidden />
+      <input class="w-image" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" hidden />
       <span class="wardrobe-upload-copy">옷 사진 선택</span>
       <img class="wardrobe-thumb" alt="보유 옷 미리보기" hidden />
     </label>
@@ -287,9 +297,9 @@ function addWardrobeRow() {
   input.addEventListener("change", () => {
     const file = input.files?.[0];
     if (!file) return;
-    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+    if (!isSupportedImage(file)) {
       input.value = "";
-      toast("보유 옷 사진은 JPG, PNG, WEBP만 지원합니다.");
+      toast(`보유 옷 사진은 ${IMAGE_HINT}`);
       return;
     }
     if (file.size > 12 * 1024 * 1024) {

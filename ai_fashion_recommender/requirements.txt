@@ -1,5 +1,7 @@
 numpy
 Pillow
+# 아이폰 기본 저장 형식(HEIC) 업로드. 없으면 JPG·PNG·WEBP 만 받는다.
+pillow-heif
 opencv-python
 mediapipe==0.10.14
 torch
