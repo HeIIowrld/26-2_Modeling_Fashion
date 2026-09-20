@@ -338,6 +338,10 @@ function collectProfile() {
     activity_level: data.get("activity_level"),
     height_cm: numeric("height_cm"),
     weight_kg: numeric("weight_kg"),
+    reference_measurements: {
+      top: { chest_width_cm: numeric("reference_top_chest_cm"), length_cm: numeric("reference_top_length_cm") },
+      bottom: { waist_width_cm: numeric("reference_bottom_waist_cm"), length_cm: numeric("reference_bottom_length_cm") },
+    },
     preferred_colors: [...state.preferredColors],
     avoided_colors: [...state.avoidedColors],
     preferred_materials: [...state.preferredMaterials],
@@ -497,8 +501,9 @@ function renderResult(result) {
   $("result-data-badge").hidden = !isMock;
   $("result-disclaimer").textContent = isMock
     ? "현재 분석 수치와 상품은 서비스 흐름을 확인하기 위한 시연 데이터예요. 실제 모델 서버를 연결하면 실제 분석 결과로 바뀝니다."
-    : "무신사 상품은 실시간 검색 결과로 가격과 재고가 달라질 수 있습니다.";
+    : "무신사 상품은 실시간 검색 결과로 가격과 재고가 달라질 수 있습니다. 예상 착장샷은 실제 핏을 보장하지 않습니다.";
 
+  const shoppingResults = Array.isArray(result.shopping_results) ? result.shopping_results : [];
   resetPrivacyBar();
   $("result-lede").textContent = "현재 유지할 옷과 교체할 상품의 조화를 계산해 세 가지 코디로 구성했습니다.";
 
@@ -512,6 +517,36 @@ function renderResult(result) {
   renderRules(result.rules);
   renderFigures(result.images);
   showView("recos");
+}
+
+function renderSizeFit(fit) {
+  if (!fit || !fit.status) return "";
+  const deltaText = (value) => `${value > 0 ? "+" : ""}${Number(value).toLocaleString("ko-KR")}cm`;
+  const differences = (fit.differences || []).map((difference) =>
+    `${difference.label} ${deltaText(difference.delta_cm)}`
+  ).join(" · ");
+  const columns = Object.entries(fit.columns || {});
+  const rows = fit.size_options || [];
+  const date = fit.fetched_at ? new Date(fit.fetched_at).toLocaleDateString("ko-KR") : "";
+  const cells = (measurements) => columns.map(([key]) =>
+    `<td>${measurements?.[key] == null ? "—" : escapeHtml(String(measurements[key]))}</td>`
+  ).join("");
+  return `<section class="shopping-size-fit" aria-label="상품 실측과 사이즈 비교">
+    <b>사이즈 비교</b>
+    <p>${escapeHtml(fit.summary || "실측 정보를 확인해주세요.")}</p>
+    ${differences ? `<p class="size-differences">${escapeHtml(fit.compared_size || "")} · ${escapeHtml(differences)}</p>` : ""}
+    ${fit.closest_size ? `<small>실측 차이를 기준으로 골랐어요. 소재와 신축성에 따라 착용감은 달라질 수 있어요.${fit.availability == null ? " 해당 옵션의 재고는 상품 페이지에서 확인해주세요." : ""}</small>` : ""}
+    ${rows.length ? `<details><summary>사이즈별 실측 보기 (cm)</summary>
+      <div class="size-table-scroll"><table>
+        <caption class="sr-only">상품 사이즈별 실측과 기준 옷의 치수, 단위 cm</caption>
+        <thead><tr><th scope="col">사이즈</th>${columns.map(([, label]) => `<th scope="col">${escapeHtml(label)}</th>`).join("")}<th scope="col">판매 상태</th></tr></thead>
+        <tbody>${Object.keys(fit.reference || {}).length ? `<tr class="size-reference"><th scope="row">기준 옷</th>${cells(fit.reference)}<td>—</td></tr>` : ""}
+          ${rows.map((row) => `<tr${row.size === fit.closest_size ? ' class="size-closest"' : ""}><th scope="row">${escapeHtml(row.size)}</th>${cells(row.measurements)}<td>${row.available === false ? "품절·비활성" : row.available === true ? "조회 시 판매 가능" : "재고 확인 필요"}</td></tr>`).join("")}
+        </tbody></table></div>
+      ${fit.measurement_note ? `<small>${escapeHtml(fit.measurement_note)}</small>` : ""}
+      ${date ? `<small>실측 조회: ${escapeHtml(date)} · 무신사 상품 표기 기준</small>` : ""}
+    </details>` : ""}
+  </section>`;
 }
 
 function renderShoppingProductCard(product) {
@@ -550,6 +585,7 @@ function renderShoppingProductCard(product) {
         </div>
       </div>
     </a>
+    ${renderSizeFit(product.size_fit)}
     ${renderShoppingEvidence(product)}
     <div class="shopping-tryon-choice">
       <button type="button" data-shopping-select="${escapeHtml(product.product_id)}"

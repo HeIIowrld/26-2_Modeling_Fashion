@@ -26,10 +26,14 @@ FIDELITY_CHECKS = {"reference_fidelity", "color_fidelity", "garment_leak"}
 BOTTOM_CHECKS = {"bottom_length_fidelity", "color_fidelity", "reference_fidelity"}
 
 
-def load_quality(path: Path) -> dict[str, dict]:
+def load_quality(path: Path, *, allow_unassessed=False) -> dict[str, dict]:
     rows = {}
     for line in path.read_text(encoding="utf-8").splitlines():
         row = json.loads(line)
+        row["assessed"] = not row.get("skipped") and not row.get("error") and bool(row.get("checks"))
+        if not row["assessed"] and not allow_unassessed:
+            raise ValueError(f"미검사 결과는 통과로 집계할 수 없습니다: {path}: {row.get('pair')}")
+        row.setdefault("checks", [])
         row["failed"] = {c["name"] for c in row["checks"] if not c["passed"]}
         row["retry"] = any(not c["passed"] and c["retryable"] for c in row["checks"])
         row["values"] = {c["name"]: c["value"] for c in row["checks"]}
@@ -39,8 +43,13 @@ def load_quality(path: Path) -> dict[str, dict]:
 
 def paired(base: Path, base_q: Path, var: Path, var_q: Path, category: str) -> list[dict]:
     base_rows = {r["pair"]: r for r in load_dedup(base)[0] if r["category"] == category}
-    var_rows = {r["pair"]: r for r in load_dedup(var)[0] if r["category"] == category}
+    successful, errors = load_dedup(var)
+    if any(r.get("category", category) == category for r in errors):
+        raise ValueError("변형 실험에 생성 오류가 있습니다. 오류를 제외하고 채택할 수 없습니다.")
+    var_rows = {r["pair"]: r for r in successful if r["category"] == category}
     bq, vq = load_quality(base_q), load_quality(var_q)
+    if not var_rows or set(var_rows) - (set(base_rows) & set(bq) & set(vq)):
+        raise ValueError("비교 대상 또는 대응하는 기준/품질 결과가 누락됐습니다.")
     items = []
     for pair, v in var_rows.items():
         if pair in base_rows and pair in bq and pair in vq:
@@ -72,7 +81,7 @@ def compare_agnostic(items: list[dict]) -> dict:
         verdict("A1 크롭·배 노출·덜 덮음 실패율 감소(CI 상한<0)", crop[2] < 0, crop),
         verdict("A2a 자기 상품 top-1 비열등(CI 하한≥-0.05)", top1[1] >= -0.05, top1),
         verdict("A2b 색차 중앙값 증가 ≤1.0", color_shift <= 1.0, color_shift),
-        verdict("A3 충실도·잔류 실패율 증가 없음(CI 상한≤0.05)", fidelity[2] <= 0.05, fidelity),
+        verdict("A3 충실도·잔류 실패율 비열등(허용 증가 5%p, CI 상한≤0.05)", fidelity[2] <= 0.05, fidelity),
         verdict("A4 얼굴 PSNR 최소 ≥30dB", min(face) >= 30.0, min(face)),
     ]
     return {"pairs": len(items), "people": len({i["person"] for i in items}), "criteria": criteria,
@@ -110,22 +119,27 @@ def compare_lower_shape(items: list[dict], refs: dict) -> dict:
     for i in items:
         i["wide"] = is_wide_bottom(refs[i["product_id"]])
         i["shaped"] = any(note.startswith("lower:shaped") for note in i["var"].get("mask_notes", []))
-    band = lambda r: r["width_res"].get("shin") if r["width_res"].get("shin") is not None else r["width_res"].get("thigh")  # noqa: E731
-    items = [i for i in items if band(i["base"]) is not None and band(i["var"]) is not None]
+    # 원본 사진으로 부위를 고정한다. 결과마다 종아리/허벅지를 바꾸면 폭 차이가 왜곡된다.
+    for i in items:
+        i["width_band"] = "shin" if i["base"]["width_orig"].get("shin") is not None else "thigh"
+    band = lambda i, side: i[side]["width_res"].get(i["width_band"])  # noqa: E731
+    total = len(items)
+    items = [i for i in items if band(i, "base") is not None and band(i, "var") is not None]
 
     def within_gap(sample, side):
         groups = defaultdict(lambda: {True: [], False: []})
         for i in sample:
-            groups[i["person"]][i["wide"]].append(band(i[side]))
+            groups[i["person"]][i["wide"]].append(band(i, side))
         diffs = [np.mean(g[True]) - np.mean(g[False]) for g in groups.values() if g[True] and g[False]]
         return float(np.mean(diffs)) if diffs else float("nan")
 
     gap_diff = cluster_ci(items, lambda s: within_gap(s, "var") - within_gap(s, "base"))
     slim = [i for i in items if i["seller_fit"] in {"슬림핏", "레귤러핏"} and not i["wide"]]
-    slim_increase = cluster_ci(slim, lambda s: float(np.mean([band(i["var"]) - band(i["base"]) for i in s])))
+    slim_increase = cluster_ci(slim, lambda s: float(np.mean([band(i, "var") - band(i, "base") for i in s])))
     top1 = rate_diff(items, lambda _q, r: r.get("rank_res") == 1)
     bottom_fail = rate_diff(items, lambda q, _r: bool(q["failed"] & BOTTOM_CHECKS))
     criteria = [
+        verdict("L0 고정한 부위의 폭 측정 누락 없음", len(items) == total, {"expected": total, "measured": len(items)}),
         verdict("L1 같은 사람 안 와이드−나머지 폭 차이 증가(CI 하한>0)", gap_diff[1] > 0, gap_diff),
         verdict("L2 슬림·레귤러(와이드 이름 제외) 폭 증가 없음(CI 상한≤0.02)", slim_increase[2] <= 0.02, slim_increase),
         verdict("L3 자기 상품 top-1 비열등(CI 하한≥-0.05)", top1[1] >= -0.05, top1),
@@ -143,12 +157,20 @@ def compare_lower_shape(items: list[dict], refs: dict) -> dict:
 def compare_seeds(base_q: Path, var_qs: list[Path]) -> dict:
     """시드 42(기존)와 추가 시드의 검사 결과로 재생성 효과와 판정 안정성을 잰다.
 
-    같은 사람·상품·마스크에서 시드만 바꾼 결과이므로 운영의 '1회 재생성'과 같은 조건이다.
+    저장된 이미지 재검사 점수로 선택 정책을 재현한다. 운영 중 선택·육안 검증을 대체하지 않는다.
     """
     seeds = [load_quality(base_q)] + [load_quality(p) for p in var_qs]
+    if len(seeds) < 2 or not seeds[1] or any(set(s) != set(seeds[1]) for s in seeds[2:]) \
+            or set(seeds[1]) - set(seeds[0]):
+        raise ValueError("추가 시드의 평가 대상이 비었거나 시드별 결과가 누락됐습니다.")
     pairs = sorted(set.intersection(*(set(s) for s in seeds)))
     first, second = seeds[0], seeds[1]
     retry_pairs = [p for p in pairs if first[p]["retry"]]
+    def key(row):
+        penalty = sum(1.0 if c["retryable"] else 0.25 for c in row["checks"] if not c["passed"])
+        return penalty, -(row["values"].get("sharpness") or 0.0)
+    selected = {p: (second[p] if first[p]["retry"] and key(second[p]) < key(first[p]) else first[p])
+                for p in pairs}
     structural = [p for p in pairs if first[p]["failed"] and not first[p]["retry"]]
     agreement = float(np.mean([len({s[p]["retry"] for s in seeds}) == 1 for p in pairs]))
     spread = {}
@@ -161,21 +183,28 @@ def compare_seeds(base_q: Path, var_qs: list[Path]) -> dict:
         "pairs": len(pairs), "seeds": len(seeds),
         "retry_decision_agreement_all_seeds": agreement,
         "seed42_retry_pairs": len(retry_pairs),
-        "fixed_by_one_regeneration": sum(not second[p]["retry"] for p in retry_pairs),
+        "retry_flags_cleared_in_second_attempt": sum(not second[p]["retry"] for p in retry_pairs),
+        "selected_all_checks_passed_after_retry": sum(not selected[p]["failed"] for p in retry_pairs),
         "improved_penalty": sum(second[p]["penalty"] < first[p]["penalty"] for p in retry_pairs),
-        "best_of_two_retry_rate": float(np.mean([first[p]["retry"] and second[p]["retry"] for p in pairs])),
+        "selected_retry_rate": float(np.mean([selected[p]["retry"] for p in pairs])),
+        "selected_any_failure_rate": float(np.mean([bool(selected[p]["failed"]) for p in pairs])),
         "seed42_retry_rate": float(np.mean([first[p]["retry"] for p in pairs])),
         "structural_pairs": len(structural),
-        "structural_persisting": sum(bool(second[p]["failed"] - {c for c in second[p]["failed"] if c in FIDELITY_CHECKS}) for p in structural),
+        "structural_persisting_in_second_seed": sum(any(not c["passed"] and not c["retryable"]
+                                                      for c in second[p]["checks"]) for p in structural),
         "metric_spread": spread,
     }
 
 
 def flag_summary(var_q: Path) -> dict:
-    rows = load_quality(var_q)
+    rows = load_quality(var_q, allow_unassessed=True)
     by_category = defaultdict(Counter)
     for row in rows.values():
         by_category[row["category"]]["pairs"] += 1
+        if not row["assessed"]:
+            by_category[row["category"]]["unassessed"] += 1
+            continue
+        by_category[row["category"]]["assessed"] += 1
         by_category[row["category"]]["any"] += bool(row["failed"])
         by_category[row["category"]]["retry"] += row["retry"]
         for name in row["failed"]:

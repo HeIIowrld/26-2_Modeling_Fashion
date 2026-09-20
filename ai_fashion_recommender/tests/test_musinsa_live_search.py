@@ -43,7 +43,7 @@ class StubSearch(MusinsaLiveSearch):
         self.fail = fail
         self.calls: list[tuple[str, str]] = []
 
-    def _fetch(self, category: str, query: str, size: int = 40) -> list[dict]:
+    def _fetch(self, category: str, query: str, size: int = 100, **kwargs) -> list[dict]:
         self.calls.append((category, query))
         if self.fail:
             raise OSError("network unavailable")

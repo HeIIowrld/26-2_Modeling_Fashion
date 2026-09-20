@@ -54,6 +54,9 @@ class UIContractTests(unittest.TestCase):
         self.assertNotIn('id="reco-picker"', html)
         self.assertNotIn('id="reco-detail"', html)
         self.assertNotIn("renderRecommendations", javascript)
+        self.assertNotIn('data-image="preview"', html)
+        self.assertIn("예상 착장샷은 실제 핏을 보장하지", html)
+        self.assertIn("예상 착장샷은 실제 핏을 보장하지", javascript)
 
     def test_musinsa_products_can_be_selected_for_real_tryon(self):
         html = (STATIC / "index.html").read_text(encoding="utf-8")

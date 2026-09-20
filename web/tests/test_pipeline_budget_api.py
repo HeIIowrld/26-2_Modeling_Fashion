@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
 from pathlib import Path
 from types import SimpleNamespace
 from PIL import Image
@@ -92,6 +93,39 @@ class FakeEngine:
         self.parser_backend = "fashn"
 
 class PipelineBudgetAPITests(unittest.TestCase):
+    def test_live_size_comparison_reaches_web_payload_before_final_selection(self):
+        import pipeline
+        from musinsa_live_search import MusinsaLiveSearch
+        from product_measurements import normalize_size_table
+
+        client = Mock()
+        def table(product_id):
+            return normalize_size_table(product_id, {"data": {"sizes": [{"name": "M", "items": [
+                {"name": "가슴단면", "value": 54 if product_id == "MS2" else 65},
+                {"name": "총장", "value": 70}]}]}})
+        client.get.side_effect = table
+        search = MusinsaLiveSearch(measurements=client)
+        self.addCleanup(search.close)
+        fake_engine = FakeEngine()
+        fake_engine.product_search = search
+        profile = pipeline.build_profile({"reference_measurements": {"top": {"chest_width_cm": 54, "length_cm": 70}}})
+        rows = [{"goodsNo": number, "goodsName": "상의", "finalPrice": 50000, "reviewCount": 100 if number == 1 else 1}
+                for number in (1, 2)]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            image = root / "person.jpg"
+            Image.new("RGB", (64, 128)).save(image)
+            with patch.object(pipeline, "get_engine", return_value=fake_engine), patch.object(
+                search, "_fetch", side_effect=lambda category, *a, **kw: rows if category == "top" else []
+            ):
+                result = pipeline.run_pipeline(image, profile, root / "out", lambda stage: None)
+        products = result.payload["shopping_results"]
+        self.assertEqual(products[0]["product_id"], "MS2")
+        self.assertEqual(products[0]["size_fit"]["closest_size"], "M")
+        self.assertEqual(products[0]["size_fit"]["differences"][0]["delta_cm"], 0)
+        self.assertNotIn("ranking_bonus", products[0]["size_fit"])
+        self.assertEqual(result.recommendations, [])
+
     def test_run_pipeline_uses_only_live_product_search(self):
         # Create a tiny image file
         tmpdir = Path(tempfile.mkdtemp())
