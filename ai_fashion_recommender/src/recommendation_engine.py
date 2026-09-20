@@ -182,7 +182,7 @@ class RecommendationEngine:
     # 검색 키워드 생성과 상품 이미지 필터 단계에서 실행되는 규칙이다.
     # 점수식에 직접 들어가지 않더라도 여기에 등록해야 미지원 규칙으로
     # 잘못 분류되지 않는다.
-    PIPELINE_RULE_IDS = {"R-COL-09", "R-COL-14", "R-COL-15", "R-DET-01"}
+    PIPELINE_RULE_IDS = {"R-COL-09", "R-DET-01"}
     EXECUTABLE_RULE_IDS = SCORING_RULE_IDS | SAFETY_RULE_IDS | GUIDANCE_RULE_IDS | PIPELINE_RULE_IDS
 
     # 실측 사이즈 15점은 아직 계산하지 않는다. 보유 옷 5점은 목록이 있을 때만 활성화한다.

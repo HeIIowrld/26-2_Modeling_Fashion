@@ -193,6 +193,30 @@ class TryOnBatchTests(unittest.TestCase):
             [["TOP1"], ["TOP2"]],
         )
 
+    def test_recommended_outfits_replace_the_cartesian_product(self):
+        products = {
+            "TOP1": shopping_product("TOP1", "top"),
+            "TOP2": shopping_product("TOP2", "top"),
+            "BOTTOM1": shopping_product("BOTTOM1", "bottom"),
+            "BOTTOM2": shopping_product("BOTTOM2", "bottom"),
+        }
+        self.job["shopping_tryon_products"] = products
+        self.job["result"]["shopping_results"] = [
+            {"product_id": product_id} for product_id in products
+        ]
+        self.job["result"]["shopping_outfits"] = [
+            {"product_ids": ["TOP1", "BOTTOM2"]},
+            {"product_ids": ["TOP2", "BOTTOM1"]},
+        ]
+
+        initialized = web_app._initialize_shopping_tryon_batch(self.job_id)
+
+        self.assertEqual(initialized["total"], 2)
+        self.assertEqual(
+            [item["product_ids"] for item in initialized["items"]],
+            [["TOP1", "BOTTOM2"], ["TOP2", "BOTTOM1"]],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -281,8 +281,11 @@ def _build_result(profile: dict, image_seed: int) -> dict:
                 "review_score": 94,
                 "source": "mock",
                 "search_keywords": ["여유핏", "코튼", "캐주얼"],
-                "recommendation_reason": f"{purpose}·{style} 조건과 여유핏·코튼 기준이 {body_shape} 실루엣에 잘 맞아 추천했어요.",
+                "recommendation_reason": "추천 규칙에서 도출된 여유핏이 상품명과 일치해 추천했어요.",
                 "recommendation_reason_source": "rules",
+                "fit_evidence": ["추천 규칙에서 도출된 '여유핏' 핏이 상품명과 일치합니다.", "현재 착장에서 확인된 코튼 소재 조건이 상품명과 일치합니다."],
+                "fit_evidence_labels": ["핏", "소재"],
+                "reason_rule_ids": ["R-SIL-01", "R-MAT-01"],
                 "tryon_available": True,
                 "tryon_reason": "",
             },
@@ -299,8 +302,11 @@ def _build_result(profile: dict, image_seed: int) -> dict:
                 "review_score": 96,
                 "source": "mock",
                 "search_keywords": ["세미와이드", "데님", "풀렝스"],
-                "recommendation_reason": f"{purpose}·{style} 조건과 세미와이드·풀렝스 기준이 {body_shape}의 균형을 보완해 추천했어요.",
+                "recommendation_reason": "추천 규칙에서 확인된 세미와이드 핏이 상품명과 일치해 추천했어요.",
                 "recommendation_reason_source": "rules",
+                "fit_evidence": ["추천 규칙에서 도출된 '세미와이드' 핏이 상품명과 일치합니다.", "현재 착장에서 확인된 데님 소재 조건이 상품명과 일치합니다."],
+                "fit_evidence_labels": ["핏", "소재"],
+                "reason_rule_ids": ["R-SIL-01", "R-MAT-01"],
                 "tryon_available": True,
                 "tryon_reason": "",
             },
@@ -340,15 +346,48 @@ def _build_result(profile: dict, image_seed: int) -> dict:
                       "현재 유지": []}.get(profile.get("change_scope"), ["top", "bottom"])
     templates = {item["category"]: item for item in result["shopping_results"]}
     templates["shoes"] = {
-        **templates["top"], "name": "신발 UI 확인용 샘플", "category": "shoes",
+        **templates["top"], "name": "스니커즈 UI 확인용 샘플", "category": "shoes",
         "search_keywords": ["스니커즈", style, purpose], "tryon_available": False,
         "tryon_reason": "신발은 가상 피팅 미지원",
-        "recommendation_reason": f"{purpose}·{style} 조건으로 찾는 신발 예시예요.",
+        "recommendation_reason": "추천 조건에서 도출된 스니커즈 종류가 상품명과 일치합니다.",
+        "fit_evidence": ["추천 조건에서 도출된 '스니커즈' 종류가 상품명과 일치합니다."],
+        "fit_evidence_labels": ["종류"],
+        "reason_rule_ids": ["R-CTX-01", "R-ACC-06"],
     }
     result["shopping_results"] = [
         {**templates[category], "product_id": f"MSMOCK{category.upper()}{index}",
          "name": f"{templates[category]['name']} {index}"}
         for category in ("top", "bottom", "shoes") if category in categories
+        for index in range(1, 4)
+    ]
+    products_by_id = {item["product_id"]: item for item in result["shopping_results"]}
+    current_labels = {
+        "top": ("현재 상의", result["outfit_summary"]["상의"]),
+        "bottom": ("현재 하의", result["outfit_summary"]["하의"]),
+        "shoes": ("현재 신발", result["outfit_summary"]["신발"]),
+    }
+    current_items = [
+        {"category": category, "label": current_labels[category][0],
+         "description": current_labels[category][1]}
+        for category in ("top", "bottom", "shoes") if category not in categories
+    ]
+    result["shopping_outfits"] = [
+        {
+            "combination_id": f"OUTFIT-{index}",
+            "product_ids": [f"MSMOCK{category.upper()}{index}" for category in categories],
+            "current_items": current_items,
+            "reason": "현재 유지할 아이템의 실루엣과 선택한 스타일 키워드를 함께 맞춘 코디입니다.",
+            "reason_source": "rules",
+            "evidence": [
+                "현재 착장에 남는 아이템과 교체 상품의 상·하의 조화를 확인했습니다.",
+                f"선택한 {style} 스타일 키워드가 상품명에 실제로 포함된 상품을 묶었습니다.",
+            ],
+            "evidence_labels": ["현재 착장", "스타일"],
+            "rule_ids": ["R-CMP-03", "R-CTX-01"],
+            "products": [
+                products_by_id[f"MSMOCK{category.upper()}{index}"] for category in categories
+            ],
+        }
         for index in range(1, 4)
     ]
     result["request"] = profile

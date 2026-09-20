@@ -39,6 +39,7 @@ from recommendation_explanations import (
     add_product_recommendation_reasons,
     build_outfit_summary_points,
 )
+from outfit_combination_recommender import recommend_outfit_combinations
 from feedback_store import FeedbackStore
 from outfit_analyzer import COLOR_PALETTE, OutfitAnalyzer, _dominant_palette
 from pose_analyzer import PoseAnalyzer
@@ -348,11 +349,6 @@ def build_profile(payload: dict) -> UserProfile:
         activity_level=payload.get("activity_level") or "보통",
         preferred_colors=string_list("preferred_colors"),
         avoided_colors=string_list("avoided_colors"),
-        personal_tone=(
-            str(payload.get("personal_tone") or "")
-            if str(payload.get("personal_tone") or "") in {"웜톤", "쿨톤"}
-            else ""
-        ),
         preferred_materials=preferred_materials,
         avoided_materials=string_list("avoided_materials"),
         excluded_item_types=string_list("excluded_item_types"),
@@ -557,15 +553,33 @@ def run_pipeline(
                 shopping_results = product_search.search(
                     target_keywords,
                     profile,
-                    limit=3,
+                    limit=6,
                 )
             except Exception as exc:  # 외부 검색 장애가 본 분석까지 실패시키지 않게 격리한다.
                 print(f"[MUSINSA] live search unavailable: {exc}")
+        shopping_outfits = recommend_outfit_combinations(
+            shopping_results,
+            profile,
+            pose_result,
+            outfit_result,
+            target_keywords,
+            engine.recommender,
+            limit=3,
+        )
+        if shopping_outfits:
+            selected_ids = list(dict.fromkeys(
+                product_id
+                for combination in shopping_outfits
+                for product_id in combination.product_ids
+            ))
+            by_id = {product.product_id: product for product in shopping_results}
+            shopping_results = [by_id[product_id] for product_id in selected_ids if product_id in by_id]
         add_product_recommendation_reasons(
             shopping_results,
             profile,
             pose_result,
             target_keywords,
+            use_llm=False,
         )
         supported_categories = set(getattr(engine.tryon, "supported_categories", TRYON_PRODUCT_CATEGORIES))
         shoe_reason = ""
@@ -583,6 +597,18 @@ def run_pipeline(
             supported_categories=supported_categories,
             shoe_unavailable_reason=shoe_reason,
         )
+        shopping_payload_by_id = {
+            item["product_id"]: item for item in shopping_payloads
+        }
+        shopping_outfit_payloads = []
+        for combination in shopping_outfits:
+            combination_payload = combination.public_dict()
+            combination_payload["products"] = [
+                shopping_payload_by_id[product_id]
+                for product_id in combination.product_ids
+                if product_id in shopping_payload_by_id
+            ]
+            shopping_outfit_payloads.append(combination_payload)
 
         on_stage("preview")
 
@@ -603,6 +629,7 @@ def run_pipeline(
             ),
         },
         "shopping_results": shopping_payloads,
+        "shopping_outfits": shopping_outfit_payloads,
         "rules": {
             "implemented": len(engine.recommender.active_rule_ids),
             "documented": len(engine.recommender.documented_rule_ids),
@@ -821,7 +848,6 @@ def _request_summary(profile: UserProfile) -> dict:
         "activity_level": profile.activity_level,
         "preferred_colors": list(profile.preferred_colors),
         "avoided_colors": list(profile.avoided_colors),
-        "personal_tone": profile.personal_tone,
         "preferred_materials": list(profile.preferred_materials),
     }
 

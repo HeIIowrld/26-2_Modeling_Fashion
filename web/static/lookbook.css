@@ -702,6 +702,42 @@ select {
 .shopping-grid {
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px;
 }
+.shopping-grid.has-outfit-combinations { display: grid; grid-template-columns: 1fr; gap: 24px; }
+.outfit-combination-card {
+  min-width: 0; padding: 22px; border: 1px solid var(--line);
+  border-radius: var(--r-lg); background: var(--panel-2);
+}
+.outfit-combination-header {
+  display: grid; grid-template-columns: minmax(150px, .45fr) minmax(0, 1fr);
+  align-items: end; gap: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--line);
+}
+.outfit-combination-header h3 { margin: 4px 0 0; font-family: var(--disp); font-size: 1.35rem; }
+.outfit-combination-header p { margin: 0; color: var(--ink-soft); font-size: .84rem; line-height: 1.6; }
+.outfit-combination-number {
+  color: var(--signal-ink); font-family: var(--disp); font-size: .68rem;
+  font-weight: 800; letter-spacing: .14em;
+}
+.outfit-current-items { display: flex; flex-wrap: wrap; gap: 8px; margin: 15px 0; }
+.outfit-current-item {
+  display: grid; gap: 3px; max-width: 100%; padding: 9px 12px;
+  border: 1px dashed var(--line); border-radius: 12px; background: var(--bg);
+}
+.outfit-current-item span { color: var(--signal-ink); font-size: .67rem; font-weight: 900; }
+.outfit-current-item strong {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--ink-soft); font-size: .74rem;
+}
+.outfit-combination-evidence { margin: 0 0 17px; }
+.outfit-combination-evidence summary { cursor: pointer; font-size: .79rem; font-weight: 900; }
+.outfit-combination-evidence ul {
+  display: grid; gap: 7px; margin: 10px 0 0; padding: 0; list-style: none;
+  color: var(--ink-soft); font-size: .75rem; line-height: 1.5;
+}
+.outfit-combination-evidence li { display: flex; gap: 8px; }
+.outfit-combination-evidence b { flex: 0 0 auto; color: var(--ink); }
+.outfit-combination-products {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;
+}
 .change-categories { display: flex; flex-wrap: wrap; gap: 12px; }
 .change-categories label {
   display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px;
@@ -1081,6 +1117,8 @@ select {
   .hero-copy h1 { font-size: clamp(1.75rem, 8vw, 2.1rem); }
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
   .shopping-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .shopping-grid.has-outfit-combinations { grid-template-columns: 1fr; }
+  .outfit-combination-products { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .shopping-head { align-items: stretch; flex-direction: column; gap: 8px; }
   .current-score-content { grid-template-columns: 1fr; }
   .score-bar { grid-template-columns: 96px 1fr 30px; }
@@ -1112,6 +1150,9 @@ select {
   .product { grid-template-columns: auto 1fr; }
   .product-price { grid-column: 2; text-align: right; }
   .shopping-grid { grid-template-columns: 1fr; }
+  .outfit-combination-card { padding: 16px; }
+  .outfit-combination-header { grid-template-columns: 1fr; gap: 10px; }
+  .outfit-combination-products { grid-template-columns: 1fr; }
   .current-score-panel { padding: 18px 14px; }
   .current-score-head { align-items: flex-start; }
   .current-score-total strong { font-size: 2.2rem; }

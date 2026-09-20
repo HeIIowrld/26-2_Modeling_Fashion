@@ -17,6 +17,7 @@ const state = {
   retentionMinutes: 30,
   profile: null,
   shoppingProducts: [],
+  shoppingOutfits: [],
   shoppingSelection: {},
   shoppingEvidenceOpen: new Set(),
   shoppingTryonResults: [],
@@ -214,15 +215,6 @@ $("to-step-2").addEventListener("click", () => { unlock(2); goto(2); });
 $("back-to-1").addEventListener("click", () => goto(1));
 
 /* ── 2단계: 조건 ──────────────────────────────────────── */
-document.querySelectorAll('input[name="personal_tone"]').forEach((input) => {
-  input.addEventListener("change", () => {
-    if (!input.checked) return;
-    document.querySelectorAll('input[name="personal_tone"]').forEach((other) => {
-      if (other !== input) other.checked = false;
-    });
-  });
-});
-
 function fillSelect(id, values) {
   // 문자열 목록과 {value, label} 목록을 모두 받는다.
   const select = $(id);
@@ -346,7 +338,6 @@ function collectProfile() {
     activity_level: data.get("activity_level"),
     height_cm: numeric("height_cm"),
     weight_kg: numeric("weight_kg"),
-    personal_tone: data.get("personal_tone") || "",
     preferred_colors: [...state.preferredColors],
     avoided_colors: [...state.avoidedColors],
     preferred_materials: [...state.preferredMaterials],
@@ -475,7 +466,6 @@ function renderRequestSummary(request) {
     ["성별", values.gender],
     ["목적", values.purpose],
     ["스타일", values.desired_style],
-    ["피부톤", values.personal_tone],
     ["변경", values.change_categories ? values.change_categories.map((category) => ({top: "상의", bottom: "하의", shoes: "신발"})[category]).join(" · ") : values.change_scope],
     ["예산", values.min_budget != null && values.max_budget != null
       ? `${Number(values.min_budget).toLocaleString("ko-KR")}~${Number(values.max_budget).toLocaleString("ko-KR")}원`
@@ -495,6 +485,7 @@ function renderRequestSummary(request) {
 function renderResult(result) {
   stopShoppingTryonBatchPolling();
   state.shoppingProducts = [];
+  state.shoppingOutfits = [];
   state.shoppingSelection = {};
   state.shoppingTryonResults = [];
   state.shoppingTryonSelected = 0;
@@ -509,12 +500,12 @@ function renderResult(result) {
     : "무신사 상품은 실시간 검색 결과로 가격과 재고가 달라질 수 있습니다.";
 
   resetPrivacyBar();
-  $("result-lede").textContent = "사진과 입력 조건에서 만든 키워드로 무신사 상품을 실시간 검색했습니다.";
+  $("result-lede").textContent = "현재 유지할 옷과 교체할 상품의 조화를 계산해 세 가지 코디로 구성했습니다.";
 
   renderCurrentOutfitEvaluation(result.current_outfit_evaluation);
   renderCurrentOutfit(result);
   renderBodyStats(result.pose);
-  renderShoppingProducts(result.shopping_results || []);
+  renderShoppingProducts(result.shopping_results || [], result.shopping_outfits || []);
   if (state.tryon.available && (result.shopping_results || []).some((product) => product.tryon_available)) {
     startShoppingTryonBatch();
   }
@@ -523,7 +514,79 @@ function renderResult(result) {
   showView("recos");
 }
 
-function renderShoppingProducts(products) {
+function renderShoppingProductCard(product) {
+  const reviews = product.review_count
+    ? `리뷰 ${Number(product.review_count).toLocaleString("ko-KR")}`
+    : "";
+  const rating = product.review_score
+    ? `${(Number(product.review_score) / 20).toFixed(1)} / 5`
+    : "";
+  const selected = state.shoppingSelection[product.category] === product.product_id;
+  const tryonReady = Boolean(product.tryon_available && state.tryon.available);
+  const tryonReason = product.tryon_reason || state.tryon.reason || "상품 이미지를 준비하지 못했습니다.";
+  return `<article class="shopping-card${selected ? " is-selected" : ""}">
+    <a class="shopping-link" href="${escapeHtml(product.url)}" target="_blank"
+       rel="noopener noreferrer sponsored" aria-label="무신사에서 ${escapeHtml(product.name)} 보기">
+      <div class="shopping-image-wrap">
+        <img class="shopping-image" src="${escapeHtml(product.image_url)}"
+             alt="${escapeHtml(product.name)} 상품 사진" loading="lazy" referrerpolicy="no-referrer" />
+        <span class="shopping-category">${({top: "상의", bottom: "하의", shoes: "신발"})[product.category] || "미지원"}</span>
+      </div>
+      <div class="shopping-copy">
+        <span class="shopping-brand">${escapeHtml(product.brand || "MUSINSA")}</span>
+        <h3>${escapeHtml(product.name)}</h3>
+        <div class="shopping-meta">${escapeHtml([rating, reviews, product.gender].filter(Boolean).join(" · "))}</div>
+        ${(product.search_keywords || []).length ? `
+          <div class="shopping-keywords" aria-label="대표 검색 키워드">
+            ${(product.search_keywords || []).slice(0, 3).map((keyword) =>
+              `<span class="shopping-keyword">${escapeHtml(keyword)}</span>`
+            ).join("")}
+          </div>` : ""}
+        ${product.recommendation_reason ? `
+          <p class="shopping-reason"><b>상품 선택 근거</b>${escapeHtml(product.recommendation_reason)}</p>` : ""}
+        <div class="shopping-bottom">
+          <strong>${Number(product.price).toLocaleString("ko-KR")}원</strong>
+          <span>무신사에서 보기 ↗</span>
+        </div>
+      </div>
+    </a>
+    ${renderShoppingEvidence(product)}
+    <div class="shopping-tryon-choice">
+      <button type="button" data-shopping-select="${escapeHtml(product.product_id)}"
+        aria-pressed="${selected}" ${tryonReady ? "" : "disabled"}
+        title="${escapeHtml(tryonReady ? "이 상품을 실제 합성 조합에 넣습니다." : tryonReason)}">
+        ${selected ? "✓ 입어보기 선택됨" : tryonReady ? "입어보기 선택" : "합성 불가"}
+      </button>
+      <small>${escapeHtml(tryonReady ? "상품 이미지 파싱·VTON 가능" : tryonReason)}</small>
+    </div>
+  </article>`;
+}
+
+function renderOutfitCombination(outfit, index) {
+  const currentItems = (outfit.current_items || []).map((item) => `
+    <div class="outfit-current-item">
+      <span>${escapeHtml(item.label || "현재 착장")}</span>
+      <strong>${escapeHtml(item.description || "사진 속 아이템")}</strong>
+    </div>`).join("");
+  const evidence = (outfit.evidence || []).slice(0, 3);
+  const labels = outfit.evidence_labels || [];
+  return `<section class="outfit-combination-card">
+    <header class="outfit-combination-header">
+      <div><span class="outfit-combination-number">LOOK ${index + 1}</span><h3>추천 코디 ${index + 1}</h3></div>
+      <p>${escapeHtml(outfit.reason || "현재 착장과 선택 조건을 함께 고려한 조합입니다.")}</p>
+    </header>
+    ${currentItems ? `<div class="outfit-current-items" aria-label="그대로 입는 현재 아이템">${currentItems}</div>` : ""}
+    ${evidence.length ? `<details class="outfit-combination-evidence">
+      <summary>왜 이 조합인가요? <span aria-hidden="true">▼</span></summary>
+      <ul>${evidence.map((text, evidenceIndex) => `<li>${labels[evidenceIndex] ? `<b>${escapeHtml(labels[evidenceIndex])}</b>` : ""}<span>${escapeHtml(text)}</span></li>`).join("")}</ul>
+    </details>` : ""}
+    <div class="outfit-combination-products">
+      ${(outfit.products || []).map(renderShoppingProductCard).join("")}
+    </div>
+  </section>`;
+}
+
+function renderShoppingProducts(products, outfits = []) {
   const section = $("shopping-section");
   const grid = $("shopping-results");
   const panel = $("shopping-tryon-panel");
@@ -535,61 +598,20 @@ function renderShoppingProducts(products) {
     return;
   }
   state.shoppingProducts = products;
-  grid.innerHTML = state.shoppingProducts.map((product, index) => {
-    const reviews = product.review_count
-      ? `리뷰 ${Number(product.review_count).toLocaleString("ko-KR")}`
-      : "";
-    const rating = product.review_score
-      ? `${(Number(product.review_score) / 20).toFixed(1)} / 5`
-      : "";
-    const selected = state.shoppingSelection[product.category] === product.product_id;
-    const tryonReady = Boolean(product.tryon_available && state.tryon.available);
-    const tryonReason = product.tryon_reason || state.tryon.reason || "상품 이미지를 준비하지 못했습니다.";
-    return `
-      ${index === 0 || state.shoppingProducts[index - 1].category !== product.category
-        ? `<h3 class="shopping-category-heading">${({top: "상의", bottom: "하의", shoes: "신발"})[product.category] || "상품"} 추천 · ${state.shoppingProducts.filter((item) => item.category === product.category).length}개</h3>` : ""}
-      <article class="shopping-card${selected ? " is-selected" : ""}">
-        <a class="shopping-link" href="${escapeHtml(product.url)}" target="_blank"
-           rel="noopener noreferrer sponsored" aria-label="무신사에서 ${escapeHtml(product.name)} 보기">
-          <div class="shopping-image-wrap">
-            <img class="shopping-image" src="${escapeHtml(product.image_url)}"
-                 alt="${escapeHtml(product.name)} 상품 사진" loading="lazy" referrerpolicy="no-referrer" />
-            <span class="shopping-category">${({top: "상의", bottom: "하의", shoes: "신발"})[product.category] || "미지원"}</span>
-          </div>
-          <div class="shopping-copy">
-            <span class="shopping-brand">${escapeHtml(product.brand || "MUSINSA")}</span>
-            <h3>${escapeHtml(product.name)}</h3>
-            <div class="shopping-meta">${escapeHtml([rating, reviews, product.gender].filter(Boolean).join(" · "))}</div>
-            ${(product.search_keywords || []).length ? `
-              <div class="shopping-keywords" aria-label="대표 검색 키워드">
-                ${(product.search_keywords || []).slice(0, 3).map((keyword) =>
-                  `<span class="shopping-keyword">${escapeHtml(keyword)}</span>`
-                ).join("")}
-              </div>` : ""}
-            ${product.recommendation_reason ? `
-              <p class="shopping-reason"><b>추천 이유</b>${escapeHtml(product.recommendation_reason)}</p>` : ""}
-            <div class="shopping-bottom">
-              <strong>${Number(product.price).toLocaleString("ko-KR")}원</strong>
-              <span>무신사에서 보기 ↗</span>
-            </div>
-          </div>
-        </a>
-        ${renderShoppingEvidence(product)}
-        <div class="shopping-tryon-choice">
-          <button type="button" data-shopping-select="${escapeHtml(product.product_id)}"
-            aria-pressed="${selected}" ${tryonReady ? "" : "disabled"}
-            title="${escapeHtml(tryonReady ? "이 상품을 실제 합성 조합에 넣습니다." : tryonReason)}">
-            ${selected ? "✓ 입어보기 선택됨" : tryonReady ? "입어보기 선택" : "합성 불가"}
-          </button>
-          <small>${escapeHtml(tryonReady ? "상품 이미지 파싱·VTON 가능" : tryonReason)}</small>
-        </div>
-      </article>`;
-  }).join("");
+  state.shoppingOutfits = outfits;
+  grid.classList.toggle("has-outfit-combinations", Boolean(outfits.length));
+  grid.innerHTML = outfits.length
+    ? outfits.map(renderOutfitCombination).join("")
+    : state.shoppingProducts.map((product, index) => `
+        ${index === 0 || state.shoppingProducts[index - 1].category !== product.category
+          ? `<h3 class="shopping-category-heading">${({top: "상의", bottom: "하의", shoes: "신발"})[product.category] || "상품"} 추천 · ${state.shoppingProducts.filter((item) => item.category === product.category).length}개</h3>` : ""}
+        ${renderShoppingProductCard(product)}`).join("");
   const requested = state.result?.request?.change_categories || [];
-  const shortages = requested.filter((category) => products.filter((product) => product.category === category).length < 3);
+  const shortages = outfits.length
+    ? (outfits.length < 3 ? requested : [])
+    : requested.filter((category) => products.filter((product) => product.category === category).length < 3);
   if (shortages.length) {
-    grid.insertAdjacentHTML("beforeend", `<p class="shopping-category-heading">${shortages.map((category) =>
-      ({top: "상의", bottom: "하의", shoes: "신발"})[category]).filter(Boolean).join(" · ")}: 조건에 맞는 상품이 3개보다 적거나 검색이 원활하지 않습니다. 예산·조건을 조정해 다시 검색해보세요.</p>`);
+    grid.insertAdjacentHTML("beforeend", `<p class="shopping-category-heading">조건에 맞는 코디 조합이 3개보다 적습니다. 예산·조건을 조정해 다시 검색해보세요.</p>`);
   }
   grid.querySelectorAll("[data-shopping-select]").forEach((button) => {
     button.addEventListener("click", () => toggleShoppingSelection(button.dataset.shoppingSelect));
@@ -626,7 +648,7 @@ function toggleShoppingSelection(productId) {
   } else {
     state.shoppingSelection[product.category] = productId;
   }
-  renderShoppingProducts(state.shoppingProducts);
+  renderShoppingProducts(state.shoppingProducts, state.shoppingOutfits);
 }
 
 function selectedShoppingProducts() {
@@ -645,7 +667,7 @@ function renderShoppingTryonPanel() {
   const batch = state.shoppingTryonBatch;
   const selectedCopy = selected.length
     ? selected.map((product) => `<span><b>${({top: "상의", bottom: "하의", shoes: "신발"})[product.category]}</b> ${escapeHtml(product.name)}</span>`).join("")
-    : "<span>아래 전체 조합은 자동 생성됩니다. 특정 조합을 먼저 보려면 상품을 선택하세요.</span>";
+    : "<span>위에서 추천한 세 코디는 자동 생성됩니다. 다른 조합을 보려면 상품을 선택하세요.</span>";
   const history = state.shoppingTryonResults.length > 1
     ? `<div class="shopping-tryon-history" aria-label="무신사 상품 합성 결과 전환">
         ${state.shoppingTryonResults.map((result, index) => `
@@ -666,7 +688,7 @@ function renderShoppingTryonPanel() {
   const batchProgress = batch
     ? `<div class="shopping-batch" data-status="${escapeHtml(batch.status)}">
          <div class="shopping-batch-copy">
-           <strong>${escapeHtml(batchLabels[batch.status] || "무신사 전체 조합")}</strong>
+           <strong>${escapeHtml(batchLabels[batch.status] || "추천 코디 조합")}</strong>
            <span>${Number(batch.ready || 0)} / ${Number(batch.total || 0)}장 준비</span>
          </div>
          ${batch.total ? `<div class="shopping-batch-progress" aria-label="무신사 조합 렌더링 진행률">
@@ -711,9 +733,9 @@ function renderShoppingTryonPanel() {
   panel.innerHTML = `
     <div class="shopping-tryon-toolbar">
       <div>
-        <strong>검색된 무신사 상품의 모든 조합 입어보기</strong>
+        <strong>추천 코디 3가지 입어보기</strong>
         <div class="shopping-selection">${selectedCopy}</div>
-        <p>입어보기 가능한 상품을 카테고리별로 하나씩 조합해 생성합니다. 신발은 양쪽 발이 보이고 신발 합성 모델이 준비된 경우에 포함됩니다.</p>
+        <p>Fashion Rules로 선택한 추천 코디를 순서대로 생성합니다. 신발은 양쪽 발이 보이고 신발 합성 모델이 준비된 경우에 포함됩니다.</p>
       </div>
       <button class="btn btn-primary" id="shopping-tryon-generate" type="button"
         ${selected.length ? "" : "disabled"}>선택 조합 렌더링</button>
@@ -1084,6 +1106,7 @@ $("delete-now").addEventListener("click", async () => {
     $("wardrobe-list").replaceChildren();
     state.jobId = null;
     state.shoppingProducts = [];
+    state.shoppingOutfits = [];
     state.shoppingSelection = {};
     state.shoppingTryonResults = [];
     state.shoppingTryonBatch = null;
@@ -1103,6 +1126,7 @@ $("restart").addEventListener("click", () => {
   state.result = null;
   state.jobId = null;
   state.shoppingProducts = [];
+  state.shoppingOutfits = [];
   state.shoppingSelection = {};
   state.shoppingTryonResults = [];
   state.shoppingTryonBatch = null;
