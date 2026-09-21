@@ -12,7 +12,13 @@ from quality_checker import QualityChecker
 
 def check(point=(0.5, 0.9, 0.99)):
     names = ("left_ankle", "right_ankle", "left_foot", "right_foot")
-    landmarks = {name: (0.5, 0.9, 0.99) for name in names}
+    landmarks = {
+        "left_shoulder": (0.35, 0.25, 0.99),
+        "right_shoulder": (0.65, 0.25, 0.99),
+        "left_hip": (0.42, 0.55, 0.99),
+        "right_hip": (0.58, 0.55, 0.99),
+        **{name: (0.5, 0.9, 0.99) for name in names},
+    }
     landmarks["left_foot"] = point
     pose = SimpleNamespace(valid=True, warnings=[], full_body_score=0.9, landmarks=landmarks)
     image = Image.fromarray(np.random.default_rng(1).integers(0, 256, (400, 320, 3), dtype=np.uint8))

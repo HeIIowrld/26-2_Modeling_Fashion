@@ -62,6 +62,30 @@ class UIContractTests(unittest.TestCase):
         self.assertIn("예상 착장샷은 실제 핏을 보장하지", html)
         self.assertIn("예상 착장샷은 실제 핏을 보장하지", javascript)
 
+    def test_full_body_upload_guide_is_rendered(self):
+        html = (STATIC / "index.html").read_text(encoding="utf-8")
+        guide = STATIC / "assets" / "full-body-guide.png"
+        self.assertTrue(guide.is_file())
+        self.assertIn('src="assets/full-body-guide.png"', html)
+        self.assertIn('alt="정면을 향해 팔을 자연스럽게 내린 전신사진 촬영 예시"', html)
+        for text in (
+            "정면 전신사진을 올려주세요",
+            "머리부터 발끝까지 모두 나오게 촬영",
+            "몸과 얼굴은 정면을 향하기",
+            "팔은 몸 옆에 자연스럽게 내리기",
+            "몸을 가리는 물건 없이 한 명만 촬영",
+        ):
+            self.assertIn(text, html)
+
+    def test_photo_preflight_blocks_step_two_until_server_validation(self):
+        javascript = (STATIC / "app.js").read_text(encoding="utf-8")
+        self.assertIn('/api/validate-photo', javascript)
+        self.assertIn('사진을 확인하고 있어요', javascript)
+        self.assertIn('note.dataset.tone = "bad"', javascript)
+        self.assertIn('unlock(2);', javascript)
+        self.assertIn('goto(2);', javascript)
+        self.assertIn('state.photoValidation', javascript)
+
     def test_musinsa_products_can_be_selected_for_real_tryon(self):
         html = (STATIC / "index.html").read_text(encoding="utf-8")
         javascript = (STATIC / "app.js").read_text(encoding="utf-8")
