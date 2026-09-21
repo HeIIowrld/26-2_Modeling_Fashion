@@ -262,11 +262,10 @@ async def _store_uploaded_image(upload: UploadFile, target: Path) -> None:
         raise HTTPException(status_code=400, detail="이미지 파일이 비어 있습니다.")
     if len(raw) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail="이미지 용량은 12MB 이하만 지원합니다.")
+    # 저장은 _save_upload 한 곳에서만 한다. 여기서 따로 열면 HEIC 를 거절하고 EXIF 회전을
+    # 버려, 조건 입력 전 사진 검사에서 아이폰 사진이 막히거나 누운 채로 검사된다.
     try:
-        with Image.open(BytesIO(raw)) as opened:
-            if opened.format not in ALLOWED_FORMATS:
-                raise HTTPException(status_code=400, detail="JPG, PNG, WEBP 이미지만 지원합니다.")
-            opened.convert("RGB").save(target, "JPEG", quality=95)
+        _save_upload(raw, target, "전신 사진")
     except UnidentifiedImageError as exc:
         raise HTTPException(status_code=400, detail="이미지 파일을 해석할 수 없습니다.") from exc
 

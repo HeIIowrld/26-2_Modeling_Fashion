@@ -63,11 +63,25 @@ class PhotoUploadFormatTests(unittest.TestCase):
     # HEIC 의 회전은 pillow-heif 가 디코딩 단계에서 적용하고 EXIF 태그를 1 로 정리한다.
     # 그래서 합성 파일로는 재현되지 않는다. 실제 기기 사진으로 한 번 확인해야 한다.
 
-    def test_all_three_upload_paths_share_one_saver(self):
-        # 경로마다 따로 열면 회전 보정을 빠뜨리기 쉽다. 한 곳으로 모아 둔다.
+    def test_no_upload_path_bypasses_the_shared_saver(self):
+        # 경로마다 따로 열면 HEIC 허용과 회전 보정을 빠뜨린다. 2026-09-21 에 조건 입력 전
+        # 사진 검사(/api/validate-photo)가 따로 저장해 아이폰 사진을 첫 단계에서 막았다.
         source = Path(web_app.__file__).read_text(encoding="utf-8")
-        self.assertEqual(source.count("_save_upload("), 4)  # 정의 1 + 호출 3
         self.assertNotIn('opened.convert("RGB").save(', source)
+        self.assertGreaterEqual(source.count("_save_upload("), 5)  # 정의 1 + 전신·체형·보유 옷·사진 검사
+
+    def test_photo_validation_stores_rotated_photo_upright(self):
+        import asyncio
+
+        class _Upload:
+            async def read(self):
+                return _portrait_stored_sideways()
+
+        with TemporaryDirectory() as raw:
+            target = Path(raw) / "photo.jpg"
+            asyncio.run(web_app._store_uploaded_image(_Upload(), target))
+            with Image.open(target) as saved:
+                self.assertEqual((saved.width, saved.height), (60, 120))
 
 
 if __name__ == "__main__":
