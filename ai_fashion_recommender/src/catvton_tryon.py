@@ -565,6 +565,34 @@ def evaluate_garment_reference(
     }
 
 
+# 정상 상품 사진은 평면컷이든 모델 착용컷이든 옷 둘레에 여백이 있다. 옷이 사진의 두 변
+# 이상에 닿아 있으면 옷 일부만 확대한 연출컷(뒷모습 클로즈업 등)이거나, 여러 색을 쌓아
+# 놓은 묶음 상품 사진이다. 이런 사진을 조건으로 주면 모델이 앞판·소매·기장을 지어내
+# 상품과 전혀 다른 옷을 그린다(2026-09-21, 무신사 96개 중 6개. 해상도를 4~9배 올려도
+# 충실도는 그대로였다 — 원인은 해상도가 아니라 사진 구성이다).
+EDGE_TOUCH_FRACTION = 0.15
+MAX_EDGE_CONTACT = 1
+_CATEGORY_LABEL = {"top": "상의", "bottom": "하의"}
+
+
+def reference_edge_contact(cleaned: Image.Image) -> int:
+    """흰 배경 위에 옷만 남긴 레퍼런스에서, 옷이 닿은 사진 테두리 수(0~4)."""
+    rgb = np.asarray(cleaned.convert("RGB"))
+    garment = (rgb < 235).any(axis=2)
+    edges = (garment[0], garment[-1], garment[:, 0], garment[:, -1])
+    return sum(float(edge.mean()) > EDGE_TOUCH_FRACTION for edge in edges)
+
+
+def _reject_cropped_reference(cleaned: Image.Image, category: str) -> None:
+    contact = reference_edge_contact(cleaned)
+    if contact > MAX_EDGE_CONTACT:
+        label = _CATEGORY_LABEL.get(category, "상품")
+        raise TryOnNotReady(
+            f"{label} 상품의 대표 사진이 옷 전체를 보여 주지 않습니다(일부 확대·여러 색 묶음 사진). "
+            "상품과 다른 옷이 그려질 수 있어 합성하지 않았습니다."
+        )
+
+
 def _border_color(image: Image.Image) -> tuple[int, int, int]:
     """가장자리 픽셀의 중앙값. 레터박스 여백을 배경과 비슷하게 채운다."""
     rgb = np.asarray(image.convert("RGB"))
@@ -849,7 +877,9 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             if cached_report:
                 self.reference_reports[garment_path.name] = cached_report
                 self._warn_low_coverage(garment_path.name, cached_report)
-            return Image.open(cache_path).convert("RGB")
+            cached = Image.open(cache_path).convert("RGB")
+            _reject_cropped_reference(cached, category)
+            return cached
         parser = self._get_garment_parser()
         if parser is None or parser.backend != "fashn-human-parser":
             return original
@@ -858,7 +888,12 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             segmentation = parsed["segmentation"]
             mask = np.isin(segmentation, target_labels)
             if mask.sum() < 0.02 * mask.size:
-                return original
+                # 전신 모델컷에서 옷이 작게 나온 경우다. 원본을 그대로 넘기면 사람·다른 옷·
+                # 배경이 모두 조건에 들어가 상품과 다른 옷이 그려진다.
+                raise TryOnNotReady(
+                    f"{_CATEGORY_LABEL.get(category, '상품')} 상품의 대표 사진에서 옷이 너무 작게 나와 "
+                    "옷 모양을 떼어낼 수 없습니다. 정확히 입혀볼 수 없어 합성하지 않았습니다."
+                )
             mask = _largest_component(mask)
             mask = _refine_garment_mask(mask)
             # 닫힘 연산이 옷 위를 가로지르는 가방끈·머리카락·팔 픽셀을 다시 포함시켜
@@ -866,7 +901,12 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             occluders = np.isin(segmentation, (1, 2, 8, 9, 11, 12, 13, 17))
             mask = np.logical_and(mask, ~occluders)
             if mask.sum() < 0.02 * mask.size:
-                return original
+                # 전신 모델컷에서 옷이 작게 나온 경우다. 원본을 그대로 넘기면 사람·다른 옷·
+                # 배경이 모두 조건에 들어가 상품과 다른 옷이 그려진다.
+                raise TryOnNotReady(
+                    f"{_CATEGORY_LABEL.get(category, '상품')} 상품의 대표 사진에서 옷이 너무 작게 나와 "
+                    "옷 모양을 떼어낼 수 없습니다. 정확히 입혀볼 수 없어 합성하지 않았습니다."
+                )
             rgb = np.array(original)
             report = evaluate_garment_reference(
                 rgb, mask, target_pixels=self.width * self.height
@@ -874,6 +914,10 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             self.reference_reports[garment_path.name] = report
             self._warn_low_coverage(garment_path.name, report)
             cleaned = _paste_on_white(rgb, mask)
+            report["edge_contact"] = reference_edge_contact(cleaned)
+            _reject_cropped_reference(cleaned, category)
+        except TryOnNotReady:
+            raise
         except Exception as exc:  # 정제 실패 시 원본으로 안전하게 대체한다.
             print(f"상품 이미지 정제 실패({garment_path.name}), 원본을 사용합니다: {exc}")
             return original
@@ -901,12 +945,15 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             print(f"레퍼런스 품질 캐시 저장 실패: {exc}")
 
     def _warn_low_coverage(self, name: str, report: dict[str, float]) -> None:
+        # 근거는 흰 셔츠가 시스루로 그려진 사례(MS6797005) 하나다. "다른 옷이 그려진다"는
+        # 주장은 2026-09-21 A/B 에서 반박됐다 — 같은 36쌍에서 해상도를 4~9배 올려
+        # coverage 미달이 33→0 이 됐는데도 상품 유사도는 0.775→0.778 로 그대로였다.
+        # 다른 옷이 그려지는 주원인은 사진 구성이고, 그건 _reject_cropped_reference 가 막는다.
         if report.get("coverage", 1.0) < self.min_reference_coverage:
             self._add_warning(
                 f"레퍼런스 해상도 낮음({name}): coverage={report['coverage']:.2f} < "
-                f"{self.min_reference_coverage}. 조건 입력으로 확대되므로 텍스처가 뭉개지고 "
-                "레퍼런스와 다른 옷이 그려질 수 있습니다(참고 지표. 시스루 예측기로는 "
-                "검증되지 않았습니다)."
+                f"{self.min_reference_coverage}. 조건 입력으로 확대되므로 옷감 질감이 흐려지거나 "
+                "얇은 옷이 비쳐 보이게 그려질 수 있습니다(참고 지표)."
             )
 
     def _add_warning(self, message: str) -> None:
