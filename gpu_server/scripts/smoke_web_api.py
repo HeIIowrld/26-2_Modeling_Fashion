@@ -3,12 +3,42 @@
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import mimetypes
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+
+TRYON_CATEGORIES = ("top", "bottom", "shoes")
+
+
+def expected_shopping_combinations(result: dict) -> list[list[str]]:
+    """앱(`_initialize_shopping_tryon_batch`)과 같은 규칙으로 무신사 배치 조합을 만든다.
+
+    추천 코디(`shopping_outfits`)가 있으면 코디 순서대로, 합성 준비가 된 상품
+    (`tryon_available`)만 남겨 중복 없이 쓴다. 룩 탭 이후 결과는 코디마다 한 조합이다.
+    코디가 없는 구형 결과만 상의·하의·신발 곱집합으로 처리한다.
+    """
+    available: dict[str, dict] = {}
+    for product in result.get("shopping_results") or []:
+        if product.get("tryon_available") and product.get("category") in TRYON_CATEGORIES:
+            available.setdefault(str(product["product_id"]), product)
+    combinations: list[list[str]] = []
+    seen: set[tuple[str, ...]] = set()
+    for outfit in result.get("shopping_outfits") or []:
+        ids = [str(pid) for pid in outfit.get("product_ids") or [] if str(pid) in available]
+        if ids and tuple(ids) not in seen:
+            seen.add(tuple(ids))
+            combinations.append(ids)
+    if combinations:
+        return combinations
+    groups = [[pid for pid, product in available.items() if product["category"] == category]
+              for category in TRYON_CATEGORIES]
+    groups = [group for group in groups if group]
+    return [list(ids) for ids in itertools.product(*groups)] if groups else []
 
 
 def _json_request(url: str, *, method: str = "GET", data: bytes | None = None, headers=None) -> dict:
@@ -134,22 +164,16 @@ def main() -> int:
         if not image:
             raise RuntimeError(f"결과 이미지가 비어 있습니다: {name}")
 
-    available_by_category = {"top": [], "bottom": []}
     selected_by_category = {}
     for product in shopping_results:
         if "tryon_available" not in product or "tryon_reason" not in product:
             raise RuntimeError("무신사 상품의 합성 가능 여부가 응답에 없습니다.")
         if product.get("tryon_available") and product.get("category") in {"top", "bottom"}:
-            available_by_category[product["category"]].append(product)
             selected_by_category.setdefault(product["category"], product)
     if set(selected_by_category) != {"top", "bottom"}:
         raise RuntimeError(f"합성 가능한 무신사 상의·하의가 모두 없습니다: {shopping_results!r}")
 
-    expected_combinations = [
-        [top["product_id"], bottom["product_id"]]
-        for top in available_by_category["top"]
-        for bottom in available_by_category["bottom"]
-    ]
+    expected_combinations = expected_shopping_combinations(result)
     shopping_batch = _json_request(
         f"{base_url}/api/jobs/{job_id}/shopping-tryon-batch",
         method="POST",
@@ -166,13 +190,13 @@ def main() -> int:
             f"{base_url}/api/jobs/{job_id}/shopping-tryon-batch"
         )
     if shopping_batch.get("status") != "done":
-        raise RuntimeError(f"무신사 전체 조합 배치가 완료되지 않았습니다: {shopping_batch!r}")
+        raise RuntimeError(f"무신사 조합 배치가 완료되지 않았습니다: {shopping_batch!r}")
     actual_combinations = [
         item.get("product_ids") for item in shopping_batch.get("items") or []
     ]
     if actual_combinations != expected_combinations:
         raise RuntimeError(
-            f"무신사 전체 조합이 일치하지 않습니다: expected={expected_combinations!r}, "
+            f"무신사 조합이 추천 코디와 일치하지 않습니다: expected={expected_combinations!r}, "
             f"actual={actual_combinations!r}"
         )
     for item in shopping_batch.get("items") or []:

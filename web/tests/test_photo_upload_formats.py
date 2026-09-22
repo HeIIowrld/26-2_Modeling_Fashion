@@ -5,6 +5,7 @@
 어긋나고 체형 판정이 조용히 틀린다. 에러가 나지 않아 더 위험하다.
 """
 
+import re
 import unittest
 from io import BytesIO
 from pathlib import Path
@@ -14,6 +15,8 @@ from fastapi import HTTPException
 from PIL import Image
 
 import web.app as web_app
+
+HEIC_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "white_40x90.heic"
 
 
 def _portrait_stored_sideways() -> bytes:
@@ -51,17 +54,32 @@ class PhotoUploadFormatTests(unittest.TestCase):
             self.skipTest("pillow-heif 가 설치되지 않았습니다")
         self.assertIn("HEIF", web_app.ALLOWED_FORMATS)
         self.assertIn("HEIC", web_app.ALLOWED_FORMATS_LABEL)
-        buffer = BytesIO()
-        Image.new("RGB", (40, 90), "white").save(buffer, "HEIF")
+        # 테스트 중에 HEIF 를 인코딩하지 않는다. GPU 서버 계산 노드에서는 x265 인코더가
+        # 스레드를 수만 개 띄우며 멈춰 서버 테스트 전체가 걸린다(2026-09-22). 운영 코드는
+        # 디코딩만 하므로 미리 만들어 둔 흰색 40x90 HEIC(443바이트)를 읽는다.
+        raw_heic = HEIC_FIXTURE.read_bytes()
         with TemporaryDirectory() as raw:
             target = Path(raw) / "original.jpg"
-            web_app._save_upload(buffer.getvalue(), target, "전신 사진")
+            web_app._save_upload(raw_heic, target, "전신 사진")
             with Image.open(target) as saved:
                 self.assertEqual(saved.format, "JPEG")
                 self.assertEqual((saved.width, saved.height), (40, 90))
 
     # HEIC 의 회전은 pillow-heif 가 디코딩 단계에서 적용하고 EXIF 태그를 1 로 정리한다.
     # 그래서 합성 파일로는 재현되지 않는다. 실제 기기 사진으로 한 번 확인해야 한다.
+
+    def test_tests_never_encode_heif(self):
+        # 인코딩이 다시 들어오면 서버 테스트가 멈춘다. 새 HEIC 입력은 fixtures 파일로 추가할 것.
+        root = Path(__file__).resolve().parents[2]
+        encoding = re.compile(r"save\([^)]*[\"']HEI[FC][\"']")
+        offenders = [
+            str(path.relative_to(root))
+            for folder in (root / "web" / "tests", root / "ai_fashion_recommender" / "tests")
+            for path in folder.glob("test_*.py")
+            if encoding.search(path.read_text(encoding="utf-8"))
+        ]
+        self.assertEqual(offenders, [])
+        self.assertEqual(HEIC_FIXTURE.read_bytes()[4:12], b"ftypheic")
 
     def test_no_upload_path_bypasses_the_shared_saver(self):
         # 경로마다 따로 열면 HEIC 허용과 회전 보정을 빠뜨린다. 2026-09-21 에 조건 입력 전
