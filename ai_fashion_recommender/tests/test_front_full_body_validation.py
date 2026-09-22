@@ -40,6 +40,14 @@ def landmarks() -> dict[str, tuple[float, float, float]]:
     }
 
 
+def camera_landmarks() -> dict[str, tuple[float, float, float]]:
+    """실제 MediaPipe 좌표: left_*는 사람 기준 왼쪽이라 정면 사진에서는 이미지 오른쪽에 있다.
+
+    위 landmarks()는 좌우가 반전된 셀카와 같다. 둘 다 같은 판정이 나와야 한다.
+    """
+    return {name: (1.0 - x, y, v) for name, (x, y, v) in landmarks().items()}
+
+
 def checked(landmark_map: dict | None, *, valid: bool = True) -> dict:
     pose = SimpleNamespace(
         valid=valid,
@@ -165,6 +173,49 @@ class FrontFullBodyValidationTests(unittest.TestCase):
         result = checked(current)
         self.assertFalse(result["passed"])
         self.assertEqual(result["arm_pose"]["status"], "arms_crossed_or_occluded")
+
+    def test_arms_down_passes_in_camera_orientation(self):
+        # 2026-09-22 운영 배포에서 팔을 내린 정면 사진이 모두 '팔 교차'로 거절됐다.
+        result = checked(camera_landmarks())
+        self.assertEqual(result["arm_pose"]["status"], "arms_down")
+        self.assertTrue(result["passed"], result["issues"])
+
+    def test_measured_front_photo_passes(self):
+        # 운영 서버에서 잰 DeepFashion 정면 사진(팔을 몸 옆에 내림)의 손목·어깨 x 좌표.
+        current = camera_landmarks()
+        current["left_shoulder"] = (0.71, 0.25, 0.95)
+        current["right_shoulder"] = (0.40, 0.25, 0.95)
+        current["left_hip"] = (0.62, 0.55, 0.95)
+        current["right_hip"] = (0.47, 0.55, 0.95)
+        current["left_elbow"] = (0.73, 0.45, 0.95)
+        current["right_elbow"] = (0.37, 0.45, 0.95)
+        current["left_wrist"] = (0.73, 0.65, 0.95)
+        current["right_wrist"] = (0.36, 0.65, 0.95)
+        self.assertEqual(assess_arm_pose(current)["status"], "arms_down")
+
+    def test_relaxed_arms_slightly_outside_shoulders_pass(self):
+        # 팔을 편하게 내리면 손목이 어깨보다 어깨 폭의 0.25~0.41만큼 바깥에 온다(실측 100장).
+        current = camera_landmarks()
+        width = current["left_shoulder"][0] - current["right_shoulder"][0]
+        current["left_wrist"] = (current["left_shoulder"][0] + 0.35 * width, 0.65, 0.95)
+        current["right_wrist"] = (current["right_shoulder"][0] - 0.35 * width, 0.65, 0.95)
+        self.assertEqual(assess_arm_pose(current)["status"], "arms_down")
+
+    def test_crossed_arms_are_rejected_in_camera_orientation(self):
+        current = camera_landmarks()
+        current["left_wrist"] = (0.32, 0.58, 0.95)
+        current["right_wrist"] = (0.68, 0.58, 0.95)
+        result = checked(current)
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["arm_pose"]["status"], "arms_crossed_or_occluded")
+
+    def test_open_arms_are_rejected_in_camera_orientation(self):
+        current = camera_landmarks()
+        current["left_wrist"] = (0.95, 0.65, 0.95)
+        current["right_wrist"] = (0.05, 0.65, 0.95)
+        result = checked(current)
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["arm_pose"]["status"], "arms_raised_or_open")
 
     def test_multiple_failures_are_limited_to_three_messages(self):
         current = landmarks()
