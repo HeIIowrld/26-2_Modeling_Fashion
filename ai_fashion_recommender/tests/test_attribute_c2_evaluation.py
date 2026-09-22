@@ -24,7 +24,7 @@ class C2EvaluationTests(unittest.TestCase):
     def run_report(self):
         with contextlib.redirect_stdout(io.StringIO()):
             evaluation.report(self.args)
-        return json.loads(self.args.output.with_suffix(".json").read_text())
+        return json.loads(self.args.output.with_suffix(".json").read_text(encoding="utf-8"))
 
     def test_replay_is_deterministic_and_counts_abstentions_and_unchanged_axes(self):
         first = self.run_report()
@@ -41,10 +41,10 @@ class C2EvaluationTests(unittest.TestCase):
                             if p["axis"] in {"item_type", "material"} or p["cut_type"] == "flat"))
 
     def altered_payload(self, change):
-        payload = json.loads(self.args.predictions.read_text())
+        payload = json.loads(self.args.predictions.read_text(encoding="utf-8"))
         change(payload)
         self.args.predictions = Path(self.directory.name) / "changed.json"
-        self.args.predictions.write_text(json.dumps(payload))
+        self.args.predictions.write_text(json.dumps(payload), encoding="utf-8")
 
     def test_rejects_mismatched_model_or_image(self):
         self.altered_payload(lambda p: p.update(checkpoint_sha256="wrong"))
