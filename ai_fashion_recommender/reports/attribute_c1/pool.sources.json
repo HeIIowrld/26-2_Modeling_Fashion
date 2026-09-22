@@ -1,0 +1,17 @@
+{
+  "top": {
+    "sha256": "ece73f64f42b7f037c3d013ab785c5aa9c6f05085de839e9cbad1848e2eb8e33",
+    "url": "https://api.musinsa.com/api2/dp/v2/plp/goods?gf=A&category=001&sortCode=POPULAR&page=1&size=100&caller=CATEGORY",
+    "fetched_at": 1789873221.444555
+  },
+  "bottom": {
+    "sha256": "9091a521e7844a8a7002b3709dd13590b32476c49265944f9f561243771562de",
+    "url": "https://api.musinsa.com/api2/dp/v2/plp/goods?gf=A&category=003&sortCode=POPULAR&page=1&size=100&caller=CATEGORY",
+    "fetched_at": 1789873222.5427415
+  },
+  "shoes": {
+    "sha256": "70f7d4872f06a4af7f60a93d3a85438455fa6cfd324a98a59a0af750e2a5b73e",
+    "url": "https://api.musinsa.com/api2/dp/v2/plp/goods?gf=A&category=103&sortCode=POPULAR&page=1&size=100&caller=CATEGORY",
+    "fetched_at": 1789873223.6379707
+  }
+}

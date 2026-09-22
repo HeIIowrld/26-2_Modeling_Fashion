@@ -1,0 +1,142 @@
+[
+  {
+    "index": 1,
+    "detail_index": 0,
+    "product_id": "MS6955600",
+    "url": "https://image.msscdn.net/images/prd_img/20260730/6955600/detail_6955600_17857218140384_500.jpg",
+    "image_sha256": "3d8ae403e83162df2f0b45ae80217d32ed941db3146bf0bc71e25d7d794fba6a"
+  },
+  {
+    "index": 1,
+    "detail_index": 1,
+    "product_id": "MS6955600",
+    "url": "https://image.msscdn.net/images/prd_img/20260730/6955600/detail_6955600_17857218234816_500.jpg",
+    "image_sha256": "14927663934303f694e367ac26657b2363cd76d461253a444faae5177a17923e"
+  },
+  {
+    "index": 1,
+    "detail_index": 2,
+    "product_id": "MS6955600",
+    "url": "https://image.msscdn.net/images/prd_img/20260730/6955600/detail_6955600_17857218255481_500.jpg",
+    "image_sha256": "0751900780190f5786744ab178deeaf0a32cc88db09d0e233c496e26219c148d"
+  },
+  {
+    "index": 2,
+    "detail_index": 0,
+    "product_id": "MS7059554",
+    "url": "https://image.msscdn.net/images/prd_img/20260812/7059554/detail_7059554_17877946343923_500.jpg",
+    "image_sha256": "d5ca54224f3b320d2c684e2f2460a6924b3ef6224bb6897b793fe8c69911046d"
+  },
+  {
+    "index": 2,
+    "detail_index": 1,
+    "product_id": "MS7059554",
+    "url": "https://image.msscdn.net/images/prd_img/20260812/7059554/detail_7059554_17876361190250_500.jpg",
+    "image_sha256": "57c01b5acdce97d05c8c417a5e4cb39555c893ed87c29ef0df2c9e2d2ea69b94"
+  },
+  {
+    "index": 2,
+    "detail_index": 2,
+    "product_id": "MS7059554",
+    "url": "https://image.msscdn.net/images/prd_img/20260812/7059554/detail_7059554_17876361201988_500.jpg",
+    "image_sha256": "604cbe2297b293af2aac41d43237bf56dff52a85df410ee70e933ccfff02627f"
+  },
+  {
+    "index": 6,
+    "detail_index": 0,
+    "product_id": "MS5395163",
+    "url": "https://image.msscdn.net/images/prd_img/20250903/5395163/detail_5395163_17604244393357_500.jpg",
+    "image_sha256": "8732b1a9a9f6986babc806d609393755f0018800debcdf594e2765bc00662d13"
+  },
+  {
+    "index": 6,
+    "detail_index": 1,
+    "product_id": "MS5395163",
+    "url": "https://image.msscdn.net/images/prd_img/20250903/5395163/detail_5395163_17604244405866_500.jpg",
+    "image_sha256": "c1b1f0ad8c81b6a4c56df71706e88a35b01105e0a5396097afd125b3f615b441"
+  },
+  {
+    "index": 6,
+    "detail_index": 2,
+    "product_id": "MS5395163",
+    "url": "https://image.msscdn.net/images/prd_img/20250903/5395163/detail_5395163_17604244544697_500.jpg",
+    "image_sha256": "e9b84db742d0da068650458ac9161516ff32f4648747f08d81ad62221b1281bb"
+  },
+  {
+    "index": 14,
+    "detail_index": 0,
+    "product_id": "MS7079083",
+    "url": "https://image.msscdn.net/images/goods_img/20260814/7079083/7079083_17877519516979_500.jpg",
+    "image_sha256": "d50d65f83b7c08e66e73e7c3df63b4762adbf3fac5422bf00eb4a24d6d0f9d27"
+  },
+  {
+    "index": 14,
+    "detail_index": 1,
+    "product_id": "MS7079083",
+    "url": "https://image.msscdn.net/images/prd_img/20260814/7079083/detail_7079083_17877519444082_500.jpg",
+    "image_sha256": "cbd325fbccbec869b3ea806eef3260debe2837f77d24f21fea7f19aacf6732ab"
+  },
+  {
+    "index": 16,
+    "detail_index": 0,
+    "product_id": "MS7039092",
+    "url": "https://image.msscdn.net/images/prd_img/20260810/7039092/detail_7039092_17872987178539_500.jpg",
+    "image_sha256": "32c2380807d2455289835a8c22ab9a39d6add84055d896c187b297ed427515ba"
+  },
+  {
+    "index": 16,
+    "detail_index": 1,
+    "product_id": "MS7039092",
+    "url": "https://image.msscdn.net/images/prd_img/20260810/7039092/detail_7039092_17872987189122_500.jpg",
+    "image_sha256": "08133f86744629991cf193bb70972b941d6e3c9a86d18ee331bd20bb1e7ce16f"
+  },
+  {
+    "index": 16,
+    "detail_index": 2,
+    "product_id": "MS7039092",
+    "url": "https://image.msscdn.net/images/prd_img/20260810/7039092/detail_7039092_17872987201154_500.jpg",
+    "image_sha256": "c84b8af1d6710c672be4f18ea43cee655ea7fec89f16a6e9892fae19ba606763"
+  },
+  {
+    "index": 22,
+    "detail_index": 0,
+    "product_id": "MS7011235",
+    "url": "https://image.msscdn.net/images/prd_img/20260806/7011235/detail_7011235_17872894317605_500.jpg",
+    "image_sha256": "056487eb391e1a5f67769b2dd329326f43a56d7bd0a8eef1fe06c4ff3a3ef4e6"
+  },
+  {
+    "index": 22,
+    "detail_index": 1,
+    "product_id": "MS7011235",
+    "url": "https://image.msscdn.net/images/prd_img/20260806/7011235/detail_7011235_17872894326725_500.jpg",
+    "image_sha256": "072ce048e6da833f4a7a5e1689603e3768f707ad28010f58c604acc62e8f3561"
+  },
+  {
+    "index": 22,
+    "detail_index": 2,
+    "product_id": "MS7011235",
+    "url": "https://image.msscdn.net/images/prd_img/20260806/7011235/detail_7011235_17872894335431_500.jpg",
+    "image_sha256": "8b783289933afc961dfc0af0e108f391dddb00e2b3bd4aabbcb73f8af4829e82"
+  },
+  {
+    "index": 26,
+    "detail_index": 0,
+    "product_id": "MS7122627",
+    "url": "https://image.msscdn.net/images/prd_img/20260820/7122627/detail_7122627_17883483085642_500.jpg",
+    "image_sha256": "66650a562c5d6cfd46d8247a5043bfee99764e4208a67cac9e24ac8ba6cbb398"
+  },
+  {
+    "index": 26,
+    "detail_index": 1,
+    "product_id": "MS7122627",
+    "url": "https://image.msscdn.net/images/prd_img/20260820/7122627/detail_7122627_17883483087218_500.jpg",
+    "image_sha256": "94f12b4bffb44c3a2b8f776db3e3701e2ca994196dd22cfb51b66ee7f9c52388"
+  },
+  {
+    "index": 26,
+    "detail_index": 2,
+    "product_id": "MS7122627",
+    "url": "https://image.msscdn.net/images/prd_img/20260820/7122627/detail_7122627_17883483088905_500.jpg",
+    "image_sha256": "4770eaa73dfaade536648092759fdd9b5c996de3360a57ea823ffca3e154a005"
+  }
+]

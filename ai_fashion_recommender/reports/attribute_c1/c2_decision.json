@@ -1,0 +1,41 @@
+{
+  "label_source": "ai_visual_review_with_seller_evidence",
+  "human_ground_truth_complete": false,
+  "supersedes": "decision_2026-09-22.json",
+  "policy": "worn-fit-length-v1",
+  "c2_decision": "implement_selective_fit_length_fallback",
+  "reference_products": 100,
+  "evaluable_attributes": 281,
+  "before_correct": 60,
+  "after_correct": 76,
+  "added_correct": 16,
+  "added_wrong": 0,
+  "protected_position_checks": 448,
+  "protected_position_regressions": 0,
+  "tests_passed": 64,
+  "retrained": false,
+  "deployed": false,
+  "latency_budget_seconds": 0.25,
+  "cold_live_search_seconds": {
+    "before": 0.9264,
+    "after": 1.2627
+  },
+  "cached_live_search_median_seconds": {
+    "before": 0.0174,
+    "after": 0.0177
+  },
+  "limitations": [
+    "AI references, not human ground truth",
+    "Policy designed on the same 100 products, no held-out validation",
+    "Cold latency increased by 0.3363 seconds; no user-perceived or load P95 validation",
+    "Per-product accuracy assumes shortlisting; deadline can defer photos",
+    "Item type, material and shoes excluded"
+  ],
+  "inference_job": 234969,
+  "runtime_job": 234975,
+  "input_sha256": {
+    "labels_ai_reviewed.csv": "67d51614c1024e28cd97982bfa1e471eb0e3877df26a6fc70a728d8c16ad18de",
+    "c2_predictions.json": "954872de4844179dafae111ea6fdd69b657d29c8712bd9656a16a9e49e575390",
+    "c2_runtime.json": "3ee48ae9e3542633380148922da56c03d9d838a1cef9d07ccb6be4bf9bbd4ebb"
+  }
+}

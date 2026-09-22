@@ -1,0 +1,2 @@
+# Generated review pages reference the local image cache. Rebuild with `review`.
+review_*.html
