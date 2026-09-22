@@ -29,7 +29,10 @@ FRONT_WIDTH_TORSO_RATIO_MIN = 0.35
 FRONT_WIDTH_TORSO_RATIO_MAX = 2.5
 ARM_CROSSING_MARGIN = 0.08
 ARM_RAISED_MARGIN = 0.08
-ARM_OPEN_MARGIN = 0.25
+# 손목이 자기 어깨보다 바깥으로 나간 정도(어깨 폭 대비). 팔을 자연스럽게 내린 실제 정면 사진은
+# 0.25~0.41이라 0.25에서는 10장 중 1장꼴로 거절됐다. 두 팔을 벌리거나 기둥을 잡은 사진은 0.75~1.43이다.
+# 허리에 손을 올린 자세(0.29~0.36)는 이 값으로 자연 자세와 가를 수 없어 거절하지 않는다(2026-09-22 실측 100장).
+ARM_OPEN_MARGIN = 0.6
 ARM_MAX_OUTWARD_RATIO = 1.5
 PERSON_DETECTION_ERROR = "사진에서 사람의 정면 전신을 확인할 수 없습니다. 머리부터 발끝까지 한 명만 나오도록 다시 촬영해 주세요."
 CORE_TORSO_LANDMARKS = ("left_shoulder", "right_shoulder", "left_hip", "right_hip")
@@ -169,14 +172,18 @@ def assess_arm_pose(
     hip_y = (points["left_hip"][1] + points["right_hip"][1]) / 2
     shoulder_y = (left_shoulder[1] + right_shoulder[1]) / 2
     shoulder_width = max(abs(left_shoulder[0] - right_shoulder[0]), 1e-6)
-    left_crossed = left_wrist[0] > center_x + ARM_CROSSING_MARGIN
-    right_crossed = right_wrist[0] < center_x - ARM_CROSSING_MARGIN
-    wrists_crossed = left_crossed or right_crossed
+    # MediaPipe의 left_*는 사람 기준 왼쪽이라 정면 사진에서는 이미지 오른쪽에 찍힌다.
+    # 이미지 좌우를 가정하면 팔을 내린 정상 정면 사진이 전부 '팔 교차'가 된다
+    # (2026-09-22 운영 배포에서 실제 정면 사진 8장 중 7장 거절). 각 팔의 바깥쪽은
+    # 그 팔 어깨가 몸 중심의 어느 쪽에 있는지로 정한다. 좌우 반전된 셀카도 같은 규칙으로 맞다.
+    wrists_crossed = False
+    arms_open = False
+    for side in ("left", "right"):
+        shoulder, wrist = points[f"{side}_shoulder"], points[f"{side}_wrist"]
+        outward = 1.0 if shoulder[0] >= center_x else -1.0
+        wrists_crossed |= (wrist[0] - center_x) * outward < -ARM_CROSSING_MARGIN
+        arms_open |= (wrist[0] - shoulder[0]) * outward > shoulder_width * ARM_OPEN_MARGIN
     wrists_raised = min(left_wrist[1], right_wrist[1]) < shoulder_y - ARM_RAISED_MARGIN
-    arms_open = (
-        left_wrist[0] < left_shoulder[0] - shoulder_width * ARM_OPEN_MARGIN
-        or right_wrist[0] > right_shoulder[0] + shoulder_width * ARM_OPEN_MARGIN
-    )
     wrists_down = left_wrist[1] >= hip_y - 0.05 and right_wrist[1] >= hip_y - 0.05
     elbows_between = all(
         points[f"{side}_shoulder"][1] - 0.05
