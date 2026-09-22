@@ -1,0 +1,21 @@
+{
+  "recorded_at": "2026-09-22T02:48:05.419924+00:00",
+  "label_source": "ai_visual_review_with_seller_evidence",
+  "human_ground_truth_complete": false,
+  "reference_products": 100,
+  "cut_counts": {
+    "worn": 71,
+    "flat": 28,
+    "other": 1
+  },
+  "c2_decision": "do_not_wire_all_four_axes",
+  "decision_reasons": [
+    "item_type fallback: 16 correct of 38 additions",
+    "material fallback: 3 correct of 30 additions",
+    "flat-image fit: 2 correct of 7 evaluable references",
+    "worn-bottom length references all belong to one class"
+  ],
+  "followup_candidate": "worn-bottom fit only; requires independent validation and runtime cut identification",
+  "runtime_files_changed": false,
+  "tests_passed": 22
+}

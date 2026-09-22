@@ -1,0 +1,907 @@
+{
+  "review_sha256": "41fd3c323a8ba6c5867cc26531745a89a73e0e2f73f2a7179295a72835305f09",
+  "sample_sha256": "90013900e91358f49109abbb0ba56e3ef2fd2bafbc387d24914d6d8c58a6e816",
+  "category_mapping_sha256": "c37da4cc51bf2762ad069e439c9c059a8cc118eac9cb40b48b93ce0b56c603e9",
+  "sources": [
+    {
+      "product_id": "MS6955600",
+      "url": "https://goods-detail.musinsa.com/api2/goods/6955600",
+      "fetched_at": "2026-09-22T02:31:23.280339+00:00",
+      "sha256": "c973850a13a986ce83d8822650bc7572f1d6ddca74cf9b66c0fcc65242e7f91d",
+      "seller_category": "Clothing > 티셔츠 > 긴소매 티셔츠",
+      "canonical_item_type": "티셔츠",
+      "review_notes": "판매자 본문 레귤러핏, 총장 56/58cm. 겉감 레이온 68%·면 32%로 주 소재는 어휘 밖. 사진은 누끼컷."
+    },
+    {
+      "product_id": "MS7059554",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7059554",
+      "fetched_at": "2026-09-22T02:31:23.298514+00:00",
+      "sha256": "3cf9974cf58c28611eca649f06cb08dd8f991f29f928895d6cfc7e91d3dc398a",
+      "seller_category": "Clothing > 티셔츠 > 긴소매 티셔츠",
+      "canonical_item_type": "티셔츠",
+      "review_notes": "판매자 핏 태그 레귤러. 추가 사진도 비착용. 총장과 섬유 조성은 확인 불가."
+    },
+    {
+      "product_id": "MS7088559",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7088559",
+      "fetched_at": "2026-09-22T02:31:23.282108+00:00",
+      "sha256": "17b33a20bfab2af5f133cee686807e90d1c2ceb4c0706f2dd1efe4839234a652",
+      "seller_category": "Clothing > 니트/스웨터",
+      "canonical_item_type": "니트",
+      "review_notes": "착용한 V넥 니트의 몸통이 여유 있고 밑단이 허리 아래. 판매자 분류 니트/스웨터."
+    },
+    {
+      "product_id": "MS6968276",
+      "url": "https://goods-detail.musinsa.com/api2/goods/6968276",
+      "fetched_at": "2026-09-22T02:31:23.289244+00:00",
+      "sha256": "d6a42e27b07ac5fc6923bd44298ea1ccfa42e633a9381cdce9d8f6065e09e2ab",
+      "seller_category": "Clothing > 티셔츠 > 후드 티셔츠",
+      "canonical_item_type": "후드티",
+      "review_notes": "후드 상의의 어깨와 몸통이 보통 여유. 앉은 자세와 소품 때문에 밑단을 확정할 수 없음."
+    },
+    {
+      "product_id": "MS7144038",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7144038",
+      "fetched_at": "2026-09-22T02:31:23.386133+00:00",
+      "sha256": "44ef2c77ae28cd039f71d0c3f1d656b38499cbc9dc9ca008791f2b54e658e233",
+      "seller_category": "Clothing > 티셔츠 > 긴소매 티셔츠",
+      "canonical_item_type": "티셔츠",
+      "review_notes": "판매자 오버사이즈 태그와 코튼 95% 본문. 착용컷 밑단은 프레임 밖."
+    },
+    {
+      "product_id": "MS5395163",
+      "url": "https://goods-detail.musinsa.com/api2/goods/5395163",
+      "fetched_at": "2026-09-22T02:31:23.369616+00:00",
+      "sha256": "16d11e6ae52aa35b5c916bda7f074af747ef8582074e298a723f815f337eeb09",
+      "seller_category": "Clothing > 니트/스웨터",
+      "canonical_item_type": "니트",
+      "review_notes": "원본은 평면 니트. 별도 착용 사진에서 떨어지는 어깨와 여유 있는 몸통, 허리 벨트 부근의 짧은 밑단 확인."
+    },
+    {
+      "product_id": "MS7103342",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7103342",
+      "fetched_at": "2026-09-22T02:31:23.396977+00:00",
+      "sha256": "0f7fc6a85e73ab506bc49373c8ede41028a8856d357a57f5a4b5698e1759d4c6",
+      "seller_category": "Clothing > 티셔츠 > 긴소매 티셔츠",
+      "canonical_item_type": "티셔츠",
+      "review_notes": "래글런 티셔츠 몸통이 과도하게 넓지 않고 밑단은 허리 아래. 판매자 레귤러·루즈 복수 태그 중 사진 기준 레귤러; 경계 사례."
+    },
+    {
+      "product_id": "MS7112643",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7112643",
+      "fetched_at": "2026-09-22T02:31:23.371222+00:00",
+      "sha256": "be291721b4d5e1845b4f521671686d64ae4784d70e50960d95eaf29e455ce617",
+      "seller_category": "Clothing > 티셔츠 > 긴소매 티셔츠",
+      "canonical_item_type": "티셔츠",
+      "review_notes": "착용한 티셔츠의 몸통과 팔에 보통 여유. 하단이 잘려 기장 확인 불가."
+    },
+    {
+      "product_id": "MS7104626",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7104626",
+      "fetched_at": "2026-09-22T02:31:23.485500+00:00",
+      "sha256": "bd3bf011e6e329144885616cb5edbc28e577522f8bd9d453ed6cf0a50243646e",
+      "seller_category": "Clothing > 니트/스웨터",
+      "canonical_item_type": "니트",
+      "review_notes": "V넥 니트의 넓은 몸통과 처지는 어깨, 골반 부근 밑단. 판매자 니트 분류."
+    },
+    {
+      "product_id": "MS7102714",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7102714",
+      "fetched_at": "2026-09-22T02:31:23.447422+00:00",
+      "sha256": "6f66367e9e48b7c371368a3aa17f8d5262c59c373bbec366ad85f0c18ff2237f",
+      "seller_category": "Clothing > 티셔츠 > 후드 티셔츠",
+      "canonical_item_type": "후드티",
+      "review_notes": "줄무늬 후드 상의는 몸통을 따라 떨어지고 밑단은 골반 부근. 판매자 후드 티셔츠 분류; 칼라 티셔츠로 오인하지 않음."
+    },
+    {
+      "product_id": "MS7119658",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7119658",
+      "fetched_at": "2026-09-22T02:31:23.465470+00:00",
+      "sha256": "ac419da81335666e213de4f45e6191474b67f1fca4716b82f9de4102234994a6",
+      "seller_category": "Clothing > 블라우스",
+      "canonical_item_type": "블라우스",
+      "review_notes": "판매자 블라우스 분류·레귤러 태그·Cotton 100%, 총장 62cm. 착용 사진에서 프릴 여밈과 허리 아래 밑단 확인."
+    },
+    {
+      "product_id": "MS7169307",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7169307",
+      "fetched_at": "2026-09-22T02:31:23.476521+00:00",
+      "sha256": "8c0d74ce251ca3ce0089e4e01e60d64c537dc42f115ecad0790b54f4e34f5323",
+      "seller_category": "Clothing > 니트/스웨터",
+      "canonical_item_type": "니트",
+      "review_notes": "판매자 니트 분류. 몸통과 소매의 보통 여유. 밑단을 바지 안에 넣어 실제 기장 판정 보류."
+    },
+    {
+      "product_id": "MS7131730",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7131730",
+      "fetched_at": "2026-09-22T02:31:23.549619+00:00",
+      "sha256": "46be2870c606833b6705a74f3c97949a273816f88333cb4724bb0f2aabb9c461",
+      "seller_category": "Clothing > 티셔츠 > 반소매 티셔츠",
+      "canonical_item_type": "티셔츠",
+      "review_notes": "판매자 본문 인체 곡선을 따라 슬림하게 밀착. 사진에서 몸통 셔링과 허리 아래 밑단 확인; 섬유 조성 없음."
+    },
+    {
+      "product_id": "MS7079083",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7079083",
+      "fetched_at": "2026-09-22T02:31:23.532541+00:00",
+      "sha256": "9bbd8cd42c2bf1dae59c6199545c6741727480be7fac15fbf2ce9173ec138870",
+      "seller_category": "Clothing > 니트/스웨터",
+      "canonical_item_type": "니트",
+      "review_notes": "누끼컷 니트. 별도 착용 사진에서 여유 있는 몸통·어깨 확인. 밑단을 넣어 실제 기장 보류."
+    },
+    {
+      "product_id": "MS7126579",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7126579",
+      "fetched_at": "2026-09-22T02:31:23.548641+00:00",
+      "sha256": "808248cc679ba82d4e905de74de86f353d114d2b835ff7b60ba0dfa3a91715a9",
+      "seller_category": "Clothing > 티셔츠 > 맨투맨/스웨트셔츠",
+      "canonical_item_type": "티셔츠",
+      "review_notes": "판매자 맨투맨/스웨트셔츠 분류는 기존 프로젝트 어휘에서 티셔츠. 넓은 몸통과 골반 부근 밑단."
+    },
+    {
+      "product_id": "MS7039092",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7039092",
+      "fetched_at": "2026-09-22T02:31:23.552938+00:00",
+      "sha256": "443d08033406014714834643cc15a0bc29f5e107548112bfb916a189e37a1d02",
+      "seller_category": "Clothing > 티셔츠 > 긴소매 티셔츠",
+      "canonical_item_type": "티셔츠",
+      "review_notes": "별도 앞·뒤 착용 사진에서 어깨가 떨어지고 몸통에 여유, 밑단이 골반에 걸침. 판매자 긴소매 티셔츠 분류."
+    },
+    {
+      "product_id": "MS6980767",
+      "url": "https://goods-detail.musinsa.com/api2/goods/6980767",
+      "fetched_at": "2026-09-22T02:31:23.604034+00:00",
+      "sha256": "102b1843a24413c574e7249b3a5f879142546d0473bf8a57e233bfab6d94638e",
+      "seller_category": "Clothing > 티셔츠 > 긴소매 티셔츠",
+      "canonical_item_type": "티셔츠",
+      "review_notes": "앉은 자세이고 팔이 겹쳐 몸통과 밑단이 가려짐. 판매자 슬림·레귤러 복수 태그만으로 한 핏을 확정하지 않음."
+    },
+    {
+      "product_id": "MS7022626",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7022626",
+      "fetched_at": "2026-09-22T02:31:23.640826+00:00",
+      "sha256": "accb606f0c57e87b13ff6541883ec1c980a1fba8c84257de4f61771878c11b4e",
+      "seller_category": "Clothing > 티셔츠 > 긴소매 티셔츠",
+      "canonical_item_type": "티셔츠",
+      "review_notes": "넓게 떨어지는 검정 티셔츠의 몸통과 골반 부근 밑단. 섬유 조성은 사진으로 확정하지 않음."
+    },
+    {
+      "product_id": "MS7091145",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7091145",
+      "fetched_at": "2026-09-22T02:31:23.647093+00:00",
+      "sha256": "9e2c67ab8e237ba7b950bd6488c792e5652307c859ec918f53e5502a029de59c",
+      "seller_category": "Clothing > 티셔츠 > 긴소매 티셔츠",
+      "canonical_item_type": "티셔츠",
+      "review_notes": "착용 사진에서 몸통을 따라 붙는 실루엣과 허리 벨트 부근 짧은 밑단. 기장 경계 사례."
+    },
+    {
+      "product_id": "MS7020447",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7020447",
+      "fetched_at": "2026-09-22T02:31:23.644808+00:00",
+      "sha256": "ba685bb32e789a23cc6a0f540a9873860a2c7fe3516afcd7b18e2594333fbf94",
+      "seller_category": "Clothing > 티셔츠 > 피케/카라 티셔츠",
+      "canonical_item_type": "폴로 셔츠",
+      "review_notes": "타이트한 몸통과 드러난 복부. 판매자 피케/카라 티셔츠 분류."
+    },
+    {
+      "product_id": "MS7037384",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7037384",
+      "fetched_at": "2026-09-22T02:31:23.682887+00:00",
+      "sha256": "a05588194666a5df77373467a291857e56e34d1010729c833a83b50ec3ed8352",
+      "seller_category": "Clothing > 니트/스웨터",
+      "canonical_item_type": "니트",
+      "review_notes": "판매자 니트 분류. 몸통에 보통 여유, 밑단이 셔츠 위 골반에 걸침."
+    },
+    {
+      "product_id": "MS7011235",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7011235",
+      "fetched_at": "2026-09-22T02:31:23.739362+00:00",
+      "sha256": "778a190dc2dacb6bb622aab7c4d615f49350feb689dc13292f0d9b653903f2cb",
+      "seller_category": "Clothing > 니트/스웨터",
+      "canonical_item_type": "니트",
+      "review_notes": "누끼컷과 추가 편직 확대 사진으로 니트 구조 확인. 착용 사진이나 핏 정보는 확보하지 못함."
+    },
+    {
+      "product_id": "MS7009217",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7009217",
+      "fetched_at": "2026-09-22T02:31:23.726390+00:00",
+      "sha256": "5224e527a47486263f2fcc2374b0def31b7c0d57898e41f807680550020c1946",
+      "seller_category": "Clothing > 니트/스웨터",
+      "canonical_item_type": "니트",
+      "review_notes": "넓은 몸통의 니트 밑단이 허리 부근에서 끝나고 안쪽 회색 상의가 그 아래 드러남."
+    },
+    {
+      "product_id": "MS7035556",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7035556",
+      "fetched_at": "2026-09-22T02:31:23.734175+00:00",
+      "sha256": "c1a17591536381934015399661c64778f481cb1eaa903d749ad7462584597edb",
+      "seller_category": "Clothing > 티셔츠 > 맨투맨/스웨트셔츠",
+      "canonical_item_type": "티셔츠",
+      "review_notes": "판매자 본문 여유 있는 핏·총장 62cm·Cotton 60%, Polyester 40%. 맨투맨은 프로젝트 티셔츠 어휘로 통일."
+    },
+    {
+      "product_id": "MS7095366",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7095366",
+      "fetched_at": "2026-09-22T02:31:23.787522+00:00",
+      "sha256": "50a3d0d22c4246f57e9cea4be0b3cde921c1ff2e880cb74ef526dac194af7d14",
+      "seller_category": "Clothing > 티셔츠 > 후드 티셔츠",
+      "canonical_item_type": "후드티",
+      "review_notes": "후드가 있는 상의의 뚜렷한 편직 구조와 여유 있는 몸통. 밑단은 바지 허리 아래."
+    },
+    {
+      "product_id": "MS7122627",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7122627",
+      "fetched_at": "2026-09-22T02:31:23.800790+00:00",
+      "sha256": "f0f0fecea21b25697c20f0f947a7980f9cb654e30098144145de3c04d1338ebe",
+      "seller_category": "Clothing > 니트/스웨터",
+      "canonical_item_type": "니트",
+      "review_notes": "판매자 니트/스웨터 분류 및 레귤러 태그. 추가 컷도 누끼이므로 착용 기장 보류."
+    },
+    {
+      "product_id": "MS7202665",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7202665",
+      "fetched_at": "2026-09-22T02:31:23.856652+00:00",
+      "sha256": "b1c1f2b0102ce0c38f38c5e536004836a326b432a717fcf7b3da31c516631e16",
+      "seller_category": "Clothing > 블라우스",
+      "canonical_item_type": "블라우스",
+      "review_notes": "판매자 블라우스 분류 및 레귤러 태그. 상의를 넣어 입고 어깨에 다른 옷을 걸쳐 기장·소재 판정 보류."
+    },
+    {
+      "product_id": "MS6998131",
+      "url": "https://goods-detail.musinsa.com/api2/goods/6998131",
+      "fetched_at": "2026-09-22T02:31:23.808211+00:00",
+      "sha256": "337748be76cbacd6d3317012dd2c7b82bb3ec5f152a5b5aff725d31f918feb30",
+      "seller_category": "Clothing > 티셔츠 > 긴소매 티셔츠",
+      "canonical_item_type": "티셔츠",
+      "review_notes": "몸통에 붙는 티셔츠와 복부가 드러나는 짧은 밑단."
+    },
+    {
+      "product_id": "MS6996599",
+      "url": "https://goods-detail.musinsa.com/api2/goods/6996599",
+      "fetched_at": "2026-09-22T02:31:23.904478+00:00",
+      "sha256": "2924a2cf287fa17f576cd590996e149ca0959f74fc61951c0b6c826da035de18",
+      "seller_category": "Clothing > 티셔츠 > 맨투맨/스웨트셔츠",
+      "canonical_item_type": "티셔츠",
+      "review_notes": "넓은 몸통과 여유 있는 소매, 골반 부근 밑단. 판매자 맨투맨은 프로젝트 티셔츠 어휘로 통일."
+    },
+    {
+      "product_id": "MS7131782",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7131782",
+      "fetched_at": "2026-09-22T02:31:23.874546+00:00",
+      "sha256": "97775027e4059d435c1538e17bdb1274c797624f3199706f3d051a77c0555e2e",
+      "seller_category": "Clothing > 니트/스웨터",
+      "canonical_item_type": "니트",
+      "review_notes": "판매자 니트 분류. 넓은 몸통·처지는 소매. 밑단을 넣어 실제 기장 보류."
+    },
+    {
+      "product_id": "MS7020436",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7020436",
+      "fetched_at": "2026-09-22T02:31:23.916625+00:00",
+      "sha256": "d8c11b4b0aee8bfeb4b25820c4daaf6f8b915d6797d0fd9136ed7751960c0f37",
+      "seller_category": "Clothing > 티셔츠 > 긴소매 티셔츠",
+      "canonical_item_type": "티셔츠",
+      "review_notes": "드레이프된 상의가 몸통을 따라 붙고 밑단이 바지 허리 아래까지 내려옴. 광택만으로 실크라고 단정하지 않음."
+    },
+    {
+      "product_id": "MS7067907",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7067907",
+      "fetched_at": "2026-09-22T02:31:23.951062+00:00",
+      "sha256": "a808a66d9efbadef0913095743ead157f47061898187e70c9ca1f31a667a5fba",
+      "seller_category": "Clothing > 티셔츠 > 긴소매 티셔츠",
+      "canonical_item_type": "티셔츠",
+      "review_notes": "몸통을 따라 붙는 연분홍 티셔츠, 골반 위 밑단. 섬유 조성 미확인."
+    },
+    {
+      "product_id": "MS7013343",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7013343",
+      "fetched_at": "2026-09-22T02:31:23.981826+00:00",
+      "sha256": "4e3dbdc27ee35dd3a1c28de6f219765ec2328ce2e17e301f352f5c7dca42cbd0",
+      "seller_category": "Clothing > 티셔츠 > 긴소매 티셔츠",
+      "canonical_item_type": "티셔츠",
+      "review_notes": "몸통에 붙는 무늬 티셔츠의 밑단 아래 복부가 드러남."
+    },
+    {
+      "product_id": "MS7049937",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7049937",
+      "fetched_at": "2026-09-22T02:31:23.995362+00:00",
+      "sha256": "e544c261f97f8df9c307daf2c4a7e7cdbda6d7b7af36d28278f1db9f246f7131",
+      "seller_category": "Clothing > 니트/스웨터",
+      "canonical_item_type": "니트",
+      "review_notes": "판매자 루즈 태그·니트 분류. 팔이 겹치고 밑단이 사진 아래에 걸려 기장 보류."
+    },
+    {
+      "product_id": "MS5901879",
+      "url": "https://goods-detail.musinsa.com/api2/goods/5901879",
+      "fetched_at": "2026-09-22T02:31:24.009127+00:00",
+      "sha256": "6dee5219c00cb931778c6dc8d48e7015469a6dbfa7b9ccfc6790c14604ceb73f",
+      "seller_category": "Clothing > 바지 > 트레이닝 팬츠",
+      "canonical_item_type": "조거·스웨트팬츠",
+      "review_notes": "트레이닝 바지의 넓은 양 다리와 신발 위까지 내려오는 밑단. 소재 조성 미확인."
+    },
+    {
+      "product_id": "MS7161042",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7161042",
+      "fetched_at": "2026-09-22T02:31:24.019890+00:00",
+      "sha256": "36a9e982c32bdf42c096e892d2ee054c302ea9d65b19ec6e803297922d18428d",
+      "seller_category": "Clothing > 바지 > 트레이닝 팬츠",
+      "canonical_item_type": "조거·스웨트팬츠",
+      "review_notes": "옆줄 트레이닝 바지의 넓은 다리와 바닥 부근 밑단."
+    },
+    {
+      "product_id": "MS6907192",
+      "url": "https://goods-detail.musinsa.com/api2/goods/6907192",
+      "fetched_at": "2026-09-22T02:31:24.103095+00:00",
+      "sha256": "761aba5d7e1bd5d55fe98996be7e8c1e3f0f65edc123d097aea9b5aa5f44137f",
+      "seller_category": "Clothing > 바지 > 코튼 팬츠",
+      "canonical_item_type": "치노 팬츠",
+      "review_notes": "판매자 코튼 팬츠 분류. 무릎과 종아리에 넓은 여유, 발등 위 밑단."
+    },
+    {
+      "product_id": "MS7156288",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7156288",
+      "fetched_at": "2026-09-22T02:31:24.093247+00:00",
+      "sha256": "5502006580b3f100b96469469e207e1279a173c9667a7771f384c4cff60d873e",
+      "seller_category": "Clothing > 바지 > 슈트 팬츠/슬랙스",
+      "canonical_item_type": "슬랙스",
+      "review_notes": "슬랙스의 넓고 곧은 다리와 발등을 덮는 밑단. 섬유 조성 미확인."
+    },
+    {
+      "product_id": "MS858911",
+      "url": "https://goods-detail.musinsa.com/api2/goods/858911",
+      "fetched_at": "2026-09-22T02:31:24.097113+00:00",
+      "sha256": "d61c3e7fe7908e0b0199c9d6c25c1528241940d77d9b955842e37ba4751cf1a6",
+      "seller_category": "Clothing > 바지 > 청/데님 팬츠",
+      "canonical_item_type": "청바지",
+      "review_notes": "판매자 데님 팬츠 분류와 사진의 청색 워싱. 다리가 곧고 발등까지 내려옴."
+    },
+    {
+      "product_id": "MS3816971",
+      "url": "https://goods-detail.musinsa.com/api2/goods/3816971",
+      "fetched_at": "2026-09-22T02:31:24.116972+00:00",
+      "sha256": "6bb94f115013989eec35b79d99a7dec440f85ad29d4690b0723c9308755442f1",
+      "seller_category": "Clothing > 바지 > 코튼 팬츠",
+      "canonical_item_type": "치노 팬츠",
+      "review_notes": "판매자 코튼 팬츠 분류. 원본의 검정 바지 다리가 넓고 신발까지 내려옴. 본문 CP데님 언급은 일부 다른 색상 한정이므로 데님 정답에 사용하지 않음."
+    },
+    {
+      "product_id": "MS5908776",
+      "url": "https://goods-detail.musinsa.com/api2/goods/5908776",
+      "fetched_at": "2026-09-22T02:31:24.227754+00:00",
+      "sha256": "99fb97e99508ca04ab1e5e700153b0eb709bec37bd6d2a147e1d7afd804d8bab",
+      "seller_category": "Clothing > 바지 > 코튼 팬츠",
+      "canonical_item_type": "치노 팬츠",
+      "review_notes": "판매자 코튼 팬츠 분류. 여유 있는 갈색 바지의 다리 폭과 신발 위 밑단."
+    },
+    {
+      "product_id": "MS7057797",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7057797",
+      "fetched_at": "2026-09-22T02:31:24.197335+00:00",
+      "sha256": "d212cc45c9ebb81686efdb78b4c144c3030298ee6ea7650c6de121161ea73532",
+      "seller_category": "Clothing > 바지 > 청/데님 팬츠",
+      "canonical_item_type": "청바지",
+      "review_notes": "판매자 데님 팬츠 분류. 검정 데님의 넓은 다리와 발등에 쌓이는 밑단."
+    },
+    {
+      "product_id": "MS7059610",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7059610",
+      "fetched_at": "2026-09-22T02:31:24.194349+00:00",
+      "sha256": "f922e98f203f98cbd7a24a94af6f0c5007b234e787cd9f57539953195644154f",
+      "seller_category": "Clothing > 바지 > 트레이닝 팬츠",
+      "canonical_item_type": "조거·스웨트팬츠",
+      "review_notes": "큰 폭의 트레이닝 바지가 발을 덮음. 소재 조성은 미확인."
+    },
+    {
+      "product_id": "MS7141921",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7141921",
+      "fetched_at": "2026-09-22T02:31:24.206583+00:00",
+      "sha256": "ce3055022f2f5c55a21259106d94ded08783e7e9866552b7bcf95595267d8a48",
+      "seller_category": "Clothing > 바지 > 코튼 팬츠",
+      "canonical_item_type": "치노 팬츠",
+      "review_notes": "판매자 코튼 팬츠 분류. 갈색 바지가 비교적 일정한 폭으로 곧게 내려와 신발 위에 닿음."
+    },
+    {
+      "product_id": "MS7134099",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7134099",
+      "fetched_at": "2026-09-22T02:31:24.299025+00:00",
+      "sha256": "22e62862e7ac0928549c107d4746520f96478a00a9a8c91eab340329bd18fa05",
+      "seller_category": "Clothing > 바지 > 트레이닝 팬츠",
+      "canonical_item_type": "조거·스웨트팬츠",
+      "review_notes": "파란 트레이닝 바지의 큰 다리 폭과 발등까지 내려오는 밑단. 섬유 조성 미확인."
+    },
+    {
+      "product_id": "MS7036641",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7036641",
+      "fetched_at": "2026-09-22T02:31:24.298592+00:00",
+      "sha256": "208cfee29a580f84f8f48d5fc6760385b5555eb80c1173edd6cd78aa8195ae85",
+      "seller_category": "Clothing > 바지 > 코튼 팬츠",
+      "canonical_item_type": "치노 팬츠",
+      "review_notes": "판매자 코튼 팬츠 분류. 갈색 바지의 넓은 다리와 발등에 쌓이는 기장."
+    },
+    {
+      "product_id": "MS7218468",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7218468",
+      "fetched_at": "2026-09-22T02:31:24.293105+00:00",
+      "sha256": "e7e70aea62b8e32aaf4b2562b7e4b8e78c12ebee76d5d5c2bf54cb1917d5e9b9",
+      "seller_category": "Clothing > 바지 > 트레이닝 팬츠",
+      "canonical_item_type": "조거·스웨트팬츠",
+      "review_notes": "사진에서 양 다리가 넓고 신발 위까지 내려옴. 판매자 레귤러 태그는 착용 여유 표현이며 하의 다리 모양 라벨과 구분."
+    },
+    {
+      "product_id": "MS7011736",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7011736",
+      "fetched_at": "2026-09-22T02:31:24.297618+00:00",
+      "sha256": "58e4caef4fcaf9e1e8ed444b810d8b2c9896a62bc661dfd13fdf9d7de4c91690",
+      "seller_category": "Clothing > 바지 > 청/데님 팬츠",
+      "canonical_item_type": "청바지",
+      "review_notes": "판매자 데님 팬츠 분류. 넓은 워싱 데님 다리가 신발 위까지 내려옴."
+    },
+    {
+      "product_id": "MS7049603",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7049603",
+      "fetched_at": "2026-09-22T02:31:24.374303+00:00",
+      "sha256": "2753b74ace042b804f82aa2d85a74d62ef2bc89e647e2d7fbd14921cd9388be0",
+      "seller_category": "Clothing > 바지 > 코튼 팬츠",
+      "canonical_item_type": "치노 팬츠",
+      "review_notes": "판매자 코튼 팬츠 분류. 여유 있는 일자에 가까운 넓은 다리, 발등을 덮는 밑단."
+    },
+    {
+      "product_id": "MS6525758",
+      "url": "https://goods-detail.musinsa.com/api2/goods/6525758",
+      "fetched_at": "2026-09-22T02:31:24.384149+00:00",
+      "sha256": "e74cc24a399eee83f1567a775f9a8f293eafa4b534e98fd72de69e75b74bc51c",
+      "seller_category": "Clothing > 바지 > 슈트 팬츠/슬랙스",
+      "canonical_item_type": "슬랙스",
+      "review_notes": "슬랙스의 무릎 아래가 퍼지는 형태와 신발을 덮는 긴 밑단. 섬유 조성 미확인."
+    },
+    {
+      "product_id": "MS6888121",
+      "url": "https://goods-detail.musinsa.com/api2/goods/6888121",
+      "fetched_at": "2026-09-22T02:31:24.371396+00:00",
+      "sha256": "38576d367f93febc5f8bbfdce0fc220835b0d263874bdc1b1df5717c41087303",
+      "seller_category": "Clothing > 바지 > 트레이닝 팬츠",
+      "canonical_item_type": "조거·스웨트팬츠",
+      "review_notes": "옆줄 트레이닝 바지의 넓은 다리와 신발 위 밑단."
+    },
+    {
+      "product_id": "MS7223695",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7223695",
+      "fetched_at": "2026-09-22T02:31:24.410855+00:00",
+      "sha256": "24d9e264a40cba425e2326571145a468a87bc3f6312f2c2ed7d902b95035ffa4",
+      "seller_category": "Clothing > 바지 > 코튼 팬츠",
+      "canonical_item_type": "치노 팬츠",
+      "review_notes": "판매자 코튼 팬츠 분류. 걸을 때도 넓게 유지되는 다리와 발등을 덮는 밑단."
+    },
+    {
+      "product_id": "MS7201103",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7201103",
+      "fetched_at": "2026-09-22T02:31:24.470166+00:00",
+      "sha256": "2fa43196f9a09255ded1a4923af1c4dd754bf0313f4b6d77db332c658d8b4c8f",
+      "seller_category": "Clothing > 바지 > 트레이닝 팬츠",
+      "canonical_item_type": "조거·스웨트팬츠",
+      "review_notes": "앉아 있지만 넓은 두 다리와 신발에 닿는 밑단이 보임. 소재 조성 미확인."
+    },
+    {
+      "product_id": "MS7184913",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7184913",
+      "fetched_at": "2026-09-22T02:31:24.484692+00:00",
+      "sha256": "c99f5a6f82a6603a7e1b852ab235545789c7575f3821243e59c5b586be61efdb",
+      "seller_category": "Clothing > 바지 > 코튼 팬츠",
+      "canonical_item_type": "치노 팬츠",
+      "review_notes": "판매자 코튼 팬츠 분류 및 본문의 와이드 스트레이트핏 확인. 평면컷만으로 착용 기장은 보류."
+    },
+    {
+      "product_id": "MS7074036",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7074036",
+      "fetched_at": "2026-09-22T02:31:24.463291+00:00",
+      "sha256": "8b75568bb336478e03f87bb4473d55f3c5920e4a3c74a37f1d89e611eeefedff",
+      "seller_category": "Clothing > 바지 > 코튼 팬츠",
+      "canonical_item_type": "치노 팬츠",
+      "review_notes": "판매자 코튼 팬츠 분류. 넓은 녹색 바지의 양 다리와 발등 위 밑단."
+    },
+    {
+      "product_id": "MS6967919",
+      "url": "https://goods-detail.musinsa.com/api2/goods/6967919",
+      "fetched_at": "2026-09-22T02:31:24.502670+00:00",
+      "sha256": "ef10841c81f78e687b05d7879e900e6573a8c17ddd79181e0d1446819a26d6ec",
+      "seller_category": "Clothing > 바지 > 코튼 팬츠",
+      "canonical_item_type": "치노 팬츠",
+      "review_notes": "판매자 코튼 팬츠 분류. 허벅지는 좁고 무릎 아래부터 퍼져 신발까지 덮는 형태."
+    },
+    {
+      "product_id": "MS7024441",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7024441",
+      "fetched_at": "2026-09-22T02:31:24.549430+00:00",
+      "sha256": "615800f7d3cc078cba8bed6e291dba37504927d54809a6f0dd9384666c2cff83",
+      "seller_category": "Clothing > 바지 > 코튼 팬츠",
+      "canonical_item_type": "치노 팬츠",
+      "review_notes": "판매자 본문 부츠컷·코튼 원단·롱 기장. 카고 포켓이 보이지만 품목 어휘는 기존 판매자 코튼→치노 매핑을 사용."
+    },
+    {
+      "product_id": "MS6830515",
+      "url": "https://goods-detail.musinsa.com/api2/goods/6830515",
+      "fetched_at": "2026-09-22T02:31:24.583782+00:00",
+      "sha256": "f7c3b4d831f293c5076621340c51a29b4ce2a1f9336894f6d5c5323994c31ea5",
+      "seller_category": "Clothing > 바지 > 코튼 팬츠",
+      "canonical_item_type": "치노 팬츠",
+      "review_notes": "판매자 코튼 팬츠 분류. 평면 사진만 있고 핏·기장 상세는 없으므로 판정 보류."
+    },
+    {
+      "product_id": "MS7059599",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7059599",
+      "fetched_at": "2026-09-22T02:31:24.569783+00:00",
+      "sha256": "4734259016a418542b7993384eba85995a2f2ad8d04ef2895cfaca5fd0786a79",
+      "seller_category": "Clothing > 바지 > 트레이닝 팬츠",
+      "canonical_item_type": "조거·스웨트팬츠",
+      "review_notes": "트레이닝 바지의 넓은 몸통·다리와 신발 위에 모이는 밑단."
+    },
+    {
+      "product_id": "MS7107117",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7107117",
+      "fetched_at": "2026-09-22T02:31:24.594872+00:00",
+      "sha256": "93b706d76a9f76a93f2d6f90a65efa6b92f9aca9e1b5725fe881757339cc81ca",
+      "seller_category": "Clothing > 바지 > 슈트 팬츠/슬랙스",
+      "canonical_item_type": "슬랙스",
+      "review_notes": "판매자 와이드핏 슬랙스 설명. 겉감은 폴리에스터·레이온·폴리우레탄으로 어휘 밖; 안감 코튼을 겉감으로 오인하지 않음."
+    },
+    {
+      "product_id": "MS7058000",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7058000",
+      "fetched_at": "2026-09-22T02:31:24.616394+00:00",
+      "sha256": "fce2e274757a853533e4a450a55191437e92cf87d33187660827615977e6bdb3",
+      "seller_category": "Clothing > 바지 > 트레이닝 팬츠",
+      "canonical_item_type": "조거·스웨트팬츠",
+      "review_notes": "노란 트레이닝 바지가 넓고 발등까지 내려옴. 섬유 조성 미확인."
+    },
+    {
+      "product_id": "MS5999956",
+      "url": "https://goods-detail.musinsa.com/api2/goods/5999956",
+      "fetched_at": "2026-09-22T02:31:24.685428+00:00",
+      "sha256": "70721710a5092922b304e14c2acf9e92399c0417d872d4f6f68b7ff2205307a8",
+      "seller_category": "Clothing > 바지 > 트레이닝 팬츠",
+      "canonical_item_type": "조거·스웨트팬츠",
+      "review_notes": "회색 트레이닝 바지가 넓고 신발 위까지 내려옴. 회색이라는 이유로 코튼으로 추정하지 않음."
+    },
+    {
+      "product_id": "MS7036867",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7036867",
+      "fetched_at": "2026-09-22T02:31:24.678999+00:00",
+      "sha256": "b480afdbe28c1af7150ba6189d4310a3e185b44669860acca3b180fcb6957c83",
+      "seller_category": "Clothing > 바지 > 기타 바지",
+      "canonical_item_type": "트랙팬츠",
+      "review_notes": "같은 상품의 두 색상 착용컷. 판매자 본문 트랙 팬츠·Nylon 100%; 주 겉감은 어휘 밖. 두 색상 모두 긴 와이드 형태."
+    },
+    {
+      "product_id": "MS7223556",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7223556",
+      "fetched_at": "2026-09-22T02:31:24.708225+00:00",
+      "sha256": "dc0bbbec7e93aa04ec2a74a93e12ab134e41a34592680613be58a858e9315033",
+      "seller_category": "Clothing > 바지 > 기타 바지",
+      "canonical_item_type": "other",
+      "review_notes": "판매자 기타 바지 분류. 다리가 넓고 바닥까지 내려오지만 섬유와 세부 품목은 확인 불가."
+    },
+    {
+      "product_id": "MS7066721",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7066721",
+      "fetched_at": "2026-09-22T02:31:24.692238+00:00",
+      "sha256": "d05453d7e82d9a7d91adece2bd169501a37e4c4eb49a7daac57109dc9d3f64e4",
+      "seller_category": "Clothing > 바지 > 코튼 팬츠",
+      "canonical_item_type": "치노 팬츠",
+      "review_notes": "판매자 코튼 팬츠 분류. 베이지 바지 다리가 과도하게 퍼지지 않고 곧게 신발까지 내려옴."
+    },
+    {
+      "product_id": "MS7074548",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7074548",
+      "fetched_at": "2026-09-22T02:31:24.796331+00:00",
+      "sha256": "36e9cad9a7e29d0a5595a5580d2770ea2d2aa9051ccaea2a8ac3c578bc6c43a0",
+      "seller_category": "Clothing > 바지 > 청/데님 팬츠",
+      "canonical_item_type": "청바지",
+      "review_notes": "판매자 데님 팬츠 분류와 사진의 워싱 조직. 넓은 다리와 신발 위 밑단."
+    },
+    {
+      "product_id": "MS7079957",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7079957",
+      "fetched_at": "2026-09-22T02:31:24.766148+00:00",
+      "sha256": "45cdaf4c0ffbcabb1a56848b437866c5e7efe442207f6a891ce6bbf5b8b084d3",
+      "seller_category": "Clothing > 바지 > 슈트 팬츠/슬랙스",
+      "canonical_item_type": "슬랙스",
+      "review_notes": "판매자 슬랙스 분류. 넓은 검정 바지 다리와 신발 위 밑단. 소재 조성 미확인."
+    },
+    {
+      "product_id": "MS7095129",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7095129",
+      "fetched_at": "2026-09-22T02:31:24.813151+00:00",
+      "sha256": "1d94711ec2bdb92b8b7bf4c3e6a23f11bad83deb601378cd9fc6bca8bb1ebe64",
+      "seller_category": "Clothing > 바지 > 트레이닝 팬츠",
+      "canonical_item_type": "조거·스웨트팬츠",
+      "review_notes": "프린트 트레이닝 바지의 넓은 다리와 신발을 덮는 밑단. 섬유 조성 미확인."
+    },
+    {
+      "product_id": "MS7121357",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7121357",
+      "fetched_at": "2026-09-22T02:31:24.805178+00:00",
+      "sha256": "3669b2c5b35ca49b83a1b1db5a6d068d0672a940f947e5f126a0a98f31506e55",
+      "seller_category": "Shoes > 여성 구두 > 플랫 슈즈",
+      "canonical_item_type": "other",
+      "review_notes": "비착용 갈색 플랫 구두의 매끈한 가죽 계열 표면. 천연·합성 여부는 구분하지 않음. 플랫 슈즈 품목은 평가 어휘 밖."
+    },
+    {
+      "product_id": "MS7105295",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7105295",
+      "fetched_at": "2026-09-22T02:31:24.836583+00:00",
+      "sha256": "ad8c655c73e8a749c154da64edcb5c5247e132935cc36651678d9f461d1ffb8a",
+      "seller_category": "Shoes > 부츠 > 미들/하프 부츠",
+      "canonical_item_type": "부츠",
+      "review_notes": "착용한 베이지 부츠의 짧은 기모와 무광 질감. 소재군 판정이며 섬유 조성 확인은 아님."
+    },
+    {
+      "product_id": "MS6445810",
+      "url": "https://goods-detail.musinsa.com/api2/goods/6445810",
+      "fetched_at": "2026-09-22T02:31:24.878471+00:00",
+      "sha256": "2cc333b202c5959b1e72a36c3134bd5ed2a4032832e7e923bf182c66ff972b5b",
+      "seller_category": "Shoes > 스니커즈 > 패션스니커즈화",
+      "canonical_item_type": "스니커즈",
+      "review_notes": "비착용 운동화의 넓은 망사 갑피. 은색 보강재의 조성은 확정하지 않음."
+    },
+    {
+      "product_id": "MS6931960",
+      "url": "https://goods-detail.musinsa.com/api2/goods/6931960",
+      "fetched_at": "2026-09-22T02:31:24.884147+00:00",
+      "sha256": "d86e3f4aaf593292ac25b96e20d2d57e03baf99be4358c2211923fff4a286d9e",
+      "seller_category": "Shoes > 스니커즈 > 패션스니커즈화",
+      "canonical_item_type": "스니커즈",
+      "review_notes": "회색 비착용 스니커즈의 기모 있는 무광 갑피. 판매자 스니커즈 분류."
+    },
+    {
+      "product_id": "MS3911166",
+      "url": "https://goods-detail.musinsa.com/api2/goods/3911166",
+      "fetched_at": "2026-09-22T02:31:24.894213+00:00",
+      "sha256": "78900740ae7eedd43a7bf3005b88debe16a257ecacf6aba5fe27914177e8d36e",
+      "seller_category": "Shoes > 남성 및 공용 구두 > 로퍼",
+      "canonical_item_type": "로퍼",
+      "review_notes": "착용한 검정 로퍼의 매끈한 가죽 계열 갑피. 양말 길이는 신발 기장으로 기록하지 않음."
+    },
+    {
+      "product_id": "MS5290797",
+      "url": "https://goods-detail.musinsa.com/api2/goods/5290797",
+      "fetched_at": "2026-09-22T02:31:24.930959+00:00",
+      "sha256": "d66a90765a6c3f871e8860426f50d9521a0975c9d4b33f84463838d365da9d22",
+      "seller_category": "Shoes > 부츠 > 미들/하프 부츠",
+      "canonical_item_type": "부츠",
+      "review_notes": "착용한 버클 부츠의 매끈한 가죽 계열 갑피."
+    },
+    {
+      "product_id": "MS7067337",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7067337",
+      "fetched_at": "2026-09-22T02:31:24.948513+00:00",
+      "sha256": "34382c11e6b7d4f7b093e1c63d5e4247e49edbeeacc742f36d75b97ce039d7f7",
+      "seller_category": "Shoes > 여성 구두 > 메리제인 슈즈",
+      "canonical_item_type": "메리제인",
+      "review_notes": "비착용 메리제인 플랫폼의 벨벳처럼 짧은 기모가 있는 무광 갑피."
+    },
+    {
+      "product_id": "MS7276916",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7276916",
+      "fetched_at": "2026-09-22T02:31:24.967960+00:00",
+      "sha256": "63fc6436950d85425eedea6f739c30f9e87e60a085bd67c5ec621f987aee3856",
+      "seller_category": "Shoes > 스니커즈 > 패션스니커즈화",
+      "canonical_item_type": "스니커즈",
+      "review_notes": "검정 운동화에 여러 보강재가 섞여 있어 축소 사진만으로 주 소재를 확정하지 않음."
+    },
+    {
+      "product_id": "MS6266243",
+      "url": "https://goods-detail.musinsa.com/api2/goods/6266243",
+      "fetched_at": "2026-09-22T02:31:24.985326+00:00",
+      "sha256": "8acd5ec7464f21b7e1fb4246102a8184b6f9a1486a22e3d49e0f805b21d57aad",
+      "seller_category": "Sportsshoes > 러닝화 > 로우화",
+      "canonical_item_type": "러닝화",
+      "review_notes": "비착용 러닝화의 통기성 망사 갑피가 뚜렷함."
+    },
+    {
+      "product_id": "MS2897209",
+      "url": "https://goods-detail.musinsa.com/api2/goods/2897209",
+      "fetched_at": "2026-09-22T02:31:25.019792+00:00",
+      "sha256": "050937b2d80d995b5da520627a9a790015ad10ac1ba84488827ab084f93a550d",
+      "seller_category": "Shoes > 스니커즈 > 패션스니커즈화",
+      "canonical_item_type": "스니커즈",
+      "review_notes": "비착용 흰 스니커즈의 매끈한 가죽 계열 갑피. 천연·합성 여부는 미판정."
+    },
+    {
+      "product_id": "MS7121326",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7121326",
+      "fetched_at": "2026-09-22T02:31:25.021864+00:00",
+      "sha256": "66e4661aa7169a991604a9bac609e9b83b0f489bc43a5867af53679cb299aaa1",
+      "seller_category": "Shoes > 부츠 > 미들/하프 부츠",
+      "canonical_item_type": "부츠",
+      "review_notes": "착용한 검정 부츠의 광택 있는 가죽 계열 표면."
+    },
+    {
+      "product_id": "MS4430193",
+      "url": "https://goods-detail.musinsa.com/api2/goods/4430193",
+      "fetched_at": "2026-09-22T02:31:25.071160+00:00",
+      "sha256": "2ba3820dc3a3410f8eb0b4240084a2ad7be26793c090dc4305147cc70c70dbe1",
+      "seller_category": "Shoes > 남성 및 공용 구두 > 모카신",
+      "canonical_item_type": "other",
+      "review_notes": "착용한 모카신의 기모 있는 갑피. 모카신 품목은 평가 어휘 밖."
+    },
+    {
+      "product_id": "MS7173809",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7173809",
+      "fetched_at": "2026-09-22T02:31:25.082418+00:00",
+      "sha256": "c6f073bd4d75e3f94e857e6380818231dca269fd70bd140b0e735109269cf26f",
+      "seller_category": "Shoes > 부츠 > 미들/하프 부츠",
+      "canonical_item_type": "부츠",
+      "review_notes": "비착용 검정 부츠의 얼룩처럼 방향에 따라 달라지는 기모 질감."
+    },
+    {
+      "product_id": "MS1645143",
+      "url": "https://goods-detail.musinsa.com/api2/goods/1645143",
+      "fetched_at": "2026-09-22T02:31:25.112093+00:00",
+      "sha256": "eb0c8708c019611bd0bbcf2fe98d8a76d7dd1fcb940636a68db42e172f019966",
+      "seller_category": "Shoes > 부츠 > 미들/하프 부츠",
+      "canonical_item_type": "부츠",
+      "review_notes": "착용한 레이스업 부츠의 가죽 계열 갑피."
+    },
+    {
+      "product_id": "MS7141948",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7141948",
+      "fetched_at": "2026-09-22T02:31:25.101986+00:00",
+      "sha256": "332f140cbdc269ea20810d48b71b49f0f268c170019cfeef42c7c821d05184b2",
+      "seller_category": "Shoes > 스니커즈 > 캔버스/단화",
+      "canonical_item_type": "스니커즈",
+      "review_notes": "비착용 검정 스니커즈의 갑피가 작게 보여 섬유·가죽 구분 보류."
+    },
+    {
+      "product_id": "MS7062486",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7062486",
+      "fetched_at": "2026-09-22T02:31:25.152750+00:00",
+      "sha256": "162043228a24b328eb1588ee386f724a623455c17c74c9b56ff6c8ff98c26c2c",
+      "seller_category": "Sportsshoes > 등산/트레킹화 > 경등산화/트레킹화",
+      "canonical_item_type": "other",
+      "review_notes": "판매자 트레킹화 분류. 갑피가 여러 소재로 구성되어 확정 보류; 트레킹화 품목은 평가 어휘 밖."
+    },
+    {
+      "product_id": "MS4108944",
+      "url": "https://goods-detail.musinsa.com/api2/goods/4108944",
+      "fetched_at": "2026-09-22T02:31:25.163724+00:00",
+      "sha256": "e4b167ab6cc54e750307503109008f88290f05dd37853f8929d54f1cd16562e0",
+      "seller_category": "Shoes > 샌들 > 클로그",
+      "canonical_item_type": "샌들",
+      "review_notes": "일체형 성형 클로그. 고무·발포수지 계열의 표면은 의류 소재 어휘 밖. 판매자 샌들 분류를 사용."
+    },
+    {
+      "product_id": "MS4497489",
+      "url": "https://goods-detail.musinsa.com/api2/goods/4497489",
+      "fetched_at": "2026-09-22T02:31:25.206825+00:00",
+      "sha256": "77cff10085fb5d46e7f7fa8f56bbb21a9aeeed4dc21e8165fea5340e16df24bd",
+      "seller_category": "Shoes > 스니커즈 > 패션스니커즈화",
+      "canonical_item_type": "스니커즈",
+      "review_notes": "착용한 연한 색 리본 운동화. 광택만으로 새틴·실크를 확정하지 않음."
+    },
+    {
+      "product_id": "MS7238754",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7238754",
+      "fetched_at": "2026-09-22T02:31:25.179723+00:00",
+      "sha256": "2dd571f6ddb518c70b7062beb8bbb656b267b2eaaa669d59c112be1e18ccbe7d",
+      "seller_category": "Shoes > 부츠 > 롱 부츠",
+      "canonical_item_type": "부츠",
+      "review_notes": "비착용 버클 롱부츠의 매끈한 무광 가죽 계열 표면."
+    },
+    {
+      "product_id": "MS6940444",
+      "url": "https://goods-detail.musinsa.com/api2/goods/6940444",
+      "fetched_at": "2026-09-22T02:31:25.236123+00:00",
+      "sha256": "69b3448fa4924821df2cd5a0621316464e9902738836e1f0202046779dde2f35",
+      "seller_category": "Shoes > 부츠 > 미들/하프 부츠",
+      "canonical_item_type": "부츠",
+      "review_notes": "착용한 베이지 부츠의 짧은 기모와 무광 표면."
+    },
+    {
+      "product_id": "MS7121531",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7121531",
+      "fetched_at": "2026-09-22T02:31:25.272312+00:00",
+      "sha256": "4768868c4888ad4ac03a950e0aba3f8563df0ee00f009761deb8e13a04975650",
+      "seller_category": "Shoes > 스니커즈 > 패션스니커즈화",
+      "canonical_item_type": "스니커즈",
+      "review_notes": "같은 디자인 세 색상을 바닥에 진열한 비착용 사진. 갑피의 기모 표면을 기준으로 소재군 판정."
+    },
+    {
+      "product_id": "MS7168663",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7168663",
+      "fetched_at": "2026-09-22T02:31:25.254679+00:00",
+      "sha256": "421a2b6679bab672cbdd06f70e0dd107c6ea1f04e17174be13709da120995822",
+      "seller_category": "Shoes > 여성 구두 > 플랫 슈즈",
+      "canonical_item_type": "other",
+      "review_notes": "착용한 검정 플랫 슈즈의 매끈한 가죽 계열 갑피. 플랫 품목은 평가 어휘 밖."
+    },
+    {
+      "product_id": "MS6886576",
+      "url": "https://goods-detail.musinsa.com/api2/goods/6886576",
+      "fetched_at": "2026-09-22T02:31:25.296993+00:00",
+      "sha256": "3f24a5d907c160b50c4a474a254184d6b85f0a19ee2f9c3dd2aa01872ed53f0c",
+      "seller_category": "Shoes > 남성 및 공용 구두 > 로퍼",
+      "canonical_item_type": "로퍼",
+      "review_notes": "비착용 구두의 무광 기모 갑피. 세부 종류는 판매자 로퍼 분류로 통일."
+    },
+    {
+      "product_id": "MS3156291",
+      "url": "https://goods-detail.musinsa.com/api2/goods/3156291",
+      "fetched_at": "2026-09-22T02:31:25.335592+00:00",
+      "sha256": "14d5b049643abe1a88a4c352a25c9ed6ed64cb4ff9858efa7f931b1cef1e799b",
+      "seller_category": "Shoes > 스니커즈 > 기타 스니커즈",
+      "canonical_item_type": "스니커즈",
+      "review_notes": "사람이 손으로 들고 있어 착용컷도 평면컷도 아님. 판매자 본문 upper: cow suede 확인. 표본은 그대로 유지하고 컷별 표에서 제외."
+    },
+    {
+      "product_id": "MS6976462",
+      "url": "https://goods-detail.musinsa.com/api2/goods/6976462",
+      "fetched_at": "2026-09-22T02:31:25.323225+00:00",
+      "sha256": "281cf97a7c68771ac54f2ac1ef34014092f27b61a276176639a506670029a0c7",
+      "seller_category": "Shoes > 스니커즈 > 패션스니커즈화",
+      "canonical_item_type": "스니커즈",
+      "review_notes": "검정 비착용 슬립온의 표면이 작고 어두워 기모·스웨이드·섬유 조성 구분 보류."
+    },
+    {
+      "product_id": "MS7143427",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7143427",
+      "fetched_at": "2026-09-22T02:31:25.347973+00:00",
+      "sha256": "2f5285c7bc2f35e6f2eca01c5f709ebaa6a49c08b199105aa78bdbeca34fdb67",
+      "seller_category": "Sportsshoes > 러닝화 > 로우화",
+      "canonical_item_type": "러닝화",
+      "review_notes": "비착용 러닝화의 망사 갑피가 확인됨."
+    },
+    {
+      "product_id": "MS7037353",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7037353",
+      "fetched_at": "2026-09-22T02:31:25.370430+00:00",
+      "sha256": "d34bfb2ad9062ebd6d0f8f38615f584a16691f8e2ccfb45d73c2d4d0a941320d",
+      "seller_category": "Shoes > 스니커즈 > 스니커즈 뮬",
+      "canonical_item_type": "스니커즈",
+      "review_notes": "비착용 베이지 뮬의 기모 있는 갑피. 스니커즈 뮬은 기존 스니커즈 품목으로 기록."
+    },
+    {
+      "product_id": "MS2085603",
+      "url": "https://goods-detail.musinsa.com/api2/goods/2085603",
+      "fetched_at": "2026-09-22T02:31:25.401839+00:00",
+      "sha256": "f4c2ee64970472364e41ed572e18171e5768828bc0a900f46c011a2fa11dee6c",
+      "seller_category": "Shoes > 여성 구두 > 플랫 슈즈",
+      "canonical_item_type": "other",
+      "review_notes": "착용한 갈색 플랫 구두의 매끈한 가죽 계열 갑피. 플랫 품목은 평가 어휘 밖."
+    },
+    {
+      "product_id": "MS7121525",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7121525",
+      "fetched_at": "2026-09-22T02:31:25.429887+00:00",
+      "sha256": "d01354e0d18520900f6615fb53c16ced6d204d1b29713a8dc5661434fd811db1",
+      "seller_category": "Shoes > 부츠 > 롱 부츠",
+      "canonical_item_type": "부츠",
+      "review_notes": "착용한 검정 버클 롱부츠의 가죽 계열 갑피."
+    },
+    {
+      "product_id": "MS3575081",
+      "url": "https://goods-detail.musinsa.com/api2/goods/3575081",
+      "fetched_at": "2026-09-22T02:31:25.430871+00:00",
+      "sha256": "2915fcafa3dcd879a4fe3a84d3ce9627f0cbdc2d4329e03bb2f2243c1f948eeb",
+      "seller_category": "Shoes > 부츠 > 롱 부츠",
+      "canonical_item_type": "부츠",
+      "review_notes": "착용한 검정 롱부츠의 매끈한 가죽 계열 갑피."
+    },
+    {
+      "product_id": "MS7194756",
+      "url": "https://goods-detail.musinsa.com/api2/goods/7194756",
+      "fetched_at": "2026-09-22T02:31:25.450804+00:00",
+      "sha256": "3d5685dcba8af51bf703b94498414400858158453c9b9872e9965deb1447cf6b",
+      "seller_category": "Shoes > 남성 및 공용 구두 > 로퍼",
+      "canonical_item_type": "로퍼",
+      "review_notes": "비착용 검정 로퍼의 가죽 계열 갑피."
+    },
+    {
+      "product_id": "MS5698874",
+      "url": "https://goods-detail.musinsa.com/api2/goods/5698874",
+      "fetched_at": "2026-09-22T02:31:25.478115+00:00",
+      "sha256": "9d13420fa5c833f0e661d8bf7c330ed897707e9bd1c143b9d6a6fea9acf4c5fd",
+      "seller_category": "Shoes > 스니커즈 > 기타 스니커즈",
+      "canonical_item_type": "스니커즈",
+      "review_notes": "비착용 검정 운동화의 망사 갑피. 보강 패널의 섬유 조성은 판정하지 않음."
+    }
+  ]
+}

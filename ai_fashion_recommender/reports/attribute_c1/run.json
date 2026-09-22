@@ -1,0 +1,43 @@
+{
+  "observed_at": "2026-09-21T03:45:51.761135+00:00",
+  "baseline_commit": "0f3bc90a28a8bbad36575ae2f2d00f971829ee91",
+  "health_url": "http://afsd.iptime.org/api/health",
+  "health": {
+    "device": "cuda",
+    "trained_heads": true,
+    "parser_backend": "fashn-human-parser",
+    "vton_enabled": true,
+    "tryon_categories": [
+      "bottom",
+      "shoes",
+      "top"
+    ],
+    "product_count": 2224,
+    "product_color_audits": 2224,
+    "product_color_overrides": 8,
+    "product_color_mismatches": 1089,
+    "rules_implemented": 48,
+    "rules_documented": 55
+  },
+  "checkpoint_sha256": "3c560c9db0ade6a62d3ead1fc61edc56ff6a935083ee7393858a3a757431765d",
+  "verified_checkpoint_locations": [
+    "server release fitta_20260921_hotswap",
+    "server /data1/dsl01/26-2_Modeling_Fashion",
+    "current workspace"
+  ],
+  "evaluation_job_id": "234048",
+  "evaluation_device": "cpu",
+  "status": "human_labels_pending",
+  "provisional_sample_size": 100,
+  "candidate_pool_size": 300,
+  "tests_passed": 17,
+  "inference_scope": "predict defaults, four mapped axes; clothing type/fit/length unsupported for shoes",
+  "inference_status": "completed",
+  "inference_errors": 0,
+  "inference_products": 300,
+  "evaluation_job_elapsed_seconds": 88,
+  "predictions_sha256": "546ab0066dcda3e7d7237d4a1426b2f0b96e14d4890b6b084785122045b1a1a7",
+  "source_hashes_verified": true,
+  "image_hashes_verified": 300,
+  "title_replay_verified": 300
+}
