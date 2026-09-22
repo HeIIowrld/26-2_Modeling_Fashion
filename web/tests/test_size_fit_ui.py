@@ -13,11 +13,13 @@ STATIC = Path(__file__).resolve().parents[1] / "static"
 @unittest.skipUnless(shutil.which("node"), "Node is required for JavaScript behavior tests")
 class SizeFitUITests(unittest.TestCase):
     def run_js(self, code):
-        result = subprocess.run(["node", "-e", code], text=True, capture_output=True, check=True)
+        # Node 는 UTF-8 로 출력한다. text=True 만 쓰면 Windows 에서 cp949 로 읽어 한글이 깨진다.
+        result = subprocess.run(["node", "-e", code], text=True, encoding="utf-8",
+                                capture_output=True, check=True)
         return json.loads(result.stdout)
 
     def test_measurement_text_is_escaped_and_zero_difference_is_displayed(self):
-        source = (STATIC / "app.js").read_text()
+        source = (STATIC / "app.js").read_text(encoding="utf-8")
         function = source[source.index("function renderSizeFit("):source.index("function renderShoppingProducts(")]
         code = "const escapeHtml = (s) => String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');\n" + function
         code += "\nconsole.log(JSON.stringify(renderSizeFit(" + json.dumps({
@@ -34,7 +36,7 @@ class SizeFitUITests(unittest.TestCase):
         self.assertIn("<td>—</td>", html)
 
     def test_form_serializes_reference_dimensions_without_using_height_as_garment_length(self):
-        source = (STATIC / "app.js").read_text()
+        source = (STATIC / "app.js").read_text(encoding="utf-8")
         function = source[source.index("function collectProfile("):source.index("/* ── 3단계:")]
         code = """
 const $ = () => ({});

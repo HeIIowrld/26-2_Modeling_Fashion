@@ -64,7 +64,7 @@ class MeasurementTests(unittest.TestCase):
             with patch.object(client, "_fetch", side_effect=[actual(), {"data": {}}]) as fetch:
                 first = client.get("MS1")
             self.assertEqual(fetch.call_count, 2)
-            saved = json.loads((Path(directory) / "MS1.json").read_text())
+            saved = json.loads((Path(directory) / "MS1.json").read_text(encoding="utf-8"))
             self.assertEqual(saved["raw"]["actual_size"]["sizes"][1]["name"], "M")
             other = ProductMeasurementClient(Path(directory))
             with patch.object(other, "_fetch", side_effect=AssertionError("cache missed")):

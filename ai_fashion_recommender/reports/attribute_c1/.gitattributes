@@ -1,2 +1,5 @@
 # CSV snapshots use the standard CSV CRLF terminator; preserve hashable bytes.
 *.csv -text whitespace=cr-at-eol
+# JSON artifacts are hashed for provenance too (review_artifact_sha256, *_sha256 in *.sources.json).
+# Without this, Windows checkouts (core.autocrlf=true) turn LF into CRLF and the hashes stop matching.
+*.json -text

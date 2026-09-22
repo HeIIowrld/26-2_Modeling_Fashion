@@ -57,9 +57,9 @@ def predict(args):
 
 def report(args):
     rows = benchmark.read_csv(args.labels)
-    original = json.loads(args.baseline.read_text())
+    original = json.loads(args.baseline.read_text(encoding="utf-8"))
     records, pairs = pair_predictions(rows, original)
-    payload = json.loads(args.predictions.read_text())
+    payload = json.loads(args.predictions.read_text(encoding="utf-8"))
     if payload["checkpoint_sha256"] != original["checkpoint_sha256"]:
         raise ValueError("Checkpoints differ")
     if payload["labels_sha256"] != benchmark.digest(args.labels):
@@ -126,7 +126,7 @@ def report(args):
             chosen = [p for p in output if p["cut_type"] == cut and p["axis"] == axis and p["evaluable"]]
             lines.append(f"| {cut} | {axis} | {sum(p['before_correct'] for p in chosen)}/{len(chosen)} | "
                          f"{sum(p['after_correct'] for p in chosen)}/{len(chosen)} |")
-    args.output.write_text("\n".join(lines) + "\n")
+    args.output.write_text("\n".join(lines) + "\n", encoding="utf-8")
     benchmark.write_json(args.output.with_suffix(".json"), {"policy": POLICY_VERSION,
         "inputs": {name: benchmark.digest(getattr(args, name)) for name in ("labels", "baseline", "predictions")},
         "summary": summary, "pairs": output})
