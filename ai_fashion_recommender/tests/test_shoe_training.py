@@ -15,8 +15,16 @@ def module(name):
     return result
 
 
+# train_shoe_heads 만 scikit-learn 을 쓴다. 학습 의존성(requirements-shoe-training.txt)은
+# 운영 서버·일반 개발 환경에 없으므로, 없으면 그 테스트만 건너뛰고 나머지는 돌린다.
+# 모듈 수준에서 바로 불러오면 수집 오류로 pytest 전체가 멈춘다(2026-09-22 서버·Windows).
+HAS_TRAINING_DEPS = importlib.util.find_spec("sklearn") is not None
+needs_training_deps = unittest.skipUnless(
+    HAS_TRAINING_DEPS, "신발 학습 의존성(scikit-learn)이 없습니다: requirements-shoe-training.txt"
+)
+
 prep = module("prepare_shoe_dataset")
-train = module("train_shoe_heads")
+train = module("train_shoe_heads") if HAS_TRAINING_DEPS else None
 weak = module("build_weak_shoe_manifest")
 
 
@@ -36,18 +44,21 @@ class ShoeTrainingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "shoe_label"):
             prep.validate_manifest([self.row(shoe_label="Running")])
 
+    @needs_training_deps
     def test_negative_classes_never_accepted(self):
         probabilities = np.eye(12)[[10, 11, 2]]
         metrics = train.metrics(np.array([10, 11, 2]), probabilities, .5)
         self.assertEqual(metrics["accepted_count"], 1)
         self.assertEqual(metrics["barefoot_false_accept_rate"], 0)
 
+    @needs_training_deps
     def test_no_supported_threshold(self):
         probabilities = np.eye(12)[[2, 2]] * .9 + .1 / 12
         threshold, _, met = train.select_threshold(np.array([11, 11]), probabilities, .85, 1)
         self.assertFalse(met)
         self.assertEqual(threshold, 1.0)
 
+    @needs_training_deps
     def test_cache_checksum_leakage(self):
         a = {"backbone_model_id": "m", "features": torch.zeros(1, 3), "paths": ["a"],
              "subject_ids": [""], "product_ids": ["p"], "session_ids": [""], "checksums": ["same"]}
@@ -60,6 +71,7 @@ class ShoeTrainingTests(unittest.TestCase):
                          weak.stable_split("same-person-and-product"))
         self.assertIn(weak.stable_split("same-person-and-product"), {"train", "val", "test"})
 
+    @needs_training_deps
     def test_cache_requires_label_provenance(self):
         cache = {"features": torch.zeros(1, 3), "labels": torch.tensor([2]),
                  "label_names": tuple(weak.SHOE_LABELS), "preprocessing": "squash",
