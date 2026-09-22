@@ -713,7 +713,10 @@ function renderLookRender(entry) {
       </figure>${warnings}`;
   }
   const status = lookStatus(entry);
-  const copy = {
+  // 합성을 거절한 이유(대표 사진이 옷 전체를 안 보여 줌 등)가 있으면 그대로 보여 준다.
+  // 뭉뚱그린 "실패"보다 사용자가 다른 조합을 고를 근거가 된다.
+  const reason = status === "failed" ? lookBatchItem(entry.key)?.error : "";
+  const copy = reason || {
     queued: "차례를 기다리는 중입니다.",
     running: "이 조합을 합성하는 중입니다.",
     failed: "이 조합은 합성하지 못했습니다.",
