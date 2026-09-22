@@ -17,5 +17,6 @@
   ],
   "followup_candidate": "worn-bottom fit only; requires independent validation and runtime cut identification",
   "runtime_files_changed": false,
-  "tests_passed": 22
+  "tests_passed": 22,
+  "superseded_by": "c2_decision.json"
 }

@@ -1,0 +1,4291 @@
+{
+  "created_at": "2026-09-22T03:37:05.437047+00:00",
+  "policy": "worn-fit-length-v1",
+  "device": "cuda",
+  "checkpoint_sha256": "3c560c9db0ade6a62d3ead1fc61edc56ff6a935083ee7393858a3a757431765d",
+  "source_sha256": {
+    "live_product_attributes.py": "0dd4a21550d87f1f6e60dda332b37e36e4fdc42e53491a9063e3753924b8dd02",
+    "musinsa_live_search.py": "ab09a5cf5be7afa939b59a34f0e51be0933ed9c6ca96348cd8a2b88ee85b7087"
+  },
+  "labels_sha256": "67d51614c1024e28cd97982bfa1e471eb0e3877df26a6fc70a728d8c16ad18de",
+  "scope": "Fixed C-1 100 candidate rows; real model inference and CDN; search API and measurements excluded",
+  "results": [
+    {
+      "case": "all_axes",
+      "transport": "local_images",
+      "run": "baseline",
+      "elapsed_seconds": 0.01843681838363409,
+      "stats": {
+        "requests": 20,
+        "completed_requests": 20,
+        "raw_count": 672,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "elapsed_seconds": 0.018,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "photo": {
+          "candidates": 0,
+          "matched_products": 0,
+          "elapsed_seconds": 0.0
+        },
+        "total_elapsed_seconds": 0.0184,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7022626",
+        "MS5395163",
+        "MS7102714",
+        "MS7103342",
+        "MS7122627",
+        "MS6996599",
+        "MS6525758",
+        "MS7036867",
+        "MS7141921",
+        "MS7011736",
+        "MS7074548",
+        "MS858911",
+        "MS3575081",
+        "MS3911166",
+        "MS5290797",
+        "MS6940444",
+        "MS7067337",
+        "MS7105295"
+      ],
+      "protected_positions": {
+        "0": "MS7022626",
+        "1": "MS5395163",
+        "2": "MS7102714",
+        "3": "MS7103342",
+        "4": "MS7122627",
+        "5": "MS6996599",
+        "6": "MS6525758",
+        "7": "MS7036867",
+        "8": "MS7141921",
+        "9": "MS7011736",
+        "10": "MS7074548",
+        "11": "MS858911",
+        "12": "MS3575081",
+        "13": "MS3911166",
+        "14": "MS5290797",
+        "15": "MS6940444",
+        "16": "MS7067337",
+        "17": "MS7105295"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "all_axes",
+      "transport": "local_images",
+      "run": "cold",
+      "elapsed_seconds": 0.2908459724858403,
+      "stats": {
+        "requests": 20,
+        "completed_requests": 20,
+        "raw_count": 672,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "elapsed_seconds": 0.016,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "photo": {
+          "candidates": 15,
+          "cache_hits": 0,
+          "inferred": 1,
+          "failures": 0,
+          "elapsed_seconds": 0.2731,
+          "deferred": 14,
+          "matched_products": 1
+        },
+        "total_elapsed_seconds": 0.2907,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7022626",
+        "MS5395163",
+        "MS7102714",
+        "MS7103342",
+        "MS7122627",
+        "MS6996599",
+        "MS6525758",
+        "MS7036867",
+        "MS7141921",
+        "MS7011736",
+        "MS7074548",
+        "MS858911",
+        "MS3575081",
+        "MS3911166",
+        "MS5290797",
+        "MS6940444",
+        "MS7067337",
+        "MS7105295"
+      ],
+      "protected_positions": {
+        "0": "MS7022626",
+        "1": "MS5395163",
+        "2": "MS7102714",
+        "3": "MS7103342",
+        "4": "MS7122627",
+        "5": "MS6996599",
+        "6": "MS6525758",
+        "7": "MS7036867",
+        "8": "MS7141921",
+        "9": "MS7011736",
+        "10": "MS7074548",
+        "11": "MS858911",
+        "12": "MS3575081",
+        "13": "MS3911166",
+        "14": "MS5290797",
+        "15": "MS6940444",
+        "16": "MS7067337",
+        "17": "MS7105295"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "all_axes",
+      "transport": "local_images",
+      "run": "repeat1",
+      "elapsed_seconds": 0.30263539869338274,
+      "stats": {
+        "requests": 20,
+        "completed_requests": 20,
+        "raw_count": 672,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "elapsed_seconds": 0.016,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "photo": {
+          "candidates": 15,
+          "cache_hits": 1,
+          "inferred": 8,
+          "failures": 0,
+          "elapsed_seconds": 0.2857,
+          "deferred": 6,
+          "matched_products": 2
+        },
+        "total_elapsed_seconds": 0.3025,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7022626",
+        "MS5395163",
+        "MS7102714",
+        "MS7103342",
+        "MS7122627",
+        "MS6996599",
+        "MS6525758",
+        "MS7036867",
+        "MS7141921",
+        "MS7011736",
+        "MS7074548",
+        "MS858911",
+        "MS3575081",
+        "MS3911166",
+        "MS5290797",
+        "MS6940444",
+        "MS7067337",
+        "MS7105295"
+      ],
+      "protected_positions": {
+        "0": "MS7022626",
+        "1": "MS5395163",
+        "2": "MS7102714",
+        "3": "MS7103342",
+        "4": "MS7122627",
+        "5": "MS6996599",
+        "6": "MS6525758",
+        "7": "MS7036867",
+        "8": "MS7141921",
+        "9": "MS7011736",
+        "10": "MS7074548",
+        "11": "MS858911",
+        "12": "MS3575081",
+        "13": "MS3911166",
+        "14": "MS5290797",
+        "15": "MS6940444",
+        "16": "MS7067337",
+        "17": "MS7105295"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS7074548": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9998373985290527,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "all_axes",
+      "transport": "local_images",
+      "run": "repeat2",
+      "elapsed_seconds": 0.24767067283391953,
+      "stats": {
+        "requests": 20,
+        "completed_requests": 20,
+        "raw_count": 672,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "elapsed_seconds": 0.016,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "photo": {
+          "candidates": 15,
+          "cache_hits": 9,
+          "inferred": 6,
+          "failures": 0,
+          "elapsed_seconds": 0.2309,
+          "deferred": 0,
+          "matched_products": 3
+        },
+        "total_elapsed_seconds": 0.2475,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7022626",
+        "MS5395163",
+        "MS7102714",
+        "MS7103342",
+        "MS7122627",
+        "MS6996599",
+        "MS6525758",
+        "MS7036867",
+        "MS7141921",
+        "MS7011736",
+        "MS7074548",
+        "MS858911",
+        "MS3575081",
+        "MS3911166",
+        "MS5290797",
+        "MS6940444",
+        "MS7067337",
+        "MS7105295"
+      ],
+      "protected_positions": {
+        "0": "MS7022626",
+        "1": "MS5395163",
+        "2": "MS7102714",
+        "3": "MS7103342",
+        "4": "MS7122627",
+        "5": "MS6996599",
+        "6": "MS6525758",
+        "7": "MS7036867",
+        "8": "MS7141921",
+        "9": "MS7011736",
+        "10": "MS7074548",
+        "11": "MS858911",
+        "12": "MS3575081",
+        "13": "MS3911166",
+        "14": "MS5290797",
+        "15": "MS6940444",
+        "16": "MS7067337",
+        "17": "MS7105295"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS7074548": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9998373985290527,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "all_axes",
+      "transport": "local_images",
+      "run": "repeat3",
+      "elapsed_seconds": 0.01733763888478279,
+      "stats": {
+        "requests": 20,
+        "completed_requests": 20,
+        "raw_count": 672,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "elapsed_seconds": 0.016,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "photo": {
+          "candidates": 15,
+          "cache_hits": 15,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0006,
+          "deferred": 0,
+          "matched_products": 3
+        },
+        "total_elapsed_seconds": 0.0173,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7022626",
+        "MS5395163",
+        "MS7102714",
+        "MS7103342",
+        "MS7122627",
+        "MS6996599",
+        "MS6525758",
+        "MS7036867",
+        "MS7141921",
+        "MS7011736",
+        "MS7074548",
+        "MS858911",
+        "MS3575081",
+        "MS3911166",
+        "MS5290797",
+        "MS6940444",
+        "MS7067337",
+        "MS7105295"
+      ],
+      "protected_positions": {
+        "0": "MS7022626",
+        "1": "MS5395163",
+        "2": "MS7102714",
+        "3": "MS7103342",
+        "4": "MS7122627",
+        "5": "MS6996599",
+        "6": "MS6525758",
+        "7": "MS7036867",
+        "8": "MS7141921",
+        "9": "MS7011736",
+        "10": "MS7074548",
+        "11": "MS858911",
+        "12": "MS3575081",
+        "13": "MS3911166",
+        "14": "MS5290797",
+        "15": "MS6940444",
+        "16": "MS7067337",
+        "17": "MS7105295"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS7074548": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9998373985290527,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "all_axes",
+      "transport": "local_images",
+      "run": "repeat4",
+      "elapsed_seconds": 0.017022615298628807,
+      "stats": {
+        "requests": 20,
+        "completed_requests": 20,
+        "raw_count": 672,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "elapsed_seconds": 0.016,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "photo": {
+          "candidates": 15,
+          "cache_hits": 15,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0006,
+          "deferred": 0,
+          "matched_products": 3
+        },
+        "total_elapsed_seconds": 0.017,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7022626",
+        "MS5395163",
+        "MS7102714",
+        "MS7103342",
+        "MS7122627",
+        "MS6996599",
+        "MS6525758",
+        "MS7036867",
+        "MS7141921",
+        "MS7011736",
+        "MS7074548",
+        "MS858911",
+        "MS3575081",
+        "MS3911166",
+        "MS5290797",
+        "MS6940444",
+        "MS7067337",
+        "MS7105295"
+      ],
+      "protected_positions": {
+        "0": "MS7022626",
+        "1": "MS5395163",
+        "2": "MS7102714",
+        "3": "MS7103342",
+        "4": "MS7122627",
+        "5": "MS6996599",
+        "6": "MS6525758",
+        "7": "MS7036867",
+        "8": "MS7141921",
+        "9": "MS7011736",
+        "10": "MS7074548",
+        "11": "MS858911",
+        "12": "MS3575081",
+        "13": "MS3911166",
+        "14": "MS5290797",
+        "15": "MS6940444",
+        "16": "MS7067337",
+        "17": "MS7105295"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS7074548": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9998373985290527,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "all_axes",
+      "transport": "local_images",
+      "run": "repeat5",
+      "elapsed_seconds": 0.017185460776090622,
+      "stats": {
+        "requests": 20,
+        "completed_requests": 20,
+        "raw_count": 672,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "elapsed_seconds": 0.016,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "photo": {
+          "candidates": 15,
+          "cache_hits": 15,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0006,
+          "deferred": 0,
+          "matched_products": 3
+        },
+        "total_elapsed_seconds": 0.0171,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7022626",
+        "MS5395163",
+        "MS7102714",
+        "MS7103342",
+        "MS7122627",
+        "MS6996599",
+        "MS6525758",
+        "MS7036867",
+        "MS7141921",
+        "MS7011736",
+        "MS7074548",
+        "MS858911",
+        "MS3575081",
+        "MS3911166",
+        "MS5290797",
+        "MS6940444",
+        "MS7067337",
+        "MS7105295"
+      ],
+      "protected_positions": {
+        "0": "MS7022626",
+        "1": "MS5395163",
+        "2": "MS7102714",
+        "3": "MS7103342",
+        "4": "MS7122627",
+        "5": "MS6996599",
+        "6": "MS6525758",
+        "7": "MS7036867",
+        "8": "MS7141921",
+        "9": "MS7011736",
+        "10": "MS7074548",
+        "11": "MS858911",
+        "12": "MS3575081",
+        "13": "MS3911166",
+        "14": "MS5290797",
+        "15": "MS6940444",
+        "16": "MS7067337",
+        "17": "MS7105295"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS7074548": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9998373985290527,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "all_axes",
+      "transport": "local_images",
+      "run": "repeat6",
+      "elapsed_seconds": 0.017082225531339645,
+      "stats": {
+        "requests": 20,
+        "completed_requests": 20,
+        "raw_count": 672,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "elapsed_seconds": 0.016,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "photo": {
+          "candidates": 15,
+          "cache_hits": 15,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0006,
+          "deferred": 0,
+          "matched_products": 3
+        },
+        "total_elapsed_seconds": 0.017,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7022626",
+        "MS5395163",
+        "MS7102714",
+        "MS7103342",
+        "MS7122627",
+        "MS6996599",
+        "MS6525758",
+        "MS7036867",
+        "MS7141921",
+        "MS7011736",
+        "MS7074548",
+        "MS858911",
+        "MS3575081",
+        "MS3911166",
+        "MS5290797",
+        "MS6940444",
+        "MS7067337",
+        "MS7105295"
+      ],
+      "protected_positions": {
+        "0": "MS7022626",
+        "1": "MS5395163",
+        "2": "MS7102714",
+        "3": "MS7103342",
+        "4": "MS7122627",
+        "5": "MS6996599",
+        "6": "MS6525758",
+        "7": "MS7036867",
+        "8": "MS7141921",
+        "9": "MS7011736",
+        "10": "MS7074548",
+        "11": "MS858911",
+        "12": "MS3575081",
+        "13": "MS3911166",
+        "14": "MS5290797",
+        "15": "MS6940444",
+        "16": "MS7067337",
+        "17": "MS7105295"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS7074548": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9998373985290527,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "all_axes",
+      "transport": "musinsa_cdn",
+      "run": "baseline",
+      "elapsed_seconds": 0.016770449467003345,
+      "stats": {
+        "requests": 20,
+        "completed_requests": 20,
+        "raw_count": 672,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "elapsed_seconds": 0.017,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "photo": {
+          "candidates": 0,
+          "matched_products": 0,
+          "elapsed_seconds": 0.0
+        },
+        "total_elapsed_seconds": 0.0167,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7022626",
+        "MS5395163",
+        "MS7102714",
+        "MS7103342",
+        "MS7122627",
+        "MS6996599",
+        "MS6525758",
+        "MS7036867",
+        "MS7141921",
+        "MS7011736",
+        "MS7074548",
+        "MS858911",
+        "MS3575081",
+        "MS3911166",
+        "MS5290797",
+        "MS6940444",
+        "MS7067337",
+        "MS7105295"
+      ],
+      "protected_positions": {
+        "0": "MS7022626",
+        "1": "MS5395163",
+        "2": "MS7102714",
+        "3": "MS7103342",
+        "4": "MS7122627",
+        "5": "MS6996599",
+        "6": "MS6525758",
+        "7": "MS7036867",
+        "8": "MS7141921",
+        "9": "MS7011736",
+        "10": "MS7074548",
+        "11": "MS858911",
+        "12": "MS3575081",
+        "13": "MS3911166",
+        "14": "MS5290797",
+        "15": "MS6940444",
+        "16": "MS7067337",
+        "17": "MS7105295"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "all_axes",
+      "transport": "musinsa_cdn",
+      "run": "cold",
+      "elapsed_seconds": 0.1688124043866992,
+      "stats": {
+        "requests": 20,
+        "completed_requests": 20,
+        "raw_count": 672,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "elapsed_seconds": 0.016,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "photo": {
+          "candidates": 15,
+          "cache_hits": 0,
+          "inferred": 0,
+          "failures": 15,
+          "elapsed_seconds": 0.1518,
+          "deferred": 15,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.1687,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7022626",
+        "MS5395163",
+        "MS7102714",
+        "MS7103342",
+        "MS7122627",
+        "MS6996599",
+        "MS6525758",
+        "MS7036867",
+        "MS7141921",
+        "MS7011736",
+        "MS7074548",
+        "MS858911",
+        "MS3575081",
+        "MS3911166",
+        "MS5290797",
+        "MS6940444",
+        "MS7067337",
+        "MS7105295"
+      ],
+      "protected_positions": {
+        "0": "MS7022626",
+        "1": "MS5395163",
+        "2": "MS7102714",
+        "3": "MS7103342",
+        "4": "MS7122627",
+        "5": "MS6996599",
+        "6": "MS6525758",
+        "7": "MS7036867",
+        "8": "MS7141921",
+        "9": "MS7011736",
+        "10": "MS7074548",
+        "11": "MS858911",
+        "12": "MS3575081",
+        "13": "MS3911166",
+        "14": "MS5290797",
+        "15": "MS6940444",
+        "16": "MS7067337",
+        "17": "MS7105295"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "all_axes",
+      "transport": "musinsa_cdn",
+      "run": "repeat1",
+      "elapsed_seconds": 0.2829396724700928,
+      "stats": {
+        "requests": 20,
+        "completed_requests": 20,
+        "raw_count": 672,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "elapsed_seconds": 0.022,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "photo": {
+          "candidates": 15,
+          "cache_hits": 0,
+          "inferred": 2,
+          "failures": 1,
+          "elapsed_seconds": 0.2603,
+          "deferred": 13,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.2828,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7022626",
+        "MS5395163",
+        "MS7102714",
+        "MS7103342",
+        "MS7122627",
+        "MS6996599",
+        "MS6525758",
+        "MS7036867",
+        "MS7141921",
+        "MS7011736",
+        "MS7074548",
+        "MS858911",
+        "MS3575081",
+        "MS3911166",
+        "MS5290797",
+        "MS6940444",
+        "MS7067337",
+        "MS7105295"
+      ],
+      "protected_positions": {
+        "0": "MS7022626",
+        "1": "MS5395163",
+        "2": "MS7102714",
+        "3": "MS7103342",
+        "4": "MS7122627",
+        "5": "MS6996599",
+        "6": "MS6525758",
+        "7": "MS7036867",
+        "8": "MS7141921",
+        "9": "MS7011736",
+        "10": "MS7074548",
+        "11": "MS858911",
+        "12": "MS3575081",
+        "13": "MS3911166",
+        "14": "MS5290797",
+        "15": "MS6940444",
+        "16": "MS7067337",
+        "17": "MS7105295"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "all_axes",
+      "transport": "musinsa_cdn",
+      "run": "repeat2",
+      "elapsed_seconds": 0.2860647616907954,
+      "stats": {
+        "requests": 20,
+        "completed_requests": 20,
+        "raw_count": 672,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "elapsed_seconds": 0.025,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "photo": {
+          "candidates": 15,
+          "cache_hits": 2,
+          "inferred": 1,
+          "failures": 0,
+          "elapsed_seconds": 0.2603,
+          "deferred": 12,
+          "matched_products": 1
+        },
+        "total_elapsed_seconds": 0.2859,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7022626",
+        "MS5395163",
+        "MS7102714",
+        "MS7103342",
+        "MS7122627",
+        "MS6996599",
+        "MS6525758",
+        "MS7036867",
+        "MS7141921",
+        "MS7011736",
+        "MS7074548",
+        "MS858911",
+        "MS3575081",
+        "MS3911166",
+        "MS5290797",
+        "MS6940444",
+        "MS7067337",
+        "MS7105295"
+      ],
+      "protected_positions": {
+        "0": "MS7022626",
+        "1": "MS5395163",
+        "2": "MS7102714",
+        "3": "MS7103342",
+        "4": "MS7122627",
+        "5": "MS6996599",
+        "6": "MS6525758",
+        "7": "MS7036867",
+        "8": "MS7141921",
+        "9": "MS7011736",
+        "10": "MS7074548",
+        "11": "MS858911",
+        "12": "MS3575081",
+        "13": "MS3911166",
+        "14": "MS5290797",
+        "15": "MS6940444",
+        "16": "MS7067337",
+        "17": "MS7105295"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "all_axes",
+      "transport": "musinsa_cdn",
+      "run": "repeat3",
+      "elapsed_seconds": 0.28512296825647354,
+      "stats": {
+        "requests": 20,
+        "completed_requests": 20,
+        "raw_count": 672,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "elapsed_seconds": 0.016,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "photo": {
+          "candidates": 15,
+          "cache_hits": 3,
+          "inferred": 1,
+          "failures": 0,
+          "elapsed_seconds": 0.2681,
+          "deferred": 11,
+          "matched_products": 1
+        },
+        "total_elapsed_seconds": 0.285,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7022626",
+        "MS5395163",
+        "MS7102714",
+        "MS7103342",
+        "MS7122627",
+        "MS6996599",
+        "MS6525758",
+        "MS7036867",
+        "MS7141921",
+        "MS7011736",
+        "MS7074548",
+        "MS858911",
+        "MS3575081",
+        "MS3911166",
+        "MS5290797",
+        "MS6940444",
+        "MS7067337",
+        "MS7105295"
+      ],
+      "protected_positions": {
+        "0": "MS7022626",
+        "1": "MS5395163",
+        "2": "MS7102714",
+        "3": "MS7103342",
+        "4": "MS7122627",
+        "5": "MS6996599",
+        "6": "MS6525758",
+        "7": "MS7036867",
+        "8": "MS7141921",
+        "9": "MS7011736",
+        "10": "MS7074548",
+        "11": "MS858911",
+        "12": "MS3575081",
+        "13": "MS3911166",
+        "14": "MS5290797",
+        "15": "MS6940444",
+        "16": "MS7067337",
+        "17": "MS7105295"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "all_axes",
+      "transport": "musinsa_cdn",
+      "run": "repeat4",
+      "elapsed_seconds": 0.3079478498548269,
+      "stats": {
+        "requests": 20,
+        "completed_requests": 20,
+        "raw_count": 672,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "elapsed_seconds": 0.017,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "photo": {
+          "candidates": 15,
+          "cache_hits": 4,
+          "inferred": 2,
+          "failures": 0,
+          "elapsed_seconds": 0.2908,
+          "deferred": 9,
+          "matched_products": 1
+        },
+        "total_elapsed_seconds": 0.3078,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7022626",
+        "MS5395163",
+        "MS7102714",
+        "MS7103342",
+        "MS7122627",
+        "MS6996599",
+        "MS6525758",
+        "MS7036867",
+        "MS7141921",
+        "MS7011736",
+        "MS7074548",
+        "MS858911",
+        "MS3575081",
+        "MS3911166",
+        "MS5290797",
+        "MS6940444",
+        "MS7067337",
+        "MS7105295"
+      ],
+      "protected_positions": {
+        "0": "MS7022626",
+        "1": "MS5395163",
+        "2": "MS7102714",
+        "3": "MS7103342",
+        "4": "MS7122627",
+        "5": "MS6996599",
+        "6": "MS6525758",
+        "7": "MS7036867",
+        "8": "MS7141921",
+        "9": "MS7011736",
+        "10": "MS7074548",
+        "11": "MS858911",
+        "12": "MS3575081",
+        "13": "MS3911166",
+        "14": "MS5290797",
+        "15": "MS6940444",
+        "16": "MS7067337",
+        "17": "MS7105295"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "all_axes",
+      "transport": "musinsa_cdn",
+      "run": "repeat5",
+      "elapsed_seconds": 0.29893293511122465,
+      "stats": {
+        "requests": 20,
+        "completed_requests": 20,
+        "raw_count": 672,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "elapsed_seconds": 0.016,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "photo": {
+          "candidates": 15,
+          "cache_hits": 6,
+          "inferred": 7,
+          "failures": 0,
+          "elapsed_seconds": 0.2818,
+          "deferred": 2,
+          "matched_products": 2
+        },
+        "total_elapsed_seconds": 0.2988,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7022626",
+        "MS5395163",
+        "MS7102714",
+        "MS7103342",
+        "MS7122627",
+        "MS6996599",
+        "MS6525758",
+        "MS7036867",
+        "MS7141921",
+        "MS7011736",
+        "MS7074548",
+        "MS858911",
+        "MS3575081",
+        "MS3911166",
+        "MS5290797",
+        "MS6940444",
+        "MS7067337",
+        "MS7105295"
+      ],
+      "protected_positions": {
+        "0": "MS7022626",
+        "1": "MS5395163",
+        "2": "MS7102714",
+        "3": "MS7103342",
+        "4": "MS7122627",
+        "5": "MS6996599",
+        "6": "MS6525758",
+        "7": "MS7036867",
+        "8": "MS7141921",
+        "9": "MS7011736",
+        "10": "MS7074548",
+        "11": "MS858911",
+        "12": "MS3575081",
+        "13": "MS3911166",
+        "14": "MS5290797",
+        "15": "MS6940444",
+        "16": "MS7067337",
+        "17": "MS7105295"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS7074548": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9998373985290527,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "all_axes",
+      "transport": "musinsa_cdn",
+      "run": "repeat6",
+      "elapsed_seconds": 0.11437655333429575,
+      "stats": {
+        "requests": 20,
+        "completed_requests": 20,
+        "raw_count": 672,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "elapsed_seconds": 0.016,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34,
+          "shoes": 32
+        },
+        "photo": {
+          "candidates": 15,
+          "cache_hits": 13,
+          "inferred": 2,
+          "failures": 0,
+          "elapsed_seconds": 0.0974,
+          "deferred": 0,
+          "matched_products": 3
+        },
+        "total_elapsed_seconds": 0.1143,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7022626",
+        "MS5395163",
+        "MS7102714",
+        "MS7103342",
+        "MS7122627",
+        "MS6996599",
+        "MS6525758",
+        "MS7036867",
+        "MS7141921",
+        "MS7011736",
+        "MS7074548",
+        "MS858911",
+        "MS3575081",
+        "MS3911166",
+        "MS5290797",
+        "MS6940444",
+        "MS7067337",
+        "MS7105295"
+      ],
+      "protected_positions": {
+        "0": "MS7022626",
+        "1": "MS5395163",
+        "2": "MS7102714",
+        "3": "MS7103342",
+        "4": "MS7122627",
+        "5": "MS6996599",
+        "6": "MS6525758",
+        "7": "MS7036867",
+        "8": "MS7141921",
+        "9": "MS7011736",
+        "10": "MS7074548",
+        "11": "MS858911",
+        "12": "MS3575081",
+        "13": "MS3911166",
+        "14": "MS5290797",
+        "15": "MS6940444",
+        "16": "MS7067337",
+        "17": "MS7105295"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS7074548": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9998373985290527,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "fit",
+      "transport": "local_images",
+      "run": "baseline",
+      "elapsed_seconds": 0.003938538022339344,
+      "stats": {
+        "requests": 12,
+        "completed_requests": 12,
+        "raw_count": 408,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.004,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 0,
+          "matched_products": 0,
+          "elapsed_seconds": 0.0
+        },
+        "total_elapsed_seconds": 0.0039,
+        "photo_protected_positions": 8
+      },
+      "selected": [
+        "MS6996599",
+        "MS7022626",
+        "MS5395163",
+        "MS6955600",
+        "MS6968276",
+        "MS6980767",
+        "MS5908776",
+        "MS7011736",
+        "MS7036867",
+        "MS7057797",
+        "MS7058000",
+        "MS7059599"
+      ],
+      "protected_positions": {
+        "0": "MS6996599",
+        "1": "MS7022626",
+        "6": "MS5908776",
+        "7": "MS7011736",
+        "8": "MS7036867",
+        "9": "MS7057797",
+        "10": "MS7058000",
+        "11": "MS7059599"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "fit",
+      "transport": "local_images",
+      "run": "cold",
+      "elapsed_seconds": 0.1850021919235587,
+      "stats": {
+        "requests": 12,
+        "completed_requests": 12,
+        "raw_count": 408,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.004,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 5,
+          "cache_hits": 0,
+          "inferred": 5,
+          "failures": 0,
+          "elapsed_seconds": 0.181,
+          "deferred": 0,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.1849,
+        "photo_protected_positions": 8
+      },
+      "selected": [
+        "MS6996599",
+        "MS7022626",
+        "MS5395163",
+        "MS6955600",
+        "MS6968276",
+        "MS6980767",
+        "MS5908776",
+        "MS7011736",
+        "MS7036867",
+        "MS7057797",
+        "MS7058000",
+        "MS7059599"
+      ],
+      "protected_positions": {
+        "0": "MS6996599",
+        "1": "MS7022626",
+        "6": "MS5908776",
+        "7": "MS7011736",
+        "8": "MS7036867",
+        "9": "MS7057797",
+        "10": "MS7058000",
+        "11": "MS7059599"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "fit",
+      "transport": "local_images",
+      "run": "repeat1",
+      "elapsed_seconds": 0.004202984273433685,
+      "stats": {
+        "requests": 12,
+        "completed_requests": 12,
+        "raw_count": 408,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.004,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 5,
+          "cache_hits": 5,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0001,
+          "deferred": 0,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.0042,
+        "photo_protected_positions": 8
+      },
+      "selected": [
+        "MS6996599",
+        "MS7022626",
+        "MS5395163",
+        "MS6955600",
+        "MS6968276",
+        "MS6980767",
+        "MS5908776",
+        "MS7011736",
+        "MS7036867",
+        "MS7057797",
+        "MS7058000",
+        "MS7059599"
+      ],
+      "protected_positions": {
+        "0": "MS6996599",
+        "1": "MS7022626",
+        "6": "MS5908776",
+        "7": "MS7011736",
+        "8": "MS7036867",
+        "9": "MS7057797",
+        "10": "MS7058000",
+        "11": "MS7059599"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "fit",
+      "transport": "local_images",
+      "run": "repeat2",
+      "elapsed_seconds": 0.00403209775686264,
+      "stats": {
+        "requests": 12,
+        "completed_requests": 12,
+        "raw_count": 408,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.004,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 5,
+          "cache_hits": 5,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0001,
+          "deferred": 0,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.004,
+        "photo_protected_positions": 8
+      },
+      "selected": [
+        "MS6996599",
+        "MS7022626",
+        "MS5395163",
+        "MS6955600",
+        "MS6968276",
+        "MS6980767",
+        "MS5908776",
+        "MS7011736",
+        "MS7036867",
+        "MS7057797",
+        "MS7058000",
+        "MS7059599"
+      ],
+      "protected_positions": {
+        "0": "MS6996599",
+        "1": "MS7022626",
+        "6": "MS5908776",
+        "7": "MS7011736",
+        "8": "MS7036867",
+        "9": "MS7057797",
+        "10": "MS7058000",
+        "11": "MS7059599"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "fit",
+      "transport": "local_images",
+      "run": "repeat3",
+      "elapsed_seconds": 0.003947671502828598,
+      "stats": {
+        "requests": 12,
+        "completed_requests": 12,
+        "raw_count": 408,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.004,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 5,
+          "cache_hits": 5,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0001,
+          "deferred": 0,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.0039,
+        "photo_protected_positions": 8
+      },
+      "selected": [
+        "MS6996599",
+        "MS7022626",
+        "MS5395163",
+        "MS6955600",
+        "MS6968276",
+        "MS6980767",
+        "MS5908776",
+        "MS7011736",
+        "MS7036867",
+        "MS7057797",
+        "MS7058000",
+        "MS7059599"
+      ],
+      "protected_positions": {
+        "0": "MS6996599",
+        "1": "MS7022626",
+        "6": "MS5908776",
+        "7": "MS7011736",
+        "8": "MS7036867",
+        "9": "MS7057797",
+        "10": "MS7058000",
+        "11": "MS7059599"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "fit",
+      "transport": "local_images",
+      "run": "repeat4",
+      "elapsed_seconds": 0.00407598540186882,
+      "stats": {
+        "requests": 12,
+        "completed_requests": 12,
+        "raw_count": 408,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.004,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 5,
+          "cache_hits": 5,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0001,
+          "deferred": 0,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.0041,
+        "photo_protected_positions": 8
+      },
+      "selected": [
+        "MS6996599",
+        "MS7022626",
+        "MS5395163",
+        "MS6955600",
+        "MS6968276",
+        "MS6980767",
+        "MS5908776",
+        "MS7011736",
+        "MS7036867",
+        "MS7057797",
+        "MS7058000",
+        "MS7059599"
+      ],
+      "protected_positions": {
+        "0": "MS6996599",
+        "1": "MS7022626",
+        "6": "MS5908776",
+        "7": "MS7011736",
+        "8": "MS7036867",
+        "9": "MS7057797",
+        "10": "MS7058000",
+        "11": "MS7059599"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "fit",
+      "transport": "local_images",
+      "run": "repeat5",
+      "elapsed_seconds": 0.00402955524623394,
+      "stats": {
+        "requests": 12,
+        "completed_requests": 12,
+        "raw_count": 408,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.004,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 5,
+          "cache_hits": 5,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0001,
+          "deferred": 0,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.004,
+        "photo_protected_positions": 8
+      },
+      "selected": [
+        "MS6996599",
+        "MS7022626",
+        "MS5395163",
+        "MS6955600",
+        "MS6968276",
+        "MS6980767",
+        "MS5908776",
+        "MS7011736",
+        "MS7036867",
+        "MS7057797",
+        "MS7058000",
+        "MS7059599"
+      ],
+      "protected_positions": {
+        "0": "MS6996599",
+        "1": "MS7022626",
+        "6": "MS5908776",
+        "7": "MS7011736",
+        "8": "MS7036867",
+        "9": "MS7057797",
+        "10": "MS7058000",
+        "11": "MS7059599"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "fit",
+      "transport": "local_images",
+      "run": "repeat6",
+      "elapsed_seconds": 0.004135355353355408,
+      "stats": {
+        "requests": 12,
+        "completed_requests": 12,
+        "raw_count": 408,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.004,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 5,
+          "cache_hits": 5,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0001,
+          "deferred": 0,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.0041,
+        "photo_protected_positions": 8
+      },
+      "selected": [
+        "MS6996599",
+        "MS7022626",
+        "MS5395163",
+        "MS6955600",
+        "MS6968276",
+        "MS6980767",
+        "MS5908776",
+        "MS7011736",
+        "MS7036867",
+        "MS7057797",
+        "MS7058000",
+        "MS7059599"
+      ],
+      "protected_positions": {
+        "0": "MS6996599",
+        "1": "MS7022626",
+        "6": "MS5908776",
+        "7": "MS7011736",
+        "8": "MS7036867",
+        "9": "MS7057797",
+        "10": "MS7058000",
+        "11": "MS7059599"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "fit",
+      "transport": "musinsa_cdn",
+      "run": "baseline",
+      "elapsed_seconds": 0.003960400819778442,
+      "stats": {
+        "requests": 12,
+        "completed_requests": 12,
+        "raw_count": 408,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.004,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 0,
+          "matched_products": 0,
+          "elapsed_seconds": 0.0
+        },
+        "total_elapsed_seconds": 0.0039,
+        "photo_protected_positions": 8
+      },
+      "selected": [
+        "MS6996599",
+        "MS7022626",
+        "MS5395163",
+        "MS6955600",
+        "MS6968276",
+        "MS6980767",
+        "MS5908776",
+        "MS7011736",
+        "MS7036867",
+        "MS7057797",
+        "MS7058000",
+        "MS7059599"
+      ],
+      "protected_positions": {
+        "0": "MS6996599",
+        "1": "MS7022626",
+        "6": "MS5908776",
+        "7": "MS7011736",
+        "8": "MS7036867",
+        "9": "MS7057797",
+        "10": "MS7058000",
+        "11": "MS7059599"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "fit",
+      "transport": "musinsa_cdn",
+      "run": "cold",
+      "elapsed_seconds": 0.25265430100262165,
+      "stats": {
+        "requests": 12,
+        "completed_requests": 12,
+        "raw_count": 408,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.004,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 5,
+          "cache_hits": 0,
+          "inferred": 2,
+          "failures": 3,
+          "elapsed_seconds": 0.2484,
+          "deferred": 3,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.2525,
+        "photo_protected_positions": 8
+      },
+      "selected": [
+        "MS6996599",
+        "MS7022626",
+        "MS5395163",
+        "MS6955600",
+        "MS6968276",
+        "MS6980767",
+        "MS5908776",
+        "MS7011736",
+        "MS7036867",
+        "MS7057797",
+        "MS7058000",
+        "MS7059599"
+      ],
+      "protected_positions": {
+        "0": "MS6996599",
+        "1": "MS7022626",
+        "6": "MS5908776",
+        "7": "MS7011736",
+        "8": "MS7036867",
+        "9": "MS7057797",
+        "10": "MS7058000",
+        "11": "MS7059599"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "fit",
+      "transport": "musinsa_cdn",
+      "run": "repeat1",
+      "elapsed_seconds": 0.2643853696063161,
+      "stats": {
+        "requests": 12,
+        "completed_requests": 12,
+        "raw_count": 408,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.005,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 5,
+          "cache_hits": 2,
+          "inferred": 2,
+          "failures": 1,
+          "elapsed_seconds": 0.2583,
+          "deferred": 1,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.2643,
+        "photo_protected_positions": 8
+      },
+      "selected": [
+        "MS6996599",
+        "MS7022626",
+        "MS5395163",
+        "MS6955600",
+        "MS6968276",
+        "MS6980767",
+        "MS5908776",
+        "MS7011736",
+        "MS7036867",
+        "MS7057797",
+        "MS7058000",
+        "MS7059599"
+      ],
+      "protected_positions": {
+        "0": "MS6996599",
+        "1": "MS7022626",
+        "6": "MS5908776",
+        "7": "MS7011736",
+        "8": "MS7036867",
+        "9": "MS7057797",
+        "10": "MS7058000",
+        "11": "MS7059599"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "fit",
+      "transport": "musinsa_cdn",
+      "run": "repeat2",
+      "elapsed_seconds": 0.036710151471197605,
+      "stats": {
+        "requests": 12,
+        "completed_requests": 12,
+        "raw_count": 408,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.004,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 5,
+          "cache_hits": 4,
+          "inferred": 1,
+          "failures": 0,
+          "elapsed_seconds": 0.0324,
+          "deferred": 0,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.0367,
+        "photo_protected_positions": 8
+      },
+      "selected": [
+        "MS6996599",
+        "MS7022626",
+        "MS5395163",
+        "MS6955600",
+        "MS6968276",
+        "MS6980767",
+        "MS5908776",
+        "MS7011736",
+        "MS7036867",
+        "MS7057797",
+        "MS7058000",
+        "MS7059599"
+      ],
+      "protected_positions": {
+        "0": "MS6996599",
+        "1": "MS7022626",
+        "6": "MS5908776",
+        "7": "MS7011736",
+        "8": "MS7036867",
+        "9": "MS7057797",
+        "10": "MS7058000",
+        "11": "MS7059599"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "fit",
+      "transport": "musinsa_cdn",
+      "run": "repeat3",
+      "elapsed_seconds": 0.004177195951342583,
+      "stats": {
+        "requests": 12,
+        "completed_requests": 12,
+        "raw_count": 408,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.004,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 5,
+          "cache_hits": 5,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0001,
+          "deferred": 0,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.0042,
+        "photo_protected_positions": 8
+      },
+      "selected": [
+        "MS6996599",
+        "MS7022626",
+        "MS5395163",
+        "MS6955600",
+        "MS6968276",
+        "MS6980767",
+        "MS5908776",
+        "MS7011736",
+        "MS7036867",
+        "MS7057797",
+        "MS7058000",
+        "MS7059599"
+      ],
+      "protected_positions": {
+        "0": "MS6996599",
+        "1": "MS7022626",
+        "6": "MS5908776",
+        "7": "MS7011736",
+        "8": "MS7036867",
+        "9": "MS7057797",
+        "10": "MS7058000",
+        "11": "MS7059599"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "fit",
+      "transport": "musinsa_cdn",
+      "run": "repeat4",
+      "elapsed_seconds": 0.00425184890627861,
+      "stats": {
+        "requests": 12,
+        "completed_requests": 12,
+        "raw_count": 408,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.004,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 5,
+          "cache_hits": 5,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0001,
+          "deferred": 0,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.0042,
+        "photo_protected_positions": 8
+      },
+      "selected": [
+        "MS6996599",
+        "MS7022626",
+        "MS5395163",
+        "MS6955600",
+        "MS6968276",
+        "MS6980767",
+        "MS5908776",
+        "MS7011736",
+        "MS7036867",
+        "MS7057797",
+        "MS7058000",
+        "MS7059599"
+      ],
+      "protected_positions": {
+        "0": "MS6996599",
+        "1": "MS7022626",
+        "6": "MS5908776",
+        "7": "MS7011736",
+        "8": "MS7036867",
+        "9": "MS7057797",
+        "10": "MS7058000",
+        "11": "MS7059599"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "fit",
+      "transport": "musinsa_cdn",
+      "run": "repeat5",
+      "elapsed_seconds": 0.004117967560887337,
+      "stats": {
+        "requests": 12,
+        "completed_requests": 12,
+        "raw_count": 408,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.004,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 5,
+          "cache_hits": 5,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0001,
+          "deferred": 0,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.0041,
+        "photo_protected_positions": 8
+      },
+      "selected": [
+        "MS6996599",
+        "MS7022626",
+        "MS5395163",
+        "MS6955600",
+        "MS6968276",
+        "MS6980767",
+        "MS5908776",
+        "MS7011736",
+        "MS7036867",
+        "MS7057797",
+        "MS7058000",
+        "MS7059599"
+      ],
+      "protected_positions": {
+        "0": "MS6996599",
+        "1": "MS7022626",
+        "6": "MS5908776",
+        "7": "MS7011736",
+        "8": "MS7036867",
+        "9": "MS7057797",
+        "10": "MS7058000",
+        "11": "MS7059599"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "fit",
+      "transport": "musinsa_cdn",
+      "run": "repeat6",
+      "elapsed_seconds": 0.00437803752720356,
+      "stats": {
+        "requests": 12,
+        "completed_requests": 12,
+        "raw_count": 408,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.004,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 5,
+          "cache_hits": 5,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0001,
+          "deferred": 0,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.0044,
+        "photo_protected_positions": 8
+      },
+      "selected": [
+        "MS6996599",
+        "MS7022626",
+        "MS5395163",
+        "MS6955600",
+        "MS6968276",
+        "MS6980767",
+        "MS5908776",
+        "MS7011736",
+        "MS7036867",
+        "MS7057797",
+        "MS7058000",
+        "MS7059599"
+      ],
+      "protected_positions": {
+        "0": "MS6996599",
+        "1": "MS7022626",
+        "6": "MS5908776",
+        "7": "MS7011736",
+        "8": "MS7036867",
+        "9": "MS7057797",
+        "10": "MS7058000",
+        "11": "MS7059599"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "length",
+      "transport": "local_images",
+      "run": "baseline",
+      "elapsed_seconds": 0.0016529988497495651,
+      "stats": {
+        "requests": 4,
+        "completed_requests": 4,
+        "raw_count": 136,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.001,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 0,
+          "matched_products": 0,
+          "elapsed_seconds": 0.0
+        },
+        "total_elapsed_seconds": 0.0016,
+        "photo_protected_positions": 6
+      },
+      "selected": [
+        "MS5395163",
+        "MS6980767",
+        "MS7022626",
+        "MS7039092",
+        "MS7059554",
+        "MS7067907",
+        "MS3816971",
+        "MS5901879",
+        "MS5908776",
+        "MS5999956",
+        "MS6525758",
+        "MS6830515"
+      ],
+      "protected_positions": {
+        "0": "MS5395163",
+        "1": "MS6980767",
+        "2": "MS7022626",
+        "3": "MS7039092",
+        "4": "MS7059554",
+        "5": "MS7067907"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "length",
+      "transport": "local_images",
+      "run": "cold",
+      "elapsed_seconds": 0.26900216564536095,
+      "stats": {
+        "requests": 4,
+        "completed_requests": 4,
+        "raw_count": 136,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.001,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 8,
+          "cache_hits": 0,
+          "inferred": 8,
+          "failures": 0,
+          "elapsed_seconds": 0.2671,
+          "deferred": 0,
+          "matched_products": 3
+        },
+        "total_elapsed_seconds": 0.2689,
+        "photo_protected_positions": 6
+      },
+      "selected": [
+        "MS5395163",
+        "MS6980767",
+        "MS7022626",
+        "MS7039092",
+        "MS7059554",
+        "MS7067907",
+        "MS5908776",
+        "MS6525758",
+        "MS6888121",
+        "MS3816971",
+        "MS5901879",
+        "MS5999956"
+      ],
+      "protected_positions": {
+        "0": "MS5395163",
+        "1": "MS6980767",
+        "2": "MS7022626",
+        "3": "MS7039092",
+        "4": "MS7059554",
+        "5": "MS7067907"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS5908776": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9968463778495789,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6888121": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9981753826141357,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "length",
+      "transport": "local_images",
+      "run": "repeat1",
+      "elapsed_seconds": 0.002035663463175297,
+      "stats": {
+        "requests": 4,
+        "completed_requests": 4,
+        "raw_count": 136,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.001,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 8,
+          "cache_hits": 8,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0001,
+          "deferred": 0,
+          "matched_products": 3
+        },
+        "total_elapsed_seconds": 0.002,
+        "photo_protected_positions": 6
+      },
+      "selected": [
+        "MS5395163",
+        "MS6980767",
+        "MS7022626",
+        "MS7039092",
+        "MS7059554",
+        "MS7067907",
+        "MS5908776",
+        "MS6525758",
+        "MS6888121",
+        "MS3816971",
+        "MS5901879",
+        "MS5999956"
+      ],
+      "protected_positions": {
+        "0": "MS5395163",
+        "1": "MS6980767",
+        "2": "MS7022626",
+        "3": "MS7039092",
+        "4": "MS7059554",
+        "5": "MS7067907"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS5908776": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9968463778495789,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6888121": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9981753826141357,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "length",
+      "transport": "local_images",
+      "run": "repeat2",
+      "elapsed_seconds": 0.0018768049776554108,
+      "stats": {
+        "requests": 4,
+        "completed_requests": 4,
+        "raw_count": 136,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.001,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 8,
+          "cache_hits": 8,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0001,
+          "deferred": 0,
+          "matched_products": 3
+        },
+        "total_elapsed_seconds": 0.0019,
+        "photo_protected_positions": 6
+      },
+      "selected": [
+        "MS5395163",
+        "MS6980767",
+        "MS7022626",
+        "MS7039092",
+        "MS7059554",
+        "MS7067907",
+        "MS5908776",
+        "MS6525758",
+        "MS6888121",
+        "MS3816971",
+        "MS5901879",
+        "MS5999956"
+      ],
+      "protected_positions": {
+        "0": "MS5395163",
+        "1": "MS6980767",
+        "2": "MS7022626",
+        "3": "MS7039092",
+        "4": "MS7059554",
+        "5": "MS7067907"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS5908776": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9968463778495789,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6888121": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9981753826141357,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "length",
+      "transport": "local_images",
+      "run": "repeat3",
+      "elapsed_seconds": 0.0018714070320129395,
+      "stats": {
+        "requests": 4,
+        "completed_requests": 4,
+        "raw_count": 136,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.001,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 8,
+          "cache_hits": 8,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0002,
+          "deferred": 0,
+          "matched_products": 3
+        },
+        "total_elapsed_seconds": 0.0019,
+        "photo_protected_positions": 6
+      },
+      "selected": [
+        "MS5395163",
+        "MS6980767",
+        "MS7022626",
+        "MS7039092",
+        "MS7059554",
+        "MS7067907",
+        "MS5908776",
+        "MS6525758",
+        "MS6888121",
+        "MS3816971",
+        "MS5901879",
+        "MS5999956"
+      ],
+      "protected_positions": {
+        "0": "MS5395163",
+        "1": "MS6980767",
+        "2": "MS7022626",
+        "3": "MS7039092",
+        "4": "MS7059554",
+        "5": "MS7067907"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS5908776": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9968463778495789,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6888121": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9981753826141357,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "length",
+      "transport": "local_images",
+      "run": "repeat4",
+      "elapsed_seconds": 0.0018588686361908913,
+      "stats": {
+        "requests": 4,
+        "completed_requests": 4,
+        "raw_count": 136,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.001,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 8,
+          "cache_hits": 8,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0001,
+          "deferred": 0,
+          "matched_products": 3
+        },
+        "total_elapsed_seconds": 0.0018,
+        "photo_protected_positions": 6
+      },
+      "selected": [
+        "MS5395163",
+        "MS6980767",
+        "MS7022626",
+        "MS7039092",
+        "MS7059554",
+        "MS7067907",
+        "MS5908776",
+        "MS6525758",
+        "MS6888121",
+        "MS3816971",
+        "MS5901879",
+        "MS5999956"
+      ],
+      "protected_positions": {
+        "0": "MS5395163",
+        "1": "MS6980767",
+        "2": "MS7022626",
+        "3": "MS7039092",
+        "4": "MS7059554",
+        "5": "MS7067907"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS5908776": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9968463778495789,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6888121": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9981753826141357,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "length",
+      "transport": "local_images",
+      "run": "repeat5",
+      "elapsed_seconds": 0.0018163453787565231,
+      "stats": {
+        "requests": 4,
+        "completed_requests": 4,
+        "raw_count": 136,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.001,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 8,
+          "cache_hits": 8,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0001,
+          "deferred": 0,
+          "matched_products": 3
+        },
+        "total_elapsed_seconds": 0.0018,
+        "photo_protected_positions": 6
+      },
+      "selected": [
+        "MS5395163",
+        "MS6980767",
+        "MS7022626",
+        "MS7039092",
+        "MS7059554",
+        "MS7067907",
+        "MS5908776",
+        "MS6525758",
+        "MS6888121",
+        "MS3816971",
+        "MS5901879",
+        "MS5999956"
+      ],
+      "protected_positions": {
+        "0": "MS5395163",
+        "1": "MS6980767",
+        "2": "MS7022626",
+        "3": "MS7039092",
+        "4": "MS7059554",
+        "5": "MS7067907"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS5908776": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9968463778495789,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6888121": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9981753826141357,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "length",
+      "transport": "local_images",
+      "run": "repeat6",
+      "elapsed_seconds": 0.0018561743199825287,
+      "stats": {
+        "requests": 4,
+        "completed_requests": 4,
+        "raw_count": 136,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.001,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 8,
+          "cache_hits": 8,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0001,
+          "deferred": 0,
+          "matched_products": 3
+        },
+        "total_elapsed_seconds": 0.0018,
+        "photo_protected_positions": 6
+      },
+      "selected": [
+        "MS5395163",
+        "MS6980767",
+        "MS7022626",
+        "MS7039092",
+        "MS7059554",
+        "MS7067907",
+        "MS5908776",
+        "MS6525758",
+        "MS6888121",
+        "MS3816971",
+        "MS5901879",
+        "MS5999956"
+      ],
+      "protected_positions": {
+        "0": "MS5395163",
+        "1": "MS6980767",
+        "2": "MS7022626",
+        "3": "MS7039092",
+        "4": "MS7059554",
+        "5": "MS7067907"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS5908776": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9968463778495789,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6888121": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9981753826141357,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "length",
+      "transport": "musinsa_cdn",
+      "run": "baseline",
+      "elapsed_seconds": 0.001465408131480217,
+      "stats": {
+        "requests": 4,
+        "completed_requests": 4,
+        "raw_count": 136,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.001,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 0,
+          "matched_products": 0,
+          "elapsed_seconds": 0.0
+        },
+        "total_elapsed_seconds": 0.0014,
+        "photo_protected_positions": 6
+      },
+      "selected": [
+        "MS5395163",
+        "MS6980767",
+        "MS7022626",
+        "MS7039092",
+        "MS7059554",
+        "MS7067907",
+        "MS3816971",
+        "MS5901879",
+        "MS5908776",
+        "MS5999956",
+        "MS6525758",
+        "MS6830515"
+      ],
+      "protected_positions": {
+        "0": "MS5395163",
+        "1": "MS6980767",
+        "2": "MS7022626",
+        "3": "MS7039092",
+        "4": "MS7059554",
+        "5": "MS7067907"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "length",
+      "transport": "musinsa_cdn",
+      "run": "cold",
+      "elapsed_seconds": 0.1972870621830225,
+      "stats": {
+        "requests": 4,
+        "completed_requests": 4,
+        "raw_count": 136,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.001,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 8,
+          "cache_hits": 0,
+          "inferred": 1,
+          "failures": 7,
+          "elapsed_seconds": 0.1954,
+          "deferred": 7,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.1972,
+        "photo_protected_positions": 6
+      },
+      "selected": [
+        "MS5395163",
+        "MS6980767",
+        "MS7022626",
+        "MS7039092",
+        "MS7059554",
+        "MS7067907",
+        "MS3816971",
+        "MS5901879",
+        "MS5908776",
+        "MS5999956",
+        "MS6525758",
+        "MS6830515"
+      ],
+      "protected_positions": {
+        "0": "MS5395163",
+        "1": "MS6980767",
+        "2": "MS7022626",
+        "3": "MS7039092",
+        "4": "MS7059554",
+        "5": "MS7067907"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {}
+    },
+    {
+      "case": "length",
+      "transport": "musinsa_cdn",
+      "run": "repeat1",
+      "elapsed_seconds": 0.25709548499435186,
+      "stats": {
+        "requests": 4,
+        "completed_requests": 4,
+        "raw_count": 136,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.002,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 8,
+          "cache_hits": 1,
+          "inferred": 1,
+          "failures": 2,
+          "elapsed_seconds": 0.2543,
+          "deferred": 6,
+          "matched_products": 1
+        },
+        "total_elapsed_seconds": 0.257,
+        "photo_protected_positions": 6
+      },
+      "selected": [
+        "MS5395163",
+        "MS6980767",
+        "MS7022626",
+        "MS7039092",
+        "MS7059554",
+        "MS7067907",
+        "MS5908776",
+        "MS3816971",
+        "MS5901879",
+        "MS5999956",
+        "MS6525758",
+        "MS6830515"
+      ],
+      "protected_positions": {
+        "0": "MS5395163",
+        "1": "MS6980767",
+        "2": "MS7022626",
+        "3": "MS7039092",
+        "4": "MS7059554",
+        "5": "MS7067907"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS5908776": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9968463778495789,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "length",
+      "transport": "musinsa_cdn",
+      "run": "repeat2",
+      "elapsed_seconds": 0.271883238106966,
+      "stats": {
+        "requests": 4,
+        "completed_requests": 4,
+        "raw_count": 136,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.001,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 8,
+          "cache_hits": 2,
+          "inferred": 3,
+          "failures": 0,
+          "elapsed_seconds": 0.2698,
+          "deferred": 3,
+          "matched_products": 2
+        },
+        "total_elapsed_seconds": 0.2718,
+        "photo_protected_positions": 6
+      },
+      "selected": [
+        "MS5395163",
+        "MS6980767",
+        "MS7022626",
+        "MS7039092",
+        "MS7059554",
+        "MS7067907",
+        "MS5908776",
+        "MS6525758",
+        "MS3816971",
+        "MS5901879",
+        "MS5999956",
+        "MS6830515"
+      ],
+      "protected_positions": {
+        "0": "MS5395163",
+        "1": "MS6980767",
+        "2": "MS7022626",
+        "3": "MS7039092",
+        "4": "MS7059554",
+        "5": "MS7067907"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS5908776": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9968463778495789,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "length",
+      "transport": "musinsa_cdn",
+      "run": "repeat3",
+      "elapsed_seconds": 0.12229445111006498,
+      "stats": {
+        "requests": 4,
+        "completed_requests": 4,
+        "raw_count": 136,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.001,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 8,
+          "cache_hits": 5,
+          "inferred": 3,
+          "failures": 0,
+          "elapsed_seconds": 0.1202,
+          "deferred": 0,
+          "matched_products": 3
+        },
+        "total_elapsed_seconds": 0.1222,
+        "photo_protected_positions": 6
+      },
+      "selected": [
+        "MS5395163",
+        "MS6980767",
+        "MS7022626",
+        "MS7039092",
+        "MS7059554",
+        "MS7067907",
+        "MS5908776",
+        "MS6525758",
+        "MS6888121",
+        "MS3816971",
+        "MS5901879",
+        "MS5999956"
+      ],
+      "protected_positions": {
+        "0": "MS5395163",
+        "1": "MS6980767",
+        "2": "MS7022626",
+        "3": "MS7039092",
+        "4": "MS7059554",
+        "5": "MS7067907"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS5908776": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9968463778495789,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6888121": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9981753826141357,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "length",
+      "transport": "musinsa_cdn",
+      "run": "repeat4",
+      "elapsed_seconds": 0.0020947223529219627,
+      "stats": {
+        "requests": 4,
+        "completed_requests": 4,
+        "raw_count": 136,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.001,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 8,
+          "cache_hits": 8,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0002,
+          "deferred": 0,
+          "matched_products": 3
+        },
+        "total_elapsed_seconds": 0.0021,
+        "photo_protected_positions": 6
+      },
+      "selected": [
+        "MS5395163",
+        "MS6980767",
+        "MS7022626",
+        "MS7039092",
+        "MS7059554",
+        "MS7067907",
+        "MS5908776",
+        "MS6525758",
+        "MS6888121",
+        "MS3816971",
+        "MS5901879",
+        "MS5999956"
+      ],
+      "protected_positions": {
+        "0": "MS5395163",
+        "1": "MS6980767",
+        "2": "MS7022626",
+        "3": "MS7039092",
+        "4": "MS7059554",
+        "5": "MS7067907"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS5908776": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9968463778495789,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6888121": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9981753826141357,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "length",
+      "transport": "musinsa_cdn",
+      "run": "repeat5",
+      "elapsed_seconds": 0.0019425638020038605,
+      "stats": {
+        "requests": 4,
+        "completed_requests": 4,
+        "raw_count": 136,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.001,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 8,
+          "cache_hits": 8,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0002,
+          "deferred": 0,
+          "matched_products": 3
+        },
+        "total_elapsed_seconds": 0.0019,
+        "photo_protected_positions": 6
+      },
+      "selected": [
+        "MS5395163",
+        "MS6980767",
+        "MS7022626",
+        "MS7039092",
+        "MS7059554",
+        "MS7067907",
+        "MS5908776",
+        "MS6525758",
+        "MS6888121",
+        "MS3816971",
+        "MS5901879",
+        "MS5999956"
+      ],
+      "protected_positions": {
+        "0": "MS5395163",
+        "1": "MS6980767",
+        "2": "MS7022626",
+        "3": "MS7039092",
+        "4": "MS7059554",
+        "5": "MS7067907"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS5908776": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9968463778495789,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6888121": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9981753826141357,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    },
+    {
+      "case": "length",
+      "transport": "musinsa_cdn",
+      "run": "repeat6",
+      "elapsed_seconds": 0.0018857689574360847,
+      "stats": {
+        "requests": 4,
+        "completed_requests": 4,
+        "raw_count": 136,
+        "unique_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "elapsed_seconds": 0.001,
+        "retained_candidates": {
+          "top": 34,
+          "bottom": 34
+        },
+        "photo": {
+          "candidates": 8,
+          "cache_hits": 8,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0001,
+          "deferred": 0,
+          "matched_products": 3
+        },
+        "total_elapsed_seconds": 0.0019,
+        "photo_protected_positions": 6
+      },
+      "selected": [
+        "MS5395163",
+        "MS6980767",
+        "MS7022626",
+        "MS7039092",
+        "MS7059554",
+        "MS7067907",
+        "MS5908776",
+        "MS6525758",
+        "MS6888121",
+        "MS3816971",
+        "MS5901879",
+        "MS5999956"
+      ],
+      "protected_positions": {
+        "0": "MS5395163",
+        "1": "MS6980767",
+        "2": "MS7022626",
+        "3": "MS7039092",
+        "4": "MS7059554",
+        "5": "MS7067907"
+      },
+      "rank_regressions": [],
+      "photo_evidence": {
+        "MS5908776": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9968463778495789,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6525758": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9994220733642578,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        },
+        "MS6888121": {
+          "length": {
+            "label": "롱·긴바지 기장",
+            "confidence": 0.9981753826141357,
+            "source": "product_photo",
+            "policy": "worn-fit-length-v1",
+            "keyword": "풀렝스"
+          }
+        }
+      }
+    }
+  ],
+  "live_api_results": [
+    {
+      "run": "warmup",
+      "elapsed_seconds": 0.9689992284402251,
+      "stats": {
+        "requests": 18,
+        "completed_requests": 18,
+        "raw_count": 1682,
+        "unique_candidates": {
+          "top": 519,
+          "bottom": 439,
+          "shoes": 118
+        },
+        "elapsed_seconds": 0.605,
+        "retained_candidates": {
+          "top": 300,
+          "bottom": 300,
+          "shoes": 118
+        },
+        "measurement_candidates": 16,
+        "measurement_tables": 12,
+        "photo": {
+          "candidates": 0,
+          "matched_products": 0,
+          "elapsed_seconds": 0.0
+        },
+        "total_elapsed_seconds": 0.9686,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7074443",
+        "MS5949708",
+        "MS6797131",
+        "MS6477361",
+        "MS7090677",
+        "MS6406692",
+        "MS4745197",
+        "MS6040355",
+        "MS7140188",
+        "MS4278871",
+        "MS4848191",
+        "MS6961126",
+        "MS7271173",
+        "MS6717409",
+        "MS7009053",
+        "MS7011323",
+        "MS7121531",
+        "MS7011133"
+      ],
+      "photo_evidence": {}
+    },
+    {
+      "run": "baseline1",
+      "elapsed_seconds": 0.022926132194697857,
+      "stats": {
+        "requests": 18,
+        "completed_requests": 18,
+        "raw_count": 1682,
+        "unique_candidates": {
+          "top": 519,
+          "bottom": 439,
+          "shoes": 118
+        },
+        "elapsed_seconds": 0.02,
+        "retained_candidates": {
+          "top": 300,
+          "bottom": 300,
+          "shoes": 118
+        },
+        "measurement_candidates": 16,
+        "measurement_tables": 12,
+        "photo": {
+          "candidates": 0,
+          "matched_products": 0,
+          "elapsed_seconds": 0.0
+        },
+        "total_elapsed_seconds": 0.0227,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7074443",
+        "MS5949708",
+        "MS6797131",
+        "MS6477361",
+        "MS7090677",
+        "MS6406692",
+        "MS4745197",
+        "MS6040355",
+        "MS7140188",
+        "MS4278871",
+        "MS4848191",
+        "MS6961126",
+        "MS7271173",
+        "MS6717409",
+        "MS7009053",
+        "MS7011323",
+        "MS7121531",
+        "MS7011133"
+      ],
+      "photo_evidence": {}
+    },
+    {
+      "run": "photo1",
+      "elapsed_seconds": 0.29665386117994785,
+      "stats": {
+        "requests": 18,
+        "completed_requests": 18,
+        "raw_count": 1682,
+        "unique_candidates": {
+          "top": 519,
+          "bottom": 439,
+          "shoes": 118
+        },
+        "elapsed_seconds": 0.015,
+        "retained_candidates": {
+          "top": 300,
+          "bottom": 300,
+          "shoes": 118
+        },
+        "measurement_candidates": 16,
+        "measurement_tables": 12,
+        "photo": {
+          "candidates": 12,
+          "cache_hits": 0,
+          "inferred": 3,
+          "failures": 0,
+          "elapsed_seconds": 0.2787,
+          "deferred": 9,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.296,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7074443",
+        "MS5949708",
+        "MS6797131",
+        "MS6477361",
+        "MS7090677",
+        "MS6406692",
+        "MS4745197",
+        "MS6040355",
+        "MS7140188",
+        "MS4278871",
+        "MS4848191",
+        "MS6961126",
+        "MS7271173",
+        "MS6717409",
+        "MS7009053",
+        "MS7011323",
+        "MS7121531",
+        "MS7011133"
+      ],
+      "photo_evidence": {}
+    },
+    {
+      "run": "baseline2",
+      "elapsed_seconds": 0.1871609427034855,
+      "stats": {
+        "requests": 18,
+        "completed_requests": 18,
+        "raw_count": 1682,
+        "unique_candidates": {
+          "top": 519,
+          "bottom": 439,
+          "shoes": 118
+        },
+        "elapsed_seconds": 0.184,
+        "retained_candidates": {
+          "top": 300,
+          "bottom": 300,
+          "shoes": 118
+        },
+        "measurement_candidates": 16,
+        "measurement_tables": 12,
+        "photo": {
+          "candidates": 0,
+          "matched_products": 0,
+          "elapsed_seconds": 0.0
+        },
+        "total_elapsed_seconds": 0.1869,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7074443",
+        "MS5949708",
+        "MS6797131",
+        "MS6477361",
+        "MS7090677",
+        "MS6406692",
+        "MS4745197",
+        "MS6040355",
+        "MS7140188",
+        "MS4278871",
+        "MS4848191",
+        "MS6961126",
+        "MS7271173",
+        "MS6717409",
+        "MS7009053",
+        "MS7011323",
+        "MS7121531",
+        "MS7011133"
+      ],
+      "photo_evidence": {}
+    },
+    {
+      "run": "photo2",
+      "elapsed_seconds": 0.2928983559831977,
+      "stats": {
+        "requests": 18,
+        "completed_requests": 18,
+        "raw_count": 1682,
+        "unique_candidates": {
+          "top": 519,
+          "bottom": 439,
+          "shoes": 118
+        },
+        "elapsed_seconds": 0.015,
+        "retained_candidates": {
+          "top": 300,
+          "bottom": 300,
+          "shoes": 118
+        },
+        "measurement_candidates": 16,
+        "measurement_tables": 12,
+        "photo": {
+          "candidates": 12,
+          "cache_hits": 3,
+          "inferred": 3,
+          "failures": 0,
+          "elapsed_seconds": 0.2748,
+          "deferred": 6,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.2922,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7074443",
+        "MS5949708",
+        "MS6797131",
+        "MS6477361",
+        "MS7090677",
+        "MS6406692",
+        "MS4745197",
+        "MS6040355",
+        "MS7140188",
+        "MS4278871",
+        "MS4848191",
+        "MS6961126",
+        "MS7271173",
+        "MS6717409",
+        "MS7009053",
+        "MS7011323",
+        "MS7121531",
+        "MS7011133"
+      ],
+      "photo_evidence": {}
+    },
+    {
+      "run": "baseline3",
+      "elapsed_seconds": 0.017822216264903545,
+      "stats": {
+        "requests": 18,
+        "completed_requests": 18,
+        "raw_count": 1682,
+        "unique_candidates": {
+          "top": 519,
+          "bottom": 439,
+          "shoes": 118
+        },
+        "elapsed_seconds": 0.015,
+        "retained_candidates": {
+          "top": 300,
+          "bottom": 300,
+          "shoes": 118
+        },
+        "measurement_candidates": 16,
+        "measurement_tables": 12,
+        "photo": {
+          "candidates": 0,
+          "matched_products": 0,
+          "elapsed_seconds": 0.0
+        },
+        "total_elapsed_seconds": 0.0176,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7074443",
+        "MS5949708",
+        "MS6797131",
+        "MS6477361",
+        "MS7090677",
+        "MS6406692",
+        "MS4745197",
+        "MS6040355",
+        "MS7140188",
+        "MS4278871",
+        "MS4848191",
+        "MS6961126",
+        "MS7271173",
+        "MS6717409",
+        "MS7009053",
+        "MS7011323",
+        "MS7121531",
+        "MS7011133"
+      ],
+      "photo_evidence": {}
+    },
+    {
+      "run": "photo3",
+      "elapsed_seconds": 0.21882607601583004,
+      "stats": {
+        "requests": 18,
+        "completed_requests": 18,
+        "raw_count": 1682,
+        "unique_candidates": {
+          "top": 519,
+          "bottom": 439,
+          "shoes": 118
+        },
+        "elapsed_seconds": 0.015,
+        "retained_candidates": {
+          "top": 300,
+          "bottom": 300,
+          "shoes": 118
+        },
+        "measurement_candidates": 16,
+        "measurement_tables": 12,
+        "photo": {
+          "candidates": 12,
+          "cache_hits": 6,
+          "inferred": 6,
+          "failures": 0,
+          "elapsed_seconds": 0.2009,
+          "deferred": 0,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.2181,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7074443",
+        "MS5949708",
+        "MS6797131",
+        "MS6477361",
+        "MS7090677",
+        "MS6406692",
+        "MS4745197",
+        "MS6040355",
+        "MS7140188",
+        "MS4278871",
+        "MS4848191",
+        "MS6961126",
+        "MS7271173",
+        "MS6717409",
+        "MS7009053",
+        "MS7011323",
+        "MS7121531",
+        "MS7011133"
+      ],
+      "photo_evidence": {}
+    },
+    {
+      "run": "baseline4",
+      "elapsed_seconds": 0.01802243757992983,
+      "stats": {
+        "requests": 18,
+        "completed_requests": 18,
+        "raw_count": 1682,
+        "unique_candidates": {
+          "top": 519,
+          "bottom": 439,
+          "shoes": 118
+        },
+        "elapsed_seconds": 0.016,
+        "retained_candidates": {
+          "top": 300,
+          "bottom": 300,
+          "shoes": 118
+        },
+        "measurement_candidates": 16,
+        "measurement_tables": 12,
+        "photo": {
+          "candidates": 0,
+          "matched_products": 0,
+          "elapsed_seconds": 0.0
+        },
+        "total_elapsed_seconds": 0.0178,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7074443",
+        "MS5949708",
+        "MS6797131",
+        "MS6477361",
+        "MS7090677",
+        "MS6406692",
+        "MS4745197",
+        "MS6040355",
+        "MS7140188",
+        "MS4278871",
+        "MS4848191",
+        "MS6961126",
+        "MS7271173",
+        "MS6717409",
+        "MS7009053",
+        "MS7011323",
+        "MS7121531",
+        "MS7011133"
+      ],
+      "photo_evidence": {}
+    },
+    {
+      "run": "photo4",
+      "elapsed_seconds": 0.01777409389615059,
+      "stats": {
+        "requests": 18,
+        "completed_requests": 18,
+        "raw_count": 1682,
+        "unique_candidates": {
+          "top": 519,
+          "bottom": 439,
+          "shoes": 118
+        },
+        "elapsed_seconds": 0.015,
+        "retained_candidates": {
+          "top": 300,
+          "bottom": 300,
+          "shoes": 118
+        },
+        "measurement_candidates": 16,
+        "measurement_tables": 12,
+        "photo": {
+          "candidates": 12,
+          "cache_hits": 12,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0002,
+          "deferred": 0,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.0176,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7074443",
+        "MS5949708",
+        "MS6797131",
+        "MS6477361",
+        "MS7090677",
+        "MS6406692",
+        "MS4745197",
+        "MS6040355",
+        "MS7140188",
+        "MS4278871",
+        "MS4848191",
+        "MS6961126",
+        "MS7271173",
+        "MS6717409",
+        "MS7009053",
+        "MS7011323",
+        "MS7121531",
+        "MS7011133"
+      ],
+      "photo_evidence": {}
+    },
+    {
+      "run": "baseline5",
+      "elapsed_seconds": 0.01727990247309208,
+      "stats": {
+        "requests": 18,
+        "completed_requests": 18,
+        "raw_count": 1682,
+        "unique_candidates": {
+          "top": 519,
+          "bottom": 439,
+          "shoes": 118
+        },
+        "elapsed_seconds": 0.015,
+        "retained_candidates": {
+          "top": 300,
+          "bottom": 300,
+          "shoes": 118
+        },
+        "measurement_candidates": 16,
+        "measurement_tables": 12,
+        "photo": {
+          "candidates": 0,
+          "matched_products": 0,
+          "elapsed_seconds": 0.0
+        },
+        "total_elapsed_seconds": 0.0171,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7074443",
+        "MS5949708",
+        "MS6797131",
+        "MS6477361",
+        "MS7090677",
+        "MS6406692",
+        "MS4745197",
+        "MS6040355",
+        "MS7140188",
+        "MS4278871",
+        "MS4848191",
+        "MS6961126",
+        "MS7271173",
+        "MS6717409",
+        "MS7009053",
+        "MS7011323",
+        "MS7121531",
+        "MS7011133"
+      ],
+      "photo_evidence": {}
+    },
+    {
+      "run": "photo5",
+      "elapsed_seconds": 0.01772043388336897,
+      "stats": {
+        "requests": 18,
+        "completed_requests": 18,
+        "raw_count": 1682,
+        "unique_candidates": {
+          "top": 519,
+          "bottom": 439,
+          "shoes": 118
+        },
+        "elapsed_seconds": 0.015,
+        "retained_candidates": {
+          "top": 300,
+          "bottom": 300,
+          "shoes": 118
+        },
+        "measurement_candidates": 16,
+        "measurement_tables": 12,
+        "photo": {
+          "candidates": 12,
+          "cache_hits": 12,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0002,
+          "deferred": 0,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.0175,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7074443",
+        "MS5949708",
+        "MS6797131",
+        "MS6477361",
+        "MS7090677",
+        "MS6406692",
+        "MS4745197",
+        "MS6040355",
+        "MS7140188",
+        "MS4278871",
+        "MS4848191",
+        "MS6961126",
+        "MS7271173",
+        "MS6717409",
+        "MS7009053",
+        "MS7011323",
+        "MS7121531",
+        "MS7011133"
+      ],
+      "photo_evidence": {}
+    },
+    {
+      "run": "baseline6",
+      "elapsed_seconds": 0.017359021119773388,
+      "stats": {
+        "requests": 18,
+        "completed_requests": 18,
+        "raw_count": 1682,
+        "unique_candidates": {
+          "top": 519,
+          "bottom": 439,
+          "shoes": 118
+        },
+        "elapsed_seconds": 0.015,
+        "retained_candidates": {
+          "top": 300,
+          "bottom": 300,
+          "shoes": 118
+        },
+        "measurement_candidates": 16,
+        "measurement_tables": 12,
+        "photo": {
+          "candidates": 0,
+          "matched_products": 0,
+          "elapsed_seconds": 0.0
+        },
+        "total_elapsed_seconds": 0.0172,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7074443",
+        "MS5949708",
+        "MS6797131",
+        "MS6477361",
+        "MS7090677",
+        "MS6406692",
+        "MS4745197",
+        "MS6040355",
+        "MS7140188",
+        "MS4278871",
+        "MS4848191",
+        "MS6961126",
+        "MS7271173",
+        "MS6717409",
+        "MS7009053",
+        "MS7011323",
+        "MS7121531",
+        "MS7011133"
+      ],
+      "photo_evidence": {}
+    },
+    {
+      "run": "photo6",
+      "elapsed_seconds": 0.01772445999085903,
+      "stats": {
+        "requests": 18,
+        "completed_requests": 18,
+        "raw_count": 1682,
+        "unique_candidates": {
+          "top": 519,
+          "bottom": 439,
+          "shoes": 118
+        },
+        "elapsed_seconds": 0.015,
+        "retained_candidates": {
+          "top": 300,
+          "bottom": 300,
+          "shoes": 118
+        },
+        "measurement_candidates": 16,
+        "measurement_tables": 12,
+        "photo": {
+          "candidates": 12,
+          "cache_hits": 12,
+          "inferred": 0,
+          "failures": 0,
+          "elapsed_seconds": 0.0002,
+          "deferred": 0,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 0.0175,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7074443",
+        "MS5949708",
+        "MS6797131",
+        "MS6477361",
+        "MS7090677",
+        "MS6406692",
+        "MS4745197",
+        "MS6040355",
+        "MS7140188",
+        "MS4278871",
+        "MS4848191",
+        "MS6961126",
+        "MS7271173",
+        "MS6717409",
+        "MS7009053",
+        "MS7011323",
+        "MS7121531",
+        "MS7011133"
+      ],
+      "photo_evidence": {}
+    },
+    {
+      "run": "cold_baseline",
+      "elapsed_seconds": 0.9264095518738031,
+      "stats": {
+        "requests": 18,
+        "completed_requests": 18,
+        "raw_count": 1682,
+        "unique_candidates": {
+          "top": 519,
+          "bottom": 439,
+          "shoes": 118
+        },
+        "elapsed_seconds": 0.587,
+        "retained_candidates": {
+          "top": 300,
+          "bottom": 300,
+          "shoes": 118
+        },
+        "measurement_candidates": 16,
+        "measurement_tables": 12,
+        "photo": {
+          "candidates": 0,
+          "matched_products": 0,
+          "elapsed_seconds": 0.0
+        },
+        "total_elapsed_seconds": 0.9257,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7074443",
+        "MS5949708",
+        "MS6797131",
+        "MS6477361",
+        "MS7090677",
+        "MS6406692",
+        "MS4745197",
+        "MS6040355",
+        "MS7140188",
+        "MS4278871",
+        "MS4848191",
+        "MS6961126",
+        "MS7271173",
+        "MS6717409",
+        "MS7009053",
+        "MS7011323",
+        "MS7121531",
+        "MS7011133"
+      ],
+      "photo_evidence": {}
+    },
+    {
+      "run": "cold_photo",
+      "elapsed_seconds": 1.2626697653904557,
+      "stats": {
+        "requests": 18,
+        "completed_requests": 18,
+        "raw_count": 1682,
+        "unique_candidates": {
+          "top": 519,
+          "bottom": 439,
+          "shoes": 118
+        },
+        "elapsed_seconds": 0.612,
+        "retained_candidates": {
+          "top": 300,
+          "bottom": 300,
+          "shoes": 118
+        },
+        "measurement_candidates": 16,
+        "measurement_tables": 12,
+        "photo": {
+          "candidates": 12,
+          "cache_hits": 0,
+          "inferred": 8,
+          "failures": 0,
+          "elapsed_seconds": 0.2815,
+          "deferred": 4,
+          "matched_products": 0
+        },
+        "total_elapsed_seconds": 1.262,
+        "photo_protected_positions": 18
+      },
+      "selected": [
+        "MS7074443",
+        "MS5949708",
+        "MS6797131",
+        "MS6477361",
+        "MS7090677",
+        "MS6406692",
+        "MS4745197",
+        "MS6040355",
+        "MS7140188",
+        "MS4278871",
+        "MS4848191",
+        "MS6961126",
+        "MS7271173",
+        "MS6717409",
+        "MS7009053",
+        "MS7011323",
+        "MS7121531",
+        "MS7011133"
+      ],
+      "photo_evidence": {}
+    }
+  ]
+}

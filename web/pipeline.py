@@ -10,6 +10,7 @@ import threading
 import inspect
 import urllib.parse
 import urllib.request
+import uuid
 from datetime import datetime
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -47,6 +48,7 @@ from product_catalog import ProductCatalog
 from quality_checker import QualityChecker
 from recommendation_engine import CHANGE_SCOPE_MAP, PURPOSE_STYLES, RecommendationEngine
 from musinsa_live_search import MusinsaLiveSearch
+from live_product_attributes import LiveProductAttributes
 from product_measurements import ProductMeasurementClient
 from size_fit import validate_references
 from body_shape import classify
@@ -228,7 +230,10 @@ def _build_engine() -> Engine:
         quality_checker=QualityChecker(pose_analyzer),
         outfit_analyzer=OutfitAnalyzer(clothing_parser, classifier),
         recommender=RecommendationEngine(RULES_PATH, catalog),
-        product_search=MusinsaLiveSearch(measurements=ProductMeasurementClient(DATA_DIR / "cache" / "product_measurements")),
+        product_search=MusinsaLiveSearch(
+            measurements=ProductMeasurementClient(DATA_DIR / "cache" / "product_measurements"),
+            photo_provider=LiveProductAttributes(clothing_parser, classifier.attribute_predictor)
+            if classifier.trained_attributes_enabled else None),
         tryon=_build_tryon(),
         device=classifier.device,
         trained_heads=classifier.trained_attributes_enabled,
@@ -378,12 +383,12 @@ def _shopping_image_host_allowed(url: str) -> bool:
     )
 
 
-def _cache_live_shopping_image(product, output_dir: Path) -> Path | None:
+def _cache_live_shopping_image(product, output_dir: Path, *, timeout: float = 6.0) -> Path | None:
     """무신사 API가 돌려준 공개 상품 이미지를 현재 세션에만 안전하게 저장한다."""
     if not _shopping_image_host_allowed(product.image_url):
         return None
-    suffix = hashlib.sha256(product.product_id.encode("utf-8")).hexdigest()[:12]
-    target = output_dir / f"shopping_{suffix}.jpg"
+    suffix = hashlib.sha256(f"{product.product_id}:{product.image_url}".encode("utf-8")).hexdigest()[:16]
+    target = output_dir / f"shopping_{suffix}.png"
     if target.is_file():
         return target
     request = urllib.request.Request(
@@ -391,7 +396,7 @@ def _cache_live_shopping_image(product, output_dir: Path) -> Path | None:
         headers={"User-Agent": "Mozilla/5.0 (compatible; FITTA/1.0)"},
     )
     try:
-        with urllib.request.urlopen(request, timeout=6.0) as response:
+        with urllib.request.urlopen(request, timeout=max(0.01, timeout)) as response:
             if not _shopping_image_host_allowed(response.geturl()):
                 return None
             declared = int(response.headers.get("Content-Length") or 0)
@@ -403,7 +408,15 @@ def _cache_live_shopping_image(product, output_dir: Path) -> Path | None:
         with Image.open(io.BytesIO(raw)) as opened:
             if opened.width * opened.height > MAX_SHOPPING_IMAGE_PIXELS:
                 return None
-            opened.convert("RGB").save(target, "JPEG", quality=95)
+            # Downloads can overlap; publish only a complete decoded image.
+            temporary = target.with_name(f"{target.stem}.{uuid.uuid4().hex}.tmp")
+            try:
+                # Preserve decoded pixels: benchmark and live inference see the
+                # same image, without another lossy JPEG compression pass.
+                opened.convert("RGB").save(temporary, "PNG")
+                temporary.replace(target)
+            finally:
+                temporary.unlink(missing_ok=True)
     except (OSError, ValueError, UnidentifiedImageError):
         return None
     return target
@@ -557,6 +570,8 @@ def run_pipeline(
                     target_keywords,
                     profile,
                     limit=6,
+                    photo_loader=lambda product, timeout: _cache_live_shopping_image(
+                        product, output_dir, timeout=timeout),
                 )
             except Exception as exc:  # 외부 검색 장애가 본 분석까지 실패시키지 않게 격리한다.
                 print(f"[MUSINSA] live search unavailable: {exc}")

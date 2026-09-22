@@ -74,8 +74,10 @@ class FakeProductSearch:
     def __init__(self):
         self.called = False
 
-    def search(self, targets, profile, limit=3, fallback_products=()):
+    def search(self, targets, profile, limit=3, fallback_products=(), photo_loader=None):
         self.called = True
+        if not callable(photo_loader):
+            raise AssertionError("실시간 사진 로더가 검색에 연결되어야 합니다.")
         if list(fallback_products):
             raise AssertionError("CSV fallback 상품을 실시간 검색에 넘기면 안 됩니다.")
         return []

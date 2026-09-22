@@ -1,4 +1,5 @@
 import tempfile
+import io
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -6,6 +7,7 @@ from unittest.mock import patch
 from web import pipeline
 from musinsa_live_search import ShoppingProduct
 from schemas import Product
+from PIL import Image
 
 
 def catalog_product(product_id: str, category: str = "top") -> Product:
@@ -39,6 +41,30 @@ def shopping_product(product_id: str, category: str = "top") -> ShoppingProduct:
 
 
 class ShoppingTryOnResolutionTests(unittest.TestCase):
+    def test_photo_cache_preserves_pixels_and_keys_by_image_url(self):
+        data = io.BytesIO()
+        Image.new("RGB", (16, 16), (123, 45, 67)).save(data, "JPEG")
+        raw = data.getvalue()
+        class Response(io.BytesIO):
+            headers = {"Content-Length": str(len(raw))}
+            def geturl(self):
+                return "https://image.msscdn.net/example.jpg"
+        product = shopping_product("MS1")
+        with tempfile.TemporaryDirectory() as directory, patch(
+            "web.pipeline.urllib.request.urlopen", side_effect=lambda *a, **kw: Response(raw)
+        ) as download:
+            first = pipeline._cache_live_shopping_image(product, Path(directory), timeout=.1)
+            cached = pipeline._cache_live_shopping_image(product, Path(directory), timeout=.1)
+            self.assertEqual(first, cached)
+            self.assertEqual(download.call_count, 1)
+            with Image.open(first) as saved, Image.open(io.BytesIO(raw)) as original:
+                self.assertEqual(saved.tobytes(), original.convert("RGB").tobytes())
+            product.image_url = "https://image.msscdn.net/replaced.jpg"
+            replaced = pipeline._cache_live_shopping_image(product, Path(directory), timeout=.1)
+            self.assertNotEqual(first, replaced)
+            self.assertFalse(list(Path(directory).glob("*.tmp")))
+            self.assertEqual(download.call_args.kwargs["timeout"], .1)
+
     def test_catalog_search_result_exposes_tryon_without_leaking_local_path(self):
         with tempfile.TemporaryDirectory() as directory:
             image = Path(directory) / "1.jpg"

@@ -163,6 +163,17 @@ def build_product_evidence(product: Any, profile: UserProfile, pose: PoseAnalysi
             "상품 속성", tuple(keyword for keyword, _ in details),
             ",".join(dict.fromkeys(detail_sources)),
         ))
+    photo = getattr(product, "photo_attributes", None) or {}
+    photo_keywords = [value["keyword"] for axis, value in photo.items()
+                      if axis in {"fit", "length"} and value.get("source") == "product_photo"
+                      and value.get("keyword") in attributes.get(axis, [])]
+    if photo_keywords:
+        evidence.insert(0, ProductEvidence(
+            "product_photo", "상품 사진",
+            f"상품 사진에서 '{quoted(photo_keywords)}' 특징이 추정되어 추천 조건을 보충합니다.",
+            tuple(dict.fromkeys(rule for keyword in photo_keywords for rule in rules_of(keyword))),
+            "상품 사진 추정", tuple(photo_keywords), "product_photo",
+        ))
     return evidence[:MAX_EVIDENCE]
 MATRIX_LABELS = {
     "body_fit": "체형 적합도",
@@ -283,12 +294,13 @@ def _llm_reasons(
         "당신은 FITTA가 이미 검증한 상품 추천 근거를 자연스러운 한국어로 표현하는 편집자입니다. "
         "추천 여부와 근거는 서버가 결정했으므로 새로운 근거를 판단하거나 추가하지 마세요. "
         "각 상품의 allowed_evidence에 있는 사실과 matched_keywords만 사용하고, 사용한 근거의 "
-        "evidence_id를 evidence_ids에 1~3개 반환하세요. 상품명에 매칭되지 않은 속성, 사용자 목적, "
+        "evidence_id를 evidence_ids에 1~3개 반환하세요. 제공된 근거에 없는 속성, 사용자 목적, "
         "예산·가격·할인·가성비, 실제 신체 치수, 상품 실측, 사이즈, 확인되지 않은 착용감·소재·기능·효과를 "
         "언급하지 마세요. 체형 근거가 제공되지 않았다면 체형이나 신체 특징을 말하지 말고, 신발에는 체형·다리 "
         "보정 표현을 쓰지 마세요. 입력 근거가 하나면 하나만 설명하고, 근거가 없는 상품은 출력하지 마세요. "
         "matched_keywords의 표현을 최소 하나 포함해 친절한 옷가게 점원의 한 문장으로 작성하되 해시태그와 점수는 "
-        "쓰지 말고 120자 이내로 작성하세요."
+        "쓰지 말고 120자 이내로 작성하세요. 상품 사진 근거가 있으면 반드시 그 근거를 인용하고 "
+        "'상품 사진'과 '추정'을 명시하세요. 이 경우 상품명과 일치한다고 쓰지 마세요."
     )
     if provider == "gemini":
         model = os.environ.get("FASHION_LLM_MODEL", "gemini-2.5-flash-lite")
@@ -360,6 +372,10 @@ def _llm_reasons(
         ):
             continue
         selected = [allowed[evidence_id] for evidence_id in evidence_ids]
+        if any(e.kind == "product_photo" for e in allowed.values()):
+            if (not any(e.kind == "product_photo" for e in selected)
+                    or "상품 사진" not in reason or "추정" not in reason or "상품명" in reason):
+                continue
         if any(word in reason for word in FORBIDDEN_REASON_LANGUAGE + UNSUPPORTED_PURPOSE_LANGUAGE):
             continue
         has_body_evidence = any(evidence.kind in {"body_shape", "proportion"} for evidence in selected)
