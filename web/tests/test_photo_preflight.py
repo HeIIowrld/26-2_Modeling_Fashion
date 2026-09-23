@@ -49,6 +49,19 @@ class PhotoPreflightTests(unittest.TestCase):
             self.assertIn('치마', payload['issues'][0])
             self.assertEqual(list(Path(temporary).iterdir()), [])
 
+    def test_loose_looking_clothes_pass_with_a_warning_instead_of_a_retake(self):
+        # 마스크 폭만 근거인 판정으로 막으면 정상 사진 대부분이 1단계에서 거절된다.
+        engine = FakeEngine(True)
+        outfit, parsed = engine.outfit_analyzer.analyze(None, None)
+        outfit.lower_fit = '와이드핏 추정'
+        engine.outfit_analyzer.analyze = Mock(return_value=(outfit, parsed))
+        with tempfile.TemporaryDirectory() as temporary, patch.object(web_app, 'SESSION_ROOT', Path(temporary)), patch.object(web_app, 'get_engine', return_value=engine):
+            payload = json.loads(asyncio.run(web_app.validate_photo(image_upload())).body)
+        self.assertTrue(payload['valid'])
+        self.assertEqual(payload['issues'], [])
+        self.assertTrue(payload['warnings'])
+        self.assertEqual(payload['quality']['body_visibility']['status'], 'uncertain')
+
     def run_validation(self, passed):
         with tempfile.TemporaryDirectory() as temporary:
             old_root = web_app.SESSION_ROOT

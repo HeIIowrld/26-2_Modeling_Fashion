@@ -38,22 +38,48 @@ def test_loose_clothes_are_blocked_using_existing_attribute_evidence(field, labe
     assert assess_body_visibility(outfit, parsed)['status'] == 'occluded'
 
 
-def test_mask_width_alone_is_uncertainty_not_a_body_size_judgement():
+def test_mask_width_alone_warns_instead_of_rejecting_the_photo():
+    # 마스크 폭만 근거인 '넉넉함'으로 막으면 몸선이 보이는 사진의 92%가 거절된다
+    # (reports/body_visibility_2026-09-23.md, 사람 핏 라벨 464장).
     outfit, parsed = sample()
     outfit.lower_fit = '와이드핏 추정'
     result = assess_body_visibility(outfit, parsed)
     assert result['status'] == 'uncertain'
-    assert not result['passed']
+    assert result['passed']
+    assert not result['issues']
+    assert any('체형으로 사용하지 않습니다' in message for message in result['warnings'])
     assert not result['calibrated']
 
 
-def test_missing_parser_or_unknown_fit_cannot_silently_pass():
+def test_missing_parser_or_unknown_fit_warns_without_blocking():
+    for setup in ('parser', 'fit'):
+        outfit, parsed = sample()
+        if setup == 'parser':
+            parsed['backend'] = 'pose-guided-fallback'
+        else:
+            outfit.fit = '분석 보류'
+        result = assess_body_visibility(outfit, parsed)
+        assert result['status'] == 'uncertain'
+        assert result['passed'] and result['warnings'] and not result['issues']
+
+
+def test_blocking_reasons_do_not_also_ask_for_circumferences():
+    # 차단 사유가 있으면 재촬영 안내만 내보낸다. 두 안내를 같이 주면 무엇을 해야 할지 흐려진다.
     outfit, parsed = sample()
-    parsed['backend'] = 'pose-guided-fallback'
-    assert not assess_body_visibility(outfit, parsed)['passed']
+    outfit.fit = '오버핏'
+    outfit.attribute_sources['fit'] = 'trained_head'
+    outfit.lower_fit = '와이드핏 추정'
+    result = assess_body_visibility(outfit, parsed)
+    assert not result['passed'] and result['issues'] and not result['warnings']
+
+
+def test_warnings_reach_the_caller_alongside_existing_quality_warnings():
     outfit, parsed = sample()
     outfit.fit = '분석 보류'
-    assert not assess_body_visibility(outfit, parsed)['passed']
+    result = with_body_visibility({'passed': True, 'issues': [], 'warnings': ['측면 기울기']}, outfit, parsed)
+    assert result['passed']
+    assert result['warnings'][0] == '측면 기울기'
+    assert len(result['warnings']) > 1
 
 
 def test_padded_outerwear_is_rejected_even_with_regular_fit_label():

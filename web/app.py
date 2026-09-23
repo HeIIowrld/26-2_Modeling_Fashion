@@ -662,6 +662,8 @@ async def validate_photo(image: UploadFile = File(...)) -> JSONResponse:
         return JSONResponse({
             "valid": bool(quality["passed"]),
             "issues": quality.get("issues", []),
+            # 통과했더라도 옷 때문에 체형 판정이 흔들릴 수 있다는 안내는 남긴다.
+            "warnings": quality.get("warnings", []),
             "quality": quality,
         })
     finally:

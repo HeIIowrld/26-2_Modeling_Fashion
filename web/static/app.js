@@ -253,8 +253,12 @@ async function validatePhotoBeforeNext() {
       note.dataset.tone = "bad";
       return;
     }
-    note.textContent = "사진이 확인됐어요. 조건을 입력해주세요.";
-    note.dataset.tone = "ok";
+    // 통과했더라도 옷 때문에 체형 판정이 흔들릴 수 있으면 그대로 알린다. 진행은 막지 않는다.
+    const warnings = payload.warnings || [];
+    note.textContent = warnings.length
+      ? warnings.join(" ")
+      : "사진이 확인됐어요. 조건을 입력해주세요.";
+    note.dataset.tone = warnings.length ? "warn" : "ok";
     unlock(2);
     goto(2);
   } catch (error) {
