@@ -84,5 +84,23 @@ class SmokeCombinationTests(unittest.TestCase):
         self.assertEqual(app, expected)
 
 
+class SmokeStageOrderTests(unittest.TestCase):
+    """스모크의 단계 기대값이 파이프라인 순서를 따라가게 한다.
+
+    PR #48이 체형 계산을 착장 속성 뒤로 옮겼을 때 스모크는 옛 순서를 그대로 기대해
+    정상 서버에서 실패했다. 스모크는 앱을 import 하지 않는 외부 클라이언트라 순서를
+    직접 들고 있어야 하므로, 어긋나면 이 검사가 잡는다.
+    """
+
+    def test_expected_stages_match_the_pipeline(self):
+        from pipeline import STAGES
+
+        self.assertEqual(smoke.EXPECTED_STAGES, [name for name, _label in STAGES])
+
+    def test_body_stage_comes_after_attributes(self):
+        stages = smoke.EXPECTED_STAGES
+        self.assertLess(stages.index("attributes"), stages.index("body"))
+
+
 if __name__ == "__main__":
     unittest.main()

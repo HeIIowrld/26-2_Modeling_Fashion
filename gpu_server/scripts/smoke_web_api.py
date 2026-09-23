@@ -12,6 +12,13 @@ import urllib.request
 from pathlib import Path
 
 
+# web/pipeline.py 의 STAGES 순서. 체형 계산은 착장 속성 뒤에 온다 — 옷이 몸선을 가리는지
+# 먼저 확인해야 하기 때문이다(PR #48). 순서가 바뀌면 web/tests/test_smoke_web_api.py 가 잡는다.
+EXPECTED_STAGES = [
+    "prepare", "wardrobe", "pose", "quality", "segment",
+    "attributes", "body", "candidates", "scoring", "preview", "finalize",
+]
+
 TRYON_CATEGORIES = ("top", "bottom", "shoes")
 
 
@@ -132,11 +139,7 @@ def main() -> int:
 
     if state["status"] != "done":
         raise RuntimeError(f"분석 실패: {state.get('error')}")
-    expected_stages = [
-        "prepare", "wardrobe", "pose", "quality", "body", "segment",
-        "attributes", "candidates", "scoring", "preview", "finalize",
-    ]
-    if state.get("stage_history") != expected_stages:
+    if state.get("stage_history") != EXPECTED_STAGES:
         raise RuntimeError(f"진행 단계 순서가 다릅니다: {state.get('stage_history')!r}")
     result = state["result"]
     shopping_results = result.get("shopping_results") or []
