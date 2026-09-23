@@ -86,6 +86,14 @@ class UIContractTests(unittest.TestCase):
         self.assertIn('goto(2);', javascript)
         self.assertIn('state.photoValidation', javascript)
 
+    def test_preflight_warning_is_shown_without_blocking_the_next_step(self):
+        javascript = (STATIC / "app.js").read_text(encoding="utf-8")
+        active_css = (STATIC / "lookbook.css").read_text(encoding="utf-8")
+        self.assertIn('payload.warnings', javascript)
+        self.assertIn('note.dataset.tone = warnings.length ? "warn" : "ok"', javascript)
+        # 경고 문구가 본문 색과 같으면 화면에서 눈에 띄지 않는다.
+        self.assertIn('.photo-gate-note[data-tone="warn"]', active_css)
+
     def test_musinsa_products_can_be_selected_for_real_tryon(self):
         html = (STATIC / "index.html").read_text(encoding="utf-8")
         javascript = (STATIC / "app.js").read_text(encoding="utf-8")

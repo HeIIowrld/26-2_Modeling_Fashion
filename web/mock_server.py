@@ -104,6 +104,30 @@ MOCK_LENGTH_PROMPT = (
 )
 
 
+# 조건 입력 전 사진 검사(/api/validate-photo). 파일 이름으로 판정을 고를 수 있게 해서
+# 프런트에서 차단·경고·통과 세 경로를 모두 눌러볼 수 있게 한다.
+MOCK_PREFLIGHT = {
+    "skirt": (False, ["치마·원피스가 골반과 다리 윤곽을 가려 사진 기반 체형 분석에 적합하지 않습니다.",
+                      "몸선을 가리지 않는 상의와 일자 또는 슬림한 바지를 입고 다시 촬영해 주세요. 노출이 많은 옷은 필요하지 않습니다."], []),
+    "loose": (True, [], ["하의 윤곽과 몸선을 구분하기 어렵습니다. 옷의 폭을 체형으로 사용하지 않습니다.",
+                         "옷 때문에 체형 판정이 정확하지 않을 수 있습니다. 실제 둘레를 입력하면 그 값을 우선 사용합니다."]),
+    "blur": (False, ["사진에서 사람의 정면 전신을 확인할 수 없습니다. 정면 전신사진을 사용하세요."], []),
+}
+
+
+def _mock_preflight(filename: str) -> dict:
+    valid, issues, warnings = True, [], []
+    for keyword, verdict in MOCK_PREFLIGHT.items():
+        if keyword in filename.lower():
+            valid, issues, warnings = verdict
+            break
+    return {"valid": valid, "issues": issues, "warnings": warnings,
+            "quality": {"passed": valid, "issues": issues, "warnings": warnings,
+                        "body_visibility": {"status": "occluded" if issues else "uncertain" if warnings
+                                            else "no_obvious_occlusion",
+                                            "passed": valid, "calibrated": False}}}
+
+
 def _mock_length_warnings(job: dict, categories: list[str]) -> list[str]:
     """실제 서버의 기장 경고 흐름을 흉내 낸다.
 
@@ -586,39 +610,59 @@ class MockHandler(SimpleHTTPRequestHandler):
 
         super().do_GET()
 
+    def _read_image_upload(self, form_out: dict | None = None):
+        """multipart 업로드에서 전신사진을 꺼낸다. 실패하면 응답까지 보내고 None 을 준다."""
+        content_type, params = parse_header(self.headers.get("Content-Type", ""))
+        length = _number(self.headers.get("Content-Length"), 0)
+        if content_type != "multipart/form-data" or "boundary" not in params:
+            self._json({"detail": "multipart/form-data 요청이 필요합니다."}, HTTPStatus.BAD_REQUEST)
+            return None
+        if length <= 0 or length > MAX_REQUEST_BYTES:
+            self._json({"detail": "업로드 요청이 너무 큽니다."}, HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
+            return None
+        form = FieldStorage(
+            fp=self.rfile,
+            headers=self.headers,
+            environ={
+                "REQUEST_METHOD": "POST",
+                "CONTENT_TYPE": self.headers["Content-Type"],
+                "CONTENT_LENGTH": str(length),
+            },
+            keep_blank_values=True,
+        )
+        if form_out is not None:
+            form_out["form"] = form
+        if "image" not in form:
+            self._json({"detail": "전신사진이 필요합니다."}, HTTPStatus.BAD_REQUEST)
+            return None
+        image_field = form["image"]
+        if isinstance(image_field, list):
+            image_field = image_field[0]
+        image = image_field.file.read()
+        if not image:
+            self._json({"detail": "이미지 파일이 비어 있습니다."}, HTTPStatus.BAD_REQUEST)
+            return None
+        return image, image_field
+
     def do_POST(self) -> None:  # noqa: N802
         path = urlparse(self.path).path
+        if path == "/api/validate-photo":
+            # 실제 서버는 이 검사를 통과하지 않으면 2단계를 열지 않는다. 목에 이 경로가
+            # 없으면 프런트 작업에서 1단계를 넘어갈 수 없다.
+            upload = self._read_image_upload()
+            if upload is None:
+                return
+            _image, field = upload
+            self._json(_mock_preflight(getattr(field, "filename", "") or ""))
+            return
         if path == "/api/analyze":
-            content_type, params = parse_header(self.headers.get("Content-Type", ""))
-            length = _number(self.headers.get("Content-Length"), 0)
-            if content_type != "multipart/form-data" or "boundary" not in params:
-                self._json({"detail": "multipart/form-data 요청이 필요합니다."}, HTTPStatus.BAD_REQUEST)
+            parsed_form: dict = {}
+            upload = self._read_image_upload(parsed_form)
+            if upload is None:
                 return
-            if length <= 0 or length > MAX_REQUEST_BYTES:
-                self._json({"detail": "업로드 요청이 너무 큽니다."}, HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
-                return
-            form = FieldStorage(
-                fp=self.rfile,
-                headers=self.headers,
-                environ={
-                    "REQUEST_METHOD": "POST",
-                    "CONTENT_TYPE": self.headers["Content-Type"],
-                    "CONTENT_LENGTH": str(length),
-                },
-                keep_blank_values=True,
-            )
-            if "image" not in form:
-                self._json({"detail": "전신사진이 필요합니다."}, HTTPStatus.BAD_REQUEST)
-                return
-            image_field = form["image"]
-            if isinstance(image_field, list):
-                image_field = image_field[0]
-            image = image_field.file.read()
-            if not image:
-                self._json({"detail": "이미지 파일이 비어 있습니다."}, HTTPStatus.BAD_REQUEST)
-                return
+            image, image_field = upload
             try:
-                profile = json.loads(form.getvalue("profile", "{}"))
+                profile = json.loads(parsed_form["form"].getvalue("profile", "{}"))
             except json.JSONDecodeError:
                 self._json({"detail": "조건 값을 읽을 수 없습니다."}, HTTPStatus.BAD_REQUEST)
                 return
