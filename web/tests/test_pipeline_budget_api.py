@@ -30,9 +30,10 @@ class FakeOutfitAnalyzer:
 
     def analyze(self, image_path, pose_result):
         from ai_fashion_recommender.src.schemas import OutfitAnalysis
-        # parsed segmentation can be any object understood by parser.colorize
-        parsed = {"segmentation": None}
-        return OutfitAnalysis("test", "화이트", "블랙", "안정적인 무채색 조합", ["top","pants"], "캐주얼"), parsed
+        import numpy as np
+        parsed = {"segmentation": np.full((10, 10), 6), "backend": "fashn-human-parser"}
+        return OutfitAnalysis("test", "화이트", "블랙", "안정적인 무채색 조합", ["top","pants"], "캐주얼",
+                              fit="레귤러핏", lower_fit="스트레이트핏"), parsed
 
 class FakeRecommender:
     # Minimal attributes referenced by pipeline payload construction
@@ -95,6 +96,44 @@ class FakeEngine:
         self.parser_backend = "fashn"
 
 class PipelineBudgetAPITests(unittest.TestCase):
+    def test_hidden_body_stops_direct_analysis_before_classification_or_search(self):
+        import pipeline
+        engine = FakeEngine()
+        outfit, parsed = engine.outfit_analyzer.analyze(None, None)
+        parsed['segmentation'][:] = 5
+        engine.outfit_analyzer.analyze = Mock(return_value=(outfit, parsed))
+        with tempfile.TemporaryDirectory() as temporary, patch.object(pipeline, 'get_engine', return_value=engine), patch.object(pipeline, 'classify') as classify:
+            with self.assertRaisesRegex(pipeline.PipelineError, '치마'):
+                run_pipeline(Path(temporary) / 'person.jpg', pipeline.build_profile({}), Path(temporary), lambda stage: None)
+            classify.assert_not_called()
+            self.assertFalse(engine.product_search.called)
+
+    def test_separate_body_photo_is_checked_with_its_own_pose(self):
+        import pipeline
+        engine = FakeEngine()
+        outfit, parsed = engine.outfit_analyzer.analyze(None, None)
+        hidden = {**parsed, 'segmentation': parsed['segmentation'] * 0 + 5}
+        engine.outfit_analyzer.analyze = Mock(side_effect=[(outfit, parsed), (outfit, hidden)])
+        engine.pose_analyzer.analyze = Mock(side_effect=[SimpleNamespace(valid=True), SimpleNamespace(valid=True)])
+        with tempfile.TemporaryDirectory() as temporary, patch.object(pipeline, 'get_engine', return_value=engine), patch.object(pipeline, 'classify') as classify:
+            body_path = Path(temporary) / 'body.jpg'
+            with self.assertRaisesRegex(pipeline.PipelineError, '체형 파악용 사진'):
+                run_pipeline(Path(temporary) / 'person.jpg', pipeline.build_profile({}), Path(temporary), lambda stage: None, body_path)
+            self.assertEqual(engine.pose_analyzer.analyze.call_args.args, (body_path,))
+            classify.assert_not_called()
+
+    def test_valid_separate_body_photo_supplies_its_pose_to_body_classifier(self):
+        import pipeline
+        engine = FakeEngine()
+        main_pose = engine.pose_analyzer.analyze(None)
+        body_pose = engine.pose_analyzer.analyze(None)
+        engine.pose_analyzer.analyze = Mock(side_effect=[main_pose, body_pose])
+        with tempfile.TemporaryDirectory() as temporary, patch.object(pipeline, 'get_engine', return_value=engine), patch.object(pipeline, 'classify', return_value=('사각체형', '사진 추정')) as classify:
+            body_path = Path(temporary) / 'body.jpg'
+            run_pipeline(Path(temporary) / 'person.jpg', pipeline.build_profile({}), Path(temporary), lambda stage: None, body_path)
+            self.assertIs(classify.call_args.args[1], body_pose)
+            self.assertEqual(classify.call_args.kwargs['person_image'], body_path)
+
     def test_live_size_comparison_reaches_web_payload_before_final_selection(self):
         import pipeline
         from musinsa_live_search import MusinsaLiveSearch
@@ -169,7 +208,7 @@ class PipelineBudgetAPITests(unittest.TestCase):
             self.assertTrue(fake_engine.product_search.called)
             self.assertEqual(
                 stages,
-                ["pose", "quality", "body", "segment", "attributes", "candidates", "scoring", "preview", "finalize"],
+                ["pose", "quality", "segment", "attributes", "body", "candidates", "scoring", "preview", "finalize"],
             )
             self.assertEqual(payload["request"]["desired_style"], "캐주얼")
             self.assertEqual(payload["request"]["min_budget"], 1000)

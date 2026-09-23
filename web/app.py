@@ -25,6 +25,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 WEB_DIR = Path(__file__).resolve().parent
@@ -57,6 +58,7 @@ from pipeline import (  # noqa: E402
     rule_titles,
     save_feedback,
     tryon_status,
+    validate_input_photo,
 )
 from schemas import Recommendation  # noqa: E402
 
@@ -271,9 +273,7 @@ async def _store_uploaded_image(upload: UploadFile, target: Path) -> None:
 
 
 def _validate_photo_path(image_path: Path) -> dict:
-    engine = get_engine()
-    pose = engine.pose_analyzer.analyze(image_path)
-    return engine.quality_checker.check_input(image_path, pose=pose)
+    return validate_input_photo(image_path, engine=get_engine())
 
 
 def _generate_product_tryon_for_job(job_id: str, product_ids: list[str]) -> dict:
@@ -658,7 +658,7 @@ async def validate_photo(image: UploadFile = File(...)) -> JSONResponse:
     image_path = session / "photo.jpg"
     try:
         await _store_uploaded_image(image, image_path)
-        quality = _validate_photo_path(image_path)
+        quality = await run_in_threadpool(_validate_photo_path, image_path)
         return JSONResponse({
             "valid": bool(quality["passed"]),
             "issues": quality.get("issues", []),

@@ -98,8 +98,8 @@ def classify(profile, pose, *, person_image=None, estimator=None) -> tuple[str, 
             measured = (estimator or BodyMeasurementEstimator()).estimate(
                 person_image, pose, height_cm=getattr(profile, "height_cm", None)
             )
-            # 분류는 세 부위의 비율로 갈리므로 둘레 대신 폭을 넣어도 결과가 같다.
-            # 폭은 정면 사진에서 직접 잰 값이라 둘레 환산보다 가정이 적다.
+            # 기존 둘레 기준을 폭에 적용한 휴리스틱이다. 깊이가 없어 실제 둘레
+            # 분류와 같다고 보장할 수 없으므로 반드시 추정 근거로 표시한다.
             shape, _ = classify_from_circumferences(
                 measured.chest_width, measured.waist_width, measured.hip_width
             )

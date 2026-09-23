@@ -52,6 +52,7 @@ from live_product_attributes import LiveProductAttributes
 from product_measurements import ProductMeasurementClient
 from size_fit import validate_references
 from body_shape import classify
+from body_visibility import with_body_visibility
 from schemas import GOAL_NONE, SILHOUETTE_GOAL_CHOICES, Product, UserProfile, WardrobeItem
 from virtual_tryon import TryOnNotReady, VirtualTryOnAdapter
 from catvton_tryon import (
@@ -107,9 +108,9 @@ STAGES = [
     ("wardrobe", "보유 옷 사진 확인"),
     ("pose", "전신 관절·자세 찾기"),
     ("quality", "해상도·선명도 검사"),
-    ("body", "체형·실루엣 비율 계산"),
     ("segment", "상의·하의 영역 분리"),
     ("attributes", "색상·핏·소재 인식"),
+    ("body", "체형·실루엣 비율 계산"),
     ("candidates", "추천 키워드 생성"),
     ("scoring", "무신사 실시간 상품 검색"),
     ("preview", "검색 결과 카드 준비"),
@@ -483,6 +484,18 @@ def _shopping_tryon_payloads(
     return payloads, tryon_products
 
 
+def validate_input_photo(image_path: Path, engine=None) -> dict:
+    """Share the input policy with preflight; serialize model access with analysis."""
+    engine = engine or get_engine()
+    with _analysis_lock:
+        pose = engine.pose_analyzer.analyze(image_path)
+        quality = engine.quality_checker.check_input(image_path, pose=pose)
+        if not quality["passed"]:
+            return quality
+        outfit, parsed = engine.outfit_analyzer.analyze(image_path, pose)
+        return with_body_visibility(quality, outfit, parsed)
+
+
 def run_pipeline(
     image_path: Path,
     profile: UserProfile,
@@ -511,14 +524,6 @@ def run_pipeline(
         engine.pose_analyzer.draw_landmarks(image_path, analysis=pose_result).save(
             landmark_path, quality=92
         )
-        # 둘레를 입력했으면 사진 추정보다 정확하므로 그 값으로 덮어쓴다.
-        # 여기서 확정해야 추천 엔진과 화면이 같은 체형을 본다.
-        # 체형 파악용 사진이 있으면 그쪽을 쓴다. 몸이 드러날수록 실루엣 폭이 정확하다.
-        on_stage("body")
-        pose_result.body_shape, body_shape_basis = classify(
-            profile, pose_result, person_image=body_image_path or image_path
-        )
-
         analyze_outfit = engine.outfit_analyzer.analyze
         if "on_stage" in inspect.signature(analyze_outfit).parameters:
             outfit_result, parsed = analyze_outfit(image_path, pose_result, on_stage=on_stage)
@@ -526,6 +531,25 @@ def run_pipeline(
             on_stage("segment")
             outfit_result, parsed = analyze_outfit(image_path, pose_result)
             on_stage("attributes")
+
+        # Check before silhouette measurement, recommendations or VTON. Calling
+        # /api/analyze directly must not bypass the upload preflight policy.
+        input_quality = with_body_visibility(input_quality, outfit_result, parsed)
+        if not input_quality["passed"]:
+            raise PipelineError(" / ".join(input_quality["issues"]))
+        if body_image_path is not None:
+            body_pose = engine.pose_analyzer.analyze(body_image_path)
+            body_quality = engine.quality_checker.check_input(body_image_path, pose=body_pose)
+            if body_quality["passed"]:
+                body_outfit, body_parsed = analyze_outfit(body_image_path, body_pose)
+                body_quality = with_body_visibility(body_quality, body_outfit, body_parsed)
+            if not body_quality["passed"]:
+                raise PipelineError("체형 파악용 사진: " + " / ".join(body_quality["issues"]))
+        on_stage("body")
+        pose_result.body_shape, body_shape_basis = classify(
+            profile, body_pose if body_image_path is not None else pose_result,
+            person_image=body_image_path or image_path
+        )
 
         # Fashion Rules의 기존 2×3 진단기를 현재 착장 결과에 다시 연결한다.
         current_outfit_evaluation = engine.recommender.evaluate_current_outfit(
