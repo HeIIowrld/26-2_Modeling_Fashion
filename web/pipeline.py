@@ -208,7 +208,9 @@ def _build_tryon() -> VirtualTryOnAdapter:
         shoe_model = os.environ.get("FASHION_SHOE_MODEL_PATH", "").strip()
         if shoe_model:
             from shoe_tryon import OutfitTryOn, ShoeTryOn
-            return OutfitTryOn(adapter, ShoeTryOn(shoe_model))
+            editor = ShoeTryOn(shoe_model)
+            adapter.transition_editor = editor
+            return OutfitTryOn(adapter, editor)
         return adapter
     except Exception as error:  # 저장소 없음·의존성 없음·GPU 없음 모두 여기로 온다
         print(f"[VTON] 생성 모델을 켜지 못해 비활성으로 실행합니다: {type(error).__name__}: {error}")

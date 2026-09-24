@@ -1,0 +1,1695 @@
+{
+  "job_id": 239738,
+  "inputs": {
+    "manifest": {
+      "people": [
+        "/mnt/data1/dsl01/eval/vton_fit_20260914/people/Simon_1.png",
+        "/mnt/data1/dsl01/eval/deepfashion_mm/images/MEN-Sweatshirts_Hoodies-id_00004332-01_4_full.jpg",
+        "/mnt/data1/dsl01/eval/vton_length_20260921/people_wild/long/fp_65bb5ce7128ff89de74018b755a7850a.jpg"
+      ],
+      "products": [
+        {
+          "id": "MS2240239",
+          "name": "프리미어 하이웨이스트 스키니 진 브랜딧",
+          "category": "bottom",
+          "path": "/mnt/data1/dsl01/eval/vton_length_20260921/slim/refs/MS2240239.jpg"
+        },
+        {
+          "id": "MS5252900",
+          "name": "[2PACK] 젤라 인텐션 바이커 쇼츠 3부 XP9172F",
+          "category": "bottom",
+          "path": "/mnt/data1/dsl01/releases/fitta_current/datasets/garments/raw/MS5252900.jpg"
+        },
+        {
+          "id": "MS6906711",
+          "name": "[3PACK] 아스킨 머슬핏 숏슬리브",
+          "category": "top",
+          "path": "/mnt/data1/dsl01/releases/fitta_current/datasets/garments/raw/MS6906711.jpg"
+        }
+      ]
+    },
+    "sha256": {
+      "/mnt/data1/dsl01/eval/vton_fit_20260914/people/Simon_1.png": "3cb43bbdd3cfa852338d3dfb3d9852595e28039fd7afd5b19c0bd433e69099f7",
+      "/mnt/data1/dsl01/eval/deepfashion_mm/images/MEN-Sweatshirts_Hoodies-id_00004332-01_4_full.jpg": "fbc14d18f352c7ff35ef3bde6772bcb0a3e35eb8f9a7863ca7324a66b8fc3dfe",
+      "/mnt/data1/dsl01/eval/vton_length_20260921/people_wild/long/fp_65bb5ce7128ff89de74018b755a7850a.jpg": "9b69c3e93ca2656f78d3e4b4050e47107dfdb60f5a9333177c8bb5a4a087cc45",
+      "/mnt/data1/dsl01/eval/vton_length_20260921/slim/refs/MS2240239.jpg": "1d1f85bca7cc2a87da6da6671c0d62b6dca582e05e0326c4fa54bd2aa76b1d29",
+      "/mnt/data1/dsl01/releases/fitta_current/datasets/garments/raw/MS5252900.jpg": "013560158247f0895caf603d0c104198e3f52e624133f39dd3dbb7122cdfb8a1",
+      "/mnt/data1/dsl01/releases/fitta_current/datasets/garments/raw/MS6906711.jpg": "5b381b954a9659c2149a4b16797dc2a69bc985d77335bb6e23f4c812eb6ee122"
+    },
+    "seed": 42,
+    "catvton_steps": 25,
+    "reference_editor_steps": 4,
+    "max_retries": 1,
+    "code_sha256": {
+      "catvton_tryon.py": "3108f5f3046cd79ed03d415f385b199ae155a0dcc5429dfec979d3ad16882041",
+      "tryon_transition.py": "d5b8e170e464dc8f8edad76c21c44407b69731aba622e3624abc3e052bd6e15b",
+      "shoe_tryon.py": "9532b3b87a96a21db3f4204dbad2403d41dd7ffad8dab2124d3f0ab62fa718af",
+      "tryon_quality.py": "257384897c2af0320be7959ba2510c57e78627d0b1e6bee4808b77ad33e405c5"
+    }
+  },
+  "cases": [
+    {
+      "person": "Simon_1.png",
+      "product": "MS2240239",
+      "variant": "baseline",
+      "seconds": 23.23,
+      "quality": [
+        {
+          "category": "bottom",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 0.7613,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "하의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 76%)."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 하의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": 0.0764,
+              "threshold": -0.03,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "color_fidelity",
+              "value": 4.79,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의 색이 상품 사진과 다릅니다(색차 5)."
+            },
+            {
+              "name": "bottom_length_fidelity",
+              "value": 0.0,
+              "threshold": 1.0,
+              "passed": true,
+              "retryable": false,
+              "message": "상품은 롱·긴바지 기장인데 합성 결과는 긴바지로 그려졌습니다. 원래 하의의 모양을 따라가 기장이 달라졌습니다."
+            },
+            {
+              "name": "sharpness",
+              "value": 174.2,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 흐릿합니다."
+            }
+          ],
+          "attempts": 1,
+          "unassessed_attempts": [],
+          "transition_edit": false,
+          "skin_correction": null,
+          "assess_seconds": 0.225
+        }
+      ],
+      "error": null
+    },
+    {
+      "person": "Simon_1.png",
+      "product": "MS2240239",
+      "variant": "corrected",
+      "seconds": 20.07,
+      "quality": [
+        {
+          "category": "bottom",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 0.8367,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "하의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 84%)."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 하의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": 0.1031,
+              "threshold": -0.03,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "color_fidelity",
+              "value": 3.27,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의 색이 상품 사진과 다릅니다(색차 3)."
+            },
+            {
+              "name": "bottom_length_fidelity",
+              "value": 0.0,
+              "threshold": 1.0,
+              "passed": true,
+              "retryable": true,
+              "message": "상품은 롱·긴바지 기장인데 합성 결과는 긴바지로 그려졌습니다. 원래 하의의 모양을 따라가 기장이 달라졌습니다."
+            },
+            {
+              "name": "sharpness",
+              "value": 231.5,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 흐릿합니다."
+            }
+          ],
+          "attempts": 1,
+          "unassessed_attempts": [],
+          "transition_edit": true,
+          "skin_correction": {
+            "status": "no_new_skin",
+            "pixels": 0
+          },
+          "assess_seconds": 0.176
+        }
+      ],
+      "error": null
+    },
+    {
+      "person": "Simon_1.png",
+      "product": "MS5252900",
+      "variant": "baseline",
+      "seconds": 9.22,
+      "quality": [
+        {
+          "category": "bottom",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 0.728,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "하의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 73%)."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 하의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": -0.1087,
+              "threshold": -0.03,
+              "passed": false,
+              "retryable": true,
+              "message": "합성된 하의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "bottom_length_fidelity",
+              "value": 3.0,
+              "threshold": 1.0,
+              "passed": false,
+              "retryable": false,
+              "message": "상품은 쇼츠·미니 기장인데 합성 결과는 긴바지로 그려졌습니다. 원래 하의의 모양을 따라가 기장이 달라졌습니다."
+            },
+            {
+              "name": "sharpness",
+              "value": 1043.9,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 흐릿합니다."
+            }
+          ],
+          "attempts": 2,
+          "unassessed_attempts": [],
+          "transition_edit": false,
+          "skin_correction": null,
+          "assess_seconds": 0.169
+        }
+      ],
+      "error": null
+    },
+    {
+      "person": "Simon_1.png",
+      "product": "MS5252900",
+      "variant": "corrected",
+      "seconds": 11.82,
+      "quality": [
+        {
+          "category": "bottom",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 0.8832,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "하의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 88%)."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 하의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": 0.0704,
+              "threshold": -0.03,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "bottom_length_fidelity",
+              "value": 0.0,
+              "threshold": 1.0,
+              "passed": true,
+              "retryable": true,
+              "message": "상품은 쇼츠·미니 기장인데 합성 결과는 반바지로 그려졌습니다. 원래 하의의 모양을 따라가 기장이 달라졌습니다."
+            },
+            {
+              "name": "sharpness",
+              "value": 100.4,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 흐릿합니다."
+            },
+            {
+              "name": "exposed_limb_skin",
+              "value": 1.0,
+              "threshold": 0.6,
+              "passed": true,
+              "retryable": true,
+              "message": "짧은 옷 아래 팔·다리가 자연스러운 피부로 복원되지 않았습니다."
+            }
+          ],
+          "attempts": 1,
+          "unassessed_attempts": [],
+          "transition_edit": true,
+          "skin_correction": {
+            "status": "corrected",
+            "pixels": 4055,
+            "lab_shifts": [
+              [
+                -6.076,
+                -2.594,
+                -4.25
+              ],
+              [
+                1.419,
+                -4.086,
+                -5.062
+              ]
+            ]
+          },
+          "assess_seconds": 0.057
+        }
+      ],
+      "error": null
+    },
+    {
+      "person": "Simon_1.png",
+      "product": "MS6906711",
+      "variant": "baseline",
+      "seconds": 5.53,
+      "quality": [
+        {
+          "category": "top",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 1.0,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "상의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 100%)."
+            },
+            {
+              "name": "torso_skin_inside_mask",
+              "value": 0.0,
+              "threshold": 0.08,
+              "passed": true,
+              "retryable": true,
+              "message": "상의가 상품보다 짧거나 트이게 그려져 배·가슴 피부가 드러났습니다(0%)."
+            },
+            {
+              "name": "torso_skin_outside_mask",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "원래 옷이 짧거나 앞이 트여 있어 새 상의가 그 부분을 덮지 못했습니다(0%). 몸통이 가려진 사진에서 더 정확합니다."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 상의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": 0.1521,
+              "threshold": -0.03,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "color_fidelity",
+              "value": 5.57,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의 색이 상품 사진과 다릅니다(색차 6)."
+            },
+            {
+              "name": "sharpness",
+              "value": 168.4,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의가 흐릿합니다."
+            }
+          ],
+          "attempts": 1,
+          "unassessed_attempts": [],
+          "transition_edit": false,
+          "skin_correction": null,
+          "assess_seconds": 0.418
+        }
+      ],
+      "error": null
+    },
+    {
+      "person": "Simon_1.png",
+      "product": "MS6906711",
+      "variant": "corrected",
+      "seconds": 12.65,
+      "quality": [
+        {
+          "category": "top",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 84.12,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 1.0,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "상의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 100%)."
+            },
+            {
+              "name": "torso_skin_inside_mask",
+              "value": 0.0,
+              "threshold": 0.08,
+              "passed": true,
+              "retryable": true,
+              "message": "상의가 상품보다 짧거나 트이게 그려져 배·가슴 피부가 드러났습니다(0%)."
+            },
+            {
+              "name": "torso_skin_outside_mask",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "원래 옷이 짧거나 앞이 트여 있어 새 상의가 그 부분을 덮지 못했습니다(0%). 몸통이 가려진 사진에서 더 정확합니다."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 상의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": 0.1558,
+              "threshold": -0.03,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "color_fidelity",
+              "value": 2.64,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의 색이 상품 사진과 다릅니다(색차 3)."
+            },
+            {
+              "name": "sharpness",
+              "value": 141.2,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의가 흐릿합니다."
+            },
+            {
+              "name": "exposed_limb_skin",
+              "value": 1.0,
+              "threshold": 0.6,
+              "passed": true,
+              "retryable": true,
+              "message": "짧은 옷 아래 팔·다리가 자연스러운 피부로 복원되지 않았습니다."
+            }
+          ],
+          "attempts": 1,
+          "unassessed_attempts": [],
+          "transition_edit": true,
+          "skin_correction": {
+            "status": "insufficient_skin_area",
+            "pixels": 0,
+            "lab_shifts": []
+          },
+          "assess_seconds": 0.395
+        }
+      ],
+      "error": null
+    },
+    {
+      "person": "MEN-Sweatshirts_Hoodies-id_00004332-01_4_full.jpg",
+      "product": "MS2240239",
+      "variant": "baseline",
+      "seconds": 5.09,
+      "quality": [
+        {
+          "category": "bottom",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 0.9994,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "하의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 100%)."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 하의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": 0.0726,
+              "threshold": -0.03,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "color_fidelity",
+              "value": 6.27,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의 색이 상품 사진과 다릅니다(색차 6)."
+            },
+            {
+              "name": "bottom_length_fidelity",
+              "value": 0.0,
+              "threshold": 1.0,
+              "passed": true,
+              "retryable": false,
+              "message": "상품은 롱·긴바지 기장인데 합성 결과는 긴바지로 그려졌습니다. 원래 하의의 모양을 따라가 기장이 달라졌습니다."
+            },
+            {
+              "name": "sharpness",
+              "value": 597.5,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 흐릿합니다."
+            }
+          ],
+          "attempts": 1,
+          "unassessed_attempts": [],
+          "transition_edit": false,
+          "skin_correction": null,
+          "assess_seconds": 0.185
+        }
+      ],
+      "error": null
+    },
+    {
+      "person": "MEN-Sweatshirts_Hoodies-id_00004332-01_4_full.jpg",
+      "product": "MS2240239",
+      "variant": "corrected",
+      "seconds": 10.12,
+      "quality": [
+        {
+          "category": "bottom",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 0.9997,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "하의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 100%)."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 하의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": 0.0872,
+              "threshold": -0.03,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "color_fidelity",
+              "value": 3.27,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의 색이 상품 사진과 다릅니다(색차 3)."
+            },
+            {
+              "name": "bottom_length_fidelity",
+              "value": 0.0,
+              "threshold": 1.0,
+              "passed": true,
+              "retryable": true,
+              "message": "상품은 롱·긴바지 기장인데 합성 결과는 긴바지로 그려졌습니다. 원래 하의의 모양을 따라가 기장이 달라졌습니다."
+            },
+            {
+              "name": "sharpness",
+              "value": 248.2,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 흐릿합니다."
+            }
+          ],
+          "attempts": 1,
+          "unassessed_attempts": [],
+          "transition_edit": true,
+          "skin_correction": {
+            "status": "no_new_skin",
+            "pixels": 0
+          },
+          "assess_seconds": 0.153
+        }
+      ],
+      "error": null
+    },
+    {
+      "person": "MEN-Sweatshirts_Hoodies-id_00004332-01_4_full.jpg",
+      "product": "MS5252900",
+      "variant": "baseline",
+      "seconds": 9.34,
+      "quality": [
+        {
+          "category": "bottom",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 0.8689,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "하의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 87%)."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 하의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": -0.0398,
+              "threshold": -0.03,
+              "passed": false,
+              "retryable": true,
+              "message": "합성된 하의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "bottom_length_fidelity",
+              "value": 3.0,
+              "threshold": 1.0,
+              "passed": false,
+              "retryable": false,
+              "message": "상품은 쇼츠·미니 기장인데 합성 결과는 긴바지로 그려졌습니다. 원래 하의의 모양을 따라가 기장이 달라졌습니다."
+            },
+            {
+              "name": "sharpness",
+              "value": 578.1,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 흐릿합니다."
+            }
+          ],
+          "attempts": 2,
+          "unassessed_attempts": [],
+          "transition_edit": false,
+          "skin_correction": null,
+          "assess_seconds": 0.17
+        }
+      ],
+      "error": null
+    },
+    {
+      "person": "MEN-Sweatshirts_Hoodies-id_00004332-01_4_full.jpg",
+      "product": "MS5252900",
+      "variant": "corrected",
+      "seconds": 9.82,
+      "quality": [
+        {
+          "category": "bottom",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 0.9993,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "하의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 100%)."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 하의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": 0.1494,
+              "threshold": -0.03,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "bottom_length_fidelity",
+              "value": 0.0,
+              "threshold": 1.0,
+              "passed": true,
+              "retryable": true,
+              "message": "상품은 쇼츠·미니 기장인데 합성 결과는 반바지로 그려졌습니다. 원래 하의의 모양을 따라가 기장이 달라졌습니다."
+            },
+            {
+              "name": "sharpness",
+              "value": 127.7,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 흐릿합니다."
+            },
+            {
+              "name": "exposed_limb_skin",
+              "value": 1.0,
+              "threshold": 0.6,
+              "passed": true,
+              "retryable": true,
+              "message": "짧은 옷 아래 팔·다리가 자연스러운 피부로 복원되지 않았습니다."
+            }
+          ],
+          "attempts": 1,
+          "unassessed_attempts": [],
+          "transition_edit": true,
+          "skin_correction": {
+            "status": "corrected",
+            "pixels": 28092,
+            "lab_shifts": [
+              [
+                11.2,
+                -4.594,
+                -1.703
+              ]
+            ]
+          },
+          "assess_seconds": 0.055
+        }
+      ],
+      "error": null
+    },
+    {
+      "person": "MEN-Sweatshirts_Hoodies-id_00004332-01_4_full.jpg",
+      "product": "MS6906711",
+      "variant": "baseline",
+      "seconds": 5.4,
+      "quality": [
+        {
+          "category": "top",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 1.0,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "상의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 100%)."
+            },
+            {
+              "name": "torso_skin_inside_mask",
+              "value": 0.0,
+              "threshold": 0.08,
+              "passed": true,
+              "retryable": true,
+              "message": "상의가 상품보다 짧거나 트이게 그려져 배·가슴 피부가 드러났습니다(0%)."
+            },
+            {
+              "name": "torso_skin_outside_mask",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "원래 옷이 짧거나 앞이 트여 있어 새 상의가 그 부분을 덮지 못했습니다(0%). 몸통이 가려진 사진에서 더 정확합니다."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 상의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": -0.0292,
+              "threshold": -0.03,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "color_fidelity",
+              "value": 7.19,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의 색이 상품 사진과 다릅니다(색차 7)."
+            },
+            {
+              "name": "sharpness",
+              "value": 392.5,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의가 흐릿합니다."
+            }
+          ],
+          "attempts": 1,
+          "unassessed_attempts": [],
+          "transition_edit": false,
+          "skin_correction": null,
+          "assess_seconds": 0.42
+        }
+      ],
+      "error": null
+    },
+    {
+      "person": "MEN-Sweatshirts_Hoodies-id_00004332-01_4_full.jpg",
+      "product": "MS6906711",
+      "variant": "corrected",
+      "seconds": 9.25,
+      "quality": [
+        {
+          "category": "top",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 60.91,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 1.0,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "상의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 100%)."
+            },
+            {
+              "name": "torso_skin_inside_mask",
+              "value": 0.0,
+              "threshold": 0.08,
+              "passed": true,
+              "retryable": true,
+              "message": "상의가 상품보다 짧거나 트이게 그려져 배·가슴 피부가 드러났습니다(0%)."
+            },
+            {
+              "name": "torso_skin_outside_mask",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "원래 옷이 짧거나 앞이 트여 있어 새 상의가 그 부분을 덮지 못했습니다(0%). 몸통이 가려진 사진에서 더 정확합니다."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 상의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": 0.1025,
+              "threshold": -0.03,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "color_fidelity",
+              "value": 3.52,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의 색이 상품 사진과 다릅니다(색차 4)."
+            },
+            {
+              "name": "sharpness",
+              "value": 183.1,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의가 흐릿합니다."
+            },
+            {
+              "name": "exposed_limb_skin",
+              "value": 1.0,
+              "threshold": 0.6,
+              "passed": true,
+              "retryable": true,
+              "message": "짧은 옷 아래 팔·다리가 자연스러운 피부로 복원되지 않았습니다."
+            }
+          ],
+          "attempts": 1,
+          "unassessed_attempts": [],
+          "transition_edit": true,
+          "skin_correction": {
+            "status": "corrected",
+            "pixels": 15476,
+            "lab_shifts": [
+              [
+                0.43,
+                -4.266,
+                0.516
+              ],
+              [
+                1.352,
+                -2.484,
+                2.984
+              ]
+            ]
+          },
+          "assess_seconds": 0.403
+        }
+      ],
+      "error": null
+    },
+    {
+      "person": "fp_65bb5ce7128ff89de74018b755a7850a.jpg",
+      "product": "MS2240239",
+      "variant": "baseline",
+      "seconds": 9.84,
+      "quality": [
+        {
+          "category": "bottom",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 0.6429,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "하의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 64%)."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 하의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": -0.1196,
+              "threshold": -0.03,
+              "passed": false,
+              "retryable": true,
+              "message": "합성된 하의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "color_fidelity",
+              "value": 4.95,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의 색이 상품 사진과 다릅니다(색차 5)."
+            },
+            {
+              "name": "bottom_length_fidelity",
+              "value": 0.0,
+              "threshold": 1.0,
+              "passed": true,
+              "retryable": false,
+              "message": "상품은 롱·긴바지 기장인데 합성 결과는 긴바지로 그려졌습니다. 원래 하의의 모양을 따라가 기장이 달라졌습니다."
+            },
+            {
+              "name": "sharpness",
+              "value": 160.4,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 흐릿합니다."
+            }
+          ],
+          "attempts": 2,
+          "unassessed_attempts": [],
+          "transition_edit": false,
+          "skin_correction": null,
+          "assess_seconds": 0.36
+        }
+      ],
+      "error": null
+    },
+    {
+      "person": "fp_65bb5ce7128ff89de74018b755a7850a.jpg",
+      "product": "MS2240239",
+      "variant": "corrected",
+      "seconds": 17.94,
+      "quality": [
+        {
+          "category": "bottom",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 0.8885,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "하의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 89%)."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 하의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": -0.0791,
+              "threshold": -0.03,
+              "passed": false,
+              "retryable": true,
+              "message": "합성된 하의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "color_fidelity",
+              "value": 5.73,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의 색이 상품 사진과 다릅니다(색차 6)."
+            },
+            {
+              "name": "bottom_length_fidelity",
+              "value": 0.0,
+              "threshold": 1.0,
+              "passed": true,
+              "retryable": true,
+              "message": "상품은 롱·긴바지 기장인데 합성 결과는 긴바지로 그려졌습니다. 원래 하의의 모양을 따라가 기장이 달라졌습니다."
+            },
+            {
+              "name": "sharpness",
+              "value": 377.0,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 흐릿합니다."
+            }
+          ],
+          "attempts": 2,
+          "unassessed_attempts": [],
+          "transition_edit": true,
+          "skin_correction": {
+            "status": "no_new_skin",
+            "pixels": 0
+          },
+          "assess_seconds": 0.292
+        }
+      ],
+      "error": null
+    },
+    {
+      "person": "fp_65bb5ce7128ff89de74018b755a7850a.jpg",
+      "product": "MS5252900",
+      "variant": "baseline",
+      "seconds": 9.46,
+      "quality": [
+        {
+          "category": "bottom",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 0.6786,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "하의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 68%)."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 하의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": -0.0324,
+              "threshold": -0.03,
+              "passed": false,
+              "retryable": true,
+              "message": "합성된 하의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "bottom_length_fidelity",
+              "value": 3.0,
+              "threshold": 1.0,
+              "passed": false,
+              "retryable": false,
+              "message": "상품은 쇼츠·미니 기장인데 합성 결과는 긴바지로 그려졌습니다. 원래 하의의 모양을 따라가 기장이 달라졌습니다."
+            },
+            {
+              "name": "sharpness",
+              "value": 169.7,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 흐릿합니다."
+            }
+          ],
+          "attempts": 2,
+          "unassessed_attempts": [],
+          "transition_edit": false,
+          "skin_correction": null,
+          "assess_seconds": 0.172
+        }
+      ],
+      "error": null
+    },
+    {
+      "person": "fp_65bb5ce7128ff89de74018b755a7850a.jpg",
+      "product": "MS5252900",
+      "variant": "corrected",
+      "seconds": 9.35,
+      "quality": [
+        {
+          "category": "bottom",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 0.8826,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "하의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 88%)."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 하의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": 0.0095,
+              "threshold": -0.03,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "bottom_length_fidelity",
+              "value": 0.0,
+              "threshold": 1.0,
+              "passed": true,
+              "retryable": true,
+              "message": "상품은 쇼츠·미니 기장인데 합성 결과는 반바지로 그려졌습니다. 원래 하의의 모양을 따라가 기장이 달라졌습니다."
+            },
+            {
+              "name": "sharpness",
+              "value": 323.0,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 하의가 흐릿합니다."
+            },
+            {
+              "name": "exposed_limb_skin",
+              "value": 1.0,
+              "threshold": 0.6,
+              "passed": true,
+              "retryable": true,
+              "message": "짧은 옷 아래 팔·다리가 자연스러운 피부로 복원되지 않았습니다."
+            }
+          ],
+          "attempts": 1,
+          "unassessed_attempts": [],
+          "transition_edit": true,
+          "skin_correction": {
+            "status": "corrected",
+            "pixels": 33257,
+            "lab_shifts": [
+              [
+                1.086,
+                -8.562,
+                -11.406
+              ],
+              [
+                -0.494,
+                -2.922,
+                -9.016
+              ]
+            ]
+          },
+          "assess_seconds": 0.056
+        }
+      ],
+      "error": null
+    },
+    {
+      "person": "fp_65bb5ce7128ff89de74018b755a7850a.jpg",
+      "product": "MS6906711",
+      "variant": "baseline",
+      "seconds": 10.29,
+      "quality": [
+        {
+          "category": "top",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 61.51,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 1.0,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "상의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 100%)."
+            },
+            {
+              "name": "torso_skin_inside_mask",
+              "value": 0.0,
+              "threshold": 0.08,
+              "passed": true,
+              "retryable": true,
+              "message": "상의가 상품보다 짧거나 트이게 그려져 배·가슴 피부가 드러났습니다(0%)."
+            },
+            {
+              "name": "torso_skin_outside_mask",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "원래 옷이 짧거나 앞이 트여 있어 새 상의가 그 부분을 덮지 못했습니다(0%). 몸통이 가려진 사진에서 더 정확합니다."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 상의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": 0.1098,
+              "threshold": -0.03,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "color_fidelity",
+              "value": 4.11,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의 색이 상품 사진과 다릅니다(색차 4)."
+            },
+            {
+              "name": "sharpness",
+              "value": 45.5,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의가 흐릿합니다."
+            }
+          ],
+          "attempts": 2,
+          "unassessed_attempts": [],
+          "transition_edit": false,
+          "skin_correction": null,
+          "assess_seconds": 0.825
+        }
+      ],
+      "error": null
+    },
+    {
+      "person": "fp_65bb5ce7128ff89de74018b755a7850a.jpg",
+      "product": "MS6906711",
+      "variant": "corrected",
+      "seconds": 9.39,
+      "quality": [
+        {
+          "category": "top",
+          "skipped": "",
+          "checks": [
+            {
+              "name": "outside_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖의 원본 사진이 달라졌습니다. 결과 이미지 정렬을 확인해야 합니다."
+            },
+            {
+              "name": "face_preservation",
+              "value": 99.0,
+              "threshold": 30.0,
+              "passed": true,
+              "retryable": false,
+              "message": "얼굴·머리 영역이 원본과 달라졌습니다."
+            },
+            {
+              "name": "garment_coverage",
+              "value": 1.0,
+              "threshold": 0.5,
+              "passed": true,
+              "retryable": true,
+              "message": "상의 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 100%)."
+            },
+            {
+              "name": "torso_skin_inside_mask",
+              "value": 0.0,
+              "threshold": 0.08,
+              "passed": true,
+              "retryable": true,
+              "message": "상의가 상품보다 짧거나 트이게 그려져 배·가슴 피부가 드러났습니다(0%)."
+            },
+            {
+              "name": "torso_skin_outside_mask",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "원래 옷이 짧거나 앞이 트여 있어 새 상의가 그 부분을 덮지 못했습니다(0%). 몸통이 가려진 사진에서 더 정확합니다."
+            },
+            {
+              "name": "garment_leak",
+              "value": 0.0,
+              "threshold": 0.05,
+              "passed": true,
+              "retryable": false,
+              "message": "합성 영역 밖에 원래 상의가 일부 남았습니다(0%)."
+            },
+            {
+              "name": "reference_fidelity",
+              "value": 0.1229,
+              "threshold": -0.03,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의가 추천 상품보다 원래 옷에 더 가깝습니다."
+            },
+            {
+              "name": "color_fidelity",
+              "value": 0.26,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의 색이 상품 사진과 다릅니다(색차 0)."
+            },
+            {
+              "name": "sharpness",
+              "value": 98.3,
+              "threshold": 25.0,
+              "passed": true,
+              "retryable": true,
+              "message": "합성된 상의가 흐릿합니다."
+            },
+            {
+              "name": "exposed_limb_skin",
+              "value": 0.9835,
+              "threshold": 0.6,
+              "passed": true,
+              "retryable": true,
+              "message": "짧은 옷 아래 팔·다리가 자연스러운 피부로 복원되지 않았습니다."
+            }
+          ],
+          "attempts": 1,
+          "unassessed_attempts": [],
+          "transition_edit": true,
+          "skin_correction": {
+            "status": "corrected",
+            "pixels": 17797,
+            "lab_shifts": [
+              [
+                2.118,
+                -1.75,
+                -3.25
+              ],
+              [
+                -6.253,
+                -4.594,
+                -8.766
+              ]
+            ]
+          },
+          "assess_seconds": 0.39
+        }
+      ],
+      "error": null
+    }
+  ]
+}

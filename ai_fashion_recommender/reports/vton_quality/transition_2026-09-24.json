@@ -1,0 +1,865 @@
+{
+  "kind": "paired_generation_smoke_not_population_validation",
+  "base_commit": "2f56d70",
+  "cohorts": {
+    "flux": {
+      "summary": {
+        "baseline": {
+          "images": 9,
+          "errors": 0,
+          "failed_images": 4,
+          "median_seconds": 5.07,
+          "min_face_psnr": 65.68,
+          "min_outside_psnr": 99.0,
+          "length_failures": 4
+        },
+        "corrected": {
+          "images": 9,
+          "errors": 0,
+          "failed_images": 1,
+          "median_seconds": 9.54,
+          "min_face_psnr": 53.25,
+          "min_outside_psnr": 99.0,
+          "length_failures": 1
+        }
+      },
+      "cases": [
+        {
+          "person": "Simon_1.png",
+          "product_id": "MS2240239",
+          "category": "bottom",
+          "variant": "baseline",
+          "seconds": 9.8,
+          "notes": [
+            "lower:native(스키니·레깅스)"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "Simon_1.png",
+          "product_id": "MS2240239",
+          "category": "bottom",
+          "variant": "corrected",
+          "seconds": 288.15,
+          "notes": [
+            "lower:native(스키니·레깅스)",
+            "bottom:transition-envelope"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            {
+              "status": "no_new_skin",
+              "pixels": 0
+            }
+          ],
+          "error": null
+        },
+        {
+          "person": "Simon_1.png",
+          "product_id": "MS5252900",
+          "category": "bottom",
+          "variant": "baseline",
+          "seconds": 5.0,
+          "notes": [],
+          "failed_checks": {
+            "reference_fidelity": -0.0688,
+            "bottom_length_fidelity": 3.0
+          },
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "Simon_1.png",
+          "product_id": "MS5252900",
+          "category": "bottom",
+          "variant": "corrected",
+          "seconds": 4.86,
+          "notes": [],
+          "failed_checks": {
+            "reference_fidelity": -0.0696,
+            "bottom_length_fidelity": 3.0
+          },
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            {
+              "status": "no_new_skin",
+              "pixels": 0
+            }
+          ],
+          "error": null
+        },
+        {
+          "person": "Simon_1.png",
+          "product_id": "MS6906711",
+          "category": "top",
+          "variant": "baseline",
+          "seconds": 5.75,
+          "notes": [
+            "upper:agnostic"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "Simon_1.png",
+          "product_id": "MS6906711",
+          "category": "top",
+          "variant": "corrected",
+          "seconds": 11.8,
+          "notes": [
+            "upper:agnostic",
+            "top:transition-envelope"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            {
+              "status": "insufficient_skin_area",
+              "pixels": 0,
+              "lab_shifts": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "person": "Yifeng_0.png",
+          "product_id": "MS2240239",
+          "category": "bottom",
+          "variant": "baseline",
+          "seconds": 5.07,
+          "notes": [
+            "lower:native(스키니·레깅스)"
+          ],
+          "failed_checks": {
+            "bottom_length_fidelity": 2.0
+          },
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "Yifeng_0.png",
+          "product_id": "MS2240239",
+          "category": "bottom",
+          "variant": "corrected",
+          "seconds": 10.12,
+          "notes": [
+            "lower:native(스키니·레깅스)",
+            "bottom:transition-envelope"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            {
+              "status": "no_new_skin",
+              "pixels": 0
+            }
+          ],
+          "error": null
+        },
+        {
+          "person": "Yifeng_0.png",
+          "product_id": "MS5252900",
+          "category": "bottom",
+          "variant": "baseline",
+          "seconds": 4.98,
+          "notes": [],
+          "failed_checks": {
+            "reference_fidelity": -0.0914,
+            "bottom_length_fidelity": 3.0
+          },
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "Yifeng_0.png",
+          "product_id": "MS5252900",
+          "category": "bottom",
+          "variant": "corrected",
+          "seconds": 9.54,
+          "notes": [
+            "bottom:transition-envelope"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            {
+              "status": "corrected",
+              "pixels": 6145,
+              "lab_shifts": [
+                [
+                  -5.2,
+                  -1.453,
+                  -1.219
+                ],
+                [
+                  1.205,
+                  -3.453,
+                  -3.703
+                ]
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "person": "Yifeng_0.png",
+          "product_id": "MS6906711",
+          "category": "top",
+          "variant": "baseline",
+          "seconds": 5.4,
+          "notes": [
+            "upper:agnostic"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "Yifeng_0.png",
+          "product_id": "MS6906711",
+          "category": "top",
+          "variant": "corrected",
+          "seconds": 9.98,
+          "notes": [
+            "upper:agnostic",
+            "top:transition-envelope"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            {
+              "status": "no_new_skin",
+              "pixels": 15
+            }
+          ],
+          "error": null
+        },
+        {
+          "person": "MEN-Jackets_Vests-id_00005047-01_4_full.jpg",
+          "product_id": "MS2240239",
+          "category": "bottom",
+          "variant": "baseline",
+          "seconds": 4.78,
+          "notes": [
+            "lower:native(스키니·레깅스)"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "MEN-Jackets_Vests-id_00005047-01_4_full.jpg",
+          "product_id": "MS2240239",
+          "category": "bottom",
+          "variant": "corrected",
+          "seconds": 9.09,
+          "notes": [
+            "lower:native(스키니·레깅스)",
+            "bottom:transition-envelope"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            {
+              "status": "no_new_skin",
+              "pixels": 0
+            }
+          ],
+          "error": null
+        },
+        {
+          "person": "MEN-Jackets_Vests-id_00005047-01_4_full.jpg",
+          "product_id": "MS5252900",
+          "category": "bottom",
+          "variant": "baseline",
+          "seconds": 4.68,
+          "notes": [],
+          "failed_checks": {
+            "reference_fidelity": -0.0375,
+            "bottom_length_fidelity": 3.0
+          },
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "MEN-Jackets_Vests-id_00005047-01_4_full.jpg",
+          "product_id": "MS5252900",
+          "category": "bottom",
+          "variant": "corrected",
+          "seconds": 8.26,
+          "notes": [
+            "bottom:transition-envelope"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            {
+              "status": "corrected",
+              "pixels": 23298,
+              "lab_shifts": [
+                [
+                  -3.68,
+                  0.688,
+                  -2.406
+                ],
+                [
+                  1.923,
+                  -1.312,
+                  -2.984
+                ]
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "person": "MEN-Jackets_Vests-id_00005047-01_4_full.jpg",
+          "product_id": "MS6906711",
+          "category": "top",
+          "variant": "baseline",
+          "seconds": 5.11,
+          "notes": [
+            "upper:agnostic"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "MEN-Jackets_Vests-id_00005047-01_4_full.jpg",
+          "product_id": "MS6906711",
+          "category": "top",
+          "variant": "corrected",
+          "seconds": 8.63,
+          "notes": [
+            "upper:agnostic",
+            "top:transition-envelope"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            {
+              "status": "corrected",
+              "pixels": 16602,
+              "lab_shifts": [
+                [
+                  -6.354,
+                  2.781,
+                  -2.0
+                ],
+                [
+                  -12.872,
+                  5.125,
+                  0.328
+                ]
+              ]
+            }
+          ],
+          "error": null
+        }
+      ]
+    },
+    "final": {
+      "summary": {
+        "baseline": {
+          "images": 9,
+          "errors": 0,
+          "failed_images": 5,
+          "median_seconds": 5.24,
+          "min_face_psnr": 60.27,
+          "min_outside_psnr": 99.0,
+          "length_failures": 3
+        },
+        "corrected": {
+          "images": 9,
+          "errors": 0,
+          "failed_images": 1,
+          "median_seconds": 12.93,
+          "min_face_psnr": 60.91,
+          "min_outside_psnr": 99.0,
+          "length_failures": 0
+        }
+      },
+      "cases": [
+        {
+          "person": "MEN-Sweatshirts_Hoodies-id_00004332-01_4_full.jpg",
+          "product_id": "MS2240239",
+          "category": "bottom",
+          "variant": "baseline",
+          "seconds": 9.34,
+          "notes": [
+            "lower:native(스키니·레깅스)"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "MEN-Sweatshirts_Hoodies-id_00004332-01_4_full.jpg",
+          "product_id": "MS2240239",
+          "category": "bottom",
+          "variant": "corrected",
+          "seconds": 12.65,
+          "notes": [
+            "lower:native(스키니·레깅스)",
+            "bottom:transition-envelope"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            {
+              "status": "no_new_skin",
+              "pixels": 0
+            }
+          ],
+          "error": null
+        },
+        {
+          "person": "MEN-Sweatshirts_Hoodies-id_00004332-01_4_full.jpg",
+          "product_id": "MS5252900",
+          "category": "bottom",
+          "variant": "baseline",
+          "seconds": 4.64,
+          "notes": [],
+          "failed_checks": {
+            "reference_fidelity": -0.0756,
+            "bottom_length_fidelity": 3.0
+          },
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "MEN-Sweatshirts_Hoodies-id_00004332-01_4_full.jpg",
+          "product_id": "MS5252900",
+          "category": "bottom",
+          "variant": "corrected",
+          "seconds": 13.49,
+          "notes": [
+            "bottom:transition-envelope"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": 1.0,
+          "skin_correction": [
+            {
+              "status": "corrected",
+              "pixels": 28092,
+              "lab_shifts": [
+                [
+                  11.2,
+                  -4.594,
+                  -1.703
+                ]
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "person": "MEN-Sweatshirts_Hoodies-id_00004332-01_4_full.jpg",
+          "product_id": "MS6906711",
+          "category": "top",
+          "variant": "baseline",
+          "seconds": 5.35,
+          "notes": [
+            "upper:agnostic"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "MEN-Sweatshirts_Hoodies-id_00004332-01_4_full.jpg",
+          "product_id": "MS6906711",
+          "category": "top",
+          "variant": "corrected",
+          "seconds": 13.93,
+          "notes": [
+            "upper:agnostic",
+            "top:transition-envelope"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": 1.0,
+          "skin_correction": [
+            {
+              "status": "corrected",
+              "pixels": 15476,
+              "lab_shifts": [
+                [
+                  0.43,
+                  -4.266,
+                  0.516
+                ],
+                [
+                  1.352,
+                  -2.484,
+                  2.984
+                ]
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "person": "MEN-Sweatshirts_Hoodies-id_00004649-05_4_full.jpg",
+          "product_id": "MS2240239",
+          "category": "bottom",
+          "variant": "baseline",
+          "seconds": 5.24,
+          "notes": [
+            "lower:native(스키니·레깅스)"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "MEN-Sweatshirts_Hoodies-id_00004649-05_4_full.jpg",
+          "product_id": "MS2240239",
+          "category": "bottom",
+          "variant": "corrected",
+          "seconds": 13.49,
+          "notes": [
+            "lower:native(스키니·레깅스)",
+            "bottom:transition-envelope"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            {
+              "status": "no_new_skin",
+              "pixels": 22
+            }
+          ],
+          "error": null
+        },
+        {
+          "person": "MEN-Sweatshirts_Hoodies-id_00004649-05_4_full.jpg",
+          "product_id": "MS5252900",
+          "category": "bottom",
+          "variant": "baseline",
+          "seconds": 4.99,
+          "notes": [],
+          "failed_checks": {
+            "reference_fidelity": -0.0364,
+            "bottom_length_fidelity": 3.0
+          },
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "MEN-Sweatshirts_Hoodies-id_00004649-05_4_full.jpg",
+          "product_id": "MS5252900",
+          "category": "bottom",
+          "variant": "corrected",
+          "seconds": 12.53,
+          "notes": [
+            "bottom:transition-envelope"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": 1.0,
+          "skin_correction": [
+            {
+              "status": "corrected",
+              "pixels": 27864,
+              "lab_shifts": [
+                [
+                  10.315,
+                  -5.359,
+                  -5.938
+                ]
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "person": "MEN-Sweatshirts_Hoodies-id_00004649-05_4_full.jpg",
+          "product_id": "MS6906711",
+          "category": "top",
+          "variant": "baseline",
+          "seconds": 5.36,
+          "notes": [
+            "upper:agnostic"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "MEN-Sweatshirts_Hoodies-id_00004649-05_4_full.jpg",
+          "product_id": "MS6906711",
+          "category": "top",
+          "variant": "corrected",
+          "seconds": 12.97,
+          "notes": [
+            "upper:agnostic",
+            "top:transition-envelope"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": 1.0,
+          "skin_correction": [
+            {
+              "status": "corrected",
+              "pixels": 15869,
+              "lab_shifts": [
+                [
+                  -2.228,
+                  -0.898,
+                  -1.125
+                ],
+                [
+                  -13.489,
+                  5.344,
+                  6.312
+                ]
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "person": "fp_65bb5ce7128ff89de74018b755a7850a.jpg",
+          "product_id": "MS2240239",
+          "category": "bottom",
+          "variant": "baseline",
+          "seconds": 5.05,
+          "notes": [
+            "lower:native(스키니·레깅스)"
+          ],
+          "failed_checks": {
+            "reference_fidelity": -0.1235
+          },
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "fp_65bb5ce7128ff89de74018b755a7850a.jpg",
+          "product_id": "MS2240239",
+          "category": "bottom",
+          "variant": "corrected",
+          "seconds": 11.91,
+          "notes": [
+            "lower:native(스키니·레깅스)",
+            "bottom:transition-envelope"
+          ],
+          "failed_checks": {
+            "reference_fidelity": -0.0791
+          },
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            {
+              "status": "no_new_skin",
+              "pixels": 0
+            }
+          ],
+          "error": null
+        },
+        {
+          "person": "fp_65bb5ce7128ff89de74018b755a7850a.jpg",
+          "product_id": "MS5252900",
+          "category": "bottom",
+          "variant": "baseline",
+          "seconds": 5.06,
+          "notes": [],
+          "failed_checks": {
+            "reference_fidelity": -0.0301,
+            "bottom_length_fidelity": 3.0
+          },
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "fp_65bb5ce7128ff89de74018b755a7850a.jpg",
+          "product_id": "MS5252900",
+          "category": "bottom",
+          "variant": "corrected",
+          "seconds": 11.59,
+          "notes": [
+            "bottom:transition-envelope"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": 1.0,
+          "skin_correction": [
+            {
+              "status": "corrected",
+              "pixels": 33257,
+              "lab_shifts": [
+                [
+                  1.086,
+                  -8.562,
+                  -11.406
+                ],
+                [
+                  -0.494,
+                  -2.922,
+                  -9.016
+                ]
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "person": "fp_65bb5ce7128ff89de74018b755a7850a.jpg",
+          "product_id": "MS6906711",
+          "category": "top",
+          "variant": "baseline",
+          "seconds": 5.41,
+          "notes": [
+            "upper:agnostic"
+          ],
+          "failed_checks": {
+            "color_fidelity": 45.83
+          },
+          "exposed_limb_skin": null,
+          "skin_correction": [
+            null
+          ],
+          "error": null
+        },
+        {
+          "person": "fp_65bb5ce7128ff89de74018b755a7850a.jpg",
+          "product_id": "MS6906711",
+          "category": "top",
+          "variant": "corrected",
+          "seconds": 12.93,
+          "notes": [
+            "upper:agnostic",
+            "top:transition-envelope"
+          ],
+          "failed_checks": {},
+          "exposed_limb_skin": 0.9907,
+          "skin_correction": [
+            {
+              "status": "corrected",
+              "pixels": 17797,
+              "lab_shifts": [
+                [
+                  2.118,
+                  -1.75,
+                  -3.25
+                ],
+                [
+                  -6.253,
+                  -4.594,
+                  -8.766
+                ]
+              ]
+            }
+          ],
+          "error": null
+        }
+      ]
+    }
+  },
+  "final_cohort_inputs": {
+    "manifest": {
+      "people": [
+        "/mnt/data1/dsl01/eval/deepfashion_mm/images/MEN-Sweatshirts_Hoodies-id_00004332-01_4_full.jpg",
+        "/mnt/data1/dsl01/eval/deepfashion_mm/images/MEN-Sweatshirts_Hoodies-id_00004649-05_4_full.jpg",
+        "/mnt/data1/dsl01/eval/vton_length_20260921/people_wild/long/fp_65bb5ce7128ff89de74018b755a7850a.jpg"
+      ],
+      "products": [
+        {
+          "id": "MS2240239",
+          "name": "프리미어 하이웨이스트 스키니 진 브랜딧",
+          "category": "bottom",
+          "path": "/mnt/data1/dsl01/eval/vton_length_20260921/slim/refs/MS2240239.jpg"
+        },
+        {
+          "id": "MS5252900",
+          "name": "[2PACK] 젤라 인텐션 바이커 쇼츠 3부 XP9172F",
+          "category": "bottom",
+          "path": "/mnt/data1/dsl01/releases/fitta_current/datasets/garments/raw/MS5252900.jpg"
+        },
+        {
+          "id": "MS6906711",
+          "name": "[3PACK] 아스킨 머슬핏 숏슬리브",
+          "category": "top",
+          "path": "/mnt/data1/dsl01/releases/fitta_current/datasets/garments/raw/MS6906711.jpg"
+        }
+      ]
+    },
+    "sha256": {
+      "/mnt/data1/dsl01/eval/deepfashion_mm/images/MEN-Sweatshirts_Hoodies-id_00004332-01_4_full.jpg": "fbc14d18f352c7ff35ef3bde6772bcb0a3e35eb8f9a7863ca7324a66b8fc3dfe",
+      "/mnt/data1/dsl01/eval/deepfashion_mm/images/MEN-Sweatshirts_Hoodies-id_00004649-05_4_full.jpg": "ada814b53a8d2063237db4b63a839cb96ca9fd8489e77790155695bbd813aa0b",
+      "/mnt/data1/dsl01/eval/vton_length_20260921/people_wild/long/fp_65bb5ce7128ff89de74018b755a7850a.jpg": "9b69c3e93ca2656f78d3e4b4050e47107dfdb60f5a9333177c8bb5a4a087cc45",
+      "/mnt/data1/dsl01/eval/vton_length_20260921/slim/refs/MS2240239.jpg": "1d1f85bca7cc2a87da6da6671c0d62b6dca582e05e0326c4fa54bd2aa76b1d29",
+      "/mnt/data1/dsl01/releases/fitta_current/datasets/garments/raw/MS5252900.jpg": "013560158247f0895caf603d0c104198e3f52e624133f39dd3dbb7122cdfb8a1",
+      "/mnt/data1/dsl01/releases/fitta_current/datasets/garments/raw/MS6906711.jpg": "5b381b954a9659c2149a4b16797dc2a69bc985d77335bb6e23f4c812eb6ee122"
+    },
+    "seed": 42,
+    "catvton_steps": 25,
+    "reference_editor_steps": 4,
+    "max_retries": 0,
+    "code_sha256": {
+      "catvton_tryon.py": "64a0f1c941abf97c3f6a893867b9ac3de74236c9d6bcb80819a67178205c50a4",
+      "tryon_transition.py": "9eb008b8b6e007e439ac89bdffc1ef5e5f604d0681edbe96aacb0b4c8b9a1083",
+      "shoe_tryon.py": "9532b3b87a96a21db3f4204dbad2403d41dd7ffad8dab2124d3f0ab62fa718af",
+      "tryon_quality.py": "257384897c2af0320be7959ba2510c57e78627d0b1e6bee4808b77ad33e405c5"
+    }
+  },
+  "limits": [
+    "No ground truth for hidden body dimensions or skin; no claim of recovering true measurements.",
+    "Convenience sample: six people and three products across two development stages; no population success rate.",
+    "Initial cohort did not include exposed-limb coverage check; compare cohort metrics separately.",
+    "One outdoor skinny-jeans case still fails reference fidelity.",
+    "Short-skirt prompt guard has unit coverage only, no GPU case.",
+    "Operating service and GitHub have not been modified by this evaluation."
+  ]
+}

@@ -11,6 +11,7 @@
     "fidelity_delta_min": -0.03,
     "color_de_max": 25.0,
     "sharpness_min": 25.0,
-    "length_gap_max": 1.0
+    "length_gap_max": 1.0,
+    "exposed_limb_skin_min": 0.6
   }
 }
