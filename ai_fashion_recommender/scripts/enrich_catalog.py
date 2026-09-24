@@ -241,8 +241,10 @@ def apply_musinsa_facts(row: dict, out: dict, table: dict) -> list[str]:
              if value.strip()]
     palettes = palettes_for(names, table["musinsa_color"])
     if palettes:
-        # 대표 색은 첫 옵션, 나머지는 color_options 로 남긴다. 추천은 어느 색이든
-        # 실제로 파는 색이면 맞춘 것으로 본다(대표 사진은 한 색뿐이라는 점은 별도 표기).
+        # 대표 색은 첫 옵션이다. **이 값이 대표 사진의 색이라는 보장은 없다** — 첫 컬러칩과
+        # 사진 색이 같은 경우가 345개 중 46%뿐이었다(2026-09-25). 사진 색 감사
+        # (product_image_colors.csv)가 확신할 때 ProductCatalog 이 그 값으로 덮어쓴다.
+        # 나머지 색은 color_options 로 남기되 추천 점수에는 쓰지 않는다(회피 색 검사 전용).
         out["color"] = palettes[0]
         out["color_options"] = "|".join(palettes)
         used.append("color")

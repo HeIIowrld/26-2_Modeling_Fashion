@@ -64,10 +64,12 @@ class StubMeasurements:
 
 
 class ColorOptionTests(unittest.TestCase):
-    """상품명에 색이 없어도 무신사가 그 색을 팔면 조건을 맞춘 것으로 본다.
+    """색 옵션은 회피 색 검사에만 쓴다.
 
-    실측(2026-09-25, 표본 60개): 색 옵션이 있는 상품의 68%가 2색 이상이고,
-    11%는 저장된 대표 색이 실제 판매 색에 아예 없었다.
+    카드 사진과 가상 피팅은 대표 사진 한 장으로 돈다. 그런데 첫 컬러칩과 대표 사진 색이
+    같은 경우가 345개 중 46%뿐이었다(2026-09-25). 그래서 "파는 색 중에 원하는 색이
+    있으니 추천"은 하지 않는다 — 다른 색으로 합성하면 색을 맞춘 의미가 없다.
+    반대로 파는 색이 전부 회피 색이면 어느 사진이 뜨든 회피 색이므로 뺄 수 있다.
     """
 
     def targets(self, color="블랙"):
@@ -81,14 +83,12 @@ class ColorOptionTests(unittest.TestCase):
                                          provided_fields=["budget", "change_scope"])
         return search, search.search(self.targets(color), profile, limit=2)
 
-    def test_sold_color_counts_even_when_the_name_never_says_it(self):
+    def test_a_sold_color_does_not_promote_a_product(self):
         search, results = self.search_with({"MS2": ["아이보리", "(19)BLACK"]})
-        first = results[0]
-        self.assertEqual(first.product_id, "MS2")
-        self.assertEqual(first.color_match, "블랙")
-        self.assertEqual(results[1].color_match, "")
-        # 상품명이 아니라 색 옵션이 근거다. 상품명 일치 목록은 건드리지 않는다.
-        self.assertNotIn("블랙", first.matched_keywords)
+        # 블랙을 팔지만 대표 사진이 블랙이라는 보장이 없으므로 순위를 올리지 않는다.
+        self.assertEqual([product.product_id for product in results], ["MS1", "MS2"])
+        self.assertEqual([product.retrieval_score for product in results], [0.0, 0.0])
+        self.assertNotIn("블랙", results[1].matched_keywords)
 
     def test_products_whose_every_color_is_avoided_are_dropped(self):
         profile = UserProfile(budget=120_000, change_scope="전체 변경",
@@ -104,23 +104,13 @@ class ColorOptionTests(unittest.TestCase):
 
     def test_unknown_colors_change_nothing(self):
         search, results = self.search_with({})
-        self.assertEqual([product.color_match for product in results], ["", ""])
+        self.assertEqual(len(results), 2)
         self.assertEqual(search.last_search_stats["color_options"]["colors_known"], 0)
-
-    def test_a_name_that_already_matches_is_not_counted_twice(self):
-        search = StubSearch({"top": [item(1, "블랙 반팔 티셔츠")]})
-        search.measurements = StubMeasurements({"MS1": ["블랙"]})
-        profile = UserProfile(budget=120_000, change_scope="전체 변경",
-                              provided_fields=["budget", "change_scope"])
-        results = search.search(self.targets(), profile, limit=1)
-        self.assertIn("블랙", results[0].matched_keywords)
-        self.assertEqual(results[0].color_match, "")
 
     def test_colors_reach_the_web_payload(self):
         _, results = self.search_with({"MS2": ["아이보리", "(19)BLACK"]})
-        payload = results[0].public_dict()
+        payload = next(p for p in results if p.product_id == "MS2").public_dict()
         self.assertEqual(payload["color_options"], ["아이보리", "(19)BLACK"])
-        self.assertEqual(payload["color_match"], "블랙")
 
 
 class MusinsaLiveSearchTests(unittest.TestCase):

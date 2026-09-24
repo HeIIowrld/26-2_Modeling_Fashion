@@ -74,9 +74,8 @@ class ShoppingProduct:
     search_keywords: list[str] = field(default_factory=list)
     matched_keywords: list[str] = field(default_factory=list)
     photo_attributes: dict = field(default_factory=dict)
-    # 무신사가 파는 색 이름 전부(대표 색 하나가 아니다). 사이즈표 응답에서 같이 온다.
+    # 무신사가 파는 색 이름 전부. 회피 색 검사에만 쓴다(대표 사진이 어느 색인지 모른다).
     color_options: list[str] = field(default_factory=list)
-    color_match: str = ""
     retrieval_score: float = 0.0
     recommendation_reason: str = ""
     recommendation_reason_source: str = "rules"
@@ -404,7 +403,7 @@ class MusinsaLiveSearch:
             except Exception:
                 pass  # Prefetch is optional; it must not block normal size ranking.
         self._compare_shortlist(grouped, profile)
-        self._supplement_colors(grouped, targets, profile)
+        self._drop_fully_avoided_colors(grouped, profile)
         selected = self._select(grouped, targets, limit)
         self._supplement_photos(grouped, targets, photo_loader, prefetched)
         self.last_search_stats["total_elapsed_seconds"] = round(time.monotonic() - started, 4)
@@ -436,36 +435,29 @@ class MusinsaLiveSearch:
         self.last_search_stats["photo_protected_positions"] = len(protected)
         return selected
 
-    def _supplement_colors(self, grouped, targets, profile) -> None:
-        """상품명에 색이 없어도 무신사가 그 색을 파는지로 판단한다. 추가 요청은 없다.
+    def _drop_fully_avoided_colors(self, grouped, profile) -> None:
+        """파는 색이 **전부** 회피 색인 상품을 뺀다. 추가 요청은 없다(사이즈표 응답에 같이 온다).
 
-        상품명 텍스트만 보던 때에는 '그레이'로 저장된 상품이 실제로는 화이트·블랙·베이지로도
-        팔리는데 색 조건에서 탈락했고, 싫어하는 색을 빼 달라는 요청도 이름에 색이 없으면
-        그냥 통과했다. 대표 사진은 한 색뿐이므로 어떤 색으로 맞췄는지 `color_match` 에 남긴다.
+        이 검사만 색 옵션으로 할 수 있다. 어느 색 사진이 카드에 뜨든 그 색은 파는 색 중
+        하나이므로, 파는 색이 모두 회피 색이면 사진도 회피 색이다.
+
+        반대로 "파는 색 중에 원하는 색이 있으니 추천"은 하지 않는다. 카드 사진과 가상 피팅은
+        대표 사진 한 장으로 돌아가는데, 그 사진이 어느 색인지 모른다 — 첫 컬러칩과 대표 사진
+        색이 같은 경우가 345개 중 46%뿐이었다(2026-09-25). 다른 색으로 합성해 주면
+        색을 맞춰 추천한 의미가 없다.
         """
         avoided = [value for value in getattr(profile, "avoided_colors", []) or [] if value]
-        stats = {"colors_known": 0, "color_matched": 0, "avoided_dropped": 0}
+        stats = {"colors_known": 0, "avoided_dropped": 0}
         for category, products in grouped.items():
-            wanted = (targets.targets.get(category) or {}).get("color", [])
             kept = []
             for product in products:
                 palettes = palettes_for(product.color_options)
                 stats["colors_known"] += bool(palettes)
-                # 파는 색이 전부 회피 색일 때만 뺀다. 한 색이라도 남으면 고를 수 있다.
                 if palettes and avoided and all(palette in avoided for palette in palettes):
                     stats["avoided_dropped"] += 1
                     continue
                 kept.append(product)
-                if not wanted or not palettes or set(wanted) & set(product.matched_keywords):
-                    continue
-                matched = next((keyword for keyword in wanted if keyword in palettes), "")
-                if matched:
-                    product.retrieval_score += ATTRIBUTE_WEIGHTS["color"]
-                    product.color_match = matched
-                    stats["color_matched"] += 1
             grouped[category] = kept
-        for products in grouped.values():
-            products.sort(key=self._sort_key)
         self.last_search_stats["color_options"] = stats
 
     def _photo_shortlist(self, grouped, targets):
