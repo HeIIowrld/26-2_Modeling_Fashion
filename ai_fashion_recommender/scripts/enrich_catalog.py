@@ -36,6 +36,7 @@ from config import (  # noqa: E402
     FASHION_ATTRIBUTE_HEADS_PATH,
     garment_image_path,
 )
+from product_colors import palettes_for  # noqa: E402
 
 # ProductCatalog 이 읽는 전체 스키마. 순서를 products.csv 와 맞춰 두면 사람이 비교하기 쉽다.
 OUTPUT_FIELDS = [
@@ -44,8 +45,10 @@ OUTPUT_FIELDS = [
     "material", "neckline", "formality", "activity_tags", "warmth", "breathability",
     "water_resistant", "visual_weight", "detail_level", "waistline",
     "pattern_scale", "pattern_contrast", "brand", "gender", "image_url", "image_path",
+    # 무신사가 파는 색 전부(팔레트). color 는 그중 대표 하나다.
+    "color_options",
     # 출처 추적용. 무신사가 표기한 원본 값을 그대로 남겨 둔다.
-    "detail_color", "detail_season", "detail_fit", "detail_thickness",
+    "detail_color", "detail_colors", "detail_season", "detail_fit", "detail_thickness",
     "detail_sheer", "detail_category",
 ]
 
@@ -234,13 +237,20 @@ def apply_musinsa_facts(row: dict, out: dict, table: dict) -> list[str]:
     상세 이미지 안에 있어 OCR 없이는 못 읽는다. 소재는 그대로 모델 추정이다.
     """
     used = []
-    color = (row.get("detail_color") or "").strip()
-    if color:
-        for palette, words in table["musinsa_color"].items():
-            if any(word.lower() in color.lower() for word in words):
-                out["color"] = palette
-                used.append("color")
-                break
+    names = [value.strip() for value in (row.get("detail_colors") or row.get("detail_color") or "").split("|")
+             if value.strip()]
+    palettes = palettes_for(names, table["musinsa_color"])
+    if palettes:
+        # 대표 색은 첫 옵션, 나머지는 color_options 로 남긴다. 추천은 어느 색이든
+        # 실제로 파는 색이면 맞춘 것으로 본다(대표 사진은 한 색뿐이라는 점은 별도 표기).
+        out["color"] = palettes[0]
+        out["color_options"] = "|".join(palettes)
+        used.append("color")
+    elif names:
+        # 표에 없는 이름(예: '황토색')이면 색을 지어내지 않는다. 예전에는 이럴 때
+        # 상품명 추측이 그대로 남아 '황토색' 상품이 '블루'로 저장됐다.
+        out["color"] = ""
+        used.append("color_unmapped")
 
     season = (row.get("detail_season") or "").strip()
     if season in table["musinsa_season"]:

@@ -325,6 +325,9 @@ class Product:
     image_color: str = ""
     image_color_confidence: float = 0.0
     color_source: str = "catalog"
+    # 무신사가 파는 색 전부(팔레트 이름). color 는 대표 색 하나일 뿐이라
+    # 다른 색을 원하는 사용자가 같은 상품을 놓친다. 비어 있으면 '대표 색만 안다'는 뜻이다.
+    color_options: list[str] = field(default_factory=list)
 
 
 @dataclass

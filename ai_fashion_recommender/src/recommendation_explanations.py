@@ -163,6 +163,15 @@ def build_product_evidence(product: Any, profile: UserProfile, pose: PoseAnalysi
             "상품 속성", tuple(keyword for keyword, _ in details),
             ",".join(dict.fromkeys(detail_sources)),
         ))
+    color_match = str(getattr(product, "color_match", "") or "")
+    if color_match and color_match in attributes.get("color", []):
+        # 상품명에는 색이 없지만 무신사가 그 색을 판다. 대표 사진은 다른 색일 수 있으므로
+        # '상품명과 일치'라고 쓰지 않고 판매 색 옵션이라는 사실을 그대로 적는다.
+        evidence.append(ProductEvidence(
+            "color_option", "색상 옵션",
+            f"상품명에는 없지만 무신사 색 옵션에 '{color_match}'이(가) 있습니다. 대표 사진은 다른 색일 수 있습니다.",
+            tuple(rules_of(color_match)), "색상 옵션", (color_match,), "musinsa_option",
+        ))
     photo = getattr(product, "photo_attributes", None) or {}
     photo_keywords = [value["keyword"] for axis, value in photo.items()
                       if axis in {"fit", "length"} and value.get("source") == "product_photo"

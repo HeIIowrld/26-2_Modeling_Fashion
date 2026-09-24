@@ -41,6 +41,37 @@ class RecommendationEvidenceTests(unittest.TestCase):
         self.assertIn("fit_evidence", product.public_dict())
         self.assertIn("reason_rule_ids", product.public_dict())
 
+    def test_color_option_evidence_does_not_claim_the_name_or_the_photo(self):
+        """판매 색으로 맞춘 근거는 '상품명과 일치'가 아니다. 대표 사진도 다른 색일 수 있다."""
+        profile = UserProfile(purpose="데일리", preferred_colors=["블랙"],
+                              provided_fields={"purpose", "preferred_colors"})
+        pose = PoseAnalysis(True, 0.9, "삼각체형", 0.9, 0.48, 0.46, "정면", 0.82)
+        outfit = OutfitAnalysis("test", "화이트", "블루", "보통 조합", [], "캐주얼")
+        targets = RecommendationKeywordGenerator().generate(profile, pose, outfit)
+        for category in targets.targets:
+            targets.targets[category]["color"] = ["블랙"]
+        product = ShoppingProduct("MS1", "베이직 반팔 티셔츠", "브랜드", 39000,
+                                  "https://image", "https://product", "top",
+                                  color_options=["아이보리", "(19)BLACK"], color_match="블랙")
+
+        evidence = build_product_evidence(product, profile, pose, targets)
+
+        texts = [item.text for item in evidence if item.kind == "color_option"]
+        self.assertEqual(len(texts), 1)
+        self.assertIn("색 옵션", texts[0])
+        self.assertIn("대표 사진은 다른 색일 수 있습니다", texts[0])
+        self.assertNotIn("상품명과 일치", texts[0])
+
+    def test_no_color_evidence_without_a_sold_color_match(self):
+        profile = UserProfile(purpose="데일리", provided_fields={"purpose"})
+        pose = PoseAnalysis(True, 0.9, "삼각체형", 0.9, 0.48, 0.46, "정면", 0.82)
+        outfit = OutfitAnalysis("test", "화이트", "블루", "보통 조합", [], "캐주얼")
+        targets = RecommendationKeywordGenerator().generate(profile, pose, outfit)
+        product = ShoppingProduct("MS1", "베이직 반팔 티셔츠", "브랜드", 39000,
+                                  "https://image", "https://product", "top")
+        evidence = build_product_evidence(product, profile, pose, targets)
+        self.assertEqual([item for item in evidence if item.kind == "color_option"], [])
+
     def test_low_confidence_shape_is_not_stated(self):
         profile = UserProfile(provided_fields=[])
         pose = PoseAnalysis(True, 0.9, "삼각체형", 0.90, 0.48, 0.46, "정면", 0.40)

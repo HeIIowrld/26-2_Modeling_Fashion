@@ -28,7 +28,8 @@ import sys
 # 런타임 모듈은 src/에 있다. 임포트 전에 경로를 등록한다.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from config import DATA_DIR, GARMENT_RAW_DIR, REPO_DIR
+from config import DATA_DIR, GARMENT_RAW_DIR, REPO_DIR  # noqa: E402
+from product_measurements import color_options_from  # noqa: E402
 from schemas import BODY_SHAPES
 
 API_URL = "https://api.musinsa.com/api2/dp/v2/plp/goods"
@@ -162,7 +163,8 @@ class CrawledProduct:
     image_path: str = ""
     # 아래는 상세 API에서 받아오는 "무신사가 직접 표기한 값"이다. 상품명 키워드
     # 추측과 달리 사실이므로, enrich_catalog.py 가 모델 판정보다 우선해서 쓴다.
-    detail_color: str = ""      # 옵션의 COLOR_CHIP
+    detail_color: str = ""      # 옵션 COLOR_CHIP 의 첫 색(대표 색)
+    detail_colors: str = ""     # 파는 색 전부. 대표 하나만 남기면 나머지 색을 잃는다
     detail_season: str = ""     # 계절 태그
     detail_fit: str = ""        # 핏 태그
     detail_thickness: str = ""  # 두께 태그
@@ -342,12 +344,12 @@ def fetch_detail(goods_no: str) -> dict:
     try:
         request = urllib.request.Request(OPTIONS_URL.format(no=number), headers=HEADERS)
         options = json.loads(_open_with_retry(request, retries=2).decode("utf-8")).get("data", {})
-        for option in options.get("basic", []):
-            if option.get("displayType") == "COLOR_CHIP":
-                values = option.get("optionValues") or []
-                if values:
-                    out["detail_color"] = values[0].get("name") or ""
-                break
+        names = color_options_from({"data": options})
+        if names:
+            # 상품은 보통 3색 안팎으로 팔린다. 첫 색만 두면 나머지 색을 원하는 사용자가
+            # 같은 상품을 영영 만나지 못한다(실측: 색 옵션이 있는 상품의 68%가 2색 이상).
+            out["detail_color"] = names[0]
+            out["detail_colors"] = "|".join(names)
     except Exception:
         pass
     return out
@@ -401,7 +403,7 @@ def save_csv(products: list[CrawledProduct], csv_path: Path) -> None:
         "body_shapes", "price", "season", "stock", "url",
         "brand", "gender", "image_url", "image_path",
         # 무신사가 직접 표기한 값. 상품명 추측이 아니라 사실이다.
-        "detail_color", "detail_season", "detail_fit",
+        "detail_color", "detail_colors", "detail_season", "detail_fit",
         "detail_thickness", "detail_sheer", "detail_category",
     ]
     csv_path.parent.mkdir(parents=True, exist_ok=True)
