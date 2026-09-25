@@ -182,7 +182,7 @@ class RecommendationEngine:
     # 검색 키워드 생성과 상품 이미지 필터 단계에서 실행되는 규칙이다.
     # 점수식에 직접 들어가지 않더라도 여기에 등록해야 미지원 규칙으로
     # 잘못 분류되지 않는다.
-    PIPELINE_RULE_IDS = {"R-COL-09", "R-DET-01"}
+    PIPELINE_RULE_IDS = {"R-COL-09", "R-DET-01", "R-TREND-01"}
     EXECUTABLE_RULE_IDS = SCORING_RULE_IDS | SAFETY_RULE_IDS | GUIDANCE_RULE_IDS | PIPELINE_RULE_IDS
 
     # 실측 사이즈 15점은 아직 계산하지 않는다. 보유 옷 5점은 목록이 있을 때만 활성화한다.
@@ -214,7 +214,6 @@ class RecommendationEngine:
         "R-COL-07": "추천 상품 이미지의 아이템별 색 면적 데이터가 없습니다.",
         "R-COL-12": "신발·가방·양말 상품 후보와 색 데이터가 없습니다.",
         "R-ACC-03": "가방과 신발 상품 후보를 아직 함께 생성하지 않습니다.",
-        "R-TREND-01": "출처 날짜가 있는 국내 판매·검색 추세 데이터가 없습니다.",
     }
 
     def __init__(self, rules_path: str | Path, catalog: ProductCatalog) -> None:

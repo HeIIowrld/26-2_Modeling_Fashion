@@ -16,7 +16,20 @@ from recommendation_keywords import TargetKeywordResult
 from schemas import Product, UserProfile
 from shopping_http import bounded_results, fetch_json
 from size_fit import compare_sizes
-from live_product_attributes import missing_photo_axes, photo_matches
+from live_product_attributes import (
+    confident_fit_evidence,
+    missing_photo_axes,
+    photo_matches,
+    photo_validation_axes,
+    rule_backed_photo_attributes,
+)
+from fashion_ranking_policy import (
+    basic_logo_tee_adjustment,
+    canonical_bottom_fit,
+    formal_context_adjustment,
+    sporty_context_adjustment,
+    trend_fit_adjustment,
+)
 
 
 API_URL = "https://api.musinsa.com/api2/dp/v2/plp/goods"
@@ -58,6 +71,16 @@ KEYWORD_ALIASES = {
     "가죽": ("레더", "가죽", "leather"),
     "린넨": ("린넨", "리넨", "linen"),
 }
+PHOTO_SAMPLE_ITEM_TERMS = {
+    "top": ("티셔츠", "후드", "맨투맨", "셔츠", "블라우스", "니트", "가디건", "블레이저", "재킷", "자켓", "코트", "베스트"),
+    "bottom": ("슬랙스", "데님", "청바지", "카고", "조거", "트레이닝", "쇼츠", "반바지", "스커트", "팬츠"),
+}
+PHOTO_SAMPLE_TOP_FIT_TERMS = (
+    ("오버핏", ("오버핏", "오버사이즈", "루즈")),
+    ("여유핏", ("여유", "릴랙스")),
+    ("슬림핏", ("슬림", "스키니")),
+    ("레귤러핏", ("레귤러", "스탠다드")),
+)
 @dataclass
 class ShoppingProduct:
     product_id: str
@@ -83,6 +106,8 @@ class ShoppingProduct:
     fit_evidence: list[str] = field(default_factory=list)
     fit_evidence_labels: list[str] = field(default_factory=list)
     reason_rule_ids: list[str] = field(default_factory=list)
+    ranking_adjustments: dict = field(default_factory=dict)
+    ranking_evidence_source: str = "title"
 
     def public_dict(self) -> dict:
         """내부 키워드와 점수는 웹 UI에 보내지 않는다."""
@@ -90,6 +115,7 @@ class ShoppingProduct:
         data.pop("matched_keywords", None)
         data.pop("retrieval_score", None)
         data.pop("photo_attributes", None)
+        data.pop("ranking_adjustments", None)
         data["size_fit"].pop("ranking_bonus", None)
         return data
 
@@ -102,7 +128,7 @@ class MusinsaLiveSearch:
         search_budget: float = 8.0, measurement_budget: float = 5.0,
         measurements: ProductMeasurementClient | None = None,
         candidates_per_category: int = 300, measurement_candidates: int = 8,
-        photo_provider=None, photo_candidates: int = 8, photo_budget: float = 0.25,
+        photo_provider=None, photo_candidates: int = 8, photo_budget: float = 1.0,
     ) -> None:
         self.timeout = timeout
         self.cache_ttl = cache_ttl
@@ -153,17 +179,23 @@ class MusinsaLiveSearch:
                 (color, item_type), (material, item_type), (item_type,),
             )))
             return list(dict.fromkeys(candidates))
+        item_type = self._preferred_term(attributes, "item_type")
         fit = self._preferred_term(attributes, "fit")
         material = self._preferred_term(attributes, "material")
         style = self._preferred_term(attributes, "style")
         color = self._preferred_term(attributes, "color")
-        primary = " ".join(value for value in (fit, material) if value)
-        noun = CATEGORY_FALLBACK_QUERY[category]
+        fallback_noun = CATEGORY_FALLBACK_QUERY[category]
+        noun = item_type or fallback_noun
+        # Fit is deliberately not required by the primary queries.  We first
+        # collect visually plausible items and let the trained fit heads apply
+        # Fashion Rules to the candidate images.  A fit-text query remains as a
+        # fallback for resilience when photo inference is unavailable.
+        primary = " ".join(value for value in (material, noun) if value)
         fits = attributes.get("fit", [])
         alternative_fit = fits[1] if len(fits) > 1 else (self._aliases(fits[0])[-1] if fits else "")
-        candidates = [primary, f"{material} {noun}" if material else noun,
-                      f"{alternative_fit or fit} {noun}" if fit else "",
-                      " ".join(value for value in (color or style, material or noun) if value), noun]
+        candidates = [primary,
+                      " ".join(value for value in (color or style, material or noun) if value),
+                      f"{alternative_fit or fit} {noun}" if fit else "", fallback_noun]
         return list(dict.fromkeys(value.strip() for value in candidates if value.strip()))[:4]
 
     def _fetch(
@@ -237,7 +269,9 @@ class MusinsaLiveSearch:
         if photo_attributes:
             matches = photo_matches(item.get("category", ""), str(item.get("goodsName") or ""),
                                     attributes, photo_attributes)
-            score += sum(ATTRIBUTE_WEIGHTS[axis] for axis in matches if axis not in matched_axes)
+            # A verified visual match must be able to compete with the same
+            # keyword in a title (title matches currently receive 2x weight).
+            score += sum(2 * ATTRIBUTE_WEIGHTS[axis] for axis in matches if axis not in matched_axes)
         return score, matched
 
     @staticmethod
@@ -404,35 +438,16 @@ class MusinsaLiveSearch:
                 pass  # Prefetch is optional; it must not block normal size ranking.
         self._compare_shortlist(grouped, profile)
         self._drop_fully_avoided_colors(grouped, profile)
-        selected = self._select(grouped, targets, limit)
         self._supplement_photos(grouped, targets, photo_loader, prefetched)
+        self._apply_fashion_policy_adjustments(grouped, profile)
+        for products in grouped.values():
+            products.sort(key=self._sort_key)
+        selected = self._select(grouped, targets, limit)
         self.last_search_stats["total_elapsed_seconds"] = round(time.monotonic() - started, 4)
-        self.last_search_stats["photo_protected_positions"] = sum(bool(p.matched_keywords) for p in selected)
-        if not any(p.photo_attributes and not p.matched_keywords for products in grouped.values() for p in products):
-            return selected
-        # Protect the actual pre-photo display positions, including brand diversity
-        # and measurement sorting. Photos only compete for title-unmatched slots.
-        protected = {p.product_id for p in selected if p.matched_keywords}
-        replacements = {category: sorted((p for p in products if not p.matched_keywords), key=self._sort_key)
-                        for category, products in grouped.items()}
-        used, brand_counts = set(protected), {}
-        for product in selected:
-            if product.product_id in protected:
-                brand_counts[product.brand] = brand_counts.get(product.brand, 0) + 1
-        for index, product in enumerate(selected):
-            if product.product_id in protected:
-                continue
-            candidates = [p for p in replacements.get(product.category, []) if p.product_id not in used]
-            if not candidates:
-                continue
-            best = candidates[0]
-            tied = [p for p in candidates if self._sort_key(p)[0] == self._sort_key(best)[0]]
-            best = next((p for p in tied if not p.brand or brand_counts.get(p.brand, 0) < 2), best)
-            selected[index] = best
-            used.add(best.product_id)
-            brand_counts[best.brand] = brand_counts.get(best.brand, 0) + 1
-        self.last_search_stats["total_elapsed_seconds"] = round(time.monotonic() - started, 4)
-        self.last_search_stats["photo_protected_positions"] = len(protected)
+        self.last_search_stats["vision_ranked_products"] = sum(
+            bool(product.photo_attributes)
+            for products in grouped.values() for product in products
+        )
         return selected
 
     def _drop_fully_avoided_colors(self, grouped, profile) -> None:
@@ -461,12 +476,66 @@ class MusinsaLiveSearch:
         self.last_search_stats["color_options"] = stats
 
     def _photo_shortlist(self, grouped, targets):
-        return [products[index] for index in range(self.photo_candidates)
-                for category, products in grouped.items() if index < len(products)
-                and missing_photo_axes(category, products[index].name, targets.targets[category])]
+        shortlist = []
+        for category, products in grouped.items():
+            attributes = rule_backed_photo_attributes(targets, category)
+            eligible = [
+                product for product in products
+                if (
+                    category == "top"
+                    or getattr(self.photo_provider, "validates_named_fit", False) is True
+                    or missing_photo_axes(category, product.name, attributes)
+                )
+            ]
+            # Top images also need the design-point check. Bottoms are sampled
+            # only when fit/length evidence is missing from their titles. The
+            # sample is stratified so the eight slots do not collapse to one
+            # popular item type, fit or brand.
+            shortlist.extend(self._diverse_photo_sample(eligible, self.photo_candidates))
+        return shortlist
+
+    @classmethod
+    def _photo_sample_dimensions(cls, product):
+        text = cls._normalized(product.name)
+        item_type = next((term for term in PHOTO_SAMPLE_ITEM_TERMS.get(product.category, ())
+                          if cls._normalized(term) in text), "기타")
+        if product.category == "bottom":
+            fit = canonical_bottom_fit(product.name, product.photo_attributes) or "핏 미상"
+        else:
+            fit = next((label for label, terms in PHOTO_SAMPLE_TOP_FIT_TERMS
+                        if any(cls._normalized(term) in text for term in terms)), "핏 미상")
+        brand = cls._normalized(product.brand) or "브랜드 미상"
+        return item_type, fit, brand
+
+    @classmethod
+    def _diverse_photo_sample(cls, products, limit):
+        remaining = list(enumerate(products))
+        selected = []
+        seen_types, seen_fits, seen_brands = set(), set(), set()
+        while remaining and len(selected) < limit:
+            best = max(
+                remaining,
+                key=lambda item: (
+                    4 * (cls._photo_sample_dimensions(item[1])[0] not in seen_types)
+                    + 3 * (cls._photo_sample_dimensions(item[1])[1] not in seen_fits)
+                    + 1 * (cls._photo_sample_dimensions(item[1])[2] not in seen_brands),
+                    -item[0],
+                ),
+            )
+            remaining.remove(best)
+            product = best[1]
+            selected.append(product)
+            item_type, fit, brand = cls._photo_sample_dimensions(product)
+            seen_types.add(item_type)
+            seen_fits.add(fit)
+            seen_brands.add(brand)
+        return selected
 
     def _supplement_photos(self, grouped, targets, loader, prefetched=None):
-        self.last_search_stats["photo"] = {"candidates": 0, "matched_products": 0, "elapsed_seconds": 0.0}
+        self.last_search_stats["photo"] = {
+            "candidates": 0, "analyzed_products": 0, "coverage": 0.0,
+            "ranking_mode": "title_only", "matched_products": 0, "elapsed_seconds": 0.0,
+        }
         if self.photo_provider is None or self.photo_budget <= 0:
             return
         shortlist = self._photo_shortlist(grouped, targets)
@@ -477,11 +546,13 @@ class MusinsaLiveSearch:
             records = self.photo_provider.get_many(shortlist, loader, self.photo_budget, prefetched=prefetched)
         except Exception:
             self.last_search_stats["photo"] = {"candidates": len(shortlist), "failed": True,
+                "analyzed_products": 0, "coverage": 0.0, "ranking_mode": "title_only",
                 "elapsed_seconds": round(time.monotonic() - started, 4), "matched_products": 0}
             return
         for product in shortlist:
-            attributes = targets.targets[product.category]
-            evidence = photo_matches(product.category, product.name, attributes, records.get(product.product_id, {}))
+            attributes = rule_backed_photo_attributes(targets, product.category)
+            raw_evidence = records.get(product.product_id, {})
+            evidence = photo_matches(product.category, product.name, attributes, raw_evidence)
             # An existing brand/title keyword keeps its original score and source.
             evidence = {axis: value for axis, value in evidence.items()
                         if not set(attributes[axis]).intersection(product.matched_keywords)}
@@ -489,12 +560,65 @@ class MusinsaLiveSearch:
             before, _ = self._score(item, attributes, 0)
             after, _ = self._score(item, attributes, 0, photo_attributes=evidence)
             product.retrieval_score += after - before
-            product.photo_attributes = evidence
+            conflicts = {}
+            for axis in photo_validation_axes(
+                product.category, product.name, attributes, raw_evidence
+            ):
+                value = raw_evidence.get(axis, {})
+                if axis in evidence or not confident_fit_evidence(value):
+                    continue
+                # A confident incompatible visual label is negative evidence.
+                # It is a ranking penalty, not a public assertion or hard filter.
+                conflicts[f"{axis}_conflict"] = dict(value)
+                product.retrieval_score -= ATTRIBUTE_WEIGHTS[axis]
+            design = raw_evidence.get("design", {})
+            product.photo_attributes = {
+                **evidence,
+                **conflicts,
+                **({"design": design} if design.get("source") == "product_photo" else {}),
+            }
+            if product.photo_attributes:
+                product.ranking_evidence_source = "title+photo"
+        analyzed = len(records)
+        coverage = analyzed / len(shortlist) if shortlist else 0.0
+        ranking_mode = (
+            "photo_assisted" if coverage >= 0.5
+            else "limited_photo_assist" if analyzed
+            else "title_only"
+        )
+        dimensions = {self._photo_sample_dimensions(product) for product in shortlist}
         self.last_search_stats["photo"] = {
             **self.photo_provider.last_stats, "candidates": len(shortlist),
+            "analyzed_products": analyzed, "coverage": round(coverage, 4),
+            "ranking_mode": ranking_mode, "sample_groups": len(dimensions),
             "elapsed_seconds": round(time.monotonic() - started, 4),
             "matched_products": sum(bool(p.photo_attributes) for p in shortlist),
+            "rule_matches": sum(any(axis in p.photo_attributes for axis in ("fit", "length")) for p in shortlist),
+            "rule_conflicts": sum(any(axis.endswith("_conflict") for axis in p.photo_attributes) for p in shortlist),
         }
+
+    @staticmethod
+    def _apply_fashion_policy_adjustments(grouped, profile):
+        """Apply small, inspectable trend/design weights before final sorting."""
+        for products in grouped.values():
+            for product in products:
+                adjustments = {}
+                trend_value, trend = trend_fit_adjustment(product, profile)
+                if trend:
+                    adjustments["bottom_fit_trend"] = trend
+                tee_value, tee = basic_logo_tee_adjustment(product)
+                if tee:
+                    adjustments["basic_logo_tee"] = tee
+                formal_value, formal = formal_context_adjustment(product, profile)
+                if formal:
+                    adjustments["formal_context"] = formal
+                sporty_value, sporty = sporty_context_adjustment(product, profile)
+                if sporty:
+                    adjustments["sporty_context"] = sporty
+                product.retrieval_score = round(
+                    product.retrieval_score + trend_value + tee_value + formal_value + sporty_value, 4
+                )
+                product.ranking_adjustments = adjustments
 
     def _select(self, grouped, targets, limit):
         # 최신 화면 계약: 카테고리마다 최대 limit개. 실측 기반 재정렬도 유지한다.

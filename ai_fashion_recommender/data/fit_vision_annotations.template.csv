@@ -1,0 +1,4 @@
+image_path,mask_path,split,category,source_domain,group_id,upper_fit,upper_length,bottom_silhouette,bottom_length,quality
+images/user/person_001_outfit_001.jpg,masks/user/person_001_outfit_001.png,train,top,user,person_001_outfit_001,여유핏,기본 기장,,,판정 가능
+images/user/person_001_outfit_001.jpg,masks/user/person_001_outfit_001.png,train,bottom,user,person_001_outfit_001,,,세미와이드,풀렝스,판정 가능
+images/shop/product_1001_model_01.jpg,masks/shop/product_1001_model_01.png,val,bottom,shop,product_1001,,,와이드,풀렝스,판정 가능

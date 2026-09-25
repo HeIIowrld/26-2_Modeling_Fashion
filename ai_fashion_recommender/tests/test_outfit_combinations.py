@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from musinsa_live_search import ShoppingProduct
+from live_product_attributes import POLICY_VERSION
 from outfit_combination_recommender import recommend_outfit_combinations
 from recommendation_keywords import TargetKeywordResult
 from schemas import OutfitAnalysis, PoseAnalysis, UserProfile
@@ -103,6 +104,26 @@ class OutfitCombinationTests(unittest.TestCase):
         )
         self.assertEqual(outfits, [])
 
+    def test_three_outfits_do_not_reuse_category_items_when_candidates_are_sufficient(self):
+        products = [
+            product("T1", "top", ["오버핏", "스트리트"]),
+            product("T2", "top", ["레귤러", "스트리트"]),
+            product("T3", "top", ["레귤러", "스트리트"]),
+            product("S1", "shoes", ["스니커즈", "스트리트"]),
+            product("S2", "shoes", ["부츠", "스트리트"]),
+            product("S3", "shoes", ["로퍼", "스트리트"]),
+        ]
+        outfits = recommend_outfit_combinations(
+            products, self.profile, self.pose, self.outfit, self.targets,
+            FakeRecommender(), limit=3,
+        )
+        top_ids = [next(product_id for product_id in item.product_ids if product_id.startswith("T"))
+                   for item in outfits]
+        shoe_ids = [next(product_id for product_id in item.product_ids if product_id.startswith("S"))
+                    for item in outfits]
+        self.assertEqual(len(set(top_ids)), 3)
+        self.assertEqual(len(set(shoe_ids)), 3)
+
     def test_each_public_outfit_contains_at_most_three_verified_facts(self):
         products = [
             product("T1", "top", ["오버핏", "스트리트"]),
@@ -115,6 +136,85 @@ class OutfitCombinationTests(unittest.TestCase):
         self.assertLessEqual(len(payload["evidence"]), 3)
         self.assertEqual(len(payload["evidence"]), len(payload["evidence_labels"]))
         self.assertNotIn("예산", payload["reason"])
+
+    def test_sporty_outfit_cannot_be_carried_by_running_shoes_alone(self):
+        profile = UserProfile(
+            purpose="데일리", desired_style="스포티",
+            change_categories=["top", "bottom", "shoes"],
+        )
+        targets = TargetKeywordResult("user_input", {
+            "top": {"item_type": ["트랙 재킷"]},
+            "bottom": {"item_type": ["트랙팬츠"]},
+            "shoes": {"item_type": ["러닝화"]},
+        })
+        top = product("T1", "top", [])
+        top.name = "체크 오버핏 셔츠"
+        bottom = product("B1", "bottom", [])
+        bottom.name = "레귤러 데님 팬츠"
+        shoes = product("S1", "shoes", ["러닝화"])
+        shoes.name = "러닝화"
+
+        outfits = recommend_outfit_combinations(
+            [top, bottom, shoes], profile, self.pose, self.outfit,
+            targets, FakeRecommender(), limit=3,
+        )
+
+        self.assertEqual(outfits, [])
+
+    def test_sports_brand_denim_is_compatible_but_two_real_sporty_anchors_are_required(self):
+        profile = UserProfile(
+            purpose="데일리", desired_style="스포티",
+            change_categories=["top", "bottom", "shoes"],
+        )
+        targets = TargetKeywordResult("user_input", {
+            "top": {"item_type": ["트랙 재킷"]},
+            "bottom": {"item_type": ["트랙팬츠"]},
+            "shoes": {"item_type": ["러닝화"]},
+        })
+        top = product("T1", "top", ["트랙 재킷"])
+        top.name = "사이드라인 트랙 재킷"
+        bottom = product("B1", "bottom", [])
+        bottom.name = "레귤러 데님 팬츠"
+        bottom.brand = "아디다스"
+        shoes = product("S1", "shoes", ["러닝화"])
+        shoes.name = "러닝화"
+
+        outfits = recommend_outfit_combinations(
+            [top, bottom, shoes], profile, self.pose, self.outfit,
+            targets, FakeRecommender(), limit=1,
+        )
+
+        self.assertEqual(len(outfits), 1)
+        self.assertIn("스포티 구성", outfits[0].public_dict()["evidence_labels"])
+        self.assertIn("스포츠 브랜드 예외", outfits[0].reason)
+
+    def test_visual_fit_is_used_by_fashion_rule_harmony(self):
+        self.targets = TargetKeywordResult(
+            "mixed",
+            {"top": {"fit": ["오버핏"]}, "shoes": {"item_type": ["스니커즈"]}},
+            applied_rules=["R-SIL-01", "R-CTX-01"],
+            keyword_rules={
+                "top": {"오버핏": ["R-SIL-01"]},
+                "shoes": {"스니커즈": ["R-CTX-01"]},
+            },
+        )
+        top = product("T1", "top", [])
+        top.photo_attributes = {"fit": {
+            "label": "오버핏", "confidence": 0.96, "keyword": "오버핏",
+            "source": "product_photo", "policy": POLICY_VERSION,
+        }}
+        shoe = product("S1", "shoes", ["스니커즈"])
+        recommender = FakeRecommender()
+
+        outfits = recommend_outfit_combinations(
+            [top, shoe], self.profile, self.pose, self.outfit,
+            self.targets, recommender, limit=1,
+        )
+
+        self.assertEqual(recommender.harmony_calls[0][0]["fit"], "오버핏")
+        self.assertEqual(recommender.harmony_calls[0][0]["fit_source"], "product_photo")
+        self.assertIn("상품 핏", outfits[0].public_dict()["evidence_labels"])
+        self.assertIn("R-SIL-01", outfits[0].public_dict()["rule_ids"])
 
     def test_gemini_can_phrase_the_verified_combination_evidence(self):
         products = [

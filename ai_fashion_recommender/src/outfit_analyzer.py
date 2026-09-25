@@ -23,6 +23,11 @@ from fashion_prompts import (
     UPPER_TYPE_PROMPTS,
 )
 from fashion_model import FashionClassifier
+from fit_vision_schema import (
+    BOTTOM_TO_LEGACY_FIT,
+    BOTTOM_TO_LEGACY_LENGTH,
+    UPPER_TO_LEGACY_LENGTH,
+)
 from garment_attribute_analyzer import GarmentAttributeAnalyzer, bottom_landmarks_visible
 from pose_analyzer import _to_rgb_array
 from schemas import OutfitAnalysis, PoseAnalysis
@@ -383,6 +388,8 @@ class OutfitAnalyzer:
         layering_prediction = None
         learned_upper = {}
         learned_lower = {}
+        shared_upper = {}
+        shared_lower = {}
         if self.classifier.enabled:
             upper_crop = _garment_crop(rgb, parsed["upper_mask"])
             upper_style, upper_style_confidence = self.classifier.best_mapped_label(
@@ -466,6 +473,21 @@ class OutfitAnalyzer:
                 )
                 attributes[attribute_name] = fused
                 attribute_sources[attribute_name] = source
+            predict_fit = getattr(self.classifier, "predict_fit", None)
+            shared_upper = (
+                predict_fit(Image.fromarray(rgb), category="top", mask=parsed["upper_mask"])
+                if callable(predict_fit) else {}
+            )
+            shared_upper_fit = shared_upper.get("upper_fit")
+            if shared_upper_fit and shared_upper_fit.accepted and shared_upper_fit.labels:
+                attributes["fit"] = shared_upper_fit.labels[0]
+                attribute_sources["fit"] = "shared_fit_head"
+            shared_upper_length = shared_upper.get("upper_length")
+            if shared_upper_length and shared_upper_length.accepted and shared_upper_length.labels:
+                attributes["upper_length"] = UPPER_TO_LEGACY_LENGTH.get(
+                    shared_upper_length.labels[0], shared_upper_length.labels[0]
+                )
+                attribute_sources["upper_length"] = "shared_fit_head"
             if learned_upper.get("sleeve_shape") and learned_upper["sleeve_shape"].accepted:
                 sleeve_shape = learned_upper["sleeve_shape"].labels[0]
                 attribute_sources["sleeve_shape"] = "trained_head"
@@ -620,6 +642,26 @@ class OutfitAnalyzer:
                     )
                     attributes[attribute_name] = fused
                     attribute_sources[attribute_name] = source
+                shared_lower = (
+                    predict_fit(Image.fromarray(rgb), category="bottom", mask=parsed["lower_mask"])
+                    if callable(predict_fit) else {}
+                )
+                shared_bottom_fit = shared_lower.get("bottom_silhouette")
+                if shared_bottom_fit and shared_bottom_fit.accepted and shared_bottom_fit.labels:
+                    detailed_fit = shared_bottom_fit.labels[0]
+                    pant_leg_shape = detailed_fit
+                    attributes["lower_fit"] = BOTTOM_TO_LEGACY_FIT.get(detailed_fit, detailed_fit)
+                    attribute_sources["pant_leg_shape"] = "shared_fit_head"
+                    attribute_sources["lower_fit"] = "shared_fit_head"
+                shared_bottom_length = shared_lower.get("bottom_length")
+                if shared_bottom_length and shared_bottom_length.accepted and shared_bottom_length.labels:
+                    detailed_length = shared_bottom_length.labels[0]
+                    pant_length = detailed_length
+                    attributes["bottom_length"] = BOTTOM_TO_LEGACY_LENGTH.get(
+                        detailed_length, detailed_length
+                    )
+                    attribute_sources["pant_length"] = "shared_fit_head"
+                    attribute_sources["bottom_length"] = "shared_fit_head"
                 if learned_lower.get("lower_detail") and learned_lower["lower_detail"].accepted:
                     lower_details = learned_lower["lower_detail"].labels
                     attribute_sources["lower_details"] = "trained_lower_detail_head"

@@ -37,6 +37,7 @@ class FashionClassifier:
         device: str = "auto",
         attribute_checkpoint: str | Path | None = None,
         layering_checkpoint: str | Path | None = None,
+        fit_checkpoint: str | Path | None = None,
     ) -> None:
         self.enabled = enabled
         self.model_id = model_id
@@ -44,6 +45,7 @@ class FashionClassifier:
         self.preprocess = None
         self.tokenizer = None
         self.attribute_predictor = None
+        self.fit_predictor = None
         self.shoe_predictor = None
         self._shoe_checkpoint_checked = False
         self._text_feature_cache = {}
@@ -86,6 +88,19 @@ class FashionClassifier:
                     model_id=self.model_id,
                     device=self.device,
                 )
+            if fit_checkpoint:
+                fit_path = Path(fit_checkpoint).expanduser().resolve()
+                if not fit_path.is_file():
+                    raise FileNotFoundError(f"학습된 공용 핏 헤드가 없습니다: {fit_path}")
+                from fit_vision_model import FitVisionPredictor
+
+                self.fit_predictor = FitVisionPredictor(
+                    fit_path,
+                    image_encoder=self.model,
+                    preprocess=self.preprocess,
+                    model_id=self.model_id,
+                    device=self.device,
+                )
             self.layering_predictor = None
             if layering_checkpoint:
                 layering_path = Path(layering_checkpoint).expanduser().resolve()
@@ -122,6 +137,15 @@ class FashionClassifier:
     @property
     def trained_attributes_enabled(self) -> bool:
         return self.attribute_predictor is not None
+
+    @property
+    def trained_fit_enabled(self) -> bool:
+        return self.fit_predictor is not None
+
+    def predict_fit(self, image, *, category: str, mask=None):
+        if self.fit_predictor is None:
+            return {}
+        return self.fit_predictor.predict(image, category=category, mask=mask)
 
     @property
     def trained_layering_enabled(self) -> bool:

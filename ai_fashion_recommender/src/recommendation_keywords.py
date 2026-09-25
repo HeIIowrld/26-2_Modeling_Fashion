@@ -23,6 +23,13 @@ from schemas import (
     PoseAnalysis,
     UserProfile,
 )
+from fashion_ranking_policy import (
+    formal_context_enabled,
+    formal_context_item_types,
+    sporty_context_enabled,
+    sporty_context_item_types,
+    trend_context_enabled,
+)
 
 
 UNKNOWN_MARKERS = ("분석 보류", "분석 불가", "불확실", "해당 없음", "자동")
@@ -161,6 +168,15 @@ class RecommendationKeywordGenerator:
         used_input = False
         used_photo = False
 
+        # These rules execute in live-product visual reranking rather than by
+        # adding another search keyword to the user-visible target list.
+        if "top" in targets:
+            self._rule(rules, "R-DET-01")
+        if "bottom" in targets and trend_context_enabled(profile):
+            self._rule(rules, "R-TREND-01")
+        if formal_context_enabled(profile):
+            self._rule(rules, "R-CTX-01")
+
         def add_all(attribute: str, values: list[str], source: str) -> None:
             nonlocal used_input, used_photo
             clean = [value for value in values if self._usable(value)]
@@ -193,9 +209,22 @@ class RecommendationKeywordGenerator:
         if self._provided(profile, "preferred_materials"):
             add_all("material", profile.preferred_materials, "user_input")
             self._rule(rules, "R-MAT-01")
-        else:
-            photo_materials = [outfit.material, outfit.lower_material]
-            add_all("material", photo_materials, "photo_fallback")
+        elif not (formal_context_enabled(profile) or sporty_context_enabled(profile)):
+            # A photographed top material is relevant only to a replacement
+            # top, and likewise for bottoms. Previously both values were copied
+            # to every category, making unrelated contexts retrieve the same
+            # products. In formal contexts the situation seed below takes
+            # precedence over an incidental current material.
+            category_materials = {
+                "top": outfit.material,
+                "bottom": outfit.lower_material,
+            }
+            for category, material in category_materials.items():
+                if category not in targets or not self._usable(material):
+                    continue
+                self._add(targets[category], "material", material)
+                sources[f"{category}.material"] = "photo_fallback"
+                used_photo = True
 
         if self._provided(profile, "preferred_colors"):
             add_all("color", profile.preferred_colors, "user_input")
@@ -209,6 +238,24 @@ class RecommendationKeywordGenerator:
         if self._provided(profile, "activity_level") and profile.activity_level == "높음":
             add_all("function", ["활동성", "통기성"], "user_input")
             self._rule(rules, "R-WEA-02")
+
+        # R-CTX-01 supplies an item-type seed to the normal query slots. This
+        # does not add requests or exclude other items: the broad category
+        # fallback remains in the search plan, while work/classic can actually
+        # collect shirts/blazers/slacks instead of merely reranking a casual
+        # pool dominated by the current outfit's material.
+        for category, target in targets.items():
+            # TPO/formality wins when both conditions are explicitly selected;
+            # otherwise the chosen sporty style seeds athletic item types.
+            context_types = (
+                formal_context_item_types(profile, category)
+                or sporty_context_item_types(profile, category)
+            )
+            if not context_types:
+                continue
+            self._add(target, "item_type", *context_types)
+            sources[f"{category}.item_type"] = "context_rule"
+            self._rule(rules, "R-CTX-01")
 
         # 체형·비율은 사진에서만 오는 공통 기반이다. 신뢰 가능한 경우에만 쓴다.
         proportion_reliable = pose.valid and pose.full_body_score >= 0.65
@@ -336,10 +383,10 @@ class RecommendationKeywordGenerator:
                     if attribute == "function" and "R-WEA-02" in rules:
                         rule_ids.append("R-WEA-02")
                     if attribute == "item_type":
-                        rule_ids.extend(
-                            rule_id for rule_id in ("R-CTX-01", "R-ACC-06")
-                            if rule_id in rules
-                        )
+                        if "R-CTX-01" in rules:
+                            rule_ids.append("R-CTX-01")
+                        if category == "shoes" and "R-ACC-06" in rules:
+                            rule_ids.append("R-ACC-06")
                     if attribute == "fit" and sources.get(f"{category}.fit") in {"user_style_rule", "photo_style_rule", "fashion_rule_default"} and "R-SIL-01" in rules:
                         rule_ids.append("R-SIL-01")
                     if attribute == "length" and sources.get(f"{category}.length") in {"user_style_rule", "photo_style_rule", "fashion_rule_default"} and "R-SIL-03" in rules:

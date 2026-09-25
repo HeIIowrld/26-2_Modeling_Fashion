@@ -14,8 +14,11 @@ reports/body_visibility_2026-09-23.md) 차단 신호를 정했다.
 | 마스크 폭만 근거인 넉넉한 핏 | **92%** | 79% | 83% |
 
 마지막 신호는 정상 사진의 92%를 막으면서 헐렁한 옷(79%)과 구분하지 못한다. 그래서 차단하지
-않고 경고로 남긴다. 옷에 따른 왜곡(허리 +6%)은 실제로 체형 분류를 25% 뒤집으므로 앞의 세 신호는
-차단을 유지한다. 다만 측정 잡음 수준(+2%)에서도 8%가 뒤집히므로 통과 자체가 정확도 보장은 아니다.
+않고 경고로 남긴다. 로컬 서비스 실험에서는 넉넉한 핏이 일반적인 사용자 사진을 지나치게 많이
+막는 문제를 먼저 확인하기 위해, 학습 헤드가 지지한 넉넉한 상·하의도 차단 대신 경고로 낮춘다.
+옷에 따른 왜곡(허리 +6%)은 실제로 체형 분류를 25% 뒤집으므로 결과는 참고값으로 표시한다.
+치마·원피스와 두꺼운 외투 차단은 유지한다. 측정 잡음 수준(+2%)에서도 8%가 뒤집히므로 통과
+자체가 정확도 보장은 아니다.
 """
 from __future__ import annotations
 
@@ -57,7 +60,9 @@ def assess_body_visibility(outfit, parsed: dict) -> dict:
             uncertain.append(f"{name}가 몸선을 얼마나 가리는지 확인하지 못했습니다.")
         elif any(word in value for word in LOOSE):
             if source in {"trained_head", "fused_agreement"}:
-                reasons.append(f"{name}의 넉넉한 핏이 몸선을 가릴 가능성이 있어 체형 분석을 진행하지 않습니다.")
+                uncertain.append(
+                    f"{name}의 넉넉한 핏이 몸선을 가릴 수 있어 체형 결과를 참고값으로만 제공합니다."
+                )
             else:
                 uncertain.append(f"{name} 윤곽과 몸선을 구분하기 어렵습니다. 옷의 폭을 체형으로 사용하지 않습니다.")
 
@@ -73,7 +78,7 @@ def assess_body_visibility(outfit, parsed: dict) -> dict:
         "issues": (reasons + [RETAKE]) if reasons else [],
         "warnings": (uncertain + [UNCERTAIN_NOTE]) if uncertain and not reasons else [],
         "evidence": evidence,
-        "policy_version": "2026-09-23b",
+        "policy_version": "2026-09-25-loose-fit-warning",
         "calibrated": False,
     }
 
