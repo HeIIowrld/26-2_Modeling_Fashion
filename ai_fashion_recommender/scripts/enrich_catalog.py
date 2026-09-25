@@ -36,7 +36,7 @@ from config import (  # noqa: E402
     FASHION_ATTRIBUTE_HEADS_PATH,
     garment_image_path,
 )
-from product_colors import palettes_for  # noqa: E402
+from product_colors import palettes_for, title_palettes  # noqa: E402
 
 # ProductCatalog 이 읽는 전체 스키마. 순서를 products.csv 와 맞춰 두면 사람이 비교하기 쉽다.
 OUTPUT_FIELDS = [
@@ -240,7 +240,14 @@ def apply_musinsa_facts(row: dict, out: dict, table: dict) -> list[str]:
     names = [value.strip() for value in (row.get("detail_colors") or row.get("detail_color") or "").split("|")
              if value.strip()]
     palettes = palettes_for(names, table["musinsa_color"])
-    if palettes:
+    # 상품명 색이 대표 사진과 가장 잘 맞는다(상의 81개에서 78%, 확신한 65개에서 85%).
+    # 첫 컬러칩은 46%다 — 여러 색 중 어느 것이 대표 사진인지 알려 주지 않기 때문이다.
+    from_title = title_palettes(row.get("name", ""), table["musinsa_color"])
+    if len(from_title) == 1:
+        out["color"] = from_title[0]
+        out["color_options"] = "|".join(palettes) if palettes else from_title[0]
+        used.append("color_title")
+    elif palettes:
         # 대표 색은 첫 옵션이다. **이 값이 대표 사진의 색이라는 보장은 없다** — 첫 컬러칩과
         # 사진 색이 같은 경우가 345개 중 46%뿐이었다(2026-09-25). 사진 색 감사
         # (product_image_colors.csv)가 확신할 때 ProductCatalog 이 그 값으로 덮어쓴다.

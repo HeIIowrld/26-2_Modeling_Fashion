@@ -11,12 +11,13 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from product_colors import palette_of, palettes_for  # noqa: E402
+from product_colors import palette_of, palettes_for, title_palettes  # noqa: E402
 from product_measurements import color_options_from, normalize_size_table  # noqa: E402
 
 TABLE = {"블랙": ("블랙", "차콜", "BLACK"), "화이트": ("화이트", "아이보리", "WHITE", "IVORY"),
-         "그레이": ("그레이", "멜란지", "GRAY"), "베이지": ("베이지", "BEIGE"),
-         "브라운": ("브라운", "진한갈색", "황토", "BROWN")}
+         "그레이": ("그레이", "멜란지", "GRAY", "GREY"), "베이지": ("베이지", "BEIGE"),
+         "브라운": ("브라운", "진한갈색", "황토", "BROWN"), "블루": ("블루", "BLUE"),
+         "레드": ("레드", "RED")}
 
 
 def options_payload(colors, sizes=("M", "L")):
@@ -75,6 +76,53 @@ class PaletteTests(unittest.TestCase):
     def test_palettes_keep_order_and_drop_repeats(self):
         names = ["화이트", "아이보리", "(19)BLACK", "멜란지"]
         self.assertEqual(palettes_for(names, TABLE), ["화이트", "블랙", "그레이"])
+
+
+VOCABULARY = {"non_color_terms": ["블루종", "데님", "인디고", "화이트라벨"],
+              "english_needs_left_boundary": True, "min_korean_term_length": 2}
+
+
+class TitleColorTests(unittest.TestCase):
+    """상품명에서 색을 읽는 규격. 색 단어를 품은 다른 말에 걸리면 안 된다.
+
+    2026-09-25 카탈로그 2224개 전수 확인: '블루종'이 블루로 42건, 영어 어미(LAYERED·
+    TEXTURED·COVERED·EMBROIDERED·Flared·Tailored)의 RED 가 21건 잡혔다.
+    """
+
+    def read(self, name):
+        return title_palettes(name, TABLE, VOCABULARY)
+
+    def test_garment_names_that_contain_a_color_word_are_not_colors(self):
+        for name in ("어반스퀘어 소프트쉘 3L 블루종 점퍼 SILVER BIRCH",
+                     "오버핏 데님 미니 로고 셔츠 [인디고]"):
+            with self.subTest(name=name):
+                self.assertEqual(self.read(name), [])
+
+    def test_english_color_glued_to_another_word_is_not_a_color(self):
+        for name in ("V-cut LAYERED Short Sleeve", "TEXTURED Knit", "Tailored Jacket"):
+            with self.subTest(name=name):
+                self.assertEqual(self.read(name), [])
+
+    def test_english_suffix_still_counts_as_the_color(self):
+        # YELLOWISH·GREYISH 는 진짜 색이다. 뒤에 붙는 접미는 막지 않는다.
+        self.assertEqual(self.read("GREYISH 맨투맨"), ["그레이"])
+
+    def test_modifiers_in_front_keep_the_color(self):
+        self.assertEqual(self.read("다크그레이 후드"), ["그레이"])
+        self.assertEqual(self.read("포미 다크블루 스판 부츠컷 팬츠"), ["블루"])
+
+    def test_brand_line_is_masked_but_a_real_color_survives(self):
+        self.assertEqual(self.read("NM5PS01J 화이트라벨 웰트 후디 BLACK"), ["블랙"])
+
+    def test_two_colors_are_both_reported_so_the_caller_can_skip(self):
+        self.assertEqual(self.read("블랙:화이트 트랙 재킷"), ["블랙", "화이트"])
+
+    def test_no_color_in_the_name_returns_nothing_not_a_default(self):
+        # 예전 크롤러는 여기서 '그레이'를 넣었고, 근거 없는 그레이가 329개 쌓였다.
+        self.assertEqual(self.read("짱구 닭살커플 반팔 티셔츠 2팩"), [])
+
+    def test_one_letter_color_words_are_ignored(self):
+        self.assertEqual(title_palettes("스탠다드 핏 셔츠", dict(TABLE, 브라운=("탄",)), VOCABULARY), [])
 
 
 class SizeTableTests(unittest.TestCase):

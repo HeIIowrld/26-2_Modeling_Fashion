@@ -29,6 +29,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from config import DATA_DIR, GARMENT_RAW_DIR, REPO_DIR  # noqa: E402
+from product_colors import title_palettes  # noqa: E402
 from product_measurements import color_options_from  # noqa: E402
 from schemas import BODY_SHAPES
 
@@ -172,6 +173,18 @@ class CrawledProduct:
     detail_category: str = ""   # baseCategoryFullPath
 
 
+def _title_color(name: str) -> str:
+    """상품명에서 색을 읽는다. 하나로 확정되지 않으면 **비워 둔다**.
+
+    예전에는 부분 문자열로 찾고 못 찾으면 '그레이'를 넣었다. 그래서 '블루종'이 블루가 되고,
+    색 근거가 전혀 없는 상품 329개(전체의 15%)가 그레이로 저장됐다. 색은 체형 규칙이
+    직접 보는 값이라 지어낸 기본값이 규칙을 잘못 발동시킨다. 규격은
+    data/catalog_derivation.json 의 color_vocabulary 에 있다.
+    """
+    palettes = title_palettes(name)
+    return palettes[0] if len(palettes) == 1 else ""
+
+
 def _match_keyword(name: str, table: list[tuple[str, list[str]]], default: str) -> str:
     for label, keywords in table:
         if any(keyword in name for keyword in keywords):
@@ -233,7 +246,7 @@ def parse_item(item: dict, category: str) -> CrawledProduct | None:
         product_id=f"MS{goods_no}",
         name=name,
         category=category,
-        color=_match_keyword(name, COLOR_KEYWORDS, "그레이"),
+        color=_title_color(name),
         style=style,
         purposes=_guess_purposes(name, style),
         # 상품 이미지만으로 체형 적합도를 알 수 없어 전 체형 허용으로 두고,
