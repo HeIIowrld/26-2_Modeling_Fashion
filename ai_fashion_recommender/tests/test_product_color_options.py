@@ -11,7 +11,8 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from product_colors import palette_of, palettes_for, title_palettes  # noqa: E402
+from product_colors import (  # noqa: E402
+    color_from_pixels, palette_from_rgb, palette_of, palettes_for, title_palettes)
 from product_measurements import color_options_from, normalize_size_table  # noqa: E402
 
 TABLE = {"블랙": ("블랙", "차콜", "BLACK"), "화이트": ("화이트", "아이보리", "WHITE", "IVORY"),
@@ -123,6 +124,42 @@ class TitleColorTests(unittest.TestCase):
 
     def test_one_letter_color_words_are_ignored(self):
         self.assertEqual(title_palettes("스탠다드 핏 셔츠", dict(TABLE, 브라운=("탄",)), VOCABULARY), [])
+
+
+HSV = {"hsv": {"dark": 0.16, "gray_low": 0.22, "neutral_sat": 0.12,
+                "navy_value": 0.35, "beige_sat": 0.30}}
+
+
+class GarmentPixelColorTests(unittest.TestCase):
+    """상품명·컬러칩에 색이 없을 때 의류 영역에서 색을 정한다.
+
+    RGB 최근접은 어두운 옷을 전부 검정으로 보낸다. 명도·채도를 먼저 가르면 내가 사진을
+    보고 라벨한 192장에서 58% → 69%(평가 절반)였다. 임계값은 나머지 절반에서 골랐다.
+    """
+
+    def test_dark_colours_are_not_all_black(self):
+        for rgb, expected in (((30, 40, 80), "네이비"), ((90, 60, 35), "브라운"),
+                              ((110, 105, 60), "카키"), ((20, 20, 22), "블랙")):
+            with self.subTest(rgb=rgb):
+                self.assertEqual(palette_from_rgb(rgb, HSV), expected)
+
+    def test_neutrals_split_by_brightness(self):
+        self.assertEqual(palette_from_rgb((128, 128, 130), HSV), "그레이")
+        self.assertEqual(palette_from_rgb((240, 240, 240), HSV), "화이트")
+
+    def test_agreement_is_the_share_of_the_winning_colour(self):
+        color, agreement = color_from_pixels([(20, 20, 22)] * 8 + [(90, 60, 35)] * 2, HSV)
+        self.assertEqual(color, "블랙")
+        self.assertEqual(agreement, 0.8)
+
+    def test_no_pixels_means_no_answer(self):
+        self.assertEqual(color_from_pixels([], HSV), ("", 0.0))
+
+    def test_a_mixed_garment_reports_low_agreement(self):
+        # 프린트가 많은 옷은 일치율이 낮게 나오고, 그 값으로 걸러진다.
+        pixels = [(20, 20, 22)] * 5 + [(240, 240, 240)] * 5
+        _color, agreement = color_from_pixels(pixels, HSV)
+        self.assertLessEqual(agreement, 0.5)
 
 
 class SizeTableTests(unittest.TestCase):

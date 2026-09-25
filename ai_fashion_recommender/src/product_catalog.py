@@ -19,7 +19,10 @@ class ProductCatalog:
             else self.csv_path.with_name("product_image_colors.csv")
         )
         self.color_audits = self._load_color_audits()
+        # 상품명·컬러칩에 색이 없을 때만 쓰는 의류 영역 판정 결과(audit_garment_colors.py).
+        self.photo_colors = self._load_photo_colors()
         self.products = self._load()
+        self.photo_color_count = sum(product.color_source == "photo" for product in self.products)
         self.color_override_count = sum(
             product.color_source == "image" for product in self.products
         )
@@ -37,6 +40,14 @@ class ProductCatalog:
                 for row in csv.DictReader(handle)
                 if (row.get("product_id") or "").strip()
             }
+
+    def _load_photo_colors(self) -> dict[str, dict[str, str]]:
+        path = self.csv_path.with_name("product_photo_colors.csv")
+        if not path.is_file():
+            return {}
+        with path.open(encoding="utf-8-sig", newline="") as handle:
+            return {row["product_id"]: row for row in csv.DictReader(handle)
+                    if (row.get("product_id") or "").strip() and (row.get("photo_color") or "").strip()}
 
     def _load(self) -> list[Product]:
         def split_values(value: str | None) -> list[str]:
@@ -59,11 +70,15 @@ class ProductCatalog:
                 and image_confidence >= 0.60
                 and bool(image_color)
             )
+            # 색이 비어 있을 때만 의류 영역 판정으로 채운다. 상품명·컬러칩이 있으면 그쪽이 낫다
+            # (상품명 78% vs 의류 영역 68%). 이 색은 회피 색 필터에 쓰지 않는다.
+            photo = self.photo_colors.get(row["product_id"], {}) if not catalog_color.strip() else {}
+            photo_color = (photo.get("photo_color") or "").strip()
             return Product(
                 product_id=row["product_id"],
                 name=row["name"],
                 category=row["category"],
-                color=image_color if use_image_color else catalog_color,
+                color=image_color if use_image_color else (catalog_color or photo_color),
                 style=row["style"],
                 purposes=split_values(row["purposes"]),
                 body_shapes=split_values(row["body_shapes"]),
@@ -94,7 +109,9 @@ class ProductCatalog:
                 catalog_color=catalog_color,
                 image_color=image_color,
                 image_color_confidence=round(image_confidence, 3),
-                color_source="image" if use_image_color else "catalog",
+                color_source=("image" if use_image_color
+                              else "catalog" if catalog_color else
+                              "photo" if photo_color else "none"),
                 color_options=split_values(row.get("color_options")),
             )
 
