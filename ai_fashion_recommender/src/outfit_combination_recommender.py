@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from itertools import product as cartesian_product
 from typing import Any, Iterable
 
+from fashion_ranking_policy import sporty_context_enabled, sporty_product_evidence
 from recommendation_keywords import TargetKeywordResult
 from schemas import OutfitAnalysis, PoseAnalysis, UserProfile
 
@@ -93,19 +94,40 @@ def _attribute_value(product: Any, targets: TargetKeywordResult, attribute: str)
     return next((value for value in values if value in matched), "")
 
 
+def _visual_attribute(product: Any, attribute: str) -> tuple[str, float, str]:
+    """Return the model-observed value, including a confident mismatch.
+
+    A mismatch is still the product's observed fit and must be used when Fashion
+    Rules compare the whole outfit.  It is only excluded from positive product
+    evidence and receives a retrieval penalty earlier in the pipeline.
+    """
+    photo = getattr(product, "photo_attributes", None) or {}
+    value = photo.get(attribute) or photo.get(f"{attribute}_conflict") or {}
+    if value.get("source") != "product_photo":
+        return "", 0.0, ""
+    return str(value.get("label") or ""), float(value.get("confidence") or 0.0), str(value.get("keyword") or "")
+
+
 def _product_garment(product: Any, targets: TargetKeywordResult) -> dict[str, Any]:
     category = product.category
     style = _attribute_value(product, targets, "style")
-    fit = _attribute_value(product, targets, "fit")
+    visual_fit, fit_confidence, _ = _visual_attribute(product, "fit")
+    visual_length, length_confidence, _ = _visual_attribute(product, "length")
+    fit = visual_fit or _attribute_value(product, targets, "fit")
+    length = visual_length or _attribute_value(product, targets, "length")
     return {
         "category": category,
         "color": _attribute_value(product, targets, "color"),
         "style": style,
         "fit": _fit_value(fit, category),
-        "length": _attribute_value(product, targets, "length"),
+        "length": length,
         "pattern": _attribute_value(product, targets, "pattern") or "패턴 불확실",
         "material": _attribute_value(product, targets, "material"),
         "formality": STYLE_FORMALITY.get(style, 3),
+        "fit_source": "product_photo" if visual_fit else "product_title",
+        "fit_confidence": fit_confidence if visual_fit else 1.0 if fit else 0.0,
+        "length_source": "product_photo" if visual_length else "product_title",
+        "length_confidence": length_confidence if visual_length else 1.0 if length else 0.0,
     }
 
 
@@ -150,8 +172,39 @@ def _retrieval_rank_scores(groups: dict[str, list[Any]]) -> dict[str, float]:
     return scores
 
 
+def _sporty_combination_coverage(
+    products: list[Any], profile: UserProfile,
+) -> tuple[bool, float, str]:
+    """Reject a sporty label carried by only one item in an otherwise conflicting look."""
+    if not sporty_context_enabled(profile):
+        return True, 1.0, ""
+    evidence = [(product, sporty_product_evidence(product)) for product in products]
+    conflicts = [(product, item) for product, item in evidence if item["tier"] == "conflict"]
+    strong = [(product, item) for product, item in evidence if item["tier"] == "strong"]
+    # Three changed categories need two explicit sporty anchors. With one or
+    # two changed categories, one strong anchor is enough only when no selected
+    # item explicitly conflicts (e.g. dress shirt/slacks). A sports-brand denim
+    # is compatible because its negative cue is exempt, but brand alone is not
+    # counted as a strong anchor.
+    required = 2 if len(products) >= 3 else 1
+    passed = not conflicts and len(strong) >= required
+    score = min(1.0, len(strong) / max(1, len(products)))
+    if not passed:
+        return False, score, ""
+    anchors = [item["positive_term"] for _, item in strong if item["positive_term"]]
+    brand_exemptions = [
+        str(getattr(product, "brand", "") or item["sports_brand"])
+        for product, item in evidence if item["brand_exempt"]
+    ]
+    text = f"{'·'.join(dict.fromkeys(anchors))} 등 {len(strong)}개 카테고리의 스포티 단서를 조합에 반영했습니다."
+    if brand_exemptions:
+        text += f" {'·'.join(dict.fromkeys(brand_exemptions))} 상품은 스포츠 브랜드 예외로 소재 감점을 적용하지 않았습니다."
+    return True, score, text
+
+
 def _candidate_evidence(
     products: list[Any],
+    targets: TargetKeywordResult,
     selected_categories: tuple[str, ...],
     current_items: list[dict[str, str]],
     harmony_reasons: list[str],
@@ -168,6 +221,26 @@ def _candidate_evidence(
         evidence.append(CombinationEvidence(
             "현재 착장", f"{kept}{object_particle} 유지한 상태에서 교체할 아이템의 조화를 평가했습니다.",
             ("R-CMP-03",),
+        ))
+    visual_fits = []
+    visual_rules = []
+    applied = set(targets.applied_rules)
+    for product in products:
+        label, confidence, keyword = _visual_attribute(product, "fit")
+        # Only positive matches carry a keyword. Confident conflicts influence
+        # ranking and harmony but are never presented as a recommendation fact.
+        if not label or not keyword:
+            continue
+        rule_ids = targets.keyword_rules.get(product.category, {}).get(keyword, [])
+        active_rules = [rule_id for rule_id in rule_ids if rule_id in applied]
+        if active_rules:
+            visual_fits.append(f"{product.name}: {label}({confidence:.0%})")
+            visual_rules.extend(active_rules)
+    if visual_fits and len(evidence) < 3:
+        evidence.append(CombinationEvidence(
+            "상품 핏",
+            "상품 사진에서 추정한 핏을 조합의 실루엣 평가에 반영했습니다: " + " · ".join(visual_fits),
+            tuple(dict.fromkeys(visual_rules)),
         ))
     if (
         any(category in selected_categories for category in ("top", "bottom"))
@@ -229,10 +302,20 @@ def _llm_combination_reasons(combinations: list[OutfitCombination]) -> dict[str,
         }}}, "required": ["items"], "additionalProperties": False,
     }
     instructions = (
-        "당신은 FITTA의 코디 추천 문장 편집자입니다. 각 조합에 이미 확정된 allowed_evidence만 사용해 "
-        "현재 유지하는 옷과 교체 상품이 왜 한 코디로 연결되는지 자연스러운 한국어 한 문장으로 쓰세요. "
+        "당신은 센스 있고 친절한 옷가게 점원이며, 지금 고객 앞에서 코디를 직접 보여 주며 설명하고 있습니다. "
+        "보고서나 판정 결과를 읽듯 쓰지 말고, 고객에게 말을 건네듯 부드러운 존댓말로 추천하세요. "
+        "각 조합에 이미 확정된 allowed_evidence만 사용해 현재 유지하는 옷과 교체 상품이 왜 자연스럽게 "
+        "이어지는지 한두 문장으로 설명하세요. '반영했습니다', '평가했습니다', '조건에 해당합니다'처럼 "
+        "기계적인 표현과 근거 항목의 단순 나열은 피하고, '이 조합은 ~해서 추천드려요', '~한 느낌을 "
+        "살리기 좋아요'처럼 실제 대화에 가까운 문장을 사용하세요. 여러 조합의 첫 문장과 종결 표현도 "
+        "똑같이 반복하지 마세요. "
+        "대화체로 바꾸는 것은 말투뿐이며 정보의 범위를 넓히는 것이 아닙니다. allowed_evidence에 정확히 없는 "
+        "편안함·활동성·활용도·착용감·코디 효과를 추측하지 마세요. 예를 들어 근거가 '트랙 재킷과 트랙팬츠의 "
+        "스포티 단서'와 '여유 있는 실루엣의 연결'이라면, '트랙 재킷과 트랙팬츠가 스포티한 방향을 잡아주고 "
+        "여유 있는 실루엣도 자연스럽게 이어져요'처럼 근거만 대화체로 옮기세요. "
         "새로운 색상·소재·핏·체형·목적·착용감·사이즈·가격 정보를 만들지 말고, 사용한 evidence_id를 "
-        "1~3개 반환하세요. 120자 이내이며 점수와 해시태그는 쓰지 마세요."
+        "1~3개 반환하세요. 규칙 ID나 evidence라는 말은 고객에게 보이지 말고, 140자 이내로 쓰며 점수와 "
+        "해시태그는 쓰지 마세요."
     )
     if provider == "gemini":
         body = {
@@ -241,7 +324,7 @@ def _llm_combination_reasons(combinations: list[OutfitCombination]) -> dict[str,
             "generationConfig": {"responseMimeType": "application/json", "responseJsonSchema": schema},
         }
         request = urllib.request.Request(
-            GEMINI_GENERATE_URL.format(model=urllib.parse.quote(os.environ.get("FASHION_LLM_MODEL", "gemini-2.5-flash-lite"), safe="-._")),
+            GEMINI_GENERATE_URL.format(model=urllib.parse.quote(os.environ.get("FASHION_LLM_MODEL", "gemini-3.5-flash-lite"), safe="-._")),
             data=json.dumps(body, ensure_ascii=False).encode(),
             headers={"x-goog-api-key": api_key, "Content-Type": "application/json"}, method="POST",
         )
@@ -307,6 +390,9 @@ def recommend_outfit_combinations(
     candidates: list[OutfitCombination] = []
     for index, selected in enumerate(cartesian_product(*(grouped[category] for category in selected_categories)), 1):
         chosen = list(selected)
+        sporty_passed, sporty_score, sporty_reason = _sporty_combination_coverage(chosen, profile)
+        if not sporty_passed:
+            continue
         by_category = {product.category: product for product in chosen}
         top = (
             _product_garment(by_category["top"], targets)
@@ -321,13 +407,22 @@ def recommend_outfit_combinations(
         if "shoes" in by_category:
             shoe_score, shoe_reason = _shoe_score(by_category["shoes"], profile, targets)
         retrieval = sum(rank_scores[product.product_id] for product in chosen) / len(chosen)
-        overall = 0.50 * retrieval + 0.40 * harmony + 0.10 * shoe_score
+        if sporty_context_enabled(profile):
+            overall = 0.45 * retrieval + 0.35 * harmony + 0.10 * shoe_score + 0.10 * sporty_score
+        else:
+            overall = 0.50 * retrieval + 0.40 * harmony + 0.10 * shoe_score
         evidence = _candidate_evidence(
-            chosen, selected_categories, list(current_by_category.values()),
+            chosen, targets, selected_categories, list(current_by_category.values()),
             harmony_reasons, harmony_rules, shoe_reason,
             silhouette_known=_usable(top["fit"]) and _usable(bottom["fit"]),
             color_known=_usable(top["color"]) and _usable(bottom["color"]),
         )
+        if sporty_reason:
+            insert_at = 1 if current_items else 0
+            evidence.insert(insert_at, CombinationEvidence(
+                "스포티 구성", sporty_reason, ("R-CTX-01", "R-CMP-02"),
+            ))
+            evidence = evidence[:3]
         candidates.append(OutfitCombination(
             f"OUTFIT-{index}", [product.product_id for product in chosen],
             list(current_by_category.values()), overall, evidence,
@@ -335,6 +430,18 @@ def recommend_outfit_combinations(
 
     selected_outfits: list[OutfitCombination] = []
     remaining = list(candidates)
+    category_by_product = {
+        product.product_id: product.category
+        for products in grouped.values() for product in products
+    }
+    # Products arrive after context and photo reranking. Diversity is therefore
+    # the final constraint, not a substitute for Fashion Rules. If a category
+    # has at least `limit` candidates, use a different item in every outfit.
+    unique_required = {
+        category for category, products in grouped.items()
+        if len(products) >= max(1, limit)
+    }
+    used_by_category = {category: set() for category in selected_categories}
     while remaining and len(selected_outfits) < max(0, limit):
         def diversified_score(candidate: OutfitCombination) -> float:
             overlap = max((
@@ -343,9 +450,20 @@ def recommend_outfit_combinations(
             ), default=0.0)
             return candidate.score - 0.12 * overlap
 
-        best = max(remaining, key=lambda candidate: (diversified_score(candidate), candidate.combination_id))
+        eligible = [
+            candidate for candidate in remaining
+            if all(
+                product_id not in used_by_category[category_by_product[product_id]]
+                for product_id in candidate.product_ids
+                if category_by_product[product_id] in unique_required
+            )
+        ]
+        pool = eligible or remaining
+        best = max(pool, key=lambda candidate: (diversified_score(candidate), candidate.combination_id))
         remaining.remove(best)
         selected_outfits.append(best)
+        for product_id in best.product_ids:
+            used_by_category[category_by_product[product_id]].add(product_id)
 
     for rank, combination in enumerate(selected_outfits, 1):
         combination.combination_id = f"OUTFIT-{rank}"

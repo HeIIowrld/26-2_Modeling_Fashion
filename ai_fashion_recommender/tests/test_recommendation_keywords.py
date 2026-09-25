@@ -123,6 +123,61 @@ class RecommendationKeywordTests(unittest.TestCase):
         self.assertTrue(lines)
         self.assertTrue(all("점" not in line and "/ 100" not in line for line in lines))
 
+    def test_live_reranking_rules_are_applied_only_to_relevant_contexts(self):
+        casual = self.generator.generate(
+            UserProfile(change_categories=["top", "bottom"], purpose="데일리",
+                        desired_style="캐주얼"), self.pose, self.outfit
+        )
+        formal = self.generator.generate(
+            UserProfile(change_categories=["top", "bottom"], purpose="출근",
+                        desired_style="포멀"), self.pose, self.outfit
+        )
+        self.assertIn("R-DET-01", casual.applied_rules)
+        self.assertIn("R-TREND-01", casual.applied_rules)
+        self.assertIn("R-DET-01", formal.applied_rules)
+        self.assertNotIn("R-TREND-01", formal.applied_rules)
+        self.assertIn("R-CTX-01", formal.applied_rules)
+
+    def test_formal_context_collects_formal_item_types_before_photo_material(self):
+        profile = UserProfile(
+            change_categories=["top", "bottom", "shoes"], purpose="출근",
+            desired_style="포멀", provided_fields=["purpose", "desired_style"],
+        )
+        result = self.generator.generate(profile, self.pose, self.outfit)
+
+        self.assertEqual(result.targets["top"]["item_type"][:2], ["셔츠", "블레이저"])
+        self.assertEqual(result.targets["bottom"]["item_type"][:2], ["슬랙스", "치노 팬츠"])
+        self.assertEqual(result.targets["shoes"]["item_type"][:2], ["더비슈즈", "로퍼"])
+        self.assertNotIn("material", result.targets["top"])
+        self.assertNotIn("material", result.targets["bottom"])
+        self.assertEqual(result.keyword_rules["top"]["셔츠"], ["R-CTX-01"])
+
+    def test_sporty_context_collects_athletic_item_types_before_photo_material(self):
+        profile = UserProfile(
+            change_categories=["top", "bottom", "shoes"], purpose="데일리",
+            desired_style="스포티", provided_fields=["purpose", "desired_style"],
+        )
+        result = self.generator.generate(profile, self.pose, self.outfit)
+
+        self.assertEqual(result.targets["top"]["item_type"][:2], ["트랙 재킷", "저지"])
+        self.assertEqual(result.targets["bottom"]["item_type"][:2], ["트랙팬츠", "조거팬츠"])
+        self.assertEqual(result.targets["shoes"]["item_type"][:2], ["러닝화", "스니커즈"])
+        self.assertNotIn("material", result.targets["top"])
+        self.assertNotIn("material", result.targets["bottom"])
+        self.assertEqual(result.keyword_rules["bottom"]["트랙팬츠"], ["R-CTX-01"])
+
+    def test_photo_material_fallback_stays_in_its_own_category(self):
+        profile = UserProfile(
+            change_categories=["top", "bottom"], purpose="데일리",
+            desired_style="캐주얼", provided_fields=["purpose", "desired_style"],
+        )
+        result = self.generator.generate(profile, self.pose, self.outfit)
+
+        self.assertEqual(result.targets["top"]["material"], ["니트"])
+        self.assertEqual(result.targets["bottom"]["material"], ["가죽"])
+        self.assertEqual(result.sources["top.material"], "photo_fallback")
+        self.assertEqual(result.sources["bottom.material"], "photo_fallback")
+
     def test_unreliable_photo_and_no_inputs_still_produce_searchable_keywords(self):
         unknown_outfit = OutfitAnalysis(
             "test", "분석 불가", "분석 불가", "보통 조합", [], "스타일 불확실"

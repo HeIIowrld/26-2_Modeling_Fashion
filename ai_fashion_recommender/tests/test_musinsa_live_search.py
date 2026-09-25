@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from musinsa_live_search import MusinsaLiveSearch, ShoppingProduct
 from recommendation_keywords import TargetKeywordResult
 from schemas import Product, UserProfile
+from fashion_ranking_policy import BOTTOM_FIT_TREND_WEIGHTS
 
 
 def item(
@@ -219,6 +220,7 @@ class MusinsaLiveSearchTests(unittest.TestCase):
         self.assertNotIn("retrieval_score", payload)
         self.assertEqual(payload["url"], "https://product")
         self.assertIn("recommendation_reason", payload)
+        self.assertEqual(payload["ranking_evidence_source"], "title")
 
     def test_public_payload_exposes_only_three_representative_search_keywords(self):
         product = ShoppingProduct(
@@ -242,6 +244,208 @@ class MusinsaLiveSearchTests(unittest.TestCase):
         results = search.search(bottom_only, self.profile, limit=1)
 
         self.assertEqual(results[0].url, "https://www.musinsa.com/products/77")
+
+    def test_wide_bottom_gets_small_configurable_trend_bonus(self):
+        wide = ShoppingProduct("W", "와이드 팬츠", "", 1, "", "", "bottom", retrieval_score=5)
+        straight = ShoppingProduct("S", "스트레이트 팬츠", "", 1, "", "", "bottom", retrieval_score=5)
+        self.assertEqual(BOTTOM_FIT_TREND_WEIGHTS["와이드핏"], 3.0)
+        self.search = MusinsaLiveSearch()
+        self.addCleanup(self.search.close)
+        self.search._apply_fashion_policy_adjustments(
+            {"bottom": [straight, wide]}, UserProfile(purpose="데일리", desired_style="캐주얼")
+        )
+        self.assertEqual(wide.retrieval_score, 8)
+        self.assertEqual(straight.retrieval_score, 3)
+        self.assertEqual(wide.ranking_adjustments["bottom_fit_trend"]["rule_id"], "R-TREND-01")
+
+    def test_semiwide_receives_seventy_percent_of_straight_deduction(self):
+        semiwide = ShoppingProduct("SW", "세미와이드 팬츠", "", 1, "", "", "bottom", retrieval_score=5)
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        search._apply_fashion_policy_adjustments(
+            {"bottom": [semiwide]}, UserProfile(purpose="데일리", desired_style="캐주얼")
+        )
+        self.assertEqual(BOTTOM_FIT_TREND_WEIGHTS["세미와이드"], -1.4)
+        self.assertEqual(semiwide.retrieval_score, 3.6)
+
+    def test_visual_straight_overrides_a_semiwide_product_title(self):
+        product = ShoppingProduct(
+            "SW", "세미와이드 팬츠", "", 1, "", "", "bottom", retrieval_score=5,
+            photo_attributes={"fit": {
+                "label": "스트레이트핏", "confidence": .96,
+                "source": "product_photo", "policy": "worn-fit-length-v1",
+            }},
+        )
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        search._apply_fashion_policy_adjustments(
+            {"bottom": [product]}, UserProfile(purpose="데일리", desired_style="캐주얼")
+        )
+        self.assertEqual(product.retrieval_score, 3)
+        self.assertEqual(product.ranking_adjustments["bottom_fit_trend"]["fit"], "스트레이트핏")
+
+    def test_current_policy_can_outrank_legacy_casual_fit_keywords(self):
+        search = StubSearch({"bottom": [
+            item(1, "스트레이트 데님 팬츠"),
+            item(2, "세미와이드 데님 팬츠"),
+            item(3, "와이드 데님 팬츠"),
+        ]})
+        target = TargetKeywordResult("mixed", {"bottom": {
+            "fit": ["스트레이트", "세미와이드"], "material": ["데님"],
+        }})
+        results = search.search(target, self.profile, limit=3)
+        self.assertEqual([product.product_id for product in results], ["MS3", "MS2", "MS1"])
+        self.assertFalse(any(query.startswith("와이드 ") for category, query in search.calls
+                             if category == "bottom"))
+
+    def test_trend_bonus_is_disabled_for_formal_work_interview_and_classic(self):
+        profiles = (
+            UserProfile(purpose="출근", desired_style="캐주얼"),
+            UserProfile(purpose="면접", desired_style="캐주얼"),
+            UserProfile(purpose="데일리", desired_style="포멀"),
+            UserProfile(purpose="데일리", desired_style="클래식"),
+            UserProfile(purpose="데일리", desired_style="캐주얼", dress_code="포멀"),
+        )
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        for profile in profiles:
+            product = ShoppingProduct("W", "와이드 팬츠", "", 1, "", "", "bottom", retrieval_score=5)
+            search._apply_fashion_policy_adjustments({"bottom": [product]}, profile)
+            self.assertEqual(product.retrieval_score, 5)
+
+    def test_plain_and_logo_only_tees_are_penalised_but_artwork_and_ringer_are_not(self):
+        plain = ShoppingProduct("P", "브랜드 기본 반팔 티셔츠", "", 1, "", "", "top", retrieval_score=5,
+                                photo_attributes={"design": {"item_type": "티셔츠", "plain_basic": True}})
+        graphic = ShoppingProduct("G", "아트워크 반팔 티셔츠", "", 1, "", "", "top", retrieval_score=5,
+                                  photo_attributes={"design": {"item_type": "티셔츠", "plain_basic": False}})
+        ringer = ShoppingProduct("R", "링거 반팔 티셔츠", "", 1, "", "", "top", retrieval_score=5,
+                                 photo_attributes={"design": {"item_type": "티셔츠", "plain_basic": True}})
+        large_logo = ShoppingProduct("L", "아치 로고 반팔 티셔츠", "", 1, "", "", "top", retrieval_score=5,
+                                     photo_attributes={"design": {"item_type": "티셔츠", "plain_basic": False}})
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        search._apply_fashion_policy_adjustments(
+            {"top": [plain, graphic, ringer, large_logo]}, UserProfile()
+        )
+        self.assertEqual(plain.retrieval_score, 3.75)
+        self.assertEqual(graphic.retrieval_score, 5)
+        self.assertEqual(ringer.retrieval_score, 5)
+        self.assertEqual(large_logo.retrieval_score, 3.75)
+        self.assertNotIn("ranking_adjustments", plain.public_dict())
+
+    def test_formal_context_guard_reranks_existing_candidates_only(self):
+        search = StubSearch({"top": [
+            item(1, "오버핏 후드티"),
+            item(2, "코튼 셔츠"),
+            item(3, "테일러드 블레이저"),
+        ]})
+        target = TargetKeywordResult("user_input", {"top": {}})
+        profile = UserProfile(purpose="출근", desired_style="클래식")
+        results = search.search(target, profile, limit=3)
+        self.assertEqual([product.product_id for product in results], ["MS3", "MS2", "MS1"])
+        self.assertTrue(all("와이드" not in query for _, query in search.calls))
+        self.assertEqual(results[0].ranking_adjustments["formal_context"]["rule_id"], "R-CTX-01")
+
+    def test_formal_query_uses_context_item_type_and_keeps_broad_fallback(self):
+        search = StubSearch({"top": [item(1, "옥스포드 셔츠")]})
+        target = TargetKeywordResult("user_input", {"top": {
+            "item_type": ["셔츠", "블레이저"], "style": ["포멀"],
+            "fit": ["레귤러"],
+        }})
+        search.search(target, UserProfile(purpose="출근", desired_style="포멀"), limit=1)
+
+        queries = [query for category, query in search.calls if category == "top"]
+        self.assertTrue(any("셔츠" in query for query in queries))
+        self.assertIn("베이직 상의", queries)
+
+    def test_oversized_leather_shacket_does_not_beat_regular_work_shirt(self):
+        shacket = ShoppingProduct(
+            "SH", "레더 카라 오버핏 체크 셔켓", "", 1, "", "", "top",
+            retrieval_score=6,
+        )
+        shirt = ShoppingProduct(
+            "DR", "레귤러 코튼 드레스 셔츠", "", 1, "", "", "top",
+            retrieval_score=5,
+        )
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        grouped = {"top": [shacket, shirt]}
+        search._apply_fashion_policy_adjustments(
+            grouped, UserProfile(purpose="출근", desired_style="포멀")
+        )
+        grouped["top"].sort(key=search._sort_key)
+
+        self.assertEqual(grouped["top"][0].product_id, "DR")
+        self.assertLess(shacket.ranking_adjustments["formal_context"]["value"], 0)
+
+    def test_interview_guard_is_stricter_than_work_guard(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        work = ShoppingProduct("W", "그래픽 티셔츠", "", 1, "", "", "top", retrieval_score=5)
+        interview = ShoppingProduct("I", "그래픽 티셔츠", "", 1, "", "", "top", retrieval_score=5)
+        search._apply_fashion_policy_adjustments(
+            {"top": [work]}, UserProfile(purpose="출근", desired_style="캐주얼")
+        )
+        search._apply_fashion_policy_adjustments(
+            {"top": [interview]}, UserProfile(purpose="면접", desired_style="캐주얼")
+        )
+        self.assertLess(interview.retrieval_score, work.retrieval_score)
+
+    def test_daily_casual_context_is_not_formality_reranked(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        hoodie = ShoppingProduct("H", "후드티", "", 1, "", "", "top", retrieval_score=5)
+        search._apply_fashion_policy_adjustments(
+            {"top": [hoodie]}, UserProfile(purpose="데일리", desired_style="캐주얼")
+        )
+        self.assertEqual(hoodie.retrieval_score, 5)
+        self.assertNotIn("formal_context", hoodie.ranking_adjustments)
+
+    def test_sporty_context_penalises_generic_denim_but_exempts_sports_brand_denim(self):
+        generic = ShoppingProduct(
+            "G", "레귤러 데님 팬츠", "패션브랜드", 1, "", "", "bottom",
+            retrieval_score=5,
+        )
+        branded = ShoppingProduct(
+            "N", "레귤러 데님 팬츠", "나이키", 1, "", "", "bottom",
+            retrieval_score=5,
+        )
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        search._apply_fashion_policy_adjustments(
+            {"bottom": [generic, branded]},
+            UserProfile(purpose="데일리", desired_style="스포티"),
+        )
+
+        self.assertEqual(generic.retrieval_score, 2.5)
+        self.assertEqual(branded.retrieval_score, 5)
+        self.assertTrue(branded.ranking_adjustments["sporty_context"]["brand_exempt"])
+        self.assertEqual(branded.ranking_adjustments["sporty_context"]["tier"], "compatible")
+
+    def test_sporty_context_rewards_track_items_in_more_than_shoes(self):
+        shirt = ShoppingProduct("SH", "체크 오버핏 셔츠", "", 1, "", "", "top", retrieval_score=5)
+        track = ShoppingProduct("TR", "사이드라인 트랙 재킷", "", 1, "", "", "top", retrieval_score=5)
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        search._apply_fashion_policy_adjustments(
+            {"top": [shirt, track]}, UserProfile(purpose="데일리", desired_style="스포티")
+        )
+        self.assertGreater(track.retrieval_score, shirt.retrieval_score)
+        self.assertEqual(track.ranking_adjustments["sporty_context"]["tier"], "strong")
+
+    def test_formal_guard_covers_bottoms_and_shoes(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        slacks = ShoppingProduct("SL", "테일러드 슬랙스", "", 1, "", "", "bottom", retrieval_score=5)
+        jogger = ShoppingProduct("JG", "스웨트 조거 팬츠", "", 1, "", "", "bottom", retrieval_score=5)
+        loafer = ShoppingProduct("LF", "페니 로퍼", "", 1, "", "", "shoes", retrieval_score=5)
+        sneaker = ShoppingProduct("SN", "러닝 스니커즈", "", 1, "", "", "shoes", retrieval_score=5)
+        grouped = {"bottom": [slacks, jogger], "shoes": [loafer, sneaker]}
+        search._apply_fashion_policy_adjustments(
+            grouped, UserProfile(purpose="면접", desired_style="포멀")
+        )
+        self.assertGreater(slacks.retrieval_score, jogger.retrieval_score)
+        self.assertGreater(loafer.retrieval_score, sneaker.retrieval_score)
 
 
 if __name__ == "__main__":

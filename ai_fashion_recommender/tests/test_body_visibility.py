@@ -31,11 +31,15 @@ def test_isolated_parser_noise_does_not_reject_regular_clothes():
 
 
 @pytest.mark.parametrize('field,label', [('fit', '오버핏'), ('fit', '여유핏'), ('lower_fit', '와이드핏'), ('lower_fit', '배기핏')])
-def test_loose_clothes_are_blocked_using_existing_attribute_evidence(field, label):
+def test_loose_clothes_warn_but_continue_using_existing_attribute_evidence(field, label):
     outfit, parsed = sample()
     setattr(outfit, field, label)
     outfit.attribute_sources[field] = 'trained_head'
-    assert assess_body_visibility(outfit, parsed)['status'] == 'occluded'
+    result = assess_body_visibility(outfit, parsed)
+    assert result['status'] == 'uncertain'
+    assert result['passed']
+    assert not result['issues']
+    assert any('참고값' in message for message in result['warnings'])
 
 
 def test_mask_width_alone_warns_instead_of_rejecting_the_photo():
@@ -63,14 +67,14 @@ def test_missing_parser_or_unknown_fit_warns_without_blocking():
         assert result['passed'] and result['warnings'] and not result['issues']
 
 
-def test_blocking_reasons_do_not_also_ask_for_circumferences():
-    # 차단 사유가 있으면 재촬영 안내만 내보낸다. 두 안내를 같이 주면 무엇을 해야 할지 흐려진다.
+def test_multiple_loose_fit_signals_remain_warnings_without_retake():
     outfit, parsed = sample()
     outfit.fit = '오버핏'
     outfit.attribute_sources['fit'] = 'trained_head'
     outfit.lower_fit = '와이드핏 추정'
     result = assess_body_visibility(outfit, parsed)
-    assert not result['passed'] and result['issues'] and not result['warnings']
+    assert result['passed'] and not result['issues'] and result['warnings']
+    assert result['status'] == 'uncertain'
 
 
 def test_warnings_reach_the_caller_alongside_existing_quality_warnings():

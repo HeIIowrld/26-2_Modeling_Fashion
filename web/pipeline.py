@@ -30,6 +30,7 @@ from config import (
     DATA_DIR,
     ENABLE_VTON,
     FASHION_ATTRIBUTE_HEADS_PATH,
+    FASHION_FIT_VISION_HEADS_PATH,
     OUTPUT_DIR,
     garment_image_path,
     resolve_catalog,
@@ -64,6 +65,7 @@ from catvton_tryon import (
 
 RULES_PATH = PROJECT_DIR / "FASHION_RULES_MASTER.md"
 ATTRIBUTE_HEADS_PATH = FASHION_ATTRIBUTE_HEADS_PATH
+FIT_VISION_HEADS_PATH = FASHION_FIT_VISION_HEADS_PATH
 
 PURPOSES = list(PURPOSE_STYLES)
 GENDERS = ["남성", "여성"]
@@ -223,6 +225,7 @@ def _build_engine() -> Engine:
     classifier = FashionClassifier(
         enabled=True,
         attribute_checkpoint=ATTRIBUTE_HEADS_PATH if ATTRIBUTE_HEADS_PATH.is_file() else None,
+        fit_checkpoint=FIT_VISION_HEADS_PATH if FIT_VISION_HEADS_PATH.is_file() else None,
     )
     # 어떤 CSV를 쓸지는 config.resolve_catalog 한 곳에서 정한다.
     # 상품 사진이 있는 크롤링 카탈로그(products_musinsa_enriched.csv)가 있으면
@@ -235,8 +238,12 @@ def _build_engine() -> Engine:
         recommender=RecommendationEngine(RULES_PATH, catalog),
         product_search=MusinsaLiveSearch(
             measurements=ProductMeasurementClient(DATA_DIR / "cache" / "product_measurements"),
-            photo_provider=LiveProductAttributes(clothing_parser, classifier.attribute_predictor)
-            if classifier.trained_attributes_enabled else None),
+            photo_provider=LiveProductAttributes(
+                clothing_parser,
+                classifier.attribute_predictor,
+                fit_predictor=classifier.fit_predictor,
+            )
+            if (classifier.trained_attributes_enabled or classifier.trained_fit_enabled) else None),
         tryon=_build_tryon(),
         device=classifier.device,
         trained_heads=classifier.trained_attributes_enabled,
@@ -623,7 +630,9 @@ def run_pipeline(
             profile,
             pose_result,
             target_keywords,
-            use_llm=False,
+            # The LLM may only rephrase the verified rule/keyword evidence;
+            # it cannot add purpose, budget, sizing or unsupported claims.
+            use_llm=True,
         )
         supported_categories = set(getattr(engine.tryon, "supported_categories", TRYON_PRODUCT_CATEGORIES))
         shoe_reason = ""
@@ -699,6 +708,9 @@ def run_pipeline(
             ),
             "product_color_overrides": getattr(
                 getattr(engine.recommender, "catalog", None), "color_override_count", 0
+            ),
+            "product_search": dict(
+                getattr(product_search, "last_search_stats", {}) or {}
             ),
         },
         "tryon": _adapter_tryon_status(engine.tryon),

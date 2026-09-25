@@ -1,0 +1,723 @@
+FITTA 상·하의 핏 인식 모델 — 사용자 사진/무신사 상품 사진 공용 파이프라인
+작성 목적: 추천시스템과 분리된 Computer Vision 핵심 과제로 핏 인식기를 발전시키고,
+동일한 학습 체크포인트를 (1) 사용자 착장 분석과 (2) 무신사 후보 재정렬에 두 번 사용한다.
+
+======================================================================
+0. 결론
+======================================================================
+
+주 모델
+  - 백본: Marqo/marqo-fashionSigLIP (ViT-B/16 계열)
+  - 전처리: FASHN Human Parser 의류 마스크 + MediaPipe 포즈
+  - 입력: 원본 문맥 이미지, 마스크를 적용한 의류 crop, 기하 특징 벡터
+  - 출력: 상의 핏/기장 또는 바지 실루엣/기장에 대한 멀티태스크 분류
+  - 학습: 1차로 백본 고정, 2차로 마지막 Transformer block 2개만 미세조정
+  - 배포: 사용자 사진과 상품 착용 사진 모두 같은 모델/같은 라벨/같은 전처리 사용
+
+비교 모델
+  - DINOv2 ViT-B/14 + 동일 분류 헤드
+  - 주 모델을 바로 교체하지 않고 같은 test split에서 비교한다.
+  - 사용자 사진과 상품 사진 양쪽의 macro-F1이 모두 개선될 때만 교체한다.
+
+FashionSigLIP을 우선하는 이유
+  1) 현재 프로젝트에서 이미 로드하고 있어 배포 구조를 재사용할 수 있다.
+  2) 패션 상품의 카테고리·색상·소재·세부 속성에 맞춰 학습된 임베딩이다.
+  3) 기존 22,341 crop 속성 헤드 체크포인트를 초기값과 baseline으로 쓸 수 있다.
+  4) DINOv2로 즉시 교체하면 기존 체크포인트와 검색 임베딩을 모두 다시 검증해야 한다.
+
+주의
+  - 이 모델은 사용자의 체형을 판정하는 모델이 아니다.
+  - 옷이 몸에 얼마나 붙는지, 바지통이 어떻게 변하는지를 판정한다.
+  - 크롭은 핏이 아니라 기장이다. 따라서 오버핏+크롭처럼 두 축을 동시에 출력한다.
+
+======================================================================
+1. 최종 클래스 체계
+======================================================================
+
+1-1. 상의 핏 upper_fit — 단일 클래스
+
+  U-FIT-01  슬림핏
+    몸통과 팔에 여유가 거의 없고 신체선을 따라가는 상의.
+
+  U-FIT-02  레귤러핏
+    몸통과 팔에 기본 여유가 있으나 어깨선과 품이 크게 확장되지 않은 상의.
+
+  U-FIT-03  여유핏(relaxed)
+    레귤러보다 품과 소매가 넉넉하지만 의도적인 과대 실루엣까지는 아닌 상의.
+
+  U-FIT-04  오버핏(oversized)
+    어깨선 하강, 넓은 품, 큰 소매 등 의도적인 과대 실루엣이 분명한 상의.
+
+1-2. 상의 기장 upper_length — 단일 클래스
+
+  U-LEN-01  크롭
+    밑단이 허리 또는 허리 위쪽에서 끝나는 상의.
+
+  U-LEN-02  기본 기장
+    밑단이 허리 아래부터 골반 부근 사이에 위치하는 일반적인 상의.
+
+  U-LEN-03  롱
+    밑단이 골반을 충분히 덮거나 허벅지 쪽까지 내려오는 상의.
+
+1-3. 바지 실루엣 bottom_silhouette — 단일 클래스
+
+  B-FIT-01  스키니
+    엉덩이부터 밑단까지 다리선을 거의 그대로 따라가는 바지.
+
+  B-FIT-02  슬림
+    허벅지와 종아리가 좁지만 피부에 완전히 밀착되지는 않는 바지.
+
+  B-FIT-03  스트레이트
+    허벅지부터 밑단까지 폭 변화가 작고 전체 폭이 보통 수준인 일자 바지.
+
+  B-FIT-04  세미와이드
+    스트레이트보다 확실히 넓지만 다리 전체가 크게 부풀어 보이지 않는 바지.
+    현재 모델에 없는 신규 핵심 클래스이며, 반드시 별도 라벨로 학습한다.
+
+  B-FIT-05  와이드
+    허벅지부터 밑단까지 넓은 여유가 지속되고 바지통의 존재감이 큰 바지.
+
+  B-FIT-06  벌룬
+    허벅지나 무릎 부근에서 가장 넓고 밑단으로 갈수록 다시 좁아지는 바지.
+
+  B-FIT-07  플레어·부츠컷
+    무릎 부근보다 밑단 폭이 눈에 띄게 넓어지는 바지.
+
+1-4. 하의 기장 bottom_length — 단일 클래스
+
+  B-LEN-01  쇼츠
+  B-LEN-02  무릎·7부
+  B-LEN-03  크롭·앵클
+  B-LEN-04  풀렝스
+
+1-5. 품질 상태 quality — 핏 클래스와 분리
+
+  Q-OK       판정 가능
+  Q-OCCLUDED 의류가 가방·손·외투 등에 가려짐
+  Q-POSE     정면에 가깝지 않거나 다리 교차가 심함
+  Q-CROP     의류 전체가 사진 밖으로 잘림
+  Q-FLATLAY  사람이 착용하지 않은 누끼/평면 상품 사진
+  Q-UNKNOWN  기타 판정 불가
+
+품질 상태는 학습 대상 핏 클래스에 섞지 않는다. Q-OK가 아니면 핏을 억지로 반환하지
+않고 분석 보류로 처리한다. 스커트와 원피스는 Phase 1 바지 핏 모델의 대상에서 제외한다.
+
+코드로 옮길 때 사용할 고정 순서
+
+  UPPER_FIT_CLASSES = ["슬림핏", "레귤러핏", "여유핏", "오버핏"]
+  UPPER_LENGTH_CLASSES = ["크롭", "기본 기장", "롱"]
+  BOTTOM_SILHOUETTE_CLASSES = [
+      "스키니", "슬림", "스트레이트", "세미와이드", "와이드", "벌룬", "플레어·부츠컷"
+  ]
+  BOTTOM_LENGTH_CLASSES = ["쇼츠", "무릎·7부", "크롭·앵클", "풀렝스"]
+
+======================================================================
+2. 같은 모델을 두 번 사용하는 구조
+======================================================================
+
+[사용자 사진 경로]
+  사용자 전신 사진
+    -> 사람/상의/하의 분할
+    -> 포즈 및 가시성 검사
+    -> 상의 crop + 하의 crop 생성
+    -> 공용 핏 모델 추론
+    -> 현재 착장 upper_fit, upper_length, bottom_silhouette, bottom_length 저장
+    -> 현재 코디 분석 및 가상착장 마스크 보조 정보로 전달
+
+[무신사 상품 경로]
+  무신사 후보 상품
+    -> 가능하면 착용 사진을 대표 이미지 또는 상세 이미지에서 선택
+    -> 사람/상의/하의 분할
+    -> 사용자 사진과 완전히 같은 crop/정규화
+    -> 같은 공용 핏 모델 추론
+    -> Fashion Rules가 요구한 핏과 비교
+    -> 상품 검색 점수와 코디 조합 점수 재정렬
+
+중요 원칙
+  - 사용자용 모델과 상품용 모델을 따로 학습하지 않는다.
+  - 입력 도메인만 다르고 체크포인트, 클래스 정의, confidence 정책은 같다.
+  - train/validation batch에는 user-like 사진과 shop/model 사진을 같은 비율로 섞는다.
+  - 상품 누끼 사진은 사람 대비 여유량을 알 수 없으므로 v1에서는 Q-FLATLAY로 보류한다.
+    누끼 전용 실루엣 모델은 향후 별도 보조 모델로만 추가한다.
+
+======================================================================
+3. 영상 전처리와 기하 특징
+======================================================================
+
+3-1. 분할과 crop
+
+  1) FASHN Human Parser로 사람, 상의, 바지 마스크를 얻는다.
+  2) MediaPipe로 어깨·골반·무릎·발목 관절을 얻는다.
+  3) 의류 마스크 bounding box에 10~15% margin을 둔 crop을 만든다.
+  4) crop은 종횡비를 보존하는 letterbox 방식으로 모델 기본 입력 크기에 맞춘다.
+  5) RGB crop과 배경을 제거한 masked crop 두 장을 같은 FashionSigLIP에 통과시킨다.
+  6) 두 임베딩과 아래 기하 특징을 결합해 속성 헤드에 넣는다.
+
+3-2. 상의 기하 특징 예시
+
+  - 의류 폭 / 어깨 폭: 가슴선, 허리선, 밑단선 각각 측정
+  - 의류 길이 / 어깨-골반 길이
+  - 의류 마스크 면적 / 상체 인체 영역 면적
+  - 어깨 seam 추정점과 실제 어깨 관절의 수평 거리
+  - 소매 폭 / 팔 길이
+
+3-3. 하의 기하 특징 예시
+
+  - 허벅지, 무릎, 밑단 위치의 마스크 폭 / 골반 폭
+  - 무릎 폭 / 허벅지 폭
+  - 밑단 폭 / 무릎 폭
+  - 바지 길이 / 골반-발목 길이
+  - 좌우 다리 마스크 분리 신뢰도
+  - 다리 관절 주변에서 의류 경계까지의 평균 여유 거리
+
+이 특징은 단독 규칙 판정값이 아니라 학습 모델에 들어가는 보조 입력이다. 촬영 거리와
+체형 차이를 줄이기 위해 픽셀값이 아니라 골반 폭·사지 길이로 정규화한다.
+
+======================================================================
+4. 모델 구조
+======================================================================
+
+입력 A: 원본 문맥 crop
+입력 B: 마스크 적용 garment crop
+입력 C: 정규화된 기하 특징 벡터
+
+  FashionSigLIP(A) ----\
+                        +--> feature fusion MLP --> 각 task head
+  FashionSigLIP(B) ----/
+  geometry(C) --------/
+
+공유 백본
+  - FashionSigLIP image encoder
+  - A와 B는 동일 가중치를 공유한다.
+
+fusion
+  - 두 이미지 임베딩, 기하 특징, 품질 특징을 concatenate
+  - LayerNorm -> Linear -> GELU -> Dropout
+
+출력 헤드
+  - upper_fit head: 4-class softmax
+  - upper_length head: 3-class softmax
+  - bottom_silhouette head: 7-class softmax
+  - bottom_length head: 4-class softmax
+  - quality head: 판정 가능 여부
+
+초기 버전은 상의 crop에 상의 헤드만, 하의 crop에 하의 헤드만 실행한다.
+
+======================================================================
+5. 데이터와 라벨링
+======================================================================
+
+5-1. 재사용 데이터
+
+  - 현재 22,341개 crop 및 기존 속성 라벨
+  - Fashionpedia: 의류 마스크와 속성 사전학습/보조 라벨에 사용
+  - DeepFashion2: consumer-shop pair, 의류 마스크, landmark로 도메인 차이 학습에 사용
+
+공개 데이터만으로 세미와이드/오버핏 경계를 정확히 만들기는 어렵다. 최종 핏 라벨은
+프로젝트 정의에 맞춰 직접 검수한 데이터가 필요하다.
+
+5-2. FITTA 전용 데이터
+
+  A. 상품 도메인
+    - 무신사 착용 이미지
+    - 상품 상세의 핏 정보는 초벌 라벨로만 사용
+    - 실제 사진을 사람이 확인해 최종 라벨 확정
+
+  B. 사용자 도메인
+    - 정면에 가까운 일상 전신 사진
+    - 다양한 체형, 조명, 배경, 휴대폰 화질 포함
+    - 동일 인물/동일 옷의 중복 프레임은 하나의 group_id로 관리
+
+5-3. 권장 수량
+
+  파일럿
+    - 상의 각 핏 300장 이상
+    - 바지 각 실루엣 300장 이상
+    - 사용자 도메인과 상품 도메인이 각각 최소 30% 이상
+
+  정식 학습
+    - 핵심 클래스당 800~1,500장 목표
+    - 특히 스트레이트/세미와이드/와이드는 비슷한 수량으로 맞춘다.
+    - Q-OCCLUDED/Q-POSE/Q-CROP 등 판정 불가 예시도 충분히 넣는다.
+
+5-4. 라벨링 원칙
+
+  - 상품명은 라벨러 보조 정보일 뿐 정답으로 자동 확정하지 않는다.
+  - 같은 사진을 2명이 독립 라벨링한다.
+  - 불일치한 스트레이트/세미와이드/와이드는 제3자가 확정한다.
+  - 애매한 사진을 억지로 클래스에 넣지 말고 quality=unknown으로 분리한다.
+  - Cohen's kappa 또는 Krippendorff's alpha로 라벨 일치도를 기록한다.
+
+======================================================================
+6. 데이터 분할 — 가장 중요한 누수 방지
+======================================================================
+
+학습/검증/테스트는 이미지 단위 random split을 사용하지 않는다.
+
+  - 무신사: product_id 단위 group split
+  - 사용자: person_id + outfit_id 단위 group split
+  - DeepFashion2: clothing identity/pair_id 단위 split
+
+같은 옷의 다른 사진이나 같은 사람의 연속 사진이 train과 test에 동시에 들어가면 모델이
+핏을 배운 것이 아니라 옷/인물을 외운 결과가 된다.
+
+권장 분할
+  - train 70%
+  - validation 15%
+  - held-out test 15%
+  - test는 user 도메인, shop 도메인 성능을 따로 보고한다.
+
+======================================================================
+7. 학습 순서
+======================================================================
+
+Stage 0 — 현재 모델 baseline 고정
+  - 현 fashion_attribute_heads_augmented.pt 성능을 새 test set에서 측정한다.
+  - confusion matrix와 도메인별 macro-F1을 저장한다.
+
+Stage 1 — 클래스/마스크 파이프라인 검증
+  - FashionSigLIP 백본 완전 고정
+  - 새 멀티태스크 head와 geometry branch만 학습
+  - RGB only, masked RGB, RGB+mask+geometry 세 조건을 비교한다.
+
+Stage 2 — 부분 파인튜닝
+  - FashionSigLIP 마지막 Transformer block 2개만 unfreeze
+  - backbone learning rate는 head learning rate의 1/10 이하
+  - mixed precision, class-balanced sampler, early stopping 사용
+
+Stage 3 — 도메인 균형
+  - 한 batch에 사용자/상품 사진을 균형 있게 구성
+  - 동일 의류의 consumer-shop pair가 있으면 두 이미지 예측 일관성 loss 추가
+  - 배경 제거 전후 예측이 과도하게 달라지지 않도록 consistency loss 추가
+
+Stage 4 — 비교 실험
+  - 동일 입력/동일 head로 DINOv2 ViT-B/14 frozen baseline 측정
+  - FashionSigLIP 대비 모든 핵심 도메인에서 좋아질 때만 교체
+
+권장 loss
+  total_loss = upper_fit_CE
+             + upper_length_CE
+             + bottom_silhouette_CE
+             + bottom_length_CE
+             + quality_CE
+             + optional_pair_consistency
+
+클래스 불균형이 크면 weighted cross entropy 또는 focal loss를 쓴다.
+
+======================================================================
+8. 평가 지표와 통과 기준
+======================================================================
+
+필수 지표
+  - 각 task accuracy
+  - 각 task macro-F1
+  - 클래스별 precision/recall/F1
+  - confusion matrix
+  - confidence calibration(ECE)
+  - confidence threshold별 coverage와 precision
+
+반드시 따로 볼 항목
+  - 사용자 사진 macro-F1
+  - 무신사 착용 사진 macro-F1
+  - 스트레이트 vs 세미와이드 vs 와이드 confusion
+  - 레귤러 vs 여유핏 vs 오버핏 confusion
+  - 가림/측면/다리 교차 시 abstain 정확도
+
+1차 배포 통과안
+  - 사용자와 상품 도메인 모두에서 주요 task macro-F1 0.75 이상 목표
+  - 스트레이트/세미와이드/와이드 각 precision 0.75 이상 목표
+  - 실제 서비스 confidence threshold에서는 precision 0.85 이상을 우선
+  - coverage가 낮더라도 모르는 사진을 억지로 맞히지 않는다.
+
+추천시스템 효과 평가
+  - 비전 미적용 vs 적용 Precision@3
+  - 사람이 평가한 최종 3개 조합의 핏 적합률
+  - 같은 상품 반복 추천률
+  - 사진 분석 P50/P95 지연 시간
+
+======================================================================
+9. 서비스 통합
+======================================================================
+
+공통 반환 형식 예시
+
+  {
+    "quality": {"status": "ok", "confidence": 0.96},
+    "upper_fit": {"label": "오버핏", "confidence": 0.91},
+    "upper_length": {"label": "크롭", "confidence": 0.88},
+    "bottom_silhouette": {"label": "세미와이드", "confidence": 0.93},
+    "bottom_length": {"label": "풀렝스", "confidence": 0.95},
+    "source": "shared_fit_model",
+    "model_version": "fit-v1"
+  }
+
+사용자 사진
+  - OutfitAnalysis.fit/lower_fit/bottom_length를 위 결과로 채운다.
+  - confidence가 낮으면 기존 마스크 기반 측정값 또는 분석 보류를 사용한다.
+
+무신사 상품
+  - photo_attributes에 같은 결과를 저장한다.
+  - Fashion Rules가 원하는 핏과 일치하면 가점, 충돌하면 감점한다.
+  - hard filter는 하지 않는다. 비전 오류 하나로 검색 전체가 망가지는 것을 막는다.
+
+캐시 키
+  - product_id + image_url + model_version
+  - 모델을 교체하면 기존 사진 판정 캐시가 자동 무효화되어야 한다.
+
+======================================================================
+10. 구현 순서
+======================================================================
+
+1) 위 클래스 정의를 팀에서 확정한다.
+2) 스트레이트/세미와이드/와이드 라벨링 예시판을 먼저 만든다.
+3) 기존 검증 데이터에 새 클래스 기준으로 재라벨링한다.
+4) 사용자 사진과 상품 착용 사진을 같은 CSV schema로 통합한다.
+5) parser crop/mask/geometry 추출기를 하나로 만든다.
+6) frozen FashionSigLIP 멀티태스크 baseline을 학습한다.
+7) RGB only 대비 mask+geometry ablation을 수행한다.
+8) 마지막 block 부분 파인튜닝을 수행한다.
+9) user/shop held-out test를 각각 평가한다.
+10) 기존 LiveProductAttributes와 OutfitAnalyzer에 같은 predictor를 연결한다.
+11) shadow mode로 기존 결과와 새 결과를 함께 저장한다.
+12) 사람 평가에서 개선이 확인된 후 기본 모델을 fit-v1으로 전환한다.
+
+======================================================================
+11. 현재 방식 대비 달라지는 점
+======================================================================
+
+현재
+  - 상품 사진 일부만 기존 속성 헤드로 분류
+  - 사람 착용 여부 확인 외에는 의류 마스크 기하를 적극 사용하지 않음
+  - 세미와이드 클래스 없음
+  - 사용자 사진과 상품 사진의 공통 성능 검증 부족
+
+개선 후
+  - 사용자 착장과 상품 착장에 완전히 같은 핏 모델 사용
+  - 의류 마스크 폭 변화와 포즈 정규화 특징 사용
+  - 세미와이드를 정식 독립 클래스로 학습
+  - 상품명과 무관하게 사진 근거로 핏 판정
+  - user/shop 도메인별 성능을 각각 측정
+  - 신뢰도가 낮은 경우 명시적으로 보류
+
+======================================================================
+12. 참고 자료
+======================================================================
+
+Marqo FashionSigLIP model card
+  https://huggingface.co/Marqo/marqo-fashionSigLIP
+
+DINOv2 official repository/model card
+  https://github.com/facebookresearch/dinov2
+  https://github.com/facebookresearch/dinov2/blob/main/MODEL_CARD.md
+
+Fashionpedia
+  https://fashionpedia.github.io/home/
+  https://github.com/cvdfoundation/fashionpedia
+
+DeepFashion2
+  https://github.com/switchablenorms/DeepFashion2
+  https://openaccess.thecvf.com/content_CVPR_2019/papers/Ge_DeepFashion2_A_Versatile_Benchmark_for_Detection_Pose_Estimation_Segmentation_and_CVPR_2019_paper.pdf
+
+======================================================================
+13. 생성모델 연동 — 헐렁한 옷 아래의 신체 위치를 보조하는 방법
+======================================================================
+
+13-1. 해결하려는 문제
+
+현재 하의 합성은 대체로 다음 정보에 의존한다.
+
+  - MediaPipe 골반·무릎·발목 관절
+  - FASHN Parser가 찾은 현재 바지 마스크
+  - 현재 바지 마스크를 확장한 long-hull/edit mask
+
+와이드 바지를 입은 사진에서는 바지 마스크의 바깥 경계와 실제 다리 경계의 차이가 크다.
+생성모델이 넓은 바지 마스크 전체를 사람의 하체 공간으로 받아들이면, 스트레이트 바지를
+합성할 때도 원래 와이드 윤곽을 따라 그리거나 다리가 비정상적으로 굵어질 수 있다.
+
+핏 모델은 이 문제에 다음과 같이 도움을 줄 수 있다.
+
+  "현재 바지는 와이드이고, 관절 중심선은 여기 있으므로 실제 다리는 바지 마스크보다
+   안쪽에 있을 가능성이 높다. 새 상품은 스트레이트이므로 생성 목표 영역도 그에 맞춰
+   더 좁게 잡아야 한다."
+
+단, 이것은 실제 신체 치수를 복원하는 기능이 아니다. 옷 아래 신체가 존재할 확률이 높은
+범위를 추정하는 가상착장 전용 body proxy이다.
+
+13-2. 출력값 확장
+
+공용 핏 모델에 다음 보조 출력을 추가한다.
+
+  A. fit classification
+    - 현재 옷: 스키니/슬림/스트레이트/세미와이드/와이드/벌룬/플레어
+    - 추천 상품: 동일 클래스
+
+  B. body center heatmap
+    - 골반-무릎-발목 관절을 잇는 좌우 다리 중심선의 확률 지도
+    - MediaPipe 좌표를 초기값으로 사용하고 의류 마스크/영상 특징으로 보정
+
+  C. body envelope 또는 clearance head
+    - hip, thigh, knee, calf, ankle 높이에서 예상 신체 반폭을 출력
+    - 값 자체보다 평균과 uncertainty를 함께 출력
+    - 예: knee_half_width_mean, knee_half_width_std
+
+  D. visibility/uncertainty
+    - 다리 교차, 가방 가림, 측면 자세, 무릎/발목 미검출 여부
+    - uncertainty가 높으면 새 기능을 사용하지 않고 기존 long-hull로 fallback
+
+권장 네트워크 입력
+
+  - 사용자 RGB
+  - 현재 바지 마스크
+  - MediaPipe 관절 heatmap
+  - 현재 핏 분류 결과
+
+권장 출력
+
+  {
+    "current_fit": {"label": "와이드", "confidence": 0.94},
+    "leg_center_heatmap": "HxW probability map",
+    "body_envelope": {
+      "hip": {"mean": 0.18, "std": 0.03},
+      "thigh": {"mean": 0.14, "std": 0.04},
+      "knee": {"mean": 0.10, "std": 0.03},
+      "calf": {"mean": 0.09, "std": 0.03},
+      "ankle": {"mean": 0.07, "std": 0.02}
+    },
+    "body_proxy_confidence": 0.86
+  }
+
+반폭 값은 이미지 픽셀이 아니라 골반 폭 또는 골반-발목 길이로 정규화한다.
+
+13-3. 생성용 마스크를 세 종류로 분리
+
+현재 옷의 마스크 하나만 변형해서 모든 역할을 맡기지 않는다.
+
+  1) source erase mask
+    - 현재 입고 있는 바지를 완전히 지울 영역
+    - 현재 바지 마스크 전체를 포함해야 한다.
+    - 좁은 목표 바지를 생성하더라도 기존 와이드 바지의 옆부분이 남으면 안 된다.
+
+  2) body proxy condition
+    - MediaPipe 관절 중심선과 body envelope head로 만든 확률 지도
+    - 실제 다리라고 단정하지 않고 생성 구조를 안내하는 조건으로만 사용한다.
+
+  3) target garment envelope
+    - 추천 상품 사진에서 공용 핏 모델이 판단한 target_fit으로 만든 목표 옷 범위
+    - 예: 스트레이트는 중심선 주위 폭을 일정하게, 와이드는 밑단까지 넓게,
+      벌룬은 허벅지/무릎을 넓히고 밑단을 다시 좁게 만든다.
+
+핵심은 "현재 와이드 바지 마스크 = 실제 다리"로 쓰지 않는 것이다.
+
+13-4. CatVTON에 적용하는 현실적인 1단계
+
+현재 CatVTON 인터페이스는 별도의 body heatmap을 직접 조건으로 받지 않는다. 따라서 처음에는
+생성모델을 재학습하지 않고 마스크 정책을 개선한다.
+
+기존
+  current lower mask -> long_bottom_mask() -> CatVTON edit mask
+
+개선
+  현재 사용자 사진
+    -> current_fit + body proxy
+  추천 상품 사진
+    -> target_fit + target_length
+  current garment mask + body proxy + target envelope
+    -> fit_aware_lower_mask()
+    -> CatVTON edit mask
+
+fit_aware_lower_mask 정책
+
+  - 공통: 얼굴, 머리, 손, 가방, 상의는 계속 보호한다.
+  - 현재 바지 전체는 source erase mask에 넣어 원래 실루엣을 지운다.
+  - target envelope를 포함해 새 바지가 생성될 공간을 확보한다.
+  - 관절이 검출된 주 사용자에게만 적용한다.
+  - current_fit 또는 target_fit confidence가 낮으면 기존 long-hull로 fallback한다.
+
+특히 "와이드 현재 바지 -> 스트레이트 새 바지"는 다음 두 영역으로 나눈다.
+
+  - 가운데 target envelope: 새 스트레이트 바지를 그리는 영역
+  - 원래 와이드 바지의 옆부분: 바지가 아니라 배경/공간으로 복원해야 하는 영역
+
+한 번의 CatVTON 패스로 옆부분 배경 복원이 불안정하면 아래 2-pass를 실험한다.
+
+  Pass 1: 현재 와이드 바지 옆부분을 배경으로 복원
+  Pass 2: body proxy와 target envelope에 맞춰 새 바지를 생성
+
+1-pass와 2-pass는 같은 평가 세트로 비교한 뒤 선택한다.
+
+13-5. 더 강한 2단계 — 생성모델에 body proxy를 직접 조건으로 입력
+
+마스크 조정만으로 부족하면 CatVTON의 입력부에 작은 adapter/ControlNet 계열 조건을 추가한다.
+
+추가 조건 채널
+  - 좌우 골반/무릎/발목 heatmap
+  - body envelope probability map
+  - target garment envelope
+  - current_fit/target_fit embedding
+
+이 경우 생성모델 전체를 처음부터 학습하지 않는다.
+
+  1) CatVTON 본체 동결
+  2) body-condition adapter만 학습
+  3) 필요할 때만 attention block 일부를 LoRA로 미세조정
+
+분류기의 label 문자열만 생성모델에 주는 것보다 확률 지도와 공간 마스크를 주는 것이 중요하다.
+생성모델은 "와이드"라는 단어보다 어느 픽셀에 다리가 있고 어느 범위에 옷을 그려야 하는지를
+공간적으로 받아야 한다.
+
+13-6. body proxy 학습 데이터
+
+일반 사진에는 헐렁한 옷 아래의 실제 다리 경계 정답이 없다. 따라서 실제 사진만으로 정확한
+body envelope supervision을 만들 수 없으며 다음 순서로 학습한다.
+
+  A. 보이는 신체 기반 pseudo-ground-truth
+    - 레깅스, 스키니, 짧은 하의 등 다리 경계가 비교적 분명한 사진
+    - 인체 parser + 관절을 이용해 body proxy 정답 생성
+
+  B. synthetic loose-garment augmentation
+    - 위 사진의 실제 body proxy는 유지
+    - 바지 마스크만 세미와이드/와이드/벌룬 형태로 인공 확장
+    - 넓어진 옷 마스크 안에서 원래 body proxy를 복원하도록 학습
+
+  C. 가상 인체 데이터
+    - SMPL/3D 인체 렌더 또는 사용 허가된 가상착장 데이터가 있으면 보조 학습
+    - 실제 사진 도메인으로 fine-tuning
+
+  D. paired consistency
+    - 같은 사람이 타이트한 바지와 와이드 바지를 입은 paired 사진이 있으면
+      두 사진의 body proxy가 비슷하도록 consistency loss 적용
+
+body proxy는 성별이나 체형 평균값만 외우면 안 된다. 관절 위치와 관찰 가능한 신체 근거를 우선하며,
+불확실할 때 넓은 분포(std 증가)를 반환하도록 학습한다.
+
+13-7. 생성모델 연동 loss와 평가
+
+body proxy head 학습 loss
+
+  total_cv_loss = fit_classification_loss
+                + center_heatmap_loss
+                + envelope_regression_loss
+                + uncertainty_calibration_loss
+                + paired_consistency_loss
+
+생성 결과 평가
+
+  - 관절 중심 보존: 생성 후 바지 중심선과 hip-knee-ankle 선의 거리
+  - 목표 핏 충실도: 생성 결과를 공용 핏 모델에 다시 넣었을 때 target_fit 일치율
+  - 원래 핏 잔류율: current_fit 특징이 결과에 남은 비율
+  - 다리 폭 과장률: body proxy 대비 생성 바지 폭의 비정상 확대 빈도
+  - 옆 배경 복원 오류: 현재 와이드 바지의 측면 영역에 잔상/번짐이 남는 비율
+  - 신발/손/가방 보존율
+  - 사람 평가: 핏 자연스러움, 신체 구조 자연스러움, 상품 재현성
+
+필수 A/B
+
+  A0: 기존 long-hull
+  A1: fit class만 사용한 target-aware mask
+  A2: fit class + MediaPipe skeleton tube
+  A3: fit class + learned body proxy
+  A4: learned body proxy + 2-pass generation
+
+13-8. 서비스 fallback과 안전장치
+
+  - body_proxy_confidence가 검증 임계값 미만이면 기존 long-hull 사용
+  - 좌우 무릎 또는 발목이 모두 없으면 좁은 목표 바지 합성을 보류하거나 기존 정책 사용
+  - 다리 교차/측면 자세/긴 외투 가림은 quality head가 보류
+  - body proxy는 UI에서 실제 신체 치수나 체형 분석 결과로 노출하지 않음
+  - 중간 heatmap과 mask는 디버그 모드에서만 저장하고 일반 응답에서는 제거
+  - 생성 결과를 공용 핏 모델로 재검사해 목표 핏과 다르면 경고 또는 재시도
+
+13-9. 코드 통합 예정 위치
+
+  fashion_attribute_model.py
+    - body center/envelope auxiliary head 추가
+
+  outfit_analyzer.py
+    - 사용자 current_fit과 body proxy를 context에 저장
+
+  live_product_attributes.py
+    - 상품 target_fit/target_length 추론
+
+  catvton_tryon.py
+    - fit_aware_lower_mask() 추가
+    - 기존 shape_lower_mask()/long_bottom_mask()의 다음 세대 정책
+    - current_fit, target_fit, body_proxy를 받아 edit mask 생성
+
+  tryon_quality.py
+    - 생성 결과의 target_fit 재분류와 관절 중심 보존 검사
+
+13-10. 개발 순서
+
+  1) 공용 핏 분류기부터 검증한다.
+  2) 분류 결과만 사용한 target-aware mask(A1)를 구현한다.
+  3) MediaPipe skeleton tube(A2)를 추가한다.
+  4) 타이트한 하의에서 body proxy pseudo-label 생성기를 만든다.
+  5) body center/envelope auxiliary head(A3)를 학습한다.
+  6) 기존 long-hull과 A1/A2/A3를 동일 사진에서 비교한다.
+  7) 필요할 때만 2-pass 또는 생성모델 adapter(A4)를 진행한다.
+
+추천 우선순위는 A1 -> A2 -> A3이다. 공용 핏 분류가 정확하지 않은 상태에서 body proxy나
+생성 adapter까지 동시에 학습하면 어느 부분이 실패했는지 분리하기 어렵다.
+
+======================================================================
+14. 현재 코드 구현 상태와 GPU 학습 명령
+======================================================================
+
+구현 완료
+  - fit_vision_schema.py: 상의 핏/기장, 하의 실루엣/기장, quality 라벨 계약
+  - fit_vision_dataset.py: CSV 검증과 product_id/person+outfit group split 누수 검사
+  - fit_vision_model.py: RGB + masked RGB + geometry 공용 predictor
+  - fit_vision_training.py: frozen FashionSigLIP embedding cache, 멀티태스크 head 학습
+  - outfit_analyzer.py: 사용자 착장 current fit에 같은 predictor 연결
+  - live_product_attributes.py: 무신사 착용 사진 target fit에 같은 predictor 연결
+  - musinsa_live_search.py: 사진 핏과 Fashion Rule 요구 핏을 비교해 후보 재정렬
+
+중요
+  models/fit_vision_heads.pt가 없으면 기존 속성 헤드/상품명 로직으로 자동 fallback한다.
+  즉 지금 코드는 학습과 배포 연결까지 준비된 상태이고, 실제 새 CV 정확도는 데이터를
+  라벨링하고 GPU에서 체크포인트를 만든 뒤 검증해야 한다.
+
+CSV 시작 파일
+  data/fit_vision_annotations.template.csv
+
+1) 템플릿을 복사해 실제 경로와 라벨을 채운다.
+   같은 상품 product_id 또는 같은 person_id+outfit_id는 group_id를 동일하게 유지한다.
+   동일 group_id를 train/val/test에 나누면 loader가 즉시 오류를 낸다.
+
+2) FashionSigLIP 임베딩 캐시 생성
+
+  python scripts/train_fit_vision.py cache \
+    --annotations-csv data/fit_vision_annotations.csv \
+    --image-root data/fit_vision \
+    --train-cache outputs/fit_train.pt \
+    --val-cache outputs/fit_val.pt \
+    --device cuda
+
+3) 최종 v1 학습
+
+  python scripts/train_fit_vision.py train \
+    --train-cache outputs/fit_train.pt \
+    --val-cache outputs/fit_val.pt \
+    --output-checkpoint models/fit_vision_heads.pt \
+    --feature-mode rgb_mask_geometry \
+    --device cuda
+
+4) 필수 ablation
+
+  위 train 명령의 --feature-mode와 output 이름을 바꾸어 아래 5개를 같은 split으로 돌린다.
+
+  rgb_only
+  masked_only
+  rgb_mask
+  rgb_geometry
+  rgb_mask_geometry
+
+각 체크포인트 옆 metrics.json에 아래 결과가 저장된다.
+  - task별 accuracy, macro-F1, 클래스별 F1
+  - source_domain(user/shop)별 accuracy, macro-F1, 클래스별 F1
+  - straight/세미와이드/wide 및 regular/relaxed/oversized 경계 성능
+
+배포 채택 조건
+  - 전체 성능만 보지 않고 user와 shop 양쪽 macro-F1이 모두 개선된 모델을 고른다.
+  - 최종 체크포인트 이름을 models/fit_vision_heads.pt로 둔 뒤 서버를 재시작한다.
+  - 다른 위치를 쓰면 FASHION_FIT_VISION_HEADS_PATH 환경변수에 절대경로를 지정한다.

@@ -112,6 +112,12 @@ FASHION_ATTRIBUTE_HEADS_PATH = resolve_path(
     os.environ.get("FASHION_ATTRIBUTE_HEADS_PATH"),
     "models/fashion_attribute_heads_augmented.pt",
 )
+# 사용자 착장과 무신사 착용 사진에 같은 기준을 적용하는 공용 핏 헤드.
+# 아직 학습 전인 저장소에서도 서버가 뜨도록, 호출부는 파일이 있을 때만 로드한다.
+FASHION_FIT_VISION_HEADS_PATH = resolve_path(
+    os.environ.get("FASHION_FIT_VISION_HEADS_PATH"),
+    "models/fit_vision_heads.pt",
+)
 # 목·커프스·밑단·앞여밈 ROI를 함께 보는 별도 레이어드 헤드. 아직 학습 전이면
 # 파일이 존재하지 않으며 기존 zero-shot/속성 충돌 fallback을 그대로 사용한다.
 LAYERING_HEADS_PATH = resolve_path(

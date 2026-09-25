@@ -29,6 +29,11 @@ data/fashion200k_bottoms/images/
 data/fashion200k_bottoms/cache/
 data/cache/
 
+# 공용 핏 모델의 원본 사진·마스크·개인 라벨은 로컬/GPU 스토리지에만 둔다.
+data/fit_vision/images/
+data/fit_vision/masks/
+data/fit_vision/*.csv
+
 # 실험 중간 가중치는 재생성 가능하다. 리포트(md/json)는 저장소에 포함한다.
 reports/runs/
 reports/*_assembled_states.pt
