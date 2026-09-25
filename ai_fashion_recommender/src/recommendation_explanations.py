@@ -1,8 +1,9 @@
 """웹 결과에 표시할 짧고 개인화된 추천 설명을 만든다.
 
-서버가 실제 상품명과 매칭된 키워드, 적용 규칙, 분석 신뢰도를 먼저 검증한다.
+서버가 내부적으로 매칭한 키워드, 적용 규칙, 분석 신뢰도를 먼저 검증한다.
 LLM은 이 검증을 통과한 근거만 자연스러운 한 문장으로 다듬으며 새로운 추천
-근거를 판단하거나 추가하지 않는다.
+근거를 판단하거나 추가하지 않는다. 상품명은 카드 표시와 내부 검증에는 유지하되
+사용자에게 보이는 추천 이유나 근거 문장에는 노출하지 않는다.
 """
 
 from __future__ import annotations
@@ -40,6 +41,10 @@ BODY_LANGUAGE = ("체형", "다리", "상체", "하체", "신체 비율", "허�
 FORBIDDEN_REASON_LANGUAGE = (
     "예산", "가격", "할인", "가성비", "비용", "만원", "원대",
     "사이즈", "실측", "정사이즈",
+)
+PRODUCT_NAME_LANGUAGE = (
+    "상품명", "상품 이름", "제품명", "제품 이름", "이름에", "이름에서",
+    "이름으로", "타이틀", "title",
 )
 UNSUPPORTED_PURPOSE_LANGUAGE = ("데일리", "데이트", "출근", "면접", "하객", "여행")
 
@@ -121,7 +126,7 @@ def build_product_evidence(product: Any, profile: UserProfile, pose: PoseAnalysi
     if category != "shoes" and fit_keywords:
         fit_rules = tuple(dict.fromkeys(rule for keyword in fit_keywords for rule in rules_of(keyword)))
         fit_source = source_of(attribute_of(fit_keywords[0]))
-        text = f"추천 규칙에서 도출된 '{quoted(fit_keywords)}' 핏이 상품명과 일치합니다."
+        text = f"추천 규칙에서 도출된 '{quoted(fit_keywords)}' 핏 조건을 충족합니다."
         evidence.append(ProductEvidence(
             "fit", "핏", text, fit_rules, "핏 규칙", tuple(fit_keywords), fit_source,
         ))
@@ -135,7 +140,7 @@ def build_product_evidence(product: Any, profile: UserProfile, pose: PoseAnalysi
         item_rules = tuple(dict.fromkeys(rule for keyword in item_keywords for rule in rules_of(keyword)))
         evidence.append(ProductEvidence(
             "item_type", "종류",
-            f"추천 조건에서 도출된 '{quoted(item_keywords)}' 종류가 상품명과 일치합니다.",
+            f"추천 조건에서 도출된 '{quoted(item_keywords)}' 종류에 해당합니다.",
             item_rules, "상품 종류", tuple(item_keywords), source_of("item_type"),
         ))
         cited.update(item_keywords)
@@ -146,7 +151,7 @@ def build_product_evidence(product: Any, profile: UserProfile, pose: PoseAnalysi
         prefix = "선택한" if style_source == "user_input" else "현재 착장에서 확인된"
         evidence.append(ProductEvidence(
             "style", "스타일",
-            f"{prefix} '{style_keywords[0]}' 스타일 키워드가 상품명과 일치합니다.",
+            f"{prefix} '{style_keywords[0]}' 스타일 조건에 맞습니다.",
             tuple(rules_of(style_keywords[0])), "스타일", tuple(style_keywords), style_source,
         ))
         cited.update(style_keywords)
@@ -158,7 +163,7 @@ def build_product_evidence(product: Any, profile: UserProfile, pose: PoseAnalysi
         prefix = "현재 착장에서 확인된" if detail_sources and all(source == "photo_fallback" for source in detail_sources) else "선택한"
         evidence.append(ProductEvidence(
             "detail", "·".join(dict.fromkeys(labels[attr] for _, attr in details)),
-            f"{prefix} {names} 조건이 상품명과 일치합니다.",
+            f"{prefix} {names} 조건에 맞습니다.",
             tuple(dict.fromkeys(rule for keyword, _ in details for rule in rules_of(keyword))),
             "상품 속성", tuple(keyword for keyword, _ in details),
             ",".join(dict.fromkeys(detail_sources)),
@@ -210,6 +215,15 @@ def _fallback_reason(evidence: Iterable[ProductEvidence] = ()) -> str:
     """검증된 첫 근거만 사용한다. 근거가 없으면 설명을 지어내지 않는다."""
     evidence = list(evidence)
     return evidence[0].text if evidence else ""
+
+
+def _mentions_product_name(reason: str, product_name: str = "") -> bool:
+    """상품명 자체나 상품명을 근거로 삼는 표현을 사용자 문장에서 차단한다."""
+    folded = "".join(reason.casefold().split())
+    if any("".join(term.casefold().split()) in folded for term in PRODUCT_NAME_LANGUAGE):
+        return True
+    normalized_name = "".join(str(product_name or "").casefold().split())
+    return bool(normalized_name and len(normalized_name) >= 4 and normalized_name in folded)
 
 
 def _output_text(response: dict[str, Any]) -> str:
@@ -293,13 +307,14 @@ def _llm_reasons(
     instructions = (
         "당신은 센스 있고 친절한 옷가게 점원이며, 고객에게 상품을 직접 보여 주며 설명하고 있습니다. "
         "보고서처럼 근거를 나열하지 말고 자연스러운 존댓말로 말을 건네세요. '추천 규칙에서 도출된', "
-        "'상품명과 일치합니다', '조건을 반영했습니다', '해당 상품입니다'처럼 기계적인 문구는 피하고, "
+        "'조건을 반영했습니다', '해당 상품입니다'처럼 기계적인 문구는 피하고, "
         "'이 제품은 ~해서 추천드려요', '~을 찾으셨다면 눈여겨보셔도 좋아요'처럼 대화하듯 작성하세요. "
         "여러 상품의 문장 시작과 끝맺음도 똑같이 반복하지 마세요. "
         "대화체로 바꾸는 것은 말투뿐이며 정보의 범위를 넓히는 것이 아닙니다. allowed_evidence에 정확히 없는 "
-        "편안함·활동성·활용도·착용감·코디 효과를 추측하지 마세요. 예를 들어 확인된 근거가 '와이드 핏이 "
-        "상품명과 일치'뿐이라면 '와이드 핏을 찾으셨다면 이 바지를 눈여겨보세요. 상품명에서도 원하신 핏이 "
-        "확인돼요'처럼 그 사실만 자연스럽게 말하세요. "
+        "편안함·활동성·활용도·착용감·코디 효과를 추측하지 마세요. 예를 들어 확인된 근거가 '와이드 핏 "
+        "조건을 충족함'뿐이라면 '와이드 핏을 찾으셨다면 이 바지를 눈여겨보세요'처럼 그 사실만 "
+        "자연스럽게 말하세요. 상품명은 상품 식별용으로만 참고하고, 추천 근거 문장에서는 상품명·제품명·"
+        "이름·타이틀을 근거로 언급하거나 실제 상품명을 문장에 옮기지 마세요. "
         "추천 여부와 근거는 서버가 결정했으므로 새로운 근거를 판단하거나 추가하지 마세요. "
         "각 상품의 allowed_evidence에 있는 사실과 matched_keywords만 사용하고, 사용한 근거의 "
         "evidence_id를 evidence_ids에 1~3개 반환하세요. 제공된 근거에 없는 속성, 사용자 목적, "
@@ -308,7 +323,7 @@ def _llm_reasons(
         "보정 표현을 쓰지 마세요. 입력 근거가 하나면 하나만 설명하고, 근거가 없는 상품은 출력하지 마세요. "
         "matched_keywords의 표현을 최소 하나 포함해 고객에게 직접 말하는 한두 문장으로 작성하되 해시태그와 점수는 "
         "쓰지 말고 140자 이내로 작성하세요. 규칙 ID나 evidence라는 말도 노출하지 마세요. 상품 사진 근거가 있으면 반드시 그 근거를 인용하고 "
-        "'상품 사진'과 '추정'을 명시하세요. 이 경우 상품명과 일치한다고 쓰지 마세요."
+        "'상품 사진'과 '추정'을 명시하세요."
     )
     if provider == "gemini":
         model = os.environ.get("FASHION_LLM_MODEL", "gemini-3.5-flash-lite")
@@ -382,9 +397,10 @@ def _llm_reasons(
         selected = [allowed[evidence_id] for evidence_id in evidence_ids]
         if any(e.kind == "product_photo" for e in allowed.values()):
             if (not any(e.kind == "product_photo" for e in selected)
-                    or "상품 사진" not in reason or "추정" not in reason or "상품명" in reason):
+                    or "상품 사진" not in reason or "추정" not in reason):
                 continue
-        if any(word in reason for word in FORBIDDEN_REASON_LANGUAGE + UNSUPPORTED_PURPOSE_LANGUAGE):
+        if (_mentions_product_name(reason, product.name)
+                or any(word in reason for word in FORBIDDEN_REASON_LANGUAGE + UNSUPPORTED_PURPOSE_LANGUAGE)):
             continue
         has_body_evidence = any(evidence.kind in {"body_shape", "proportion"} for evidence in selected)
         if (product.category == "shoes" or not has_body_evidence) and any(word in reason for word in BODY_LANGUAGE):
