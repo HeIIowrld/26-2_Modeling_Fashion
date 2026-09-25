@@ -6,7 +6,11 @@ import numpy as np
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-from body_visibility import assess_body_visibility, with_body_visibility
+from body_visibility import (
+    assess_body_visibility,
+    body_shape_analysis_allowed,
+    with_body_visibility,
+)
 
 
 def sample():
@@ -15,13 +19,15 @@ def sample():
 
 
 @pytest.mark.parametrize('label', [4, 5])
-def test_skirt_or_dress_blocks_silhouette_measurement(label):
+def test_skirt_or_dress_warns_and_disables_body_shape_without_blocking(label):
     outfit, parsed = sample()
     parsed['segmentation'][50:] = label
     result = assess_body_visibility(outfit, parsed)
     assert result['status'] == 'occluded'
-    assert not result['passed']
-    assert '치마' in result['issues'][0]
+    assert result['passed']
+    assert not result['issues']
+    assert any('치마' in warning for warning in result['warnings'])
+    assert not result['body_shape_reliable']
 
 
 def test_isolated_parser_noise_does_not_reject_regular_clothes():
@@ -86,10 +92,22 @@ def test_warnings_reach_the_caller_alongside_existing_quality_warnings():
     assert len(result['warnings']) > 1
 
 
-def test_padded_outerwear_is_rejected_even_with_regular_fit_label():
+def test_occluded_photo_disables_only_photo_body_shape_rules():
+    outfit, parsed = sample()
+    parsed['segmentation'][50:] = 5
+    result = with_body_visibility({'passed': True, 'issues': [], 'warnings': []}, outfit, parsed)
+    assert result['passed']
+    assert not body_shape_analysis_allowed(result)
+    assert body_shape_analysis_allowed(result, has_circumferences=True)
+
+
+def test_padded_outerwear_warns_without_rejecting_the_photo():
     outfit, parsed = sample()
     outfit.outer_category = '패딩'
-    assert assess_body_visibility(outfit, parsed)['status'] == 'occluded'
+    result = assess_body_visibility(outfit, parsed)
+    assert result['status'] == 'occluded'
+    assert result['passed'] and not result['issues']
+    assert any('외투' in warning for warning in result['warnings'])
 
 
 def test_visibility_does_not_override_other_quality_failures():

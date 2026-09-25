@@ -107,8 +107,8 @@ MOCK_LENGTH_PROMPT = (
 # 조건 입력 전 사진 검사(/api/validate-photo). 파일 이름으로 판정을 고를 수 있게 해서
 # 프런트에서 차단·경고·통과 세 경로를 모두 눌러볼 수 있게 한다.
 MOCK_PREFLIGHT = {
-    "skirt": (False, ["치마·원피스가 골반과 다리 윤곽을 가려 사진 기반 체형 분석에 적합하지 않습니다.",
-                      "몸선을 가리지 않는 상의와 일자 또는 슬림한 바지를 입고 다시 촬영해 주세요. 노출이 많은 옷은 필요하지 않습니다."], []),
+    "skirt": (True, [], ["치마·원피스가 골반과 다리 윤곽을 가려 사진 기반 체형 분석은 보류합니다.",
+                          "현재 사진으로 확인 가능한 착장 분석과 추천은 계속합니다."]),
     "loose": (True, [], ["하의 윤곽과 몸선을 구분하기 어렵습니다. 옷의 폭을 체형으로 사용하지 않습니다.",
                          "옷 때문에 체형 판정이 정확하지 않을 수 있습니다. 실제 둘레를 입력하면 그 값을 우선 사용합니다."]),
     "blur": (False, ["사진에서 사람의 정면 전신을 확인할 수 없습니다. 정면 전신사진을 사용하세요."], []),
@@ -121,10 +121,13 @@ def _mock_preflight(filename: str) -> dict:
         if keyword in filename.lower():
             valid, issues, warnings = verdict
             break
+    visibility_status = (
+        "occluded" if "skirt" in filename.lower()
+        else "uncertain" if warnings else "no_obvious_occlusion"
+    )
     return {"valid": valid, "issues": issues, "warnings": warnings,
             "quality": {"passed": valid, "issues": issues, "warnings": warnings,
-                        "body_visibility": {"status": "occluded" if issues else "uncertain" if warnings
-                                            else "no_obvious_occlusion",
+                        "body_visibility": {"status": visibility_status,
                                             "passed": valid, "calibrated": False}}}
 
 
