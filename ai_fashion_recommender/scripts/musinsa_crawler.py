@@ -28,7 +28,9 @@ import sys
 # 런타임 모듈은 src/에 있다. 임포트 전에 경로를 등록한다.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from config import DATA_DIR, GARMENT_RAW_DIR, REPO_DIR
+from config import DATA_DIR, GARMENT_RAW_DIR, REPO_DIR  # noqa: E402
+from product_colors import title_palettes  # noqa: E402
+from product_measurements import color_options_from  # noqa: E402
 from schemas import BODY_SHAPES
 
 API_URL = "https://api.musinsa.com/api2/dp/v2/plp/goods"
@@ -162,12 +164,25 @@ class CrawledProduct:
     image_path: str = ""
     # 아래는 상세 API에서 받아오는 "무신사가 직접 표기한 값"이다. 상품명 키워드
     # 추측과 달리 사실이므로, enrich_catalog.py 가 모델 판정보다 우선해서 쓴다.
-    detail_color: str = ""      # 옵션의 COLOR_CHIP
+    detail_color: str = ""      # 옵션 COLOR_CHIP 의 첫 색(대표 색)
+    detail_colors: str = ""     # 파는 색 전부. 대표 하나만 남기면 나머지 색을 잃는다
     detail_season: str = ""     # 계절 태그
     detail_fit: str = ""        # 핏 태그
     detail_thickness: str = ""  # 두께 태그
     detail_sheer: str = ""      # 비침 태그
     detail_category: str = ""   # baseCategoryFullPath
+
+
+def _title_color(name: str) -> str:
+    """상품명에서 색을 읽는다. 하나로 확정되지 않으면 **비워 둔다**.
+
+    예전에는 부분 문자열로 찾고 못 찾으면 '그레이'를 넣었다. 그래서 '블루종'이 블루가 되고,
+    색 근거가 전혀 없는 상품 329개(전체의 15%)가 그레이로 저장됐다. 색은 체형 규칙이
+    직접 보는 값이라 지어낸 기본값이 규칙을 잘못 발동시킨다. 규격은
+    data/catalog_derivation.json 의 color_vocabulary 에 있다.
+    """
+    palettes = title_palettes(name)
+    return palettes[0] if len(palettes) == 1 else ""
 
 
 def _match_keyword(name: str, table: list[tuple[str, list[str]]], default: str) -> str:
@@ -231,7 +246,7 @@ def parse_item(item: dict, category: str) -> CrawledProduct | None:
         product_id=f"MS{goods_no}",
         name=name,
         category=category,
-        color=_match_keyword(name, COLOR_KEYWORDS, "그레이"),
+        color=_title_color(name),
         style=style,
         purposes=_guess_purposes(name, style),
         # 상품 이미지만으로 체형 적합도를 알 수 없어 전 체형 허용으로 두고,
@@ -342,12 +357,12 @@ def fetch_detail(goods_no: str) -> dict:
     try:
         request = urllib.request.Request(OPTIONS_URL.format(no=number), headers=HEADERS)
         options = json.loads(_open_with_retry(request, retries=2).decode("utf-8")).get("data", {})
-        for option in options.get("basic", []):
-            if option.get("displayType") == "COLOR_CHIP":
-                values = option.get("optionValues") or []
-                if values:
-                    out["detail_color"] = values[0].get("name") or ""
-                break
+        names = color_options_from({"data": options})
+        if names:
+            # 상품은 보통 3색 안팎으로 팔린다. 첫 색만 두면 나머지 색을 원하는 사용자가
+            # 같은 상품을 영영 만나지 못한다(실측: 색 옵션이 있는 상품의 68%가 2색 이상).
+            out["detail_color"] = names[0]
+            out["detail_colors"] = "|".join(names)
     except Exception:
         pass
     return out
@@ -401,7 +416,7 @@ def save_csv(products: list[CrawledProduct], csv_path: Path) -> None:
         "body_shapes", "price", "season", "stock", "url",
         "brand", "gender", "image_url", "image_path",
         # 무신사가 직접 표기한 값. 상품명 추측이 아니라 사실이다.
-        "detail_color", "detail_season", "detail_fit",
+        "detail_color", "detail_colors", "detail_season", "detail_fit",
         "detail_thickness", "detail_sheer", "detail_category",
     ]
     csv_path.parent.mkdir(parents=True, exist_ok=True)

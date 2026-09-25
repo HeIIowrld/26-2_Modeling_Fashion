@@ -16,6 +16,8 @@ from shopping_http import fetch_json
 
 
 BASE_URL = "https://goods-detail.musinsa.com/api2/goods"
+# 색 옵션을 담기 시작한 2026-09-25 에 올렸다. 옛 캐시 파일은 색이 없으므로 다시 받는다.
+SCHEMA_VERSION = 2
 MEASUREMENT_FIELDS = {
     "총장": ("length_cm", "length"),
     "총기장": ("length_cm", "length"),
@@ -52,6 +54,26 @@ def _label(value: object) -> str:
 
 def _rows(value: object) -> list[dict]:
     return [row for row in value if isinstance(row, dict)] if isinstance(value, list) else []
+
+
+def color_options_from(options: dict | None) -> list[str]:
+    """구매 가능한 색 이름을 모두 돌려준다. 대표 색 하나만 쓰면 나머지를 잃는다.
+
+    색은 `basic` 의 COLOR_CHIP 에서만 읽는다. `optionItems` 안의 `optionName` 은
+    판매자가 정하는 값이라("컬러" 대신 "C" 인 상품이 있다) 색 옵션을 가려낼 수 없다.
+    """
+    data = (options or {}).get("data") or {}
+    if not isinstance(data, dict):
+        return []
+    names: list[str] = []
+    for option in _rows(data.get("basic")):
+        if option.get("displayType") != "COLOR_CHIP":
+            continue
+        for value in _rows(option.get("optionValues")):
+            name = str(value.get("name") or "").strip()
+            if name and name not in names:
+                names.append(name)
+    return names
 
 
 def normalize_size_table(product_id: str, actual: dict, options: dict | None = None) -> dict:
@@ -113,13 +135,15 @@ def normalize_size_table(product_id: str, actual: dict, options: dict | None = N
         sizes.append({"label": name, "measurements": measurements, "measurement_kinds": kinds,
                       "available": available, "option_ids": [v["option_id"] for v in matched]})
     return {
-        "schema_version": 1, "product_id": product_id,
+        "schema_version": SCHEMA_VERSION, "product_id": product_id,
         "status": "ready" if sizes else "missing",
         "source": "musinsa_actual_size", "source_url": f"https://www.musinsa.com/products/{product_id.removeprefix('MS')}",
         "fetched_at": datetime.now(timezone.utc).isoformat(),
         "unit": unit, "type_name": str(data.get("typeName") or ""),
         "measurement_note": str(data.get("description") or ""),
         "sizes": sizes, "variants": variants, "issues": list(dict.fromkeys(issues)),
+        # 사이즈표를 받을 때 이미 온 응답에서 같이 읽는다. 추가 요청은 없다.
+        "color_options": color_options_from(options),
     }
 
 
@@ -139,7 +163,7 @@ class ProductMeasurementClient:
     def get(self, product_id: str) -> dict:
         number = product_id.removeprefix("MS")
         if not re.fullmatch(r"[0-9]{1,12}", number):
-            return {"status": "unavailable", "sizes": [], "issues": ["invalid_product_id"]}
+            return {"status": "unavailable", "sizes": [], "issues": ["invalid_product_id"], "color_options": []}
         product_id = f"MS{number}"
         now = time.time()
         with self._lock:
@@ -150,7 +174,7 @@ class ProductMeasurementClient:
         if path:
             try:
                 saved = json.loads(path.read_text(encoding="utf-8"))
-                if (saved["record"]["schema_version"] == 1 and saved["record"]["product_id"] == product_id
+                if (saved["record"]["schema_version"] == SCHEMA_VERSION and saved["record"]["product_id"] == product_id
                         and 0 <= now - saved["cached_at"] < self.cache_ttl):
                     return saved["record"]
             except (OSError, ValueError, KeyError, TypeError):
@@ -166,7 +190,9 @@ class ProductMeasurementClient:
             if options is None:
                 record["issues"].append("options_unavailable")
         except (OSError, ValueError, TypeError, KeyError):
-            record = {"status": "unavailable", "sizes": [], "issues": ["fetch_failed"]}
+            # 실측표가 깨져도 색 옵션은 살린다. 색 매칭은 사이즈표와 무관하다.
+            record = {"status": "unavailable", "sizes": [], "issues": ["fetch_failed"],
+                      "color_options": color_options_from(options)}
         with self._lock:
             if len(self._cache) >= 512:
                 self._cache.pop(next(iter(self._cache)))

@@ -251,10 +251,27 @@ class MusinsaFactTests(unittest.TestCase):
                 self.assertEqual(out["color"], expected)
                 self.assertIn(out["color"], palette)
 
-    def test_unknown_color_leaves_the_guess_alone(self):
+    def test_unknown_color_is_emptied_instead_of_keeping_a_wrong_guess(self):
+        """표에 없는 색 이름이면 색을 비운다. 예전에는 상품명 추측이 그대로 남았다.
+
+        2026-09-25 실측: MS5920286 은 파는 색이 '황토색' 하나인데 카탈로그에는 '블루'로
+        저장돼 있었다. 표에 없어서 이름 추측이 살아남은 결과다. 빈 값이면 규칙이 색을
+        쓰지 않고, 상품 사진 색 감사(product_image_colors.csv)가 채울 수 있다.
+        """
         out, used = self.apply({"detail_color": "형광 무지개"}, {"color": "그레이"})
-        self.assertEqual(out["color"], "그레이")
-        self.assertNotIn("color", used)
+        self.assertEqual(out["color"], "")
+        self.assertIn("color_unmapped", used)
+
+    def test_every_sold_color_is_kept_not_just_the_first(self):
+        out, used = self.apply({"detail_colors": "화이트|블랙|멜란지|베이지"}, {"color": "그레이"})
+        self.assertEqual(out["color"], "화이트")
+        self.assertEqual(out["color_options"], "화이트|블랙|그레이|베이지")
+        self.assertIn("color", used)
+
+    def test_old_rows_without_the_new_column_still_work(self):
+        out, _ = self.apply({"detail_color": "네이비"}, {})
+        self.assertEqual(out["color"], "네이비")
+        self.assertEqual(out["color_options"], "네이비")
 
     def test_season_comes_from_musinsa(self):
         out, used = self.apply({"detail_season": "겨울"}, {"season": "사계절"})

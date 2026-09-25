@@ -50,6 +50,69 @@ class StubSearch(MusinsaLiveSearch):
         return self.by_category.get(category, [])
 
 
+class StubMeasurements:
+    """사이즈표 응답에 색 옵션이 같이 오는 상황을 그대로 흉내 낸다(추가 요청 없음)."""
+
+    def __init__(self, colors_by_id: dict[str, list[str]]):
+        self.colors_by_id = colors_by_id
+        self.calls: list[str] = []
+
+    def get(self, product_id: str) -> dict:
+        self.calls.append(product_id)
+        return {"status": "unavailable", "sizes": [], "issues": [],
+                "color_options": list(self.colors_by_id.get(product_id, []))}
+
+
+class ColorOptionTests(unittest.TestCase):
+    """색 옵션은 회피 색 검사에만 쓴다.
+
+    카드 사진과 가상 피팅은 대표 사진 한 장으로 돈다. 그런데 첫 컬러칩과 대표 사진 색이
+    같은 경우가 345개 중 46%뿐이었다(2026-09-25). 그래서 "파는 색 중에 원하는 색이
+    있으니 추천"은 하지 않는다 — 다른 색으로 합성하면 색을 맞춘 의미가 없다.
+    반대로 파는 색이 전부 회피 색이면 어느 사진이 뜨든 회피 색이므로 뺄 수 있다.
+    """
+
+    def targets(self, color="블랙"):
+        return TargetKeywordResult(mode="user_input",
+                                   targets={"top": {"category": ["상의"], "color": [color]}})
+
+    def search_with(self, colors_by_id, profile=None, color="블랙"):
+        search = StubSearch({"top": [item(1, "베이직 반팔 티셔츠"), item(2, "무지 반팔 티셔츠")]})
+        search.measurements = StubMeasurements(colors_by_id)
+        profile = profile or UserProfile(budget=120_000, change_scope="전체 변경",
+                                         provided_fields=["budget", "change_scope"])
+        return search, search.search(self.targets(color), profile, limit=2)
+
+    def test_a_sold_color_does_not_promote_a_product(self):
+        search, results = self.search_with({"MS2": ["아이보리", "(19)BLACK"]})
+        # 블랙을 팔지만 대표 사진이 블랙이라는 보장이 없으므로 순위를 올리지 않는다.
+        self.assertEqual([product.product_id for product in results], ["MS1", "MS2"])
+        self.assertEqual([product.retrieval_score for product in results], [0.0, 0.0])
+        self.assertNotIn("블랙", results[1].matched_keywords)
+
+    def test_products_whose_every_color_is_avoided_are_dropped(self):
+        profile = UserProfile(budget=120_000, change_scope="전체 변경",
+                              provided_fields=["budget", "change_scope"], avoided_colors=["블랙"])
+        _, results = self.search_with({"MS1": ["블랙", "차콜"], "MS2": ["아이보리"]}, profile)
+        self.assertEqual([product.product_id for product in results], ["MS2"])
+
+    def test_one_wearable_color_keeps_the_product(self):
+        profile = UserProfile(budget=120_000, change_scope="전체 변경",
+                              provided_fields=["budget", "change_scope"], avoided_colors=["블랙"])
+        _, results = self.search_with({"MS1": ["블랙", "아이보리"]}, profile)
+        self.assertIn("MS1", [product.product_id for product in results])
+
+    def test_unknown_colors_change_nothing(self):
+        search, results = self.search_with({})
+        self.assertEqual(len(results), 2)
+        self.assertEqual(search.last_search_stats["color_options"]["colors_known"], 0)
+
+    def test_colors_reach_the_web_payload(self):
+        _, results = self.search_with({"MS2": ["아이보리", "(19)BLACK"]})
+        payload = next(p for p in results if p.product_id == "MS2").public_dict()
+        self.assertEqual(payload["color_options"], ["아이보리", "(19)BLACK"])
+
+
 class MusinsaLiveSearchTests(unittest.TestCase):
     def setUp(self):
         self.targets = TargetKeywordResult(

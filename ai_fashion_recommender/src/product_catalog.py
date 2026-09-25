@@ -95,6 +95,7 @@ class ProductCatalog:
                 image_color=image_color,
                 image_color_confidence=round(image_confidence, 3),
                 color_source="image" if use_image_color else "catalog",
+                color_options=split_values(row.get("color_options")),
             )
 
         with self.csv_path.open(encoding="utf-8-sig", newline="") as handle:

@@ -10,6 +10,7 @@ from dataclasses import asdict, dataclass, field
 from functools import partial
 from typing import Iterable
 
+from product_colors import palettes_for
 from product_measurements import ProductMeasurementClient
 from recommendation_keywords import TargetKeywordResult
 from schemas import Product, UserProfile
@@ -73,6 +74,8 @@ class ShoppingProduct:
     search_keywords: list[str] = field(default_factory=list)
     matched_keywords: list[str] = field(default_factory=list)
     photo_attributes: dict = field(default_factory=dict)
+    # 무신사가 파는 색 이름 전부. 회피 색 검사에만 쓴다(대표 사진이 어느 색인지 모른다).
+    color_options: list[str] = field(default_factory=list)
     retrieval_score: float = 0.0
     recommendation_reason: str = ""
     recommendation_reason_source: str = "rules"
@@ -330,6 +333,8 @@ class MusinsaLiveSearch:
             record = records[index] if index < len(records) else None
             product.size_fit = compare_sizes(record or {"status": "unavailable"}, product.category,
                                             profile.reference_measurements.get(product.category))
+            # 같은 응답에 색 옵션이 들어 있다. 추가 요청 없이 대표 색 밖의 색을 알게 된다.
+            product.color_options = list((record or {}).get("color_options") or [])
         self.last_search_stats["measurement_candidates"] = len(shortlist)
         self.last_search_stats["measurement_tables"] = sum(bool(r and r.get("sizes")) for r in records)
         for products in grouped.values():
@@ -398,6 +403,7 @@ class MusinsaLiveSearch:
             except Exception:
                 pass  # Prefetch is optional; it must not block normal size ranking.
         self._compare_shortlist(grouped, profile)
+        self._drop_fully_avoided_colors(grouped, profile)
         selected = self._select(grouped, targets, limit)
         self._supplement_photos(grouped, targets, photo_loader, prefetched)
         self.last_search_stats["total_elapsed_seconds"] = round(time.monotonic() - started, 4)
@@ -428,6 +434,31 @@ class MusinsaLiveSearch:
         self.last_search_stats["total_elapsed_seconds"] = round(time.monotonic() - started, 4)
         self.last_search_stats["photo_protected_positions"] = len(protected)
         return selected
+
+    def _drop_fully_avoided_colors(self, grouped, profile) -> None:
+        """파는 색이 **전부** 회피 색인 상품을 뺀다. 추가 요청은 없다(사이즈표 응답에 같이 온다).
+
+        이 검사만 색 옵션으로 할 수 있다. 어느 색 사진이 카드에 뜨든 그 색은 파는 색 중
+        하나이므로, 파는 색이 모두 회피 색이면 사진도 회피 색이다.
+
+        반대로 "파는 색 중에 원하는 색이 있으니 추천"은 하지 않는다. 카드 사진과 가상 피팅은
+        대표 사진 한 장으로 돌아가는데, 그 사진이 어느 색인지 모른다 — 첫 컬러칩과 대표 사진
+        색이 같은 경우가 345개 중 46%뿐이었다(2026-09-25). 다른 색으로 합성해 주면
+        색을 맞춰 추천한 의미가 없다.
+        """
+        avoided = [value for value in getattr(profile, "avoided_colors", []) or [] if value]
+        stats = {"colors_known": 0, "avoided_dropped": 0}
+        for category, products in grouped.items():
+            kept = []
+            for product in products:
+                palettes = palettes_for(product.color_options)
+                stats["colors_known"] += bool(palettes)
+                if palettes and avoided and all(palette in avoided for palette in palettes):
+                    stats["avoided_dropped"] += 1
+                    continue
+                kept.append(product)
+            grouped[category] = kept
+        self.last_search_stats["color_options"] = stats
 
     def _photo_shortlist(self, grouped, targets):
         return [products[index] for index in range(self.photo_candidates)
