@@ -130,9 +130,11 @@ class ShoeTryOn:
             self._pipeline = pipeline
         return self._pipeline
 
-    def generate(self, person, reference, mask):
+    def generate(self, person, reference, mask, *, prompt=PROMPT, full_context=False, seed=None):
         import torch
-        box = edit_crop(mask)
+        # Clothing transitions need the face/visible limbs as skin and body context.
+        # Both callers share one model instance rather than loading FLUX twice.
+        box = (0, 0, person.width, person.height) if full_context else edit_crop(mask)
         crop = person.crop(box)
         # Avoid center cropping: retain both feet and the floor context.
         scale = 768 / max(crop.size)
@@ -142,16 +144,16 @@ class ShoeTryOn:
         product = ImageOps.pad(reference.convert("RGB"), (512, 512), color="white")
         pipe = self._load_pipeline()
         output = pipe(image=crop, image_reference=product, mask_image=mask_image,
-                      prompt=PROMPT, height=size[1], width=size[0], strength=1.0,
+                      prompt=prompt, height=size[1], width=size[0], strength=1.0,
                       num_inference_steps=4, guidance_scale=1.0,
-                      generator=torch.Generator(device="cuda").manual_seed(self.seed)).images[0]
+                      generator=torch.Generator(device="cuda").manual_seed(self.seed if seed is None else seed)).images[0]
         if output.size != size:
-            raise RuntimeError("신발 생성 결과 해상도가 요청과 다릅니다.")
+            raise RuntimeError("생성 결과 해상도가 요청과 다릅니다.")
         result = composite_feet(person, output, mask, box)
         changed = np.max(np.abs(np.asarray(result).astype(float) - np.asarray(person).astype(float)), axis=2)
         changed_fraction = float(np.mean(changed[mask] > 8))
         if changed_fraction < 0.02:
-            raise TryOnNotReady("신발이 충분히 변경되지 않았습니다. 다른 상품 사진으로 다시 시도해 주세요.")
+            raise TryOnNotReady("합성 영역이 충분히 변경되지 않았습니다. 다른 상품 사진으로 다시 시도해 주세요.")
         self.last_report = {"backend": MODEL_ID, "revision": MODEL_REVISION,
                             "changed_fraction": changed_fraction, "crop": list(box),
                             "outside_mask_preserved": bool(np.all(changed[~mask] == 0)),

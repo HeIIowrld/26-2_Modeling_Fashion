@@ -38,6 +38,7 @@ DEFAULT_THRESHOLDS = {
     "color_de_max": 25.0,
     "length_gap_max": 1.0,
     "sharpness_min": 25.0,
+    "exposed_limb_skin_min": 0.6,
 }
 
 FACE_LABELS = (1, 2)
@@ -281,10 +282,12 @@ def assess_tryon(
             sim_after = float(embed(_masked_crop(after, target_after)) @ ref_vec)
             sim_before = float(embed(_masked_crop(before, before_garment)) @ ref_vec)
             value = sim_after - sim_before
-            # 원래 옷과 똑같이 남은 결과(차이 0)도 실패여야 하므로 초과 비교다.
+            # 상품과의 유사도 변화량이다. 결과와 원래 옷의 유사도를 재는 값은 아니다.
+            # 허용 오차 이내의 변화(기본 -0.03 초과)는 통과시킨다.
             add(QualityCheck("reference_fidelity", round(value, 4), limits["fidelity_delta_min"],
                              value > limits["fidelity_delta_min"], True,
-                             f"합성된 {label}가 추천 상품보다 원래 옷에 더 가깝습니다."))
+                             f"합성된 {label}의 상품 이미지 유사도가 원본보다 낮아졌습니다. "
+                             "상품의 모양과 디테일을 확인해 주세요."))
     if reference_rgb is not None and reference_mask is not None:
         value = dominant_color_distance(reference_rgb, reference_mask, after, target_after)
         if value is not None:

@@ -41,6 +41,12 @@ def sample_recommendation(rank: int = 1, with_products: bool = True) -> Recommen
 
 
 class AdapterAvailabilityTests(unittest.TestCase):
+    def test_web_shares_reference_editor_between_clothes_and_shoes(self):
+        with (mock.patch.object(web_pipeline, "ENABLE_VTON", True),
+              mock.patch.dict(os.environ, {"FASHION_SHOE_MODEL_PATH": "test-model-path"})):
+            adapter = web_pipeline._build_tryon()
+        self.assertIs(adapter.clothing.transition_editor, adapter.shoes)
+
     def test_vton_can_be_enabled_from_the_service_environment(self):
         with mock.patch.dict(os.environ, {"FASHION_ENABLE_VTON": "1"}):
             self.assertTrue(config.env_flag("FASHION_ENABLE_VTON"))

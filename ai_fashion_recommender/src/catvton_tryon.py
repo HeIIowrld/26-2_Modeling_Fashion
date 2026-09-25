@@ -20,6 +20,8 @@ CatVTON(비상업 CC BY-NC-SA 4.0)의 디퓨전 파이프라인으로 추천 상
   얼굴·배경 디테일이 흐려지는 것을 막고 경계 이음매를 부드럽게 만든다.
 - 마스크 영역의 선명도(라플라시안 분산)가 기준에 못 미치면 시드를 바꿔 한 번 더
   생성하고 더 선명한 쪽을 선택한다(README 7단계의 "기준 미달 시에만 재생성" 규칙).
+- 짧은 옷으로의 변경·명시적 타이트핏은 연결된 참조 편집 모델로 피부와 배경을 함께
+  복원한다. 새로 드러난 피부색은 입력 사진에서 추정하며 숨겨진 실제 치수를 측정하지 않는다.
 """
 
 import json
@@ -34,6 +36,10 @@ from PIL import Image, ImageFilter
 from config import GARMENT_CLEAN_DIR, PROJECT_DIR, garment_image_path
 from schemas import Recommendation
 from virtual_tryon import TryOnNotReady, VirtualTryOnAdapter
+from tryon_transition import (
+    SHORT_LENGTHS,
+    FITTED_NAME, exposed_limb_coverage, harmonize_exposed_skin, transition_envelope, transition_prompt,
+)
 
 CATVTON_REPO = PROJECT_DIR.parent / "third_party" / "CatVTON"
 BASE_CKPT = "booksforcharlie/stable-diffusion-inpainting"
@@ -202,8 +208,16 @@ def classify_reference_bottom_length(classifier, image, *, product=None, source_
     return ""
 
 
-def classify_reference_sleeve_length(classifier, image) -> str:
+def classify_reference_sleeve_length(classifier, image, *, product=None) -> str:
     """상품 레퍼런스의 소매 길이를 추정한다. 판정 불가면 빈 문자열."""
+    name = getattr(product, "name", "") or ""
+    named = [label for label, pattern in (
+        ("민소매", r"민소매|나시|\bsleeveless\b"),
+        ("반팔", r"반팔|숏슬리브|\bshort[ -]?sleeve"),
+        ("긴팔", r"긴팔|롱슬리브|\blong[ -]?sleeve"),
+    ) if re.search(pattern, name, re.I)]
+    if len(named) == 1:
+        return named[0]
     if classifier is None or not getattr(classifier, "trained_attributes_enabled", False):
         return ""
     prediction = classifier.predict_trained_attributes(image, tasks=["sleeve_length"])
@@ -773,6 +787,8 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         quality_thresholds: dict[str, float] | None = None,
         upper_mask_policy: str = "agnostic",
         lower_mask_policy: str = "long-hull",
+        transition_correction: bool = True,
+        transition_editor=None,
     ) -> None:
         super().__init__(enabled=True)
         self.num_inference_steps = num_inference_steps
@@ -824,6 +840,10 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         # 기존 선명도 재시도로 돌아간다.
         self.post_quality_gate = post_quality_gate
         self.quality_thresholds = quality_thresholds
+        # Shared with shoe inpainting by the web factory. Without it, retain the
+        # CatVTON mask (never send the larger transition envelope to CatVTON).
+        self.transition_correction = transition_correction
+        self.transition_editor = transition_editor
         # 마스크 정책:
         # upper "agnostic"(기본) = 원래 상의의 넥라인 구멍·짧은 밑단 단서를 지운 상체 마스크(골반까지 확장).
         #       2026-09-15 상의 288쌍 사전 기준 통과: 크롭 계열 실패 -18.1%p, 자기 상품 top-1 +11.5%p,
@@ -1066,8 +1086,6 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         """
         classifier = context.get("classifier")
         outfit = context.get("outfit")
-        if outfit is None:
-            return ""
         if category == "bottom":
             current, source = current_bottom_length(outfit, context)
             target = classify_reference_bottom_length(
@@ -1081,7 +1099,7 @@ class CatVTONTryOn(VirtualTryOnAdapter):
                 self._add_warning(message)
             return target
         else:
-            target = classify_reference_sleeve_length(classifier, garment)
+            target = classify_reference_sleeve_length(classifier, garment, product=product)
             gap = sleeve_length_gap(getattr(outfit, "sleeve_length", ""), target)
             label, unit = "소매 길이", "팔"
         if gap is not None and gap >= UNRELIABLE_LENGTH_GAP:
@@ -1089,7 +1107,7 @@ class CatVTONTryOn(VirtualTryOnAdapter):
                 f"{label} 차이가 큽니다(현재보다 {gap}단계 짧음: → {target}). "
                 f"마스크가 원래 옷 모양이라 {unit} 영역이 옷 텍스처로 채워질 수 있습니다."
             )
-        return ""
+        return target
 
     def _check_neckline_gap(self, product, context: dict) -> None:
         """가려진 목 피부를 새로 그려야 하는 네크라인 변경은 품질 한계를 알린다."""
@@ -1293,7 +1311,7 @@ class CatVTONTryOn(VirtualTryOnAdapter):
     def _assess_attempt(self, person: Image.Image, result: Image.Image, mask: Image.Image,
                         sharpness: float, quality: dict):
         """합성 한 번의 결과를 모델 좌표에서 점검한다. 검사할 수 없으면 None."""
-        from tryon_quality import assess_tryon, load_thresholds
+        from tryon_quality import QualityCheck, assess_tryon, load_thresholds
 
         parser = quality.get("parser") or self._get_garment_parser()
         if parser is None or parser.backend != "fashn-human-parser":
@@ -1309,12 +1327,14 @@ class CatVTONTryOn(VirtualTryOnAdapter):
 
             embed = lambda image: classifier._encode_image(image, PREPROCESS_SQUASH).cpu().numpy()[0]  # noqa: E731
         garment = quality["garment"]
-        return assess_tryon(
+        after_seg = (quality["after_seg"] if "after_seg" in quality else
+                     parser.parse(after, pose=None)["segmentation"])
+        report = assess_tryon(
             category=quality["category"],
             before=np.asarray(person),
             after=after,
             edit_mask=np.asarray(mask) > 127,
-            after_seg=parser.parse(after, pose=None)["segmentation"],
+            after_seg=after_seg,
             target_labels=GARMENT_TARGET_LABELS[quality["category"]],
             before_seg=quality.get("segmentation"),
             landmarks_px=quality.get("landmarks"),
@@ -1326,6 +1346,23 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             reference_length=self.reference_bottom_lengths.get(quality.get("product_id", ""), ""),
             thresholds=self.quality_thresholds,
         )
+        if quality.get("transition_prompt"):
+            # The reference editor can reconstruct skin/background; these are now
+            # generative failures rather than CatVTON's fixed-mask limitation.
+            for check in report.checks:
+                if check.name == "bottom_length_fidelity":
+                    check.retryable = True
+            coverage = exposed_limb_coverage(
+                quality.get("segmentation"), after_seg, np.asarray(mask) > 127,
+                quality.get("landmarks") or {}, quality["category"], quality.get("reference_length", ""),
+            )
+            if coverage is not None:
+                limit = self.quality_thresholds.get("exposed_limb_skin_min", 0.6)
+                report.checks.append(QualityCheck(
+                    "exposed_limb_skin", round(coverage, 4), limit, coverage >= limit, True,
+                    "짧은 옷 아래 팔·다리가 자연스러운 피부로 복원되지 않았습니다.",
+                ))
+        return report
 
     def _tryon_once(
         self,
@@ -1357,24 +1394,51 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         for attempt in range(self.max_retries + 1):
             attempts += 1
             generator = torch.Generator(device=self.device).manual_seed(self.seed + attempt)
-            raw = pipeline(
-                image=person,
-                condition_image=garment,
-                mask=pipeline_mask,
-                num_inference_steps=self.num_inference_steps,
-                guidance_scale=self.guidance_scale if guidance_scale is None else guidance_scale,
-                width=self.width,
-                height=self.height,
-                eta=self.eta,
-                generator=generator,
-            )[0]
-            repainted = self._repaint(person, mask, raw, repaint_radius)
+            if quality is not None and quality.get("transition_prompt"):
+                repainted = self.transition_editor.generate(
+                    person, garment, np.asarray(mask) > 127,
+                    prompt=quality["transition_prompt"], full_context=True, seed=self.seed + attempt,
+                )
+            else:
+                raw = pipeline(
+                    image=person,
+                    condition_image=garment,
+                    mask=pipeline_mask,
+                    num_inference_steps=self.num_inference_steps,
+                    guidance_scale=self.guidance_scale if guidance_scale is None else guidance_scale,
+                    width=self.width,
+                    height=self.height,
+                    eta=self.eta,
+                    generator=generator,
+                )[0]
+                repainted = self._repaint(person, mask, raw, repaint_radius)
+            attempt_quality = dict(quality) if quality is not None else None
+            skin_report = None
+            if (self.transition_correction and attempt_quality is not None
+                    and attempt_quality.get("segmentation") is not None):
+                try:
+                    parser = attempt_quality.get("parser") or self._get_garment_parser()
+                    if parser is None or parser.backend != "fashn-human-parser":
+                        raise RuntimeError("피부 영역 파서 사용 불가")
+                    after_seg = parser.parse(np.asarray(repainted), pose=None)["segmentation"]
+                    corrected, skin_report = harmonize_exposed_skin(
+                        np.asarray(attempt_quality.get("source_person", person)), np.asarray(repainted),
+                        attempt_quality["segmentation"], after_seg, np.asarray(mask) > 127,
+                        attempt_quality["category"],
+                    )
+                    repainted = Image.fromarray(corrected)
+                    attempt_quality["after_seg"] = after_seg
+                except Exception as exc:
+                    skin_report = {"status": "unavailable", "reason": type(exc).__name__}
+                    self._add_warning("새로 드러난 피부의 색 보정을 완료하지 못했습니다.")
+                if skin_report["status"] == "no_reliable_source_skin":
+                    self._add_warning("원본 사진에서 신뢰할 피부색을 얻지 못해 피부색 보정을 보류했습니다.")
             score = self._garment_sharpness(repainted, mask)
             report = None
             if quality is not None and self.post_quality_gate:
                 started = time.perf_counter()
                 try:
-                    report = self._assess_attempt(person, repainted, mask, score, quality)
+                    report = self._assess_attempt(person, repainted, mask, score, attempt_quality)
                 except Exception as exc:  # 검사 실패가 합성 결과 전달을 막아서는 안 된다.
                     print(f"[VTON] 합성 후 품질 검사를 건너뜁니다: {type(exc).__name__}: {exc}")
                 assess_seconds += time.perf_counter() - started
@@ -1388,19 +1452,21 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             key = (float("inf") if report is not None and report.skipped else
                    report.penalty() if report is not None else 0.0, -score)
             if best is None or key < best[0]:
-                best = (key, repainted, report)
+                best = (key, repainted, report, skin_report)
             if report is None or report.skipped:
                 if -best[0][1] >= self.min_sharpness:
                     break
             elif not report.retry_recommended:
                 break
 
-        _, result, report = best
+        _, result, report, skin_report = best
         if unassessed_attempts:
             self._add_warning("합성 품질 검사를 완료하지 못한 시도가 있습니다. 결과를 직접 확인해 주세요.")
         if report is not None:
             self.last_quality_reports.append({**report.to_dict(), "attempts": attempts,
                                               "unassessed_attempts": unassessed_attempts,
+                                              "transition_edit": bool(quality and quality.get("transition_prompt")),
+                                              "skin_correction": skin_report,
                                               "assess_seconds": round(assess_seconds, 3)})
             failed = report.warnings()
             if failed:
@@ -1505,6 +1571,7 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             )
             protect_model = np.asarray(resize_and_crop(protect_padded, target)) > 127
         result = resize_and_crop(person_padded, target)
+        source_person_model = result.copy()
         pose = context.get("pose")
         landmarks_px = landmarks_to_pixels(getattr(pose, "landmarks", None), *person.size)
         segmentation_model = (
@@ -1538,6 +1605,28 @@ class CatVTONTryOn(VirtualTryOnAdapter):
                 raw_mask, category, garment_path, garment, product, segmentation, landmarks_px, context,
                 reference_length=reference_length,
             )
+            edit_prompt = ""
+            if self.transition_correction:
+                outfit = context.get("outfit")
+                shortening = (bottom_length_gap(current_bottom_length(outfit, context)[0], reference_length)
+                              if category == "bottom" else
+                              sleeve_length_gap(getattr(outfit, "sleeve_length", ""),
+                                                reference_length))
+                # Even short-to-short edits can turn the full leg style mask
+                # into trousers. Route by target length, not only source gap.
+                if (FITTED_NAME.search(product.name or "") or reference_length in SHORT_LENGTHS[category]
+                        or (shortening is not None and shortening > 0)):
+                    envelope = transition_envelope(raw_mask, segmentation, landmarks_px, category)
+                    if (envelope is not None and self.transition_editor is not None
+                            and self.transition_editor.available):
+                        raw_mask = envelope
+                        edit_prompt = transition_prompt(
+                            category, reference_length, bool(FITTED_NAME.search(product.name or "")),
+                            skirt=category == "bottom" and self._is_skirt_reference(garment, product, context),
+                        )
+                        self.last_mask_notes.append(f"{category}:transition-envelope")
+                    else:
+                        self._add_warning("기장·핏 변경용 참조 편집 모델 또는 관절 정보가 없어 기본 합성을 사용합니다. 피부·옷 폭 복원에는 한계가 있습니다.")
             self.last_raw_masks[category] = np.asarray(raw_mask).astype(bool)
             mask_np = _dilate_mask(_solidify_mask(raw_mask))
             if protect is not None:
@@ -1554,7 +1643,7 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             mask_padded, _ = pad_to_aspect(Image.fromarray(mask_np).convert("L"), target, 0)
             mask = resize_and_crop(mask_padded, target)
             quality = None
-            if self.post_quality_gate:
+            if self.post_quality_gate or self.transition_correction:
                 quality = {
                     "category": category,
                     "garment": garment,
@@ -1564,11 +1653,15 @@ class CatVTONTryOn(VirtualTryOnAdapter):
                     "landmarks": landmarks_model,
                     "classifier": context.get("classifier"),
                     "parser": context.get("parser"),
+                    "source_person": source_person_model,
+                    "transition_prompt": edit_prompt,
+                    "reference_length": reference_length,
                 }
-                try:
-                    quality["reference_mask"] = self._reference_mask(garment_path.name, garment, category)
-                except Exception as exc:  # 레퍼런스 파싱 실패는 색 검사만 건너뛴다.
-                    print(f"[VTON] 레퍼런스 옷 영역을 찾지 못했습니다({garment_path.name}): {exc}")
+                if self.post_quality_gate:
+                    try:
+                        quality["reference_mask"] = self._reference_mask(garment_path.name, garment, category)
+                    except Exception as exc:  # 레퍼런스 파싱 실패는 색 검사만 건너뛴다.
+                        print(f"[VTON] 레퍼런스 옷 영역을 찾지 못했습니다({garment_path.name}): {exc}")
             result = self._tryon_once(
                 result, garment, mask,
                 guidance_scale=guidance_override, protect_model=job_protect_model,
