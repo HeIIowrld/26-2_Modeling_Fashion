@@ -290,7 +290,11 @@ class RecommendationEngine:
                 and product.item_type not in profile.excluded_item_types
             ]
         if profile.avoided_colors:
-            products = [product for product in products if product.color not in profile.avoided_colors]
+            # 사진에서 정한 색은 회피 필터에 쓰지 않는다. 어두운 색을 블랙으로 뭉개는 오차가
+            # 남아 있어(그레이·카키·브라운 → 블랙), 틀리면 멀쩡한 상품이 통째로 사라진다.
+            products = [product for product in products
+                        if product.color_source == "photo"
+                        or product.color not in profile.avoided_colors]
         if profile.avoided_materials:
             products = [
                 product for product in products
