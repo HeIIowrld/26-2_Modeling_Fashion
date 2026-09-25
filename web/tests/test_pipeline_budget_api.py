@@ -96,17 +96,21 @@ class FakeEngine:
         self.parser_backend = "fashn"
 
 class PipelineBudgetAPITests(unittest.TestCase):
-    def test_hidden_body_stops_direct_analysis_before_classification_or_search(self):
+    def test_hidden_body_skips_photo_body_shape_but_keeps_outfit_search(self):
         import pipeline
         engine = FakeEngine()
         outfit, parsed = engine.outfit_analyzer.analyze(None, None)
         parsed['segmentation'][:] = 5
         engine.outfit_analyzer.analyze = Mock(return_value=(outfit, parsed))
         with tempfile.TemporaryDirectory() as temporary, patch.object(pipeline, 'get_engine', return_value=engine), patch.object(pipeline, 'classify') as classify:
-            with self.assertRaisesRegex(pipeline.PipelineError, '치마'):
-                run_pipeline(Path(temporary) / 'person.jpg', pipeline.build_profile({}), Path(temporary), lambda stage: None)
+            result = run_pipeline(
+                Path(temporary) / 'person.jpg', pipeline.build_profile({}),
+                Path(temporary), lambda stage: None,
+            )
             classify.assert_not_called()
-            self.assertFalse(engine.product_search.called)
+            self.assertTrue(engine.product_search.called)
+            self.assertEqual(result.payload['pose']['body_shape'], '분석 불확실')
+            self.assertTrue(any('치마' in warning for warning in result.payload['input_quality']['warnings']))
 
     def test_separate_body_photo_is_checked_with_its_own_pose(self):
         import pipeline
@@ -114,13 +118,18 @@ class PipelineBudgetAPITests(unittest.TestCase):
         outfit, parsed = engine.outfit_analyzer.analyze(None, None)
         hidden = {**parsed, 'segmentation': parsed['segmentation'] * 0 + 5}
         engine.outfit_analyzer.analyze = Mock(side_effect=[(outfit, parsed), (outfit, hidden)])
-        engine.pose_analyzer.analyze = Mock(side_effect=[SimpleNamespace(valid=True), SimpleNamespace(valid=True)])
+        main_pose = engine.pose_analyzer.analyze(None)
+        body_pose = engine.pose_analyzer.analyze(None)
+        engine.pose_analyzer.analyze = Mock(side_effect=[main_pose, body_pose])
         with tempfile.TemporaryDirectory() as temporary, patch.object(pipeline, 'get_engine', return_value=engine), patch.object(pipeline, 'classify') as classify:
             body_path = Path(temporary) / 'body.jpg'
-            with self.assertRaisesRegex(pipeline.PipelineError, '체형 파악용 사진'):
-                run_pipeline(Path(temporary) / 'person.jpg', pipeline.build_profile({}), Path(temporary), lambda stage: None, body_path)
+            result = run_pipeline(
+                Path(temporary) / 'person.jpg', pipeline.build_profile({}),
+                Path(temporary), lambda stage: None, body_path,
+            )
             self.assertEqual(engine.pose_analyzer.analyze.call_args.args, (body_path,))
             classify.assert_not_called()
+            self.assertEqual(result.payload['pose']['body_shape'], '분석 불확실')
 
     def test_valid_separate_body_photo_supplies_its_pose_to_body_classifier(self):
         import pipeline

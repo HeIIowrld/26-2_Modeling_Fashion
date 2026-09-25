@@ -36,7 +36,7 @@ def image_upload():
 
 
 class PhotoPreflightTests(unittest.TestCase):
-    def test_skirt_is_rejected_before_conditions_and_temp_photo_is_deleted(self):
+    def test_skirt_is_a_body_shape_warning_and_temp_photo_is_deleted(self):
         engine = FakeEngine(True)
         outfit, parsed = engine.outfit_analyzer.analyze(None, None)
         parsed['segmentation'][:] = 5
@@ -44,9 +44,10 @@ class PhotoPreflightTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary, patch.object(web_app, 'SESSION_ROOT', Path(temporary)), patch.object(web_app, 'get_engine', return_value=engine):
             response = asyncio.run(web_app.validate_photo(image_upload()))
             payload = json.loads(response.body)
-            self.assertFalse(payload['valid'])
+            self.assertTrue(payload['valid'])
             self.assertEqual(payload['quality']['body_visibility']['status'], 'occluded')
-            self.assertIn('치마', payload['issues'][0])
+            self.assertEqual(payload['issues'], [])
+            self.assertTrue(any('치마' in warning for warning in payload['warnings']))
             self.assertEqual(list(Path(temporary).iterdir()), [])
 
     def test_loose_looking_clothes_pass_with_a_warning_instead_of_a_retake(self):

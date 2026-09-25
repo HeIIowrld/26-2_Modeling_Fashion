@@ -53,8 +53,16 @@ from live_product_attributes import LiveProductAttributes
 from product_measurements import ProductMeasurementClient
 from size_fit import validate_references
 from body_shape import classify
-from body_visibility import with_body_visibility
-from schemas import GOAL_NONE, SILHOUETTE_GOAL_CHOICES, Product, UserProfile, WardrobeItem
+from body_visibility import body_shape_analysis_allowed, with_body_visibility
+from schemas import (
+    BASIS_PHOTO,
+    GOAL_NONE,
+    SHAPE_UNCERTAIN,
+    SILHOUETTE_GOAL_CHOICES,
+    Product,
+    UserProfile,
+    WardrobeItem,
+)
 from virtual_tryon import TryOnNotReady, VirtualTryOnAdapter
 from catvton_tryon import (
     USER_BOTTOM_LENGTH_OPTIONS,
@@ -555,10 +563,23 @@ def run_pipeline(
             if not body_quality["passed"]:
                 raise PipelineError("체형 파악용 사진: " + " / ".join(body_quality["issues"]))
         on_stage("body")
-        pose_result.body_shape, body_shape_basis = classify(
-            profile, body_pose if body_image_path is not None else pose_result,
-            person_image=body_image_path or image_path
+        shape_pose = body_pose if body_image_path is not None else pose_result
+        shape_quality = body_quality if body_image_path is not None else input_quality
+        body_shape_reliable = body_shape_analysis_allowed(
+            shape_quality,
+            has_circumferences=bool(getattr(profile, "has_circumferences", False)),
         )
+        if body_shape_reliable:
+            pose_result.body_shape, body_shape_basis = classify(
+                profile,
+                shape_pose,
+                person_image=body_image_path or image_path,
+            )
+        else:
+            # 몸선을 가리는 옷은 입력을 막지 않되 사진 폭을 실제 체형으로 사용하지 않는다.
+            pose_result.body_shape = SHAPE_UNCERTAIN
+            pose_result.body_shape_confidence = 0.0
+            body_shape_basis = BASIS_PHOTO
 
         # Fashion Rules의 기존 2×3 진단기를 현재 착장 결과에 다시 연결한다.
         current_outfit_evaluation = engine.recommender.evaluate_current_outfit(
