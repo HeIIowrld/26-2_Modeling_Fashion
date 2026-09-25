@@ -129,12 +129,49 @@ def _classification_metrics(expected, predicted, labels: tuple[str, ...]) -> dic
         precision = tp / max(1, tp + fp)
         recall = tp / max(1, tp + fn)
         per_class[label] = 2 * precision * recall / max(1e-12, precision + recall)
+    active_indices = [index for index in range(len(labels)) if bool((expected == index).any())]
+    active_scores = [per_class[labels[index]] for index in active_indices]
     return {
         "samples": int(expected.numel()),
         "accuracy": float((expected == predicted).float().mean()),
         "macro_f1": _macro_f1(expected, predicted, len(labels)),
+        # Small, explicitly scoped experiments may intentionally train only a
+        # subset of the production label contract. Keep the full-contract score
+        # above, and report the supported-label score separately.
+        "active_macro_f1": float(sum(active_scores) / max(1, len(active_scores))),
+        "active_labels": [labels[index] for index in active_indices],
         "per_class_f1": per_class,
     }
+
+
+def _evaluate_cache(heads, cache: dict, tensors) -> dict:
+    """Evaluate one cache without changing the checkpoint-selection split."""
+    import torch
+
+    metrics = {}
+    with torch.inference_mode():
+        context, garment, geometry = tensors(cache)
+        tasks = [name for name in FIT_VISION_TASKS if bool(cache["valid"][name].any())]
+        outputs = heads(context, garment, geometry, tasks)
+    for name in tasks:
+        task = FIT_VISION_TASKS[name]
+        mask = cache["valid"][name]
+        expected = cache["targets"][name][mask]
+        predicted = outputs[name].cpu()[mask].argmax(dim=-1)
+        metrics[name] = _classification_metrics(expected, predicted, task.labels)
+        metrics[name]["by_domain"] = {}
+        for domain in sorted(set(cache.get("source_domains", []))):
+            domain_mask = torch.tensor(
+                [value == domain for value in cache["source_domains"]], dtype=torch.bool
+            ) & mask
+            if not domain_mask.any():
+                continue
+            domain_expected = cache["targets"][name][domain_mask]
+            domain_predicted = outputs[name].cpu()[domain_mask].argmax(dim=-1)
+            metrics[name]["by_domain"][domain] = _classification_metrics(
+                domain_expected, domain_predicted, task.labels
+            )
+    return metrics
 
 
 def train_fit_vision_heads(
@@ -142,6 +179,7 @@ def train_fit_vision_heads(
     val_cache_path: str | Path,
     output_checkpoint: str | Path,
     *,
+    test_cache_path: str | Path | None = None,
     config: FitVisionTrainingConfig | None = None,
     device: str = "auto",
 ) -> dict:
@@ -155,8 +193,11 @@ def train_fit_vision_heads(
     torch.manual_seed(settings.seed)
     selected_device = "cuda" if device == "auto" and torch.cuda.is_available() else ("cpu" if device == "auto" else device)
     train, val = load_fit_cache(train_cache_path), load_fit_cache(val_cache_path)
+    test = load_fit_cache(test_cache_path) if test_cache_path else None
     if train["backbone_model_id"] != val["backbone_model_id"]:
         raise ValueError("train/val 핏 캐시의 백본이 다릅니다.")
+    if test is not None and train["backbone_model_id"] != test["backbone_model_id"]:
+        raise ValueError("train/test 핏 캐시의 백본이 다릅니다.")
     input_dim = int(train["context_features"].shape[1])
     heads = build_fit_vision_heads(input_dim, settings.hidden_dim, settings.dropout).to(selected_device)
     optimizer = torch.optim.AdamW(heads.parameters(), lr=settings.learning_rate,
@@ -218,33 +259,16 @@ def train_fit_vision_heads(
     heads.load_state_dict(best_state)
     heads.to(selected_device).eval()
 
-    metrics, support = {}, {}
-    with torch.inference_mode():
-        context, garment, geometry = tensors(val)
-        outputs = heads(context, garment, geometry)
+    support = {}
     for name, task in FIT_VISION_TASKS.items():
-        mask = val["valid"][name]
         support[name] = {label: int((train["targets"][name][train["valid"][name]] == i).sum())
                          for i, label in enumerate(task.labels)}
-        if not mask.any():
-            continue
-        expected = val["targets"][name][mask]
-        predicted = outputs[name].cpu()[mask].argmax(dim=-1)
-        metrics[name] = _classification_metrics(expected, predicted, task.labels)
-        metrics[name]["by_domain"] = {}
-        for domain in sorted(set(val.get("source_domains", []))):
-            domain_mask = torch.tensor(
-                [value == domain for value in val["source_domains"]], dtype=torch.bool
-            ) & mask
-            if not domain_mask.any():
-                continue
-            domain_expected = val["targets"][name][domain_mask]
-            domain_predicted = outputs[name].cpu()[domain_mask].argmax(dim=-1)
-            metrics[name]["by_domain"][domain] = _classification_metrics(
-                domain_expected, domain_predicted, task.labels
-            )
+    metrics = _evaluate_cache(heads, val, tensors)
     summary = {"device": selected_device, "config": asdict(settings), "history": history,
-               "metrics": metrics, "label_support": support}
+               "metrics": metrics, "label_support": support,
+               "deployment_status": "research_only_until_human_label_review"}
+    if test is not None:
+        summary["test_metrics"] = _evaluate_cache(heads, test, tensors)
     save_fit_vision_checkpoint(output_checkpoint, heads,
         backbone_model_id=train["backbone_model_id"], label_support=support,
         training_summary=summary)
@@ -254,9 +278,16 @@ def train_fit_vision_heads(
     return summary
 
 
-def prepare_fit_caches(csv_path, image_root, train_cache, val_cache, **kwargs):
+def prepare_fit_caches(
+    csv_path, image_root, train_cache, val_cache, test_cache=None, **kwargs
+):
     records = load_fit_vision_csv(csv_path, image_root)
-    return (
+    outputs = [
         build_fit_embedding_cache([r for r in records if r.split == "train"], train_cache, **kwargs),
         build_fit_embedding_cache([r for r in records if r.split == "val"], val_cache, **kwargs),
-    )
+    ]
+    if test_cache:
+        outputs.append(build_fit_embedding_cache(
+            [r for r in records if r.split == "test"], test_cache, **kwargs
+        ))
+    return tuple(outputs)
