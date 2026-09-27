@@ -19,11 +19,13 @@ def parser() -> argparse.ArgumentParser:
     cache.add_argument("--image-root", required=True)
     cache.add_argument("--train-cache", required=True)
     cache.add_argument("--val-cache", required=True)
+    cache.add_argument("--test-cache")
     cache.add_argument("--device", default="auto")
     cache.add_argument("--batch-size", type=int, default=32)
     train = commands.add_parser("train")
     train.add_argument("--train-cache", required=True)
     train.add_argument("--val-cache", required=True)
+    train.add_argument("--test-cache")
     train.add_argument("--output-checkpoint", required=True)
     train.add_argument("--device", default="auto")
     train.add_argument("--epochs", type=int, default=40)
@@ -39,13 +41,17 @@ def main() -> None:
     if args.command == "cache":
         outputs = prepare_fit_caches(
             args.annotations_csv, args.image_root, args.train_cache, args.val_cache,
+            args.test_cache,
             device=args.device, batch_size=args.batch_size,
         )
         print("train cache:", outputs[0])
         print("val cache:", outputs[1])
+        if len(outputs) > 2:
+            print("test cache:", outputs[2])
         return
     summary = train_fit_vision_heads(
         args.train_cache, args.val_cache, args.output_checkpoint,
+        test_cache_path=args.test_cache,
         config=FitVisionTrainingConfig(
             epochs=args.epochs, batch_size=args.batch_size, learning_rate=args.learning_rate,
             feature_mode=args.feature_mode,

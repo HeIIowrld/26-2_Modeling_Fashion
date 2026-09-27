@@ -10,6 +10,7 @@ fashn-human-parser==0.1.1
 open-clip-torch==3.3.0
 ftfy==6.3.1
 pyarrow
+pycocotools
 
 # 가상 피팅 (CatVTON)
 # src/catvton_tryon.py 가 diffusers 를 직접 import 한다(스케줄러 교체).

@@ -100,6 +100,7 @@ class FitVisionSchemaTests(unittest.TestCase):
                 train_path,
                 val_path,
                 root / "fit.pt",
+                test_cache_path=val_path,
                 config=FitVisionTrainingConfig(
                     epochs=1, batch_size=3, hidden_dim=8, patience=1,
                     feature_mode="rgb_mask_geometry",
@@ -109,6 +110,14 @@ class FitVisionSchemaTests(unittest.TestCase):
         metrics = summary["metrics"]["bottom_silhouette"]
         self.assertEqual(set(metrics["by_domain"]), {"user", "shop"})
         self.assertIn("세미와이드", metrics["per_class_f1"])
+        self.assertEqual(
+            metrics["active_labels"], ["스트레이트", "세미와이드", "와이드"]
+        )
+        self.assertGreaterEqual(metrics["active_macro_f1"], metrics["macro_f1"])
+        self.assertEqual(
+            summary["test_metrics"]["bottom_silhouette"]["active_labels"],
+            ["스트레이트", "세미와이드", "와이드"],
+        )
 
     def test_cpu_label_store_writes_portable_csv_and_stable_group_split(self):
         with tempfile.TemporaryDirectory() as directory:
