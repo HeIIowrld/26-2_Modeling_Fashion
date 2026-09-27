@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 import json
 import hashlib
 import sys
@@ -57,6 +58,10 @@ class OfflineLibraryTests(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        # scores 는 mmap 으로 열려 있다. 참조를 놓기 전에 임시 폴더를 지우면 Windows 에서
+        # "다른 프로세스가 사용 중"(WinError 32)으로 정리가 실패한다.
+        del cls.library
+        gc.collect()
         cls.temp.cleanup()
 
     def test_index_matches_direct_three_item_scoring(self):
@@ -113,7 +118,7 @@ class OfflineLibraryTests(unittest.TestCase):
 
     def test_old_automatic_pass_and_pending_review_never_qualify(self):
         path = self.verified_record(["T1", "B1", "S1"], 95)
-        original = json.loads(path.read_text())
+        original = json.loads(path.read_text(encoding="utf-8"))
         try:
             for field, value in (("preservation", {}), ("visual_review", "pending")):
                 atomic_json(path, {**original, field: value})
