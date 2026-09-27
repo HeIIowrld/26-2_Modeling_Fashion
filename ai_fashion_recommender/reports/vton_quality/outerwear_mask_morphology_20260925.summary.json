@@ -1,0 +1,158 @@
+{
+  "raw_mask": "DeepFashion-MultiModal labels 1=top or 2=outer (oracle)",
+  "skipped_no_top_or_outer": 36,
+  "variants": {
+    "raw": {
+      "all": {
+        "images": 215,
+        "mean_raw_fraction": 0.081729,
+        "mean_result_fraction": 0.081729,
+        "mean_added_fraction": 0.0,
+        "mean_added_relative_to_raw": 0.0,
+        "mean_added_background_fraction": 0.0,
+        "mean_added_pants_leggings_fraction": 0.0,
+        "mean_added_skin_fraction": 0.0,
+        "mean_added_hair_fraction": 0.0,
+        "images_removing_raw_pixels": 0
+      },
+      "outer": {
+        "images": 50,
+        "mean_raw_fraction": 0.101747,
+        "mean_result_fraction": 0.101747,
+        "mean_added_fraction": 0.0,
+        "mean_added_relative_to_raw": 0.0,
+        "mean_added_background_fraction": 0.0,
+        "mean_added_pants_leggings_fraction": 0.0,
+        "mean_added_skin_fraction": 0.0,
+        "mean_added_hair_fraction": 0.0,
+        "images_removing_raw_pixels": 0
+      },
+      "non_outer": {
+        "images": 165,
+        "mean_raw_fraction": 0.075663,
+        "mean_result_fraction": 0.075663,
+        "mean_added_fraction": 0.0,
+        "mean_added_relative_to_raw": 0.0,
+        "mean_added_background_fraction": 0.0,
+        "mean_added_pants_leggings_fraction": 0.0,
+        "mean_added_skin_fraction": 0.0,
+        "mean_added_hair_fraction": 0.0,
+        "images_removing_raw_pixels": 0
+      }
+    },
+    "close_5": {
+      "all": {
+        "images": 215,
+        "mean_raw_fraction": 0.081729,
+        "mean_result_fraction": 0.084093,
+        "mean_added_fraction": 0.002363,
+        "mean_added_relative_to_raw": 0.030815,
+        "mean_added_background_fraction": 0.000385,
+        "mean_added_pants_leggings_fraction": 0.000148,
+        "mean_added_skin_fraction": 0.000671,
+        "mean_added_hair_fraction": 0.000678,
+        "images_removing_raw_pixels": 0
+      },
+      "outer": {
+        "images": 50,
+        "mean_raw_fraction": 0.101747,
+        "mean_result_fraction": 0.106057,
+        "mean_added_fraction": 0.00431,
+        "mean_added_relative_to_raw": 0.045313,
+        "mean_added_background_fraction": 0.000485,
+        "mean_added_pants_leggings_fraction": 0.000282,
+        "mean_added_skin_fraction": 0.001405,
+        "mean_added_hair_fraction": 0.001163,
+        "images_removing_raw_pixels": 0
+      },
+      "non_outer": {
+        "images": 165,
+        "mean_raw_fraction": 0.075663,
+        "mean_result_fraction": 0.077437,
+        "mean_added_fraction": 0.001773,
+        "mean_added_relative_to_raw": 0.026421,
+        "mean_added_background_fraction": 0.000355,
+        "mean_added_pants_leggings_fraction": 0.000107,
+        "mean_added_skin_fraction": 0.000449,
+        "mean_added_hair_fraction": 0.00053,
+        "images_removing_raw_pixels": 0
+      }
+    },
+    "close_5_dilate_3": {
+      "all": {
+        "images": 215,
+        "mean_raw_fraction": 0.081729,
+        "mean_result_fraction": 0.102671,
+        "mean_added_fraction": 0.020942,
+        "mean_added_relative_to_raw": 0.285432,
+        "mean_added_background_fraction": 0.009026,
+        "mean_added_pants_leggings_fraction": 0.002492,
+        "mean_added_skin_fraction": 0.006021,
+        "mean_added_hair_fraction": 0.001847,
+        "images_removing_raw_pixels": 0
+      },
+      "outer": {
+        "images": 50,
+        "mean_raw_fraction": 0.101747,
+        "mean_result_fraction": 0.131159,
+        "mean_added_fraction": 0.029412,
+        "mean_added_relative_to_raw": 0.319883,
+        "mean_added_background_fraction": 0.013809,
+        "mean_added_pants_leggings_fraction": 0.003459,
+        "mean_added_skin_fraction": 0.005538,
+        "mean_added_hair_fraction": 0.003115,
+        "images_removing_raw_pixels": 0
+      },
+      "non_outer": {
+        "images": 165,
+        "mean_raw_fraction": 0.075663,
+        "mean_result_fraction": 0.094039,
+        "mean_added_fraction": 0.018375,
+        "mean_added_relative_to_raw": 0.274992,
+        "mean_added_background_fraction": 0.007576,
+        "mean_added_pants_leggings_fraction": 0.002199,
+        "mean_added_skin_fraction": 0.006168,
+        "mean_added_hair_fraction": 0.001462,
+        "images_removing_raw_pixels": 0
+      }
+    },
+    "close_1_dilate_1": {
+      "all": {
+        "images": 215,
+        "mean_raw_fraction": 0.081729,
+        "mean_result_fraction": 0.08762,
+        "mean_added_fraction": 0.005891,
+        "mean_added_relative_to_raw": 0.080234,
+        "mean_added_background_fraction": 0.002497,
+        "mean_added_pants_leggings_fraction": 0.000684,
+        "mean_added_skin_fraction": 0.001587,
+        "mean_added_hair_fraction": 0.000629,
+        "images_removing_raw_pixels": 0
+      },
+      "outer": {
+        "images": 50,
+        "mean_raw_fraction": 0.101747,
+        "mean_result_fraction": 0.110191,
+        "mean_added_fraction": 0.008444,
+        "mean_added_relative_to_raw": 0.091989,
+        "mean_added_background_fraction": 0.00377,
+        "mean_added_pants_leggings_fraction": 0.000936,
+        "mean_added_skin_fraction": 0.00155,
+        "mean_added_hair_fraction": 0.001098,
+        "images_removing_raw_pixels": 0
+      },
+      "non_outer": {
+        "images": 165,
+        "mean_raw_fraction": 0.075663,
+        "mean_result_fraction": 0.080781,
+        "mean_added_fraction": 0.005118,
+        "mean_added_relative_to_raw": 0.076672,
+        "mean_added_background_fraction": 0.002111,
+        "mean_added_pants_leggings_fraction": 0.000608,
+        "mean_added_skin_fraction": 0.001598,
+        "mean_added_hair_fraction": 0.000486,
+        "images_removing_raw_pixels": 0
+      }
+    }
+  }
+}

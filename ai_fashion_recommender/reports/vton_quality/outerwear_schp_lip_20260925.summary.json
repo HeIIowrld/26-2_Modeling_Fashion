@@ -1,0 +1,19 @@
+{
+  "samples": 251,
+  "outer_samples": 50,
+  "non_outer_samples": 201,
+  "outer_detected_at_1000px": 45,
+  "non_outer_false_positive_at_1000px": 26,
+  "mean_outer_as_coat_recall": 0.7822,
+  "median_outer_as_coat_recall": 0.91329,
+  "mean_outer_as_upper_fraction": 0.02955,
+  "median_outer_as_upper_fraction": 0.00069,
+  "mean_outer_coat_iou": 0.69588,
+  "median_outer_coat_iou": 0.79683,
+  "mean_outer_coat_precision": 0.86453,
+  "median_outer_coat_precision": 0.90513,
+  "mean_inner_as_coat_fraction": 0.13633,
+  "median_inner_as_coat_fraction": 0.08096,
+  "mean_inner_as_upper_fraction": 0.75519,
+  "median_inner_as_upper_fraction": 0.87594
+}

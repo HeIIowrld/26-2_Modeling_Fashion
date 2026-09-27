@@ -1,0 +1,8 @@
+{
+  "image_size": [750, 1101],
+  "description": "Manually traced two dangling parka cords for an oracle upper-bound test; not a predicted mask.",
+  "polylines": [
+    {"points": [[405, 588], [400, 621], [375, 739]], "width": 13},
+    {"points": [[473, 579], [477, 680]], "width": 13}
+  ]
+}

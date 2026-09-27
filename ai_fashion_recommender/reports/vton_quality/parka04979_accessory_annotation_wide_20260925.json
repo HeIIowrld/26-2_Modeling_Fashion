@@ -1,0 +1,8 @@
+{
+  "image_size": [750, 1101],
+  "description": "Wider brush A/B for the same two manually traced parka cords; oracle only.",
+  "polylines": [
+    {"points": [[405, 588], [400, 621], [375, 739]], "width": 25},
+    {"points": [[473, 579], [477, 680]], "width": 25}
+  ]
+}

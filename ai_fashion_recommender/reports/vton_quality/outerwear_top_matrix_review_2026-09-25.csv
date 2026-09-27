@@ -1,0 +1,15 @@
+case_id,job_id,render_status,visual_decision,primary_issue
+puffer_04979_slim,240560,completed,reject,파카 끈과 머리 아래 카키색 외투 잔여
+puffer_04979_relaxed,240561,completed,reject,파카 끈과 머리 아래 카키색 외투 잔여
+puffer_04979_oversize,240562,completed,reject,파카 끈 잔여 및 찢어진 넥라인
+puffer_05412_relaxed,240563,completed,reject,어깨 밖 흰 털 윤곽과 목 지퍼 잔여
+longcoat_00310_slim,240564,completed,reject,왼쪽 검정 코트 및 기존 흰 이너 잔여
+longcoat_00475_relaxed,240565,completed,reject,코트 외곽의 흰 배경 잔상과 하의 주변 합성 흔적
+longcoat_01582_relaxed,240566,completed,reject,머리 옆 검정 잔여 및 코트 자락 모양의 흰 배경 잔상
+longcoat_05297_relaxed,240567,pose_rejected,not_rendered,팔 관절 신뢰도 부족으로 생성 전 중단
+short_02446_slim,240568,completed,reject,원래 회색 이너 밑단이 검정 상의 아래에 남음
+short_02446_regular,240569,completed,reject,원래 회색 이너 밑단이 검정 상의 아래에 남음
+short_02446_oversize,240570,completed,reject,긴소매 상품을 반소매와 분리된 손목 커프로 생성
+short_05528_slim,240571,completed,candidate,외투 제거와 상품 실루엣이 자연스러움
+short_07431_slim,240572,completed,reject,열린 셔츠 앞섶 사이로 원래 이너 그래픽 노출
+denim_05047_slim,240573,completed,candidate,앞선 레귤러핏 메타데이터 실행과 픽셀 단위 동일

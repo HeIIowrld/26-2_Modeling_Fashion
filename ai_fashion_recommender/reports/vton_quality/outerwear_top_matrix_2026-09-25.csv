@@ -1,0 +1,15 @@
+case_id,source_group,person,top_image,top_fit
+puffer_04979_slim,parka,/mnt/data1/dsl01/eval/deepfashion_mm/images/WOMEN-Jackets_Coats-id_00004979-01_4_full.jpg,/mnt/data1/dsl01/26-2_Modeling_Fashion/datasets/garments/raw/MS6961628.jpg,슬림핏
+puffer_04979_relaxed,parka,/mnt/data1/dsl01/eval/deepfashion_mm/images/WOMEN-Jackets_Coats-id_00004979-01_4_full.jpg,/mnt/data1/dsl01/26-2_Modeling_Fashion/datasets/garments/raw/MS6697352.jpg,여유핏
+puffer_04979_oversize,parka,/mnt/data1/dsl01/eval/deepfashion_mm/images/WOMEN-Jackets_Coats-id_00004979-01_4_full.jpg,/mnt/data1/dsl01/26-2_Modeling_Fashion/datasets/garments/raw/MS5126930.jpg,오버핏
+puffer_05412_relaxed,puffer,/mnt/data1/dsl01/eval/deepfashion_mm/images/WOMEN-Jackets_Coats-id_00005412-03_4_full.jpg,/mnt/data1/dsl01/26-2_Modeling_Fashion/datasets/garments/raw/MS6595807.jpg,여유핏
+longcoat_00310_slim,long_coat,/mnt/data1/dsl01/eval/deepfashion_mm/images/WOMEN-Jackets_Coats-id_00000310-01_4_full.jpg,/mnt/data1/dsl01/26-2_Modeling_Fashion/datasets/garments/raw/MS6961628.jpg,슬림핏
+longcoat_00475_relaxed,long_coat,/mnt/data1/dsl01/eval/deepfashion_mm/images/WOMEN-Jackets_Coats-id_00000475-02_4_full.jpg,/mnt/data1/dsl01/26-2_Modeling_Fashion/datasets/garments/raw/MS6595807.jpg,여유핏
+longcoat_01582_relaxed,long_coat,/mnt/data1/dsl01/eval/deepfashion_mm/images/WOMEN-Jackets_Coats-id_00001582-03_4_full.jpg,/mnt/data1/dsl01/26-2_Modeling_Fashion/datasets/garments/raw/MS6697352.jpg,여유핏
+longcoat_05297_relaxed,long_coat,/mnt/data1/dsl01/eval/deepfashion_mm/images/WOMEN-Jackets_Coats-id_00005297-03_4_full.jpg,/mnt/data1/dsl01/26-2_Modeling_Fashion/datasets/garments/raw/MS6697352.jpg,여유핏
+short_02446_slim,short_jacket,/mnt/data1/dsl01/eval/deepfashion_mm/images/MEN-Jackets_Vests-id_00002446-04_4_full.jpg,/mnt/data1/dsl01/26-2_Modeling_Fashion/datasets/garments/raw/MS6906711.jpg,슬림핏
+short_02446_regular,short_jacket,/mnt/data1/dsl01/eval/deepfashion_mm/images/MEN-Jackets_Vests-id_00002446-04_4_full.jpg,/mnt/data1/dsl01/26-2_Modeling_Fashion/datasets/garments/raw/MS6896783.jpg,레귤러핏
+short_02446_oversize,short_jacket,/mnt/data1/dsl01/eval/deepfashion_mm/images/MEN-Jackets_Vests-id_00002446-04_4_full.jpg,/mnt/data1/dsl01/26-2_Modeling_Fashion/datasets/garments/raw/MS6957693.jpg,오버핏
+short_05528_slim,short_jacket,/mnt/data1/dsl01/eval/deepfashion_mm/images/MEN-Jackets_Vests-id_00005528-09_4_full.jpg,/mnt/data1/dsl01/26-2_Modeling_Fashion/datasets/garments/raw/MS6906711.jpg,슬림핏
+short_07431_slim,short_jacket,/mnt/data1/dsl01/eval/deepfashion_mm/images/WOMEN-Jackets_Coats-id_00007431-03_4_full.jpg,/mnt/data1/dsl01/26-2_Modeling_Fashion/datasets/garments/raw/MS6961628.jpg,슬림핏
+denim_05047_slim,short_jacket,/mnt/data1/dsl01/eval/deepfashion_mm/images/MEN-Jackets_Vests-id_00005047-01_4_full.jpg,/mnt/data1/dsl01/26-2_Modeling_Fashion/datasets/garments/raw/MS7050470.jpg,슬림핏
