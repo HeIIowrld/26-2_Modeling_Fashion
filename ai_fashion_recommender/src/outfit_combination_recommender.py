@@ -22,6 +22,14 @@ LLM_ENABLED_VALUES = {"1", "true", "yes", "on"}
 STYLE_FORMALITY = {"스포티": 1, "스트리트": 1, "캐주얼": 2, "로맨틱": 3, "미니멀": 3, "포멀": 5}
 FORBIDDEN_COPY = ("예산", "가격", "할인", "가성비", "비용", "사이즈", "실측")
 MIN_SAFE_COMBINATION_SCORE = 0.75
+KNIT_TERMS = ("니트", "스웨터", "풀오버", "knit", "sweater", "pullover")
+SHORT_SLEEVE_TERMS = (
+    "반팔", "반소매", "하프슬리브", "숏슬리브", "민소매", "슬리브리스", "베스트", "조끼",
+    "short sleeve", "sleeveless", "vest",
+)
+SHORT_BOTTOM_TERMS = (
+    "반바지", "쇼츠", "숏팬츠", "하프팬츠", "버뮤다", "쇼츠·미니", "shorts", "bermuda",
+)
 
 
 @dataclass
@@ -118,6 +126,8 @@ def _product_garment(product: Any, targets: TargetKeywordResult) -> dict[str, An
     length = visual_length or _attribute_value(product, targets, "length")
     return {
         "category": category,
+        "name": str(getattr(product, "name", "") or ""),
+        "item_type": _attribute_value(product, targets, "item_type"),
         "color": _attribute_value(product, targets, "color"),
         "style": style,
         "fit": _fit_value(fit, category),
@@ -129,7 +139,33 @@ def _product_garment(product: Any, targets: TargetKeywordResult) -> dict[str, An
         "fit_confidence": fit_confidence if visual_fit else 1.0 if fit else 0.0,
         "length_source": "product_photo" if visual_length else "product_title",
         "length_confidence": length_confidence if visual_length else 1.0 if length else 0.0,
+        "matched_keywords": list(getattr(product, "matched_keywords", []) or []),
     }
+
+
+def _garment_text(garment: dict[str, Any]) -> str:
+    values = [
+        garment.get("name", ""), garment.get("item_type", ""),
+        garment.get("material", ""), garment.get("length", ""),
+        garment.get("sleeve_length", ""),
+        *(garment.get("matched_keywords", []) or []),
+    ]
+    return " ".join(str(value).lower() for value in values if value)
+
+
+def _long_sleeve_knit_with_shorts(top: dict[str, Any], bottom: dict[str, Any]) -> bool:
+    """Block the obvious seasonal mismatch while preserving short-sleeve knitwear.
+
+    Most commerce titles omit "긴팔" for an ordinary sweater, so knitwear is
+    treated as long-sleeved unless the title, keyword evidence, or worn-outfit
+    analysis explicitly identifies a short/sleeveless design.
+    """
+    top_text = _garment_text(top)
+    bottom_text = _garment_text(bottom)
+    knit = any(term in top_text for term in KNIT_TERMS)
+    explicitly_short_sleeved = any(term in top_text for term in SHORT_SLEEVE_TERMS)
+    shorts = any(term in bottom_text for term in SHORT_BOTTOM_TERMS)
+    return knit and not explicitly_short_sleeved and shorts
 
 
 def _current_item(category: str, outfit: OutfitAnalysis) -> dict[str, str]:
@@ -393,6 +429,17 @@ def recommend_outfit_combinations(
             _product_garment(by_category["bottom"], targets)
             if "bottom" in by_category else recommender._garment(None, "bottom", outfit)
         )
+        # Current-outfit garment dictionaries omit some observed fields. Keep
+        # enough photo evidence for pair-level seasonal compatibility checks.
+        if "top" not in by_category:
+            top = dict(top)
+            top.setdefault("name", outfit.upper_type)
+            top.setdefault("sleeve_length", outfit.sleeve_length)
+        if "bottom" not in by_category:
+            bottom = dict(bottom)
+            bottom.setdefault("name", outfit.lower_subtype or outfit.lower_type)
+        if _long_sleeve_knit_with_shorts(top, bottom):
+            continue
         harmony, _, harmony_reasons, harmony_rules = recommender._outfit_harmony_score(top, bottom, profile)
         shoe_score, shoe_reason = (1.0, "")
         if "shoes" in by_category:
