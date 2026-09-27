@@ -54,14 +54,55 @@ class StubSearch(MusinsaLiveSearch):
 class StubMeasurements:
     """사이즈표 응답에 색 옵션이 같이 오는 상황을 그대로 흉내 낸다(추가 요청 없음)."""
 
-    def __init__(self, colors_by_id: dict[str, list[str]]):
+    def __init__(self, colors_by_id: dict[str, list[str]], types_by_id: dict[str, str] | None = None):
         self.colors_by_id = colors_by_id
+        self.types_by_id = types_by_id or {}
         self.calls: list[str] = []
 
     def get(self, product_id: str) -> dict:
         self.calls.append(product_id)
         return {"status": "unavailable", "sizes": [], "issues": [],
-                "color_options": list(self.colors_by_id.get(product_id, []))}
+                "color_options": list(self.colors_by_id.get(product_id, [])),
+                "type_name": self.types_by_id.get(product_id, "")}
+
+
+class CategoryCheckTests(unittest.TestCase):
+    """무신사 카테고리가 틀렸을 때 실측표로 잡는다.
+
+    상품의 부위는 검색한 카테고리를 그대로 쓴다. 무신사가 하의를 상의로 올려 두면 하의가
+    상의 자리에 추천된다(팀원 신고). 실측표는 그 옷을 실제로 잰 표라 부위를 더 잘 말한다.
+    2026-09-27 상품 659개 조사에서 어긋난 사례는 0건이었다 — 드문 오류를 막는 안전망이다.
+    """
+
+    def targets(self):
+        return TargetKeywordResult(mode="user_input", targets={"top": {"category": ["상의"]}})
+
+    def search_with(self, types_by_id):
+        search = StubSearch({"top": [item(1, "베이직 반팔 티셔츠"), item(2, "와이드 팬츠")]})
+        search.measurements = StubMeasurements({}, types_by_id)
+        profile = UserProfile(budget=120_000, change_scope="전체 변경",
+                              provided_fields=["budget", "change_scope"])
+        return search, search.search(self.targets(), profile, limit=2)
+
+    def test_a_bottom_listed_under_tops_is_dropped(self):
+        search, results = self.search_with({"MS1": "반소매티셔츠", "MS2": "바지"})
+        self.assertEqual([product.product_id for product in results], ["MS1"])
+        self.assertEqual(search.last_search_stats["category_check"]["dropped"], 1)
+
+    def test_a_matching_type_is_kept(self):
+        _search, results = self.search_with({"MS1": "셔츠", "MS2": "긴소매티셔츠"})
+        self.assertEqual(len(results), 2)
+
+    def test_a_missing_type_name_is_not_a_verdict(self):
+        # 실측표 종류가 없는 상품이 4~6% 다. 모르는 것을 틀린 것으로 취급하지 않는다.
+        search, results = self.search_with({})
+        self.assertEqual(len(results), 2)
+        self.assertEqual(search.last_search_stats["category_check"], {"checked": 0, "dropped": 0})
+
+    def test_an_unknown_or_ambiguous_type_is_left_alone(self):
+        # '오버올'은 상·하의 어느 쪽으로도 팔린다. 새 값(처음 보는 종류)도 마찬가지다.
+        _search, results = self.search_with({"MS1": "오버올", "MS2": "처음보는종류"})
+        self.assertEqual(len(results), 2)
 
 
 class ColorOptionTests(unittest.TestCase):

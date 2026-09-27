@@ -11,7 +11,7 @@ from functools import partial
 from typing import Iterable
 
 from product_colors import palettes_for
-from product_measurements import ProductMeasurementClient
+from product_measurements import ProductMeasurementClient, category_from_type_name
 from recommendation_keywords import TargetKeywordResult
 from schemas import Product, UserProfile
 from shopping_http import bounded_results, fetch_json
@@ -99,6 +99,8 @@ class ShoppingProduct:
     photo_attributes: dict = field(default_factory=dict)
     # 무신사가 파는 색 이름 전부. 회피 색 검사에만 쓴다(대표 사진이 어느 색인지 모른다).
     color_options: list[str] = field(default_factory=list)
+    # 실측표가 말하는 옷 종류('바지'·'셔츠'…). 무신사 카테고리 오류를 잡는 데 쓴다.
+    measurement_type: str = ""
     retrieval_score: float = 0.0
     recommendation_reason: str = ""
     recommendation_reason_source: str = "rules"
@@ -367,8 +369,9 @@ class MusinsaLiveSearch:
             record = records[index] if index < len(records) else None
             product.size_fit = compare_sizes(record or {"status": "unavailable"}, product.category,
                                             profile.reference_measurements.get(product.category))
-            # 같은 응답에 색 옵션이 들어 있다. 추가 요청 없이 대표 색 밖의 색을 알게 된다.
+            # 같은 응답에 색 옵션과 실측표 종류가 들어 있다. 추가 요청은 없다.
             product.color_options = list((record or {}).get("color_options") or [])
+            product.measurement_type = str((record or {}).get("type_name") or "")
         self.last_search_stats["measurement_candidates"] = len(shortlist)
         self.last_search_stats["measurement_tables"] = sum(bool(r and r.get("sizes")) for r in records)
         for products in grouped.values():
@@ -437,6 +440,7 @@ class MusinsaLiveSearch:
             except Exception:
                 pass  # Prefetch is optional; it must not block normal size ranking.
         self._compare_shortlist(grouped, profile)
+        self._drop_wrong_category(grouped)
         self._drop_fully_avoided_colors(grouped, profile)
         self._supplement_photos(grouped, targets, photo_loader, prefetched)
         self._apply_fashion_policy_adjustments(grouped, profile)
@@ -449,6 +453,29 @@ class MusinsaLiveSearch:
             for products in grouped.values() for product in products
         )
         return selected
+
+    def _drop_wrong_category(self, grouped) -> None:
+        """무신사 카테고리가 틀린 상품을 실측표로 걸러낸다. 추가 요청은 없다.
+
+        상품의 부위는 우리가 검색한 카테고리를 그대로 쓴다(`category=category`). 무신사가
+        하의를 상의로 올려 두면 하의가 상의 자리에 추천된다. 실측표는 그 옷을 실제로 잰
+        표라 부위를 훨씬 잘 말해 준다 — 상의로 올라온 바지도 typeName 이 '바지'다.
+
+        어긋날 때만 뺀다. typeName 이 없는 상품이 4~6% 있고 오버올처럼 양쪽으로 파는 옷도
+        있어서, 모르는 경우에는 아무 판단도 하지 않는다.
+        """
+        stats = {"checked": 0, "dropped": 0}
+        for category, products in grouped.items():
+            kept = []
+            for product in products:
+                actual = category_from_type_name(product.measurement_type)
+                stats["checked"] += bool(actual)
+                if actual and actual != category:
+                    stats["dropped"] += 1
+                    continue
+                kept.append(product)
+            grouped[category] = kept
+        self.last_search_stats["category_check"] = stats
 
     def _drop_fully_avoided_colors(self, grouped, profile) -> None:
         """파는 색이 **전부** 회피 색인 상품을 뺀다. 추가 요청은 없다(사이즈표 응답에 같이 온다).
