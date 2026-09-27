@@ -144,9 +144,10 @@ FORMAL_CASUAL_TERMS = {
     },
 }
 
-# A plain/basic tee receives only a modest deduction.  Visual or textual design
-# evidence cancels it, so ringer, colour-block and large graphic tees remain.
-BASIC_LOGO_TEE_PENALTY = -1.25
+# Plain/basic and logo-only tees should fall behind alternatives with an actual
+# design point. Visual or textual design evidence still protects ringer,
+# colour-block and artwork tees.
+BASIC_LOGO_TEE_PENALTY = -3.0
 TEE_TERMS = (
     "티셔츠", "반팔티", "반팔 티", "숏슬리브", "t-shirt", "tshirt", "short sleeve tee",
 )
@@ -156,6 +157,10 @@ DESIGN_POINT_TERMS = (
     "artwork", "ringer", "color block", "colour block", "striped", "illustration", "character",
 )
 LOGO_ONLY_TERMS = ("로고", "워드마크", "엠블럼", "심볼", "logo", "wordmark", "emblem")
+BASIC_TEE_CUES = (
+    "기본", "베이직", "스탠다드", "에센셜", "무지",
+    "basic", "standard", "essential", "plain",
+)
 
 
 def _normalized(value: Any) -> str:
@@ -352,6 +357,11 @@ def title_has_logo_only_cue(name: str) -> bool:
     return any(term in text for term in LOGO_ONLY_TERMS)
 
 
+def title_has_basic_tee_cue(name: str) -> bool:
+    text = _normalized(name)
+    return any(term in text for term in BASIC_TEE_CUES)
+
+
 def basic_logo_tee_adjustment(product: Any) -> tuple[float, dict]:
     """Penalise plain basics and logo/wordmark-only tees, regardless of logo size."""
     if getattr(product, "category", "") != "top":
@@ -361,7 +371,17 @@ def basic_logo_tee_adjustment(product: Any) -> tuple[float, dict]:
     item_type = str(design.get("item_type") or "")
     is_tee = item_type == "티셔츠" or any(term in name for term in TEE_TERMS)
     logo_only = title_has_logo_only_cue(name)
-    if not is_tee or (not logo_only and (title_has_design_point(name) or not design.get("plain_basic"))):
+    if not is_tee:
+        return 0.0, {}
+    if not logo_only and title_has_design_point(name):
+        return 0.0, {}
+    has_photo_judgement = "plain_basic" in design
+    plain_basic = (
+        bool(design.get("plain_basic"))
+        if has_photo_judgement
+        else title_has_basic_tee_cue(name)
+    )
+    if not logo_only and not plain_basic:
         return 0.0, {}
     value = float(BASIC_LOGO_TEE_PENALTY)
     return value, {
