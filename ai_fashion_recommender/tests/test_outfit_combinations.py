@@ -267,6 +267,49 @@ class OutfitCombinationTests(unittest.TestCase):
 
         self.assertEqual(outfits, [])
 
+    def test_large_denim_tone_gap_is_deprioritized(self):
+        profile = UserProfile(
+            desired_style="캐주얼", change_categories=["top", "bottom"],
+        )
+        targets = TargetKeywordResult("user_input", {
+            "top": {"material": ["데님"], "style": ["캐주얼"]},
+            "bottom": {"material": ["데님"], "style": ["캐주얼"]},
+        })
+        top = product("T-LIGHT", "top", ["데님", "캐주얼"])
+        top.name = "아이스 블루 데님 셔츠"
+        dark = product("B-DARK", "bottom", ["데님", "캐주얼"])
+        dark.name = "블랙 데님 팬츠"
+        similar = product("B-LIGHT", "bottom", ["데님", "캐주얼"])
+        similar.name = "연청 데님 팬츠"
+
+        outfits = recommend_outfit_combinations(
+            [top, dark, similar], profile, self.pose, self.outfit,
+            targets, FakeRecommender(), limit=1,
+        )
+
+        self.assertEqual(outfits[0].product_ids, ["T-LIGHT", "B-LIGHT"])
+
+    def test_similar_denim_tones_are_not_penalized(self):
+        profile = UserProfile(
+            desired_style="캐주얼", change_categories=["top", "bottom"],
+        )
+        targets = TargetKeywordResult("user_input", {
+            "top": {"material": ["데님"], "style": ["캐주얼"]},
+            "bottom": {"material": ["데님"], "style": ["캐주얼"]},
+        })
+        top = product("T-MID", "top", ["데님", "캐주얼"])
+        top.name = "중청 데님 셔츠"
+        bottom = product("B-DARK", "bottom", ["데님", "캐주얼"])
+        bottom.name = "진청 데님 팬츠"
+
+        outfits = recommend_outfit_combinations(
+            [top, bottom], profile, self.pose, self.outfit,
+            targets, FakeRecommender(), limit=1,
+        )
+
+        self.assertEqual(len(outfits), 1)
+        self.assertEqual(outfits[0].policy_penalty, 0.0)
+
     def test_sporty_outfit_cannot_be_carried_by_running_shoes_alone(self):
         profile = UserProfile(
             purpose="데일리", desired_style="스포티",
