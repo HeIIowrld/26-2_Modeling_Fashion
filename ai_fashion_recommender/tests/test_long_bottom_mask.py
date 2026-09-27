@@ -92,10 +92,10 @@ class LongBottomMaskTests(unittest.TestCase):
 
 
 class LongHullPolicyTests(unittest.TestCase):
-    def _apply(self, reference_length, *, name="와이드 슬랙스", policy="long-hull"):
+    def _apply(self, reference_length, *, name="와이드 슬랙스", fit="", policy="long-hull"):
         adapter = CatVTONTryOn(lower_mask_policy=policy)
         seg, lower = _jogger_scene()
-        product = SimpleNamespace(name=name, product_id="MS1")
+        product = SimpleNamespace(name=name, fit=fit, product_id="MS1")
         return lower, adapter._apply_mask_policy(
             lower, "bottom", Path("MS1.jpg"), None, product, seg, {}, {},
             reference_length=reference_length,
@@ -118,6 +118,13 @@ class LongHullPolicyTests(unittest.TestCase):
             lower, (mask, released) = self._apply(reference, name=name, policy=policy)
             self.assertIsNone(released, (reference, name, policy))
             self.assertIs(mask, lower)
+
+    def test_structured_slim_fit_avoids_long_hull_without_name_keyword(self):
+        lower, (mask, released) = self._apply(
+            "롱·긴바지 기장", name="베이직 데님", fit="슬림핏"
+        )
+        self.assertIsNone(released)
+        self.assertIs(mask, lower)
 
     def test_long_hull_is_the_default(self):
         self.assertEqual(CatVTONTryOn().lower_mask_policy, "long-hull")
