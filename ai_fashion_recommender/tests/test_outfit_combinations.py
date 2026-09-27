@@ -178,7 +178,7 @@ class OutfitCombinationTests(unittest.TestCase):
             product("T3", "top", ["레귤러", "스트리트"]),
             product("S1", "shoes", ["스니커즈", "스트리트"]),
             product("S2", "shoes", ["부츠", "스트리트"]),
-            product("S3", "shoes", ["로퍼", "스트리트"]),
+            product("S3", "shoes", ["스니커즈", "스트리트"]),
         ]
         outfits = recommend_outfit_combinations(
             products, self.profile, self.pose, self.outfit, self.targets,
