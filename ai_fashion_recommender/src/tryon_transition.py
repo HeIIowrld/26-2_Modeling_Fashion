@@ -24,7 +24,16 @@ SHORT_LENGTHS = {
 }
 
 
-def transition_prompt(category, length, fitted, *, skirt=False):
+def transition_prompt(
+    category,
+    length,
+    fitted,
+    *,
+    skirt=False,
+    source_fit="",
+    target_fit="",
+    body_prior_confidence=None,
+):
     garment = "upper-body garment" if category == "top" else "lower-body garment"
     prompt = (
         f"Replace the {garment} with the exact garment in the reference product image. "
@@ -38,6 +47,16 @@ def transition_prompt(category, length, fitted, *, skirt=False):
     )
     if fitted:
         prompt += "The target garment is close-fitting, following the limbs or torso, without the original baggy volume. "
+    if source_fit and target_fit:
+        prompt += (
+            f"The observed source garment fit is {source_fit} and the target fit is {target_fit}. "
+            "Use the visible joints and the person's unchanged natural proportions; do not preserve the source garment volume. "
+        )
+    if body_prior_confidence is not None:
+        prompt += (
+            "A pose-aligned body-location prior is available only as an uncertain spatial guide. "
+            "Do not infer exact measurements or change the person's weight. "
+        )
     if length in {"쇼츠·미니 기장", "미니 기장", "반바지", "무릎 기장", "무릎 기장 바지"}:
         if skirt:
             prompt += "The target is a short skirt: expose bare lower legs below its hem, without added trousers or leggings. "

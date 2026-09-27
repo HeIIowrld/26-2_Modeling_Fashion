@@ -36,6 +36,13 @@ from PIL import Image, ImageFilter
 from config import GARMENT_CLEAN_DIR, PROJECT_DIR, garment_image_path
 from schemas import Recommendation
 from virtual_tryon import TryOnNotReady, VirtualTryOnAdapter
+from body_shape_prior import (
+    current_fit_label,
+    estimate_body_shape_prior,
+    fit_level,
+    fit_transition_needed,
+    target_fit_label,
+)
 from tryon_transition import (
     SHORT_LENGTHS,
     FITTED_NAME, exposed_limb_coverage, harmonize_exposed_skin, transition_envelope, transition_prompt,
@@ -789,6 +796,7 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         lower_mask_policy: str = "long-hull",
         transition_correction: bool = True,
         transition_editor=None,
+        body_prior_policy: bool = True,
     ) -> None:
         super().__init__(enabled=True)
         self.num_inference_steps = num_inference_steps
@@ -844,6 +852,10 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         # CatVTON mask (never send the larger transition envelope to CatVTON).
         self.transition_correction = transition_correction
         self.transition_editor = transition_editor
+        # Pose + parser + observed fit produce an explicitly uncalibrated body
+        # location prior.  It never replaces measured body dimensions; it only
+        # routes silhouette-changing edits and widens their editable envelope.
+        self.body_prior_policy = body_prior_policy
         # 마스크 정책:
         # upper "agnostic"(기본) = 원래 상의의 넥라인 구멍·짧은 밑단 단서를 지운 상체 마스크(골반까지 확장).
         #       2026-09-15 상의 288쌍 사전 기준 통과: 크롭 계열 실패 -18.1%p, 자기 상품 top-1 +11.5%p,
@@ -868,6 +880,8 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         self.last_quality_reports: list[dict] = []
         self.last_mask_notes: list[str] = []
         self.last_raw_masks: dict[str, np.ndarray] = {}
+        self.last_body_priors: dict[str, dict] = {}
+        self.last_body_prior_maps: dict[str, dict[str, np.ndarray]] = {}
         self._quality_cache_data: dict[str, dict[str, float]] | None = None
         self._device_request = device
         self._pipeline = None
@@ -1209,12 +1223,45 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         if (category == "bottom" and self.lower_mask_policy == "long-hull" and segmentation is not None
                 and reference_length in LONG_BOTTOM_LENGTHS
                 and not self._is_skirt_reference(garment, product, context)):
-            if TIGHT_BOTTOM_NAME.search(getattr(product, "name", "") or ""):
+            target_fit = target_fit_label(product, "bottom")
+            if (TIGHT_BOTTOM_NAME.search(getattr(product, "name", "") or "")
+                    or fit_level("bottom", target_fit) == 0):
                 self.last_mask_notes.append("lower:native(스키니·레깅스)")
             else:
                 mask, released = long_bottom_mask(np.asarray(mask).astype(bool), segmentation, landmarks_px)
                 self.last_mask_notes.append("lower:long-hull")
         return mask, released
+
+    def _estimate_body_prior(self, raw_mask, category, segmentation, landmarks_px, context):
+        """Estimate and retain a non-metric hidden-body location prior."""
+        if not self.body_prior_policy or segmentation is None:
+            return None
+        outfit = context.get("outfit")
+        label, source = current_fit_label(outfit, category)
+        layering = getattr(outfit, "layering_state", "") if outfit is not None else ""
+        prior = estimate_body_shape_prior(
+            segmentation,
+            landmarks_px,
+            category,
+            label,
+            fit_source=source,
+            layering_state=layering,
+            observed_mask=raw_mask,
+        )
+        if prior is None:
+            self.last_mask_notes.append(f"{category}:body-prior(unavailable)")
+            return None
+        self.last_body_priors[category] = prior.to_diagnostic()
+        self.last_body_prior_maps[category] = {
+            "central_mask": prior.central_mask.copy(),
+            "plausible_mask": prior.plausible_mask.copy(),
+            "confidence_map": prior.confidence_map.copy(),
+        }
+        label_note = prior.fit_label or "fit-unknown"
+        self.last_mask_notes.append(
+            f"{category}:body-prior({label_note},confidence={prior.confidence:.2f})"
+        )
+        return prior
 
     def _policy_mask(self, raw_mask, category, garment_path, garment, product,
                      segmentation, landmarks_px, context):
@@ -1466,6 +1513,7 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             self.last_quality_reports.append({**report.to_dict(), "attempts": attempts,
                                               "unassessed_attempts": unassessed_attempts,
                                               "transition_edit": bool(quality and quality.get("transition_prompt")),
+                                              "body_prior": quality.get("body_prior") if quality else None,
                                               "skin_correction": skin_report,
                                               "assess_seconds": round(assess_seconds, 3)})
             failed = report.warnings()
@@ -1501,6 +1549,8 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         self.last_quality_reports = []
         self.last_mask_notes = []
         self.last_raw_masks = {}  # 정책 적용 후 원본 좌표 마스크(평가 측정용)
+        self.last_body_priors = {}
+        self.last_body_prior_maps = {}
         self.last_render_kind = ""
         person = Image.open(person_image).convert("RGB")
 
@@ -1601,6 +1651,9 @@ class CatVTONTryOn(VirtualTryOnAdapter):
                     f"스커트 레퍼런스({product.product_id}): guidance_scale "
                     f"{self.guidance_scale} → {guidance_override} (시스루 완화)"
                 )
+            body_prior = self._estimate_body_prior(
+                raw_mask, category, segmentation, landmarks_px, context
+            )
             raw_mask, released = self._apply_mask_policy(
                 raw_mask, category, garment_path, garment, product, segmentation, landmarks_px, context,
                 reference_length=reference_length,
@@ -1608,23 +1661,38 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             edit_prompt = ""
             if self.transition_correction:
                 outfit = context.get("outfit")
+                source_fit, _fit_source = current_fit_label(outfit, category)
+                target_fit = target_fit_label(product, category)
+                fitted_target = bool(FITTED_NAME.search(product.name or "")) or fit_level(
+                    category, target_fit
+                ) == 0
+                fit_narrowing = fit_transition_needed(category, source_fit, target_fit)
                 shortening = (bottom_length_gap(current_bottom_length(outfit, context)[0], reference_length)
                               if category == "bottom" else
                               sleeve_length_gap(getattr(outfit, "sleeve_length", ""),
                                                 reference_length))
                 # Even short-to-short edits can turn the full leg style mask
                 # into trousers. Route by target length, not only source gap.
-                if (FITTED_NAME.search(product.name or "") or reference_length in SHORT_LENGTHS[category]
+                if (fitted_target or fit_narrowing or reference_length in SHORT_LENGTHS[category]
                         or (shortening is not None and shortening > 0)):
                     envelope = transition_envelope(raw_mask, segmentation, landmarks_px, category)
+                    if envelope is not None and body_prior is not None:
+                        envelope |= body_prior.plausible_mask
                     if (envelope is not None and self.transition_editor is not None
                             and self.transition_editor.available):
                         raw_mask = envelope
                         edit_prompt = transition_prompt(
-                            category, reference_length, bool(FITTED_NAME.search(product.name or "")),
+                            category, reference_length, fitted_target,
                             skirt=category == "bottom" and self._is_skirt_reference(garment, product, context),
+                            source_fit=source_fit if fit_narrowing else "",
+                            target_fit=target_fit if fit_narrowing else "",
+                            body_prior_confidence=(body_prior.confidence if body_prior is not None else None),
                         )
                         self.last_mask_notes.append(f"{category}:transition-envelope")
+                        if fit_narrowing:
+                            self.last_mask_notes.append(
+                                f"{category}:fit-transition({source_fit}->{target_fit})"
+                            )
                     else:
                         self._add_warning("기장·핏 변경용 참조 편집 모델 또는 관절 정보가 없어 기본 합성을 사용합니다. 피부·옷 폭 복원에는 한계가 있습니다.")
             self.last_raw_masks[category] = np.asarray(raw_mask).astype(bool)
@@ -1656,6 +1724,7 @@ class CatVTONTryOn(VirtualTryOnAdapter):
                     "source_person": source_person_model,
                     "transition_prompt": edit_prompt,
                     "reference_length": reference_length,
+                    "body_prior": self.last_body_priors.get(category),
                 }
                 if self.post_quality_gate:
                     try:
