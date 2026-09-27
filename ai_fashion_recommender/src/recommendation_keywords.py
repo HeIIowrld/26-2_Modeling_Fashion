@@ -182,8 +182,12 @@ class RecommendationKeywordGenerator:
             clean = [value for value in values if self._usable(value)]
             if not clean:
                 return
-            applicable = [target for category, target in targets.items()
-                          if not (category == "shoes" and attribute == "material" and source == "photo_fallback")]
+            # 의류 소재 선호는 상·하의에만 적용한다. 데님·니트 같은 의류
+            # 소재를 신발 검색어로 복제하면 비현실적인 데님 신발이 노출된다.
+            applicable = [
+                target for category, target in targets.items()
+                if not (category == "shoes" and attribute == "material")
+            ]
             if not applicable:
                 return
             for target in applicable:

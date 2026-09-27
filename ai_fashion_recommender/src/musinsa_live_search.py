@@ -37,6 +37,7 @@ CATEGORY_CODES = {"top": "001", "bottom": "003", "shoes": "103"}
 CATEGORY_FALLBACK_QUERY = {"top": "베이직 상의", "bottom": "팬츠", "shoes": "신발"}
 SORT_CODES = ("POPULAR", "NEW")
 PAGE_SIZE = 100
+MAX_MATERIAL_QUERY_TERMS = 3
 # 입력 속성과 관련 있는 세부 분류만 추가한다. 무관한 품목은 검색하지 않는다.
 SUBCATEGORIES = {
     "top": {"셔츠": "001002", "니트": "001006", "후드": "001008", "맨투맨": "001004"},
@@ -176,14 +177,12 @@ class MusinsaLiveSearch:
         if category == "shoes":
             item_type = self._preferred_term(attributes, "item_type") or "스니커즈"
             color = self._preferred_term(attributes, "color")
-            material = self._preferred_term(attributes, "material")
             candidates = list(dict.fromkeys(" ".join(filter(None, terms)) for terms in (
-                (color, item_type), (material, item_type), (item_type,),
+                (color, item_type), (item_type,),
             )))
             return list(dict.fromkeys(candidates))
         item_type = self._preferred_term(attributes, "item_type")
         fit = self._preferred_term(attributes, "fit")
-        material = self._preferred_term(attributes, "material")
         style = self._preferred_term(attributes, "style")
         color = self._preferred_term(attributes, "color")
         fallback_noun = CATEGORY_FALLBACK_QUERY[category]
@@ -192,13 +191,22 @@ class MusinsaLiveSearch:
         # collect visually plausible items and let the trained fit heads apply
         # Fashion Rules to the candidate images.  A fit-text query remains as a
         # fallback for resilience when photo inference is unavailable.
-        primary = " ".join(value for value in (material, noun) if value)
+        materials = list(dict.fromkeys(
+            self._aliases(value)[0]
+            for value in attributes.get("material", [])
+            if value
+        ))[:MAX_MATERIAL_QUERY_TERMS]
+        material_queries = [f"{material} {noun}" for material in materials]
         fits = attributes.get("fit", [])
         alternative_fit = fits[1] if len(fits) > 1 else (self._aliases(fits[0])[-1] if fits else "")
-        candidates = [primary,
-                      " ".join(value for value in (color or style, material or noun) if value),
-                      f"{alternative_fit or fit} {noun}" if fit else "", fallback_noun]
-        return list(dict.fromkeys(value.strip() for value in candidates if value.strip()))[:4]
+        context_material = materials[0] if materials else noun
+        candidates = [
+            *material_queries,
+            " ".join(value for value in (color or style, context_material) if value),
+            f"{alternative_fit or fit} {noun}" if fit else "",
+            fallback_noun,
+        ]
+        return list(dict.fromkeys(value.strip() for value in candidates if value.strip()))[:5]
 
     def _fetch(
         self, category: str, query: str, size: int = PAGE_SIZE, *,
@@ -647,18 +655,53 @@ class MusinsaLiveSearch:
                 )
                 product.ranking_adjustments = adjustments
 
+    @classmethod
+    def _product_matches_material(cls, product: ShoppingProduct, material: str) -> bool:
+        normalized = cls._normalized(material)
+        if any(cls._normalized(value) == normalized
+               for value in (getattr(product, "matched_keywords", None) or [])):
+            return True
+        text = cls._normalized(f"{product.name} {product.brand}")
+        return any(cls._normalized(alias) in text for alias in cls._aliases(material))
+
     def _select(self, grouped, targets, limit):
         # 최신 화면 계약: 카테고리마다 최대 limit개. 실측 기반 재정렬도 유지한다.
         selected, seen_ids, brand_counts = [], set(), {}
+        requested_materials = {
+            category: list(dict.fromkeys(attributes.get("material", [])))
+            if category != "shoes" else []
+            for category, attributes in targets.targets.items()
+        }
+        used_materials = {category: set() for category in targets.targets}
         for category in targets.targets:
             for _ in range(limit):
                 products = [p for p in grouped.get(category, []) if p.product_id not in seen_ids]
                 if not products:
                     break
-                best = products[0]
-                tied = [p for p in products if self._sort_key(p)[0] == self._sort_key(best)[0]]
+                # 복수 소재를 선택했다면 각 소재 후보를 최소 한 번 먼저 보여 준다.
+                # 요청 소재 후보가 부족한 경우에는 기존 검색 순위로 자연스럽게 fallback한다.
+                material_pool = products
+                for material in requested_materials[category]:
+                    if material in used_materials[category]:
+                        continue
+                    matching = [
+                        product for product in products
+                        if self._product_matches_material(product, material)
+                    ]
+                    if matching:
+                        material_pool = matching
+                        break
+                best = material_pool[0]
+                tied = [
+                    product for product in material_pool
+                    if self._sort_key(product)[0] == self._sort_key(best)[0]
+                ]
                 best = next((p for p in tied if not p.brand or brand_counts.get(p.brand, 0) < 2), best)
                 selected.append(best)
                 seen_ids.add(best.product_id)
                 brand_counts[best.brand] = brand_counts.get(best.brand, 0) + 1
+                used_materials[category].update(
+                    material for material in requested_materials[category]
+                    if self._product_matches_material(best, material)
+                )
         return selected

@@ -339,6 +339,21 @@ class MusinsaLiveSearchTests(unittest.TestCase):
         self.assertFalse(any(query.startswith("와이드 ") for category, query in search.calls
                              if category == "bottom"))
 
+    def test_multiple_preferred_materials_are_represented_in_final_products(self):
+        search = StubSearch({"top": [
+            item(1, "데님 셔츠", reviews=1000),
+            item(2, "데님 재킷", reviews=900),
+            item(3, "니트 스웨터", reviews=1),
+        ]})
+        target = TargetKeywordResult("user_input", {
+            "top": {"material": ["데님", "니트"], "style": ["캐주얼"]},
+        })
+
+        results = search.search(target, self.profile, limit=3)
+
+        self.assertEqual([product.product_id for product in results], ["MS1", "MS3", "MS2"])
+        self.assertIn("니트", results[1].matched_keywords)
+
     def test_trend_bonus_is_disabled_for_formal_work_interview_and_classic(self):
         profiles = (
             UserProfile(purpose="출근", desired_style="캐주얼"),

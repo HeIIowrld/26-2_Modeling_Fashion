@@ -40,6 +40,17 @@ class CandidateGenerationTests(unittest.TestCase):
         self.assertEqual(len(calls), 8)
         self.assertEqual(self.search.last_search_stats["unique_candidates"]["top"], 41)
 
+    def test_each_selected_clothing_material_gets_a_query_but_shoes_get_none(self):
+        attributes = {"material": ["데님", "니트"], "style": ["캐주얼"]}
+        top_queries = self.search._queries("top", attributes)
+        shoe_queries = self.search._queries(
+            "shoes", {"item_type": ["스니커즈"], "material": ["데님", "니트"]}
+        )
+
+        self.assertTrue(any("데님" in query for query in top_queries))
+        self.assertTrue(any("니트" in query for query in top_queries))
+        self.assertFalse(any("데님" in query or "니트" in query for query in shoe_queries))
+
     def test_result_beyond_position_forty_is_considered(self):
         rows = [item(i, "베이직 상의") for i in range(1, 61)] + [item(61, "오버핏 니트 캐주얼")]
         with patch.object(self.search, "_fetch", return_value=rows):
