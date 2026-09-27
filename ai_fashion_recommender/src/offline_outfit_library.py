@@ -40,7 +40,7 @@ def scoring_fingerprint() -> str:
              "outfit_analyzer.py", "schemas.py", "config.py", "fashion_rules.py")]
     paths.append(root.parent / "FASHION_RULES_MASTER.md")
     # Query/review changes must not invalidate 216 million unchanged scores.
-    source = Path(__file__).read_text()
+    source = Path(__file__).read_text(encoding="utf-8")
     scoring_nodes = [node for node in ast.parse(source).body
                      if isinstance(node, ast.Assign) or isinstance(node, ast.FunctionDef)
                      and node.name in {"default_scenarios", "empty_outfit", "shoe_features", "score_triple", "build_library"}]
@@ -197,7 +197,7 @@ class OutfitLibrary:
         accepted = []
         for path in paths:
             try:
-                record = json.loads(path.read_text())
+                record = json.loads(path.read_text(encoding="utf-8"))
                 if record.get("library_identity") != self.metadata["identity"] or not render_is_eligible(record):
                     continue
                 output = path.with_suffix(".png")

@@ -56,6 +56,45 @@ def _rows(value: object) -> list[dict]:
     return [row for row in value if isinstance(row, dict)] if isinstance(value, list) else []
 
 
+_TYPE_NAMES: dict | None = None
+
+
+def load_type_names(path=None) -> dict:
+    """실측표 typeName 사전. 읽지 못하면 빈 사전(검사를 건너뛴다)."""
+    global _TYPE_NAMES
+    default = path is None
+    if default:
+        if _TYPE_NAMES is not None:
+            return _TYPE_NAMES
+        from config import DATA_DIR
+
+        path = Path(DATA_DIR) / "catalog_derivation.json"
+    try:
+        rules = json.loads(Path(path).read_text(encoding="utf-8")).get("measurement_type_names") or {}
+    except (OSError, ValueError, TypeError, AttributeError):
+        rules = {}
+    if default:
+        _TYPE_NAMES = rules
+    return rules
+
+
+def category_from_type_name(type_name: str, rules: dict | None = None) -> str:
+    """실측표가 말하는 부위. 모르면 빈 문자열을 준다.
+
+    무신사 카테고리는 가끔 틀린다(상의로 올라온 바지). 실측표는 그 옷을 실제로 잰 표라
+    부위를 훨씬 잘 말해 준다. 다만 typeName 이 비어 있는 상품이 4~6% 있고, 오버올처럼
+    상·하의 어느 쪽으로도 파는 옷이 있다 — 그럴 땐 판단하지 않는다.
+    """
+    rules = load_type_names() if rules is None else rules
+    name = (type_name or "").strip()
+    if not name or name in set(rules.get("ambiguous") or ()):
+        return ""
+    for category in ("top", "bottom"):
+        if name in (rules.get(category) or {}):
+            return category
+    return ""
+
+
 def color_options_from(options: dict | None) -> list[str]:
     """구매 가능한 색 이름을 모두 돌려준다. 대표 색 하나만 쓰면 나머지를 잃는다.
 

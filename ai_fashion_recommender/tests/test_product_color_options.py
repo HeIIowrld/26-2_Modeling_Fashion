@@ -13,7 +13,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from product_colors import (  # noqa: E402
     color_from_pixels, palette_from_rgb, palette_of, palettes_for, title_palettes)
-from product_measurements import color_options_from, normalize_size_table  # noqa: E402
+from product_measurements import (  # noqa: E402
+    category_from_type_name, color_options_from, normalize_size_table)
 
 TABLE = {"블랙": ("블랙", "차콜", "BLACK"), "화이트": ("화이트", "아이보리", "WHITE", "IVORY"),
          "그레이": ("그레이", "멜란지", "GRAY", "GREY"), "베이지": ("베이지", "BEIGE"),
@@ -160,6 +161,33 @@ class GarmentPixelColorTests(unittest.TestCase):
         pixels = [(20, 20, 22)] * 5 + [(240, 240, 240)] * 5
         _color, agreement = color_from_pixels(pixels, HSV)
         self.assertLessEqual(agreement, 0.5)
+
+
+TYPE_NAMES = {"top": {"셔츠": 38, "반소매티셔츠": 13}, "bottom": {"바지": 81, "반바지": 31},
+              "ambiguous": ["오버올"]}
+
+
+class MeasurementTypeTests(unittest.TestCase):
+    """실측표 typeName 으로 부위를 가린다. 무신사 카테고리가 틀릴 때의 안전망이다."""
+
+    def test_known_types_resolve_to_a_category(self):
+        for name, expected in (("바지", "bottom"), ("반바지", "bottom"),
+                               ("셔츠", "top"), ("반소매티셔츠", "top")):
+            with self.subTest(name=name):
+                self.assertEqual(category_from_type_name(name, TYPE_NAMES), expected)
+
+    def test_missing_or_unknown_type_gives_no_verdict(self):
+        # typeName 이 없는 상품이 4~6% 다. 모르는 것과 어긋나는 것은 다르다.
+        for name in ("", "   ", None, "처음보는종류"):
+            with self.subTest(name=name):
+                self.assertEqual(category_from_type_name(name, TYPE_NAMES), "")
+
+    def test_ambiguous_types_give_no_verdict(self):
+        # 오버올·점프수트는 상·하의 어느 쪽으로도 팔린다.
+        self.assertEqual(category_from_type_name("오버올", TYPE_NAMES), "")
+
+    def test_whitespace_is_trimmed(self):
+        self.assertEqual(category_from_type_name("  바지 ", TYPE_NAMES), "bottom")
 
 
 class SizeTableTests(unittest.TestCase):
