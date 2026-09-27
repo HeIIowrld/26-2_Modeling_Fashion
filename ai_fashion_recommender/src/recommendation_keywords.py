@@ -177,24 +177,36 @@ class RecommendationKeywordGenerator:
         if formal_context_enabled(profile):
             self._rule(rules, "R-CTX-01")
 
-        def add_all(attribute: str, values: list[str], source: str) -> None:
+        def add_all(attribute: str, values: list[str], source: str) -> bool:
             nonlocal used_input, used_photo
             clean = [value for value in values if self._usable(value)]
             if not clean:
-                return
+                return False
             # 의류 소재 선호는 상·하의에만 적용한다. 데님·니트 같은 의류
-            # 소재를 신발 검색어로 복제하면 비현실적인 데님 신발이 노출된다.
-            applicable = [
-                target for category, target in targets.items()
-                if not (category == "shoes" and attribute == "material")
-            ]
-            if not applicable:
-                return
-            for target in applicable:
-                self._add(target, attribute, *clean)
+            # 소재를 신발 검색어로 복제하지 않는다. 부위 구분이 없는 현재 UI에서
+            # 가죽은 아우터·셔츠 등 상의 선호로만 해석해 가죽 바지와 쇼츠가
+            # 의도치 않게 강제 검색되는 것을 막는다.
+            added = False
+            for category, target in targets.items():
+                category_values = list(clean)
+                if attribute == "material":
+                    if category == "shoes":
+                        continue
+                    if category == "bottom":
+                        category_values = [
+                            value for value in category_values
+                            if value not in {"가죽", "레더", "leather"}
+                        ]
+                if not category_values:
+                    continue
+                self._add(target, attribute, *category_values)
+                added = True
+            if not added:
+                return False
             sources[attribute] = source
             used_input |= source == "user_input"
             used_photo |= source == "photo_fallback"
+            return True
 
         # 입력 조건이 있으면 사진 추정보다 먼저 사용한다.
         if self._provided(profile, "desired_style"):
@@ -211,8 +223,8 @@ class RecommendationKeywordGenerator:
             self._rule(rules, "R-MAT-01")
 
         if self._provided(profile, "preferred_materials"):
-            add_all("material", profile.preferred_materials, "user_input")
-            self._rule(rules, "R-MAT-01")
+            if add_all("material", profile.preferred_materials, "user_input"):
+                self._rule(rules, "R-MAT-01")
         elif not (formal_context_enabled(profile) or sporty_context_enabled(profile)):
             # A photographed top material is relevant only to a replacement
             # top, and likewise for bottoms. Previously both values were copied
