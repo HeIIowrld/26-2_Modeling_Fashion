@@ -96,9 +96,10 @@ def composite_feet(original, generated, mask, box):
 
 
 class ShoeTryOn:
-    def __init__(self, model_path, *, seed=42):
+    def __init__(self, model_path, *, seed=42, prompt=None):
         self.model_path = Path(model_path)
         self.seed = seed
+        self.prompt = PROMPT if prompt is None else prompt
         self._pipeline = None
         self.last_report = {}
 
@@ -130,7 +131,7 @@ class ShoeTryOn:
             self._pipeline = pipeline
         return self._pipeline
 
-    def generate(self, person, reference, mask, *, prompt=PROMPT, full_context=False, seed=None):
+    def generate(self, person, reference, mask, *, prompt=None, full_context=False, seed=None):
         import torch
         # Clothing transitions need the face/visible limbs as skin and body context.
         # Both callers share one model instance rather than loading FLUX twice.
@@ -144,7 +145,8 @@ class ShoeTryOn:
         product = ImageOps.pad(reference.convert("RGB"), (512, 512), color="white")
         pipe = self._load_pipeline()
         output = pipe(image=crop, image_reference=product, mask_image=mask_image,
-                      prompt=prompt, height=size[1], width=size[0], strength=1.0,
+                      prompt=self.prompt if prompt is None else prompt,
+                      height=size[1], width=size[0], strength=1.0,
                       num_inference_steps=4, guidance_scale=1.0,
                       generator=torch.Generator(device="cuda").manual_seed(self.seed if seed is None else seed)).images[0]
         if output.size != size:

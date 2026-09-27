@@ -68,6 +68,12 @@ class PreservationTests(unittest.TestCase):
         dress[dress == 6] = 4
         self.assertIn("dress_or_skirt_overlap", reference_rank(reference, self.products, pants_geometry(trousers()), dress)["reasons"])
 
+    def test_skin_holes_copied_from_distressed_jeans_are_rejected(self):
+        seg = trousers()
+        seg[145:164, 54:69] = 16
+        result = assess_preservation(self.products, self.observed, seg, pants_geometry(trousers()), self.reports)
+        self.assertIn("pants_skin_holes", result["failed"])
+
     def test_lower_editor_protects_top_hands_and_feet(self):
         seg = trousers()
         seg[5:40, 40:160] = 3
@@ -78,9 +84,27 @@ class PreservationTests(unittest.TestCase):
         mask = lower_edit_mask(seg, SimpleNamespace(landmarks=landmarks))
         self.assertFalse(mask[np.isin(seg, (3, 13, 15))].any())
         self.assertTrue(mask[seg == 6].any())
+        seg[150:160, 60:75] = 16  # Knee skin incorrectly parsed as torso.
+        repaired = lower_edit_mask(seg, SimpleNamespace(landmarks=landmarks))
+        self.assertTrue(repaired[150:160, 60:75].all())
         landmarks["left_ankle"] = (.3, .88, .1)
         with self.assertRaises(ValueError):
             lower_edit_mask(seg, SimpleNamespace(landmarks=landmarks))
+
+    def test_shoe_guidance_preserves_production_default_and_uses_explicit_type(self):
+        from shoe_tryon import ShoeTryOn, PROMPT
+        from offline_shoe_tryon import product_prompt, crop_product_reference
+        from PIL import Image
+        self.assertEqual(ShoeTryOn("/unused").prompt, PROMPT)
+        p = SimpleNamespace(item_type="로퍼", name="스케이트 로퍼 - 태슬 브라운")
+        self.assertIn("slip-on tassel loafers", product_prompt(p))
+        self.assertEqual(product_prompt(SimpleNamespace(item_type="", name="unknown")), PROMPT)
+        raw = np.full((300, 300, 3), 240, dtype=np.uint8)
+        raw[120:180, 60:240] = 50
+        cropped, box = crop_product_reference(Image.fromarray(raw))
+        self.assertLess(cropped.height, 150)
+        self.assertTrue(box[0] <= 60 and box[2] >= 240)
+        self.assertEqual(crop_product_reference(Image.new("RGB", (100, 100), "white"))[1], None)
 
 
 if __name__ == "__main__":

@@ -239,7 +239,7 @@ def file_sha(path):
     return h.hexdigest()
 
 
-def render_manifest(shoe_model, lower_backend):
+def render_manifest(shoe_model, lower_backend, shoe_reference_mode):
     from config import FASHION_ATTRIBUTE_HEADS_PATH
     from shoe_tryon import MODEL_ID, MODEL_REVISION
     import os
@@ -252,12 +252,12 @@ def render_manifest(shoe_model, lower_backend):
                  for model in ("models--zhengchong--CatVTON", "models--booksforcharlie--stable-diffusion-inpainting")
                  for p in (hf_refs / model / "refs").glob("*") if p.is_file()}
     return {"code": {name: file_sha(PROJECT / "src" / name) for name in
-            ("catvton_tryon.py", "shoe_tryon.py", "offline_lower_tryon.py", "offline_render_quality.py",
+            ("catvton_tryon.py", "shoe_tryon.py", "offline_lower_tryon.py", "offline_shoe_tryon.py", "offline_render_quality.py",
              "clothing_parser.py", "outfit_analyzer.py", "pose_analyzer.py", "tryon_quality.py")},
             "script": file_sha(__file__), "attribute_checkpoint": file_sha(FASHION_ATTRIBUTE_HEADS_PATH),
             "shoe_model": MODEL_ID, "shoe_revision": MODEL_REVISION, "local_weights": weights,
             "catvton_cached_revisions": revisions, "lower_backend": lower_backend,
-            "seed": 42, "clothing_preset": "fast", "max_retries": 1}
+            "seed": 42, "clothing_preset": "fast", "max_retries": 1, "shoe_reference_mode": shoe_reference_mode}
 
 
 def audit_evidence(root, evidence):
@@ -304,8 +304,64 @@ def record_visual_review(root, record_path, decision, reviewer, notes):
     atomic_json(record_path, record)
 
 
+def rendered_scores(library, engine, products, observed, condition):
+    from schemas import OutfitAnalysis
+    rendered = OutfitAnalysis(**observed)
+    scores = {}
+    for scenario in library.metadata["scenarios"]:
+        if (scenario["pose"]["body_shape"] != condition["body_shape"]
+                or scenario["id"].rsplit("/", 1)[1] != condition["proportion"]):
+            continue
+        profile, scenario_pose = UserProfile(**scenario["profile"]), PoseAnalysis(**scenario["pose"])
+        top = engine._garment(None, "top", rendered)
+        bottom = engine._garment(None, "bottom", rendered)
+        diagnostic = engine._diagnose_pair(top, bottom, profile, scenario_pose)
+        attributes = [replace(products[i], color=g["color"], fit=g["fit"], length=g["length"],
+                              item_type=g["item_type"], formality=g["formality"])
+                      for i, g in enumerate((top, bottom))]
+        footwear = shoe_features(*attributes, products[2], profile, engine)
+        scores[scenario["id"]] = round(.85 * diagnostic["overall_score"] + .15 * float(footwear.mean()), 3)
+    return scores
+
+
+def rescore_renders(root, previous_index):
+    """Refresh scores after a rule/schema change using unchanged image evidence.
+
+    Require a matching old catalog, unchanged product/output hashes, and the same
+    analysis implementation. Never upgrade quality or visual review status.
+    """
+    library, engine = OutfitLibrary(root), make_engine()
+    previous = read(previous_index)
+    if digest(previous["catalog"]) != digest(library.metadata["catalog"]):
+        raise ValueError("Catalog changed; cached render scores cannot be migrated")
+    catalog = {r["product"]["product_id"]: r for r in library.metadata["catalog"]["products"]}
+    prepared = []
+    for path in sorted((root / "renders").rglob("*.json")):
+        record = read(path)
+        if record.get("library_identity") != previous["identity"] or not record.get("observed_outfit"):
+            continue
+        manifest = read(root / "render_manifests" / f"{record['renderer_manifest']}.json")
+        for name in ("outfit_analyzer.py", "clothing_parser.py", "pose_analyzer.py"):
+            if manifest["code"][name] != file_sha(PROJECT / "src" / name):
+                raise ValueError("Image analysis changed; inspect the images again before rescoring")
+        ids = record["product_ids"]
+        if (record["render_inputs"]["products"] != [catalog[pid]["image_sha256"] for pid in ids]
+                or file_sha(path.with_suffix(".png")) != record["output_sha256"]):
+            raise ValueError("Cached render input/output changed")
+        scores = rendered_scores(library, engine, [Product(**catalog[pid]["product"]) for pid in ids],
+                                 record["observed_outfit"], record["reference_condition"])
+        record.setdefault("scoring_history", []).append({"library_identity": record["library_identity"],
+                                                         "scores": record["scores"]})
+        record.update(library_identity=library.metadata["identity"], scores=scores)
+        prepared.append((path, record))
+    # Validate all records before replacing any.
+    for path, record in prepared:
+        atomic_json(path, record)
+    print(f"Rescored {len(prepared)} unchanged renders; quality/review states preserved", flush=True)
+
+
 def render(root, people, shoe_model, max_renders, *, evidence=None, lower_backend="catvton",
-           reference_name=None, combination_ids=None):
+           reference_name=None, combination_ids=None, shoe_reference_mode="baseline"):
     from PIL import Image
     from config import FASHION_ATTRIBUTE_HEADS_PATH
     from fashion_model import FashionClassifier
@@ -323,12 +379,16 @@ def render(root, people, shoe_model, max_renders, *, evidence=None, lower_backen
     parser, poses = ClothingParser(use_fashn=True), PoseAnalyzer()
     classifier = FashionClassifier(enabled=True, attribute_checkpoint=FASHION_ATTRIBUTE_HEADS_PATH)
     analyzer = OutfitAnalyzer(parser, classifier)
-    manifest = render_manifest(shoe_model, lower_backend)
+    manifest = render_manifest(shoe_model, lower_backend, shoe_reference_mode)
     renderer_id = digest(manifest)
     atomic_json(root / "render_manifests" / f"{renderer_id}.json", manifest)
     clothing = CatVTONTryOn.fast(garment_cache_dir=root / "clean" / renderer_id[:16], max_retries=1)
     clothing._garment_parser = parser
-    footwear_editor = ShoeTryOn(shoe_model)
+    if shoe_reference_mode == "product":
+        from offline_shoe_tryon import OfflineShoeTryOn
+        footwear_editor = OfflineShoeTryOn(shoe_model)
+    else:
+        footwear_editor = ShoeTryOn(shoe_model)
     if lower_backend == "flux":
         from offline_lower_tryon import OfflineLowerTryOn
         clothing = OfflineLowerTryOn(clothing, footwear_editor, parser)
@@ -419,6 +479,7 @@ def render(root, people, shoe_model, max_renders, *, evidence=None, lower_backen
                   "library_identity": library.metadata["identity"], "reference": person.name,
                   "plan_key": entry["render_key"], "render_fingerprint": render_id, "render_inputs": inputs,
                   "renderer_manifest": renderer_id, "lower_backend": lower_backend,
+                  "shoe_reference_mode": shoe_reference_mode,
                   "reference_selection": current_rank, "explicit_evaluation_reference": bool(reference_name),
                   "reference_pose": asdict(pose), "reference_gender": gender,
                   "reference_condition": condition,
@@ -426,23 +487,12 @@ def render(root, people, shoe_model, max_renders, *, evidence=None, lower_backen
         start = time.monotonic()
         output = record_path.with_suffix(".png")
         try:
+            if shoe_reference_mode == "product":
+                footwear_editor.set_product(products[2])
             adapter.synthesize(person, Recommendation(1, products, entry["score"], {}, []), output,
                                {**parsed, "pose": pose, "outfit": outfit, "classifier": classifier, "strict_vton": True})
             rendered, rendered_parsed = analyzer.analyze(output, pose)
-            scores = {}
-            for scenario in library.metadata["scenarios"]:
-                if (scenario["pose"]["body_shape"] != condition["body_shape"]
-                        or scenario["id"].rsplit("/", 1)[1] != condition["proportion"]):
-                    continue
-                profile, scenario_pose = UserProfile(**scenario["profile"]), PoseAnalysis(**scenario["pose"])
-                top = engine._garment(None, "top", rendered)
-                bottom = engine._garment(None, "bottom", rendered)
-                diagnostic = engine._diagnose_pair(top, bottom, profile, scenario_pose)
-                observed = [replace(products[i], color=g["color"], fit=g["fit"], length=g["length"],
-                                    item_type=g["item_type"], formality=g["formality"])
-                            for i, g in enumerate((top, bottom))]
-                footwear = shoe_features(*observed, products[2], profile, engine)
-                scores[scenario["id"]] = round(.85 * diagnostic["overall_score"] + .15 * float(footwear.mean()), 3)
+            scores = rendered_scores(library, engine, products, asdict(rendered), condition)
             vector = classifier._encode_image(output).detach().cpu().numpy()[0]
             np.save(output.with_suffix(".npy"), vector.astype(np.float32), allow_pickle=False)
             preservation = assess_preservation(entry["products"], asdict(rendered),
@@ -467,7 +517,7 @@ def render(root, people, shoe_model, max_renders, *, evidence=None, lower_backen
 
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
-    cli.add_argument("stage", choices=("fetch", "prepare", "index", "plan", "render", "query", "status", "audit", "review"))
+    cli.add_argument("stage", choices=("fetch", "prepare", "index", "plan", "render", "query", "status", "audit", "review", "rescore"))
     cli.add_argument("--root", type=Path, required=True)
     cli.add_argument("--device", default="auto")
     cli.add_argument("--all-contexts", action="store_true")
@@ -477,12 +527,14 @@ def main():
     cli.add_argument("--max-renders", type=int, default=0, help="0 means resume all planned renders")
     cli.add_argument("--evidence", type=Path)
     cli.add_argument("--lower-backend", choices=("catvton", "flux"), default="catvton")
+    cli.add_argument("--shoe-reference-mode", choices=("baseline", "product"), default="baseline")
     cli.add_argument("--reference-name", help="Explicit reference for controlled evaluation only")
     cli.add_argument("--combination-ids", nargs="+")
     cli.add_argument("--record", type=Path)
     cli.add_argument("--decision", choices=("accepted", "rejected"))
     cli.add_argument("--reviewer")
     cli.add_argument("--notes")
+    cli.add_argument("--previous-index", type=Path)
     cli.add_argument("--scenario")
     cli.add_argument("--kept", default='{"top":{"color":"화이트","item_type":"티셔츠","sleeve_length":"반팔"}}')
     cli.add_argument("--gender", default="")
@@ -502,12 +554,15 @@ def main():
         if not all((args.record, args.decision, args.reviewer, args.notes)):
             cli.error("review requires --record, --decision, --reviewer and --notes")
         record_visual_review(root, args.record, args.decision, args.reviewer, args.notes)
+    elif args.stage == "rescore":
+        if not args.previous_index: cli.error("rescore requires --previous-index")
+        rescore_renders(root, args.previous_index)
     elif args.stage == "render":
         if not args.people or not args.shoe_model:
             cli.error("render requires --people and --shoe-model")
         render(root, args.people, args.shoe_model, args.max_renders, evidence=args.evidence,
                lower_backend=args.lower_backend, reference_name=args.reference_name,
-               combination_ids=args.combination_ids)
+               combination_ids=args.combination_ids, shoe_reference_mode=args.shoe_reference_mode)
     else:
         library = OutfitLibrary(root)
         scenario = args.scenario or library.metadata["scenarios"][0]["id"]

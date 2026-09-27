@@ -66,9 +66,14 @@ def pants_geometry(segmentation):
     thigh, shin, hem = band(.35, .50), band(.65, .78), band(.86, .94)
     if min(thigh, shin, hem) < 6:
         return {"measurable": False, "reason": "occluded_pants"}
+    contours, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    filled = np.zeros_like(mask, dtype=np.uint8)
+    cv2.drawContours(filled, contours, -1, 1, thickness=cv2.FILLED)
+    holes = (filled > 0) & np.isin(seg, (14, 16))
     return {"measurable": True, "hem_thigh": round(hem / thigh, 5),
             "hem_shin": round(hem / shin, 5), "top": top, "bottom": bottom,
-            "thigh_pixels": thigh, "hem_pixels": hem}
+            "thigh_pixels": thigh, "hem_pixels": hem,
+            "skin_hole_fraction": round(float(holes.sum() / max(1, filled.sum())), 6)}
 
 
 def garment_family(item_type):
@@ -114,6 +119,9 @@ def preservation_checks(products, observed, segmentation, target_geometry):
                 hem_thigh_retention=round(retention, 5), hem_shin_retention=round(cuff_retention, 5),
                 target=target_geometry, observed=measured,
                 thresholds={"min": .75, "max": 1.35}, calibration="provisional_requires_visual_review")
+            hole_limit = target_geometry.get("skin_hole_fraction", 0) + .005
+            add("pants_skin_holes", measured["skin_hole_fraction"] <= hole_limit,
+                actual=measured["skin_hole_fraction"], threshold=hole_limit)
     else:
         add("pants_silhouette", None, reason="shape_gate_not_validated_for_this_family")
     tee = top.get("item_type") == "티셔츠"
@@ -171,6 +179,8 @@ def reference_rank(record, products, target_geometry, segmentation):
             ratios = [measured[k] / target_geometry[k] for k in ("hem_thigh", "hem_shin")]
             if any(r < .75 or r > 1.35 for r in ratios):
                 reasons.append("incompatible_pants_silhouette")
+            if measured.get("skin_hole_fraction", 0) > target_geometry.get("skin_hole_fraction", 0) + .005:
+                reasons.append("distressed_pants_skin_holes")
             distance = sum(abs(math.log(r)) for r in ratios)
         if outfit.get("bottom_length") not in {"긴바지", "롱·긴바지 기장", "풀렝스"}:
             reasons.append("non_full_length_pants")

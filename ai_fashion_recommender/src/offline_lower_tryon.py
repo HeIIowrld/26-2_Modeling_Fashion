@@ -51,7 +51,10 @@ def lower_edit_mask(segmentation, pose):
     ankle_y = max(points[f"{s}_ankle"][1] for s in ("left", "right")) * height
     mask[:max(0, round(hip_y - .12 * (ankle_y - hip_y)))] = 0
     mask[min(height, round(ankle_y + .015 * height)):] = 0
-    return mask.astype(bool) & np.isin(seg, (0, 6, 7, 14))
+    # FASHN sometimes labels skin through ripped knees as torso (16). Only
+    # allow that label below the hips, inside the bounded leg editing region.
+    below_hip = np.arange(height)[:, None] >= hip_y
+    return mask.astype(bool) & (np.isin(seg, (0, 6, 7, 14)) | ((seg == 16) & below_hip))
 
 
 class OfflineLowerTryOn:
@@ -70,9 +73,9 @@ class OfflineLowerTryOn:
 
     def generate(self, person_image, recommendation, output_path, context=None):
         import torch
-        from catvton_tryon import landmarks_to_pixels
+        from catvton_tryon import landmarks_to_pixels, classify_reference_bottom_length
         from shoe_tryon import edit_crop, composite_feet
-        from tryon_quality import assess_tryon
+        from tryon_quality import assess_tryon, load_thresholds
         from offline_render_quality import garment_family
 
         context = context or {}
@@ -119,11 +122,15 @@ class OfflineLowerTryOn:
             ref_mask = self.clothing._reference_mask(Path(bottom.image_path).name, reference, "bottom")
             classifier = context.get("classifier")
             embed = (lambda im: classifier._encode_image(im).detach().cpu().numpy()[0]) if classifier else None
+            with Image.open(bottom.image_path) as original_reference:
+                reference_length = classify_reference_bottom_length(classifier, reference, product=bottom,
+                    source_image=original_reference.convert("RGB")) if classifier else ""
+            self.clothing.reference_bottom_lengths[bottom.product_id] = reference_length
             report = assess_tryon(category="bottom", before=np.asarray(before), after=np.asarray(result),
                 edit_mask=mask, after_seg=after_seg, target_labels=(6,), before_seg=parsed["segmentation"],
                 landmarks_px=landmarks_to_pixels(getattr(context.get("pose"), "landmarks", None), *before.size),
                 product_name=bottom.name, reference_rgb=np.asarray(reference), reference_mask=ref_mask,
-                embed=embed)
+                embed=embed, reference_length=reference_length, thresholds=load_thresholds())
             self.last_quality_reports.append(report.to_dict())
             self.last_warnings.extend(report.warnings())
             self.last_warnings.append("Offline experimental trousers editor; visual review required")

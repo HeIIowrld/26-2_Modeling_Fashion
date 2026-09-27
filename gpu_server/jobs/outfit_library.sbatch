@@ -59,10 +59,19 @@ if [ "${FITTA_LIBRARY_STAGE:-all}" != prepare ]; then
       --root "$OUTPUT" --output "$OUTPUT/evidence" \
       --people "${FITTA_LIBRARY_PEOPLE:-$BASE/eval/deepfashion_mm/images}"
   fi
+  RENDER_ARGS=()
+  if [ -n "${FITTA_LIBRARY_REFERENCE:-}" ]; then
+    RENDER_ARGS+=(--reference-name "$FITTA_LIBRARY_REFERENCE")
+  fi
+  if [ -n "${FITTA_LIBRARY_COMBINATION_IDS:-}" ]; then
+    read -r -a COMBINATION_IDS <<< "$FITTA_LIBRARY_COMBINATION_IDS"
+    RENDER_ARGS+=(--combination-ids "${COMBINATION_IDS[@]}")
+  fi
   "$PYTHON" "$SCRIPT" render --root "$OUTPUT" \
     --people "${FITTA_LIBRARY_PEOPLE:-$BASE/eval/deepfashion_mm/images}" \
     --shoe-model "$BASE/eval/shoes_vton_20260919/flux-klein-4b" \
     --evidence "${FITTA_LIBRARY_EVIDENCE:-$OUTPUT/evidence}" \
     --lower-backend "${FITTA_LIBRARY_LOWER_BACKEND:-catvton}" \
-    --max-renders "${FITTA_LIBRARY_MAX_RENDERS:-0}"
+    --shoe-reference-mode "${FITTA_LIBRARY_SHOE_REFERENCE_MODE:-baseline}" \
+    --max-renders "${FITTA_LIBRARY_MAX_RENDERS:-0}" "${RENDER_ARGS[@]}"
 fi
