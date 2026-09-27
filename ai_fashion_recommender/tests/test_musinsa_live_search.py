@@ -129,7 +129,7 @@ class ColorOptionTests(unittest.TestCase):
         search, results = self.search_with({"MS2": ["아이보리", "(19)BLACK"]})
         # 블랙을 팔지만 대표 사진이 블랙이라는 보장이 없으므로 순위를 올리지 않는다.
         self.assertEqual([product.product_id for product in results], ["MS1", "MS2"])
-        self.assertEqual([product.retrieval_score for product in results], [0.0, 0.0])
+        self.assertEqual([product.retrieval_score for product in results], [-3.0, -3.0])
         self.assertNotIn("블랙", results[1].matched_keywords)
 
     def test_products_whose_every_color_is_avoided_are_dropped(self):
@@ -363,15 +363,25 @@ class MusinsaLiveSearchTests(unittest.TestCase):
                                  photo_attributes={"design": {"item_type": "티셔츠", "plain_basic": True}})
         large_logo = ShoppingProduct("L", "아치 로고 반팔 티셔츠", "", 1, "", "", "top", retrieval_score=5,
                                      photo_attributes={"design": {"item_type": "티셔츠", "plain_basic": False}})
+        title_only_basic = ShoppingProduct(
+            "T", "UFC 스탠다드 릴랙스핏 반팔 티셔츠 화이트", "", 1, "", "", "top",
+            retrieval_score=5,
+        )
+        title_only_ringer = ShoppingProduct(
+            "R2", "스탠다드 링거 반팔 티셔츠", "", 1, "", "", "top", retrieval_score=5,
+        )
         search = MusinsaLiveSearch()
         self.addCleanup(search.close)
         search._apply_fashion_policy_adjustments(
-            {"top": [plain, graphic, ringer, large_logo]}, UserProfile()
+            {"top": [plain, graphic, ringer, large_logo, title_only_basic, title_only_ringer]},
+            UserProfile(),
         )
-        self.assertEqual(plain.retrieval_score, 3.75)
+        self.assertEqual(plain.retrieval_score, 2)
         self.assertEqual(graphic.retrieval_score, 5)
         self.assertEqual(ringer.retrieval_score, 5)
-        self.assertEqual(large_logo.retrieval_score, 3.75)
+        self.assertEqual(large_logo.retrieval_score, 2)
+        self.assertEqual(title_only_basic.retrieval_score, 2)
+        self.assertEqual(title_only_ringer.retrieval_score, 5)
         self.assertNotIn("ranking_adjustments", plain.public_dict())
 
     def test_formal_context_guard_reranks_existing_candidates_only(self):
