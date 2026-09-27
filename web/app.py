@@ -404,7 +404,7 @@ def _read_shopping_tryon_batch(job_id: str) -> dict | None:
 
 
 def _initialize_shopping_tryon_batch(job_id: str) -> dict | None:
-    """추천된 세 코디를 우선 합성하고, 구형 결과만 카테고리 곱집합으로 처리한다."""
+    """추천 코디만 합성하고, shopping_outfits 키가 없는 구형 결과만 곱집합으로 처리한다."""
     with _jobs_lock:
         job = _jobs.get(job_id)
         if job is None:
@@ -425,6 +425,7 @@ def _initialize_shopping_tryon_batch(job_id: str) -> dict | None:
 
         combinations = []
         seen_combinations: set[tuple[str, ...]] = set()
+        has_outfit_decision = "shopping_outfits" in result
         for outfit in result.get("shopping_outfits") or []:
             products = [
                 prepared[product_id]
@@ -436,7 +437,7 @@ def _initialize_shopping_tryon_batch(job_id: str) -> dict | None:
                 seen_combinations.add(key)
                 combinations.append(products)
 
-        if not combinations:
+        if not combinations and not has_outfit_decision:
             groups = [[p for p in ordered_products if p.category == category]
                       for category in ("top", "bottom", "shoes")]
             groups = [group for group in groups if group]
@@ -457,6 +458,9 @@ def _initialize_shopping_tryon_batch(job_id: str) -> dict | None:
         capability = result.get("tryon") or {}
         if items:
             status, reason = "queued", ""
+        elif has_outfit_decision and not combinations:
+            status = "unavailable"
+            reason = "저득점 조합을 제외한 뒤 안전선을 통과한 자동 코디가 없습니다."
         elif not capability.get("available"):
             status = "unavailable"
             reason = str(capability.get("reason") or "현재 합성 GPU를 사용할 수 없습니다.")

@@ -1,4 +1,4 @@
-"""무신사 후보를 현재 착장과 연결된 세 개의 코디 조합으로 재정렬한다."""
+"""저득점 조합을 피하면서 무신사 후보를 세 개의 코디로 묶는다."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 LLM_ENABLED_VALUES = {"1", "true", "yes", "on"}
 STYLE_FORMALITY = {"스포티": 1, "스트리트": 1, "캐주얼": 2, "로맨틱": 3, "미니멀": 3, "포멀": 5}
 FORBIDDEN_COPY = ("예산", "가격", "할인", "가성비", "비용", "사이즈", "실측")
+MIN_SAFE_COMBINATION_SCORE = 0.75
 
 
 @dataclass
@@ -161,15 +162,6 @@ def _shoe_score(product: Any, profile: UserProfile, targets: TargetKeywordResult
     score = 0.92 if item_type in preferred else 0.72
     subject = _particle(item_type, "이", "가")
     return score, f"'{item_type}'{subject} 선택한 {profile.desired_style} 스타일의 코디 흐름을 이어 줍니다."
-
-
-def _retrieval_rank_scores(groups: dict[str, list[Any]]) -> dict[str, float]:
-    scores: dict[str, float] = {}
-    for products in groups.values():
-        count = max(1, len(products) - 1)
-        for index, product in enumerate(products):
-            scores[product.product_id] = 1.0 - 0.25 * index / count
-    return scores
 
 
 def _sporty_combination_coverage(
@@ -371,7 +363,7 @@ def recommend_outfit_combinations(
     recommender: Any,
     limit: int = 3,
 ) -> list[OutfitCombination]:
-    """선택 카테고리 상품과 현재 유지할 옷을 합쳐 조화가 높은 코디를 고른다."""
+    """저득점 조합을 제외한 뒤 검색 순서와 다양성으로 코디를 고른다."""
     del pose  # 체형은 상품 검색 키워드에서 이미 반영되며 조합 설명에서 다시 추측하지 않는다.
     selected_categories = tuple(targets.targets)
     grouped = {
@@ -380,7 +372,6 @@ def recommend_outfit_combinations(
     }
     if not selected_categories or any(not grouped[category] for category in selected_categories):
         return []
-    rank_scores = _retrieval_rank_scores(grouped)
     current_items = [
         _current_item(category, outfit)
         for category in ("top", "bottom", "shoes")
@@ -390,7 +381,7 @@ def recommend_outfit_combinations(
     candidates: list[OutfitCombination] = []
     for index, selected in enumerate(cartesian_product(*(grouped[category] for category in selected_categories)), 1):
         chosen = list(selected)
-        sporty_passed, sporty_score, sporty_reason = _sporty_combination_coverage(chosen, profile)
+        sporty_passed, _, sporty_reason = _sporty_combination_coverage(chosen, profile)
         if not sporty_passed:
             continue
         by_category = {product.category: product for product in chosen}
@@ -406,11 +397,15 @@ def recommend_outfit_combinations(
         shoe_score, shoe_reason = (1.0, "")
         if "shoes" in by_category:
             shoe_score, shoe_reason = _shoe_score(by_category["shoes"], profile, targets)
-        retrieval = sum(rank_scores[product.product_id] for product in chosen) / len(chosen)
-        if sporty_context_enabled(profile):
-            overall = 0.45 * retrieval + 0.35 * harmony + 0.10 * shoe_score + 0.10 * sporty_score
-        else:
-            overall = 0.50 * retrieval + 0.40 * harmony + 0.10 * shoe_score
+        # 개별 상품의 적합도는 이미 검색 단계에서 검증되어 순서에 반영됐다. 여기서는
+        # 좋은 점수를 더 높이는 대신, 실제로 교체하는 영역 중 가장 약한 연결을 조합의
+        # 안전 점수로 삼아 저득점 조합만 제외한다.
+        safety_scores = []
+        if any(category in selected_categories for category in ("top", "bottom")):
+            safety_scores.append(harmony)
+        if "shoes" in selected_categories:
+            safety_scores.append(shoe_score)
+        avoidance_score = min(safety_scores, default=1.0)
         evidence = _candidate_evidence(
             chosen, targets, selected_categories, list(current_by_category.values()),
             harmony_reasons, harmony_rules, shoe_reason,
@@ -425,11 +420,14 @@ def recommend_outfit_combinations(
             evidence = evidence[:3]
         candidates.append(OutfitCombination(
             f"OUTFIT-{index}", [product.product_id for product in chosen],
-            list(current_by_category.values()), overall, evidence,
+            list(current_by_category.values()), avoidance_score, evidence,
         ))
 
     selected_outfits: list[OutfitCombination] = []
-    remaining = list(candidates)
+    remaining = [
+        candidate for candidate in candidates
+        if candidate.score >= MIN_SAFE_COMBINATION_SCORE
+    ]
     category_by_product = {
         product.product_id: product.category
         for products in grouped.values() for product in products
@@ -443,12 +441,11 @@ def recommend_outfit_combinations(
     }
     used_by_category = {category: set() for category in selected_categories}
     while remaining and len(selected_outfits) < max(0, limit):
-        def diversified_score(candidate: OutfitCombination) -> float:
-            overlap = max((
+        def product_overlap(candidate: OutfitCombination) -> float:
+            return max((
                 len(set(candidate.product_ids) & set(chosen.product_ids)) / max(1, len(candidate.product_ids))
                 for chosen in selected_outfits
             ), default=0.0)
-            return candidate.score - 0.12 * overlap
 
         eligible = [
             candidate for candidate in remaining
@@ -459,10 +456,12 @@ def recommend_outfit_combinations(
             )
         ]
         pool = eligible or remaining
-        best = max(pool, key=lambda candidate: (diversified_score(candidate), candidate.combination_id))
-        remaining.remove(best)
-        selected_outfits.append(best)
-        for product_id in best.product_ids:
+        # 안전선을 넘은 후보는 검색 순서를 유지하되, 이미 고른 코디와
+        # 겹치지 않는 조합을 우선한다. min은 동률이면 기존 순서를 유지한다.
+        next_outfit = min(pool, key=product_overlap)
+        remaining.remove(next_outfit)
+        selected_outfits.append(next_outfit)
+        for product_id in next_outfit.product_ids:
             used_by_category[category_by_product[product_id]].add(product_id)
 
     for rank, combination in enumerate(selected_outfits, 1):

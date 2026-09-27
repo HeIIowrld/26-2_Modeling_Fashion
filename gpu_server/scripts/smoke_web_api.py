@@ -40,7 +40,7 @@ def expected_shopping_combinations(result: dict) -> list[list[str]]:
         if ids and tuple(ids) not in seen:
             seen.add(tuple(ids))
             combinations.append(ids)
-    if combinations:
+    if combinations or "shopping_outfits" in result:
         return combinations
     groups = [[pid for pid, product in available.items() if product["category"] == category]
               for category in TRYON_CATEGORIES]
