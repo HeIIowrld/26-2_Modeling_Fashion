@@ -45,6 +45,22 @@ class FakeRecommender:
         )
 
 
+class FitScoreRecommender(FakeRecommender):
+    def __init__(self, scores):
+        super().__init__()
+        self.scores = scores
+
+    def _outfit_harmony_score(self, top, bottom, _profile):
+        self.harmony_calls.append((top, bottom))
+        score = self.scores[top["fit"]]
+        return (
+            score,
+            {"silhouette": score},
+            ["상의와 하의의 조합 안전선을 확인했습니다."],
+            ["R-CMP-03", "R-SIL-01"],
+        )
+
+
 def product(product_id: str, category: str, matched: list[str]) -> ShoppingProduct:
     return ShoppingProduct(
         product_id, f"{product_id} 상품", "브랜드", 59_000,
@@ -96,6 +112,57 @@ class OutfitCombinationTests(unittest.TestCase):
         self.assertTrue(all("현재 하의를" in item.reason for item in outfits))
         self.assertTrue(all("R-CMP-03" in item.public_dict()["rule_ids"] for item in outfits))
         self.assertEqual(len(recommender.harmony_calls), 4)
+        self.assertEqual(outfits[0].product_ids, ["T1", "S1"])
+        self.assertEqual(outfits[1].product_ids, ["T2", "S2"])
+
+    def test_low_scoring_combinations_are_excluded(self):
+        self.targets = TargetKeywordResult(
+            "user_input",
+            {"top": {"fit": ["슬림핏", "오버핏"], "style": ["스트리트"]}},
+        )
+        products = [
+            product("T-LOW", "top", ["슬림핏", "스트리트"]),
+            product("T-SAFE", "top", ["오버핏", "스트리트"]),
+        ]
+        recommender = FitScoreRecommender({"슬림핏": 0.74, "오버핏": 0.90})
+
+        outfits = recommend_outfit_combinations(
+            products, self.profile, self.pose, self.outfit, self.targets, recommender, limit=3,
+        )
+
+        self.assertEqual([item.product_ids for item in outfits], [["T-SAFE"]])
+
+    def test_safe_candidates_keep_search_order_instead_of_chasing_the_highest_score(self):
+        self.targets = TargetKeywordResult(
+            "user_input",
+            {"top": {"fit": ["슬림핏", "오버핏"], "style": ["스트리트"]}},
+        )
+        products = [
+            product("T-FIRST", "top", ["슬림핏", "스트리트"]),
+            product("T-HIGHEST", "top", ["오버핏", "스트리트"]),
+        ]
+        recommender = FitScoreRecommender({"슬림핏": 0.76, "오버핏": 0.99})
+
+        outfits = recommend_outfit_combinations(
+            products, self.profile, self.pose, self.outfit, self.targets, recommender, limit=1,
+        )
+
+        self.assertEqual(outfits[0].product_ids, ["T-FIRST"])
+        self.assertLess(outfits[0].score, 0.99)
+
+    def test_all_low_scoring_combinations_return_no_outfit(self):
+        self.targets = TargetKeywordResult(
+            "user_input",
+            {"top": {"fit": ["슬림핏"], "style": ["스트리트"]}},
+        )
+        products = [product("T-LOW", "top", ["슬림핏", "스트리트"])]
+
+        outfits = recommend_outfit_combinations(
+            products, self.profile, self.pose, self.outfit, self.targets,
+            FitScoreRecommender({"슬림핏": 0.40}), limit=3,
+        )
+
+        self.assertEqual(outfits, [])
 
     def test_missing_selected_category_returns_no_partial_outfit(self):
         products = [product("T1", "top", ["오버핏"])]
@@ -111,7 +178,7 @@ class OutfitCombinationTests(unittest.TestCase):
             product("T3", "top", ["레귤러", "스트리트"]),
             product("S1", "shoes", ["스니커즈", "스트리트"]),
             product("S2", "shoes", ["부츠", "스트리트"]),
-            product("S3", "shoes", ["로퍼", "스트리트"]),
+            product("S3", "shoes", ["스니커즈", "스트리트"]),
         ]
         outfits = recommend_outfit_combinations(
             products, self.profile, self.pose, self.outfit, self.targets,

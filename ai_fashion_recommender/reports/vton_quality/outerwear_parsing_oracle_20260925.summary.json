@@ -1,0 +1,22 @@
+{
+  "samples": 50,
+  "pose_mask_valid": 45,
+  "mean_outer_labeled_fashn_top": 0.97226,
+  "median_outer_labeled_fashn_top": 0.98937,
+  "mean_inner_labeled_fashn_top": 0.98028,
+  "median_inner_labeled_fashn_top": 0.98732,
+  "mean_outer_erase_recall": 0.98664,
+  "median_outer_erase_recall": 0.99315,
+  "mean_outer_missed_protected_fraction": 0.01056,
+  "median_outer_missed_protected_fraction": 0.00603,
+  "mean_outer_missed_other_fraction": 0.00281,
+  "median_outer_missed_other_fraction": 0.0,
+  "mean_pants_erased_fraction": 0.12491,
+  "median_pants_erased_fraction": 0.07197,
+  "mean_skin_erased_fraction": 0.25123,
+  "median_skin_erased_fraction": 0.23073,
+  "mean_oracle_pants_erased_fraction": 0.1272,
+  "median_oracle_pants_erased_fraction": 0.07109,
+  "mean_oracle_skin_erased_fraction": 0.0,
+  "median_oracle_skin_erased_fraction": 0.0
+}

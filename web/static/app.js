@@ -566,13 +566,18 @@ function renderResult(result) {
 
   const shoppingResults = Array.isArray(result.shopping_results) ? result.shopping_results : [];
   resetPrivacyBar();
-  $("result-lede").textContent = "현재 유지할 옷과 교체할 상품의 조화를 계산해 세 가지 코디로 구성했습니다.";
+  const shoppingOutfits = Array.isArray(result.shopping_outfits) ? result.shopping_outfits : null;
+  $("result-lede").textContent = shoppingOutfits && !shoppingOutfits.length
+    ? "저득점 조합을 제외한 뒤 안전선을 통과한 자동 코디가 없어 개별 상품만 보여드려요."
+    : "현재 유지할 옷과 교체할 상품의 조화를 확인해 세 가지 코디로 구성했습니다.";
 
   renderCurrentOutfitEvaluation(result.current_outfit_evaluation);
   renderCurrentOutfit(result);
   renderBodyStats(result.pose);
   renderShoppingProducts(result.shopping_results || [], result.shopping_outfits || []);
-  if (state.tryon.available && (result.shopping_results || []).some((product) => product.tryon_available)) {
+  if (state.tryon.available
+      && (result.shopping_results || []).some((product) => product.tryon_available)
+      && (shoppingOutfits === null || shoppingOutfits.length)) {
     startShoppingTryonBatch();
   }
   renderRules(result.rules);
@@ -797,11 +802,15 @@ function renderShoppingProducts(products, outfits = []) {
           ? `<h3 class="shopping-category-heading">${({top: "상의", bottom: "하의", shoes: "신발"})[product.category] || "상품"} 추천 · ${state.shoppingProducts.filter((item) => item.category === product.category).length}개</h3>` : ""}
         ${renderShoppingProductCard(product)}`).join("");
   const requested = state.result?.request?.change_categories || [];
+  const noSafeOutfits = Array.isArray(state.result?.shopping_outfits) && !outfits.length;
   const shortages = outfits.length
     ? (outfits.length < 3 ? requested : [])
     : requested.filter((category) => products.filter((product) => product.category === category).length < 3);
   if (shortages.length) {
     grid.insertAdjacentHTML("beforeend", `<p class="shopping-category-heading">조건에 맞는 코디 조합이 3개보다 적습니다. 예산·조건을 조정해 다시 검색해보세요.</p>`);
+  }
+  if (noSafeOutfits) {
+    grid.insertAdjacentHTML("beforeend", '<p class="shopping-category-heading">저득점 조합은 추천에서 제외했습니다. 조건을 조정하거나 상품을 직접 골라 입어볼 수 있어요.</p>');
   }
   const lookTabs = [...grid.querySelectorAll("[data-look-tab]")];
   const selectLook = (index, moveFocus) => {

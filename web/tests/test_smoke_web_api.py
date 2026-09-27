@@ -83,6 +83,12 @@ class SmokeCombinationTests(unittest.TestCase):
         self.assertEqual(expected, [["T1", "B1"], ["T1", "B2"], ["T2", "B1"], ["T2", "B2"]])
         self.assertEqual(app, expected)
 
+    def test_explicit_empty_outfits_do_not_fall_back(self):
+        products = {"T1": "top", "B1": "bottom"}
+        app, expected = self._both(products, set(products), [])
+        self.assertEqual(expected, [])
+        self.assertEqual(app, expected)
+
 
 class SmokeStageOrderTests(unittest.TestCase):
     """스모크의 단계 기대값이 파이프라인 순서를 따라가게 한다.

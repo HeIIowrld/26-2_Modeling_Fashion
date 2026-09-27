@@ -239,6 +239,23 @@ class TryOnBatchTests(unittest.TestCase):
             [["TOP1", "BOTTOM2"], ["TOP2", "BOTTOM1"]],
         )
 
+    def test_explicit_empty_outfits_do_not_restore_rejected_combinations(self):
+        products = {
+            "TOP1": shopping_product("TOP1", "top"),
+            "BOTTOM1": shopping_product("BOTTOM1", "bottom"),
+        }
+        self.job["shopping_tryon_products"] = products
+        self.job["result"]["shopping_results"] = [
+            {"product_id": product_id} for product_id in products
+        ]
+        self.job["result"]["shopping_outfits"] = []
+
+        initialized = web_app._initialize_shopping_tryon_batch(self.job_id)
+
+        self.assertEqual(initialized["total"], 0)
+        self.assertEqual(initialized["status"], "unavailable")
+        self.assertIn("안전선", initialized["reason"])
+
 
 if __name__ == "__main__":
     unittest.main()
