@@ -20,7 +20,10 @@ GEMINI_GENERATE_URL = "https://generativelanguage.googleapis.com/v1beta/models/{
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 LLM_ENABLED_VALUES = {"1", "true", "yes", "on"}
 STYLE_FORMALITY = {"스포티": 1, "스트리트": 1, "캐주얼": 2, "로맨틱": 3, "미니멀": 3, "포멀": 5}
-FORBIDDEN_COPY = ("예산", "가격", "할인", "가성비", "비용", "사이즈", "실측")
+FORBIDDEN_COPY = (
+    "예산", "가격", "할인", "가성비", "비용", "사이즈", "실측",
+    "상품명", "상품 이름", "제품명", "제품 이름", "이름에서", "이름에", "타이틀", "title",
+)
 MIN_SAFE_COMBINATION_SCORE = 0.75
 KNIT_TERMS = ("니트", "스웨터", "풀오버", "knit", "sweater", "pullover")
 SHORT_SLEEVE_TERMS = (
@@ -222,6 +225,29 @@ def _denim_tone_penalty(top: dict[str, Any], bottom: dict[str, Any]) -> float:
     return 0.0
 
 
+def _material_repetition_penalty(
+    top: dict[str, Any], bottom: dict[str, Any], targets: TargetKeywordResult,
+) -> float:
+    top_material = str(top.get("material") or "").strip().lower()
+    bottom_material = str(bottom.get("material") or "").strip().lower()
+    if not top_material or top_material != bottom_material:
+        return 0.0
+    requested = {
+        str(value).strip().lower()
+        for category in ("top", "bottom")
+        for value in targets.targets.get(category, {}).get("material", [])
+        if value
+    }
+    # When several materials were requested, using the same one for both
+    # garments defeats the user's choice. A single denim request remains the
+    # explicit denim-on-denim exception governed by tone compatibility.
+    if len(requested) > 1:
+        return 0.12
+    if any(term in top_material for term in DENIM_TERMS):
+        return 0.0
+    return 0.10
+
+
 def _current_item(category: str, outfit: OutfitAnalysis) -> dict[str, str]:
     summary = outfit.to_summary_dict()
     if category == "top":
@@ -316,7 +342,10 @@ def _candidate_evidence(
         rule_ids = targets.keyword_rules.get(product.category, {}).get(keyword, [])
         active_rules = [rule_id for rule_id in rule_ids if rule_id in applied]
         if active_rules:
-            visual_fits.append(f"{product.name}: {label}({confidence:.0%})")
+            category_label = {"top": "추천 상의", "bottom": "추천 하의", "shoes": "추천 신발"}.get(
+                product.category, "추천 상품"
+            )
+            visual_fits.append(f"{category_label}: {label}({confidence:.0%})")
             visual_rules.extend(active_rules)
     if visual_fits and len(evidence) < 3:
         evidence.append(CombinationEvidence(
@@ -340,7 +369,7 @@ def _candidate_evidence(
         ))[:3]
         if keywords:
             evidence.append(CombinationEvidence(
-                "검색 조건", f"상품명에서 추천 키워드 '{'·'.join(keywords)}'가 실제로 확인됐습니다.",
+                "검색 조건", f"추천 조건과 일치하는 '{'·'.join(keywords)}' 속성이 확인됐습니다.",
             ))
     return evidence[:3]
 
@@ -496,7 +525,9 @@ def recommend_outfit_combinations(
             continue
         harmony, _, harmony_reasons, harmony_rules = recommender._outfit_harmony_score(top, bottom, profile)
         denim_penalty = _denim_tone_penalty(top, bottom)
-        harmony = max(0.0, harmony - denim_penalty)
+        material_penalty = _material_repetition_penalty(top, bottom, targets)
+        combination_penalty = max(denim_penalty, material_penalty)
+        harmony = max(0.0, harmony - combination_penalty)
         shoe_score, shoe_reason = (1.0, "")
         if "shoes" in by_category:
             shoe_score, shoe_reason = _shoe_score(by_category["shoes"], profile, targets)
@@ -524,7 +555,7 @@ def recommend_outfit_combinations(
         candidates.append(OutfitCombination(
             f"OUTFIT-{index}", [product.product_id for product in chosen],
             list(current_by_category.values()), avoidance_score, evidence,
-            policy_penalty=denim_penalty,
+            policy_penalty=combination_penalty,
         ))
 
     selected_outfits: list[OutfitCombination] = []
@@ -532,43 +563,22 @@ def recommend_outfit_combinations(
         candidate for candidate in candidates
         if candidate.score >= MIN_SAFE_COMBINATION_SCORE
     ]
-    category_by_product = {
-        product.product_id: product.category
-        for products in grouped.values() for product in products
-    }
-    # Products arrive after context and photo reranking. Diversity is therefore
-    # the final constraint, not a substitute for Fashion Rules. If a category
-    # has at least `limit` candidates, use a different item in every outfit.
-    unique_required = {
-        category for category, products in grouped.items()
-        if len(products) >= max(1, limit)
-    }
-    used_by_category = {category: set() for category in selected_categories}
+    # 한 번 노출한 상품은 다른 LOOK에서 다시 쓰지 않는다. 후보가 부족하더라도
+    # 같은 상의·하의·신발로 세 벌을 억지로 채우지 않고 코디 수를 줄인다.
+    used_product_ids: set[str] = set()
     while remaining and len(selected_outfits) < max(0, limit):
-        def product_overlap(candidate: OutfitCombination) -> float:
-            return max((
-                len(set(candidate.product_ids) & set(chosen.product_ids)) / max(1, len(candidate.product_ids))
-                for chosen in selected_outfits
-            ), default=0.0)
-
         eligible = [
             candidate for candidate in remaining
-            if all(
-                product_id not in used_by_category[category_by_product[product_id]]
-                for product_id in candidate.product_ids
-                if category_by_product[product_id] in unique_required
-            )
+            if used_product_ids.isdisjoint(candidate.product_ids)
         ]
-        pool = eligible or remaining
-        # 안전선을 넘은 후보는 검색 순서를 유지하되, 이미 고른 코디와
-        # 겹치지 않는 조합을 우선한다. min은 동률이면 기존 순서를 유지한다.
-        next_outfit = min(pool, key=lambda candidate: (
-            product_overlap(candidate), candidate.policy_penalty,
-        ))
+        if not eligible:
+            break
+        # 안전선을 넘은 고유 후보 중 정책 감점이 가장 작은 조합을 고른다.
+        # min은 동률이면 기존 검색 순서를 유지한다.
+        next_outfit = min(eligible, key=lambda candidate: candidate.policy_penalty)
         remaining.remove(next_outfit)
         selected_outfits.append(next_outfit)
-        for product_id in next_outfit.product_ids:
-            used_by_category[category_by_product[product_id]].add(product_id)
+        used_product_ids.update(next_outfit.product_ids)
 
     for rank, combination in enumerate(selected_outfits, 1):
         combination.combination_id = f"OUTFIT-{rank}"

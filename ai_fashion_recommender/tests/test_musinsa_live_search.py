@@ -389,6 +389,45 @@ class MusinsaLiveSearchTests(unittest.TestCase):
 
         self.assertEqual([product.product_id for product in results], ["S1", "S2", "S3"])
 
+    def test_daily_and_date_contexts_rank_different_top_products(self):
+        rows = [
+            item(1, "그래픽 티셔츠"),
+            item(2, "옥스포드 셔츠"),
+            item(3, "크루넥 니트"),
+            item(4, "스웨트 맨투맨"),
+        ]
+        daily_search = StubSearch({"top": rows})
+        date_search = StubSearch({"top": rows})
+        self.addCleanup(daily_search.close)
+        self.addCleanup(date_search.close)
+        daily_target = TargetKeywordResult("user_input", {"top": {
+            "item_type": ["티셔츠", "맨투맨", "니트"], "style": ["캐주얼"],
+        }})
+        date_target = TargetKeywordResult("user_input", {"top": {
+            "item_type": ["셔츠", "니트", "가디건"], "style": ["캐주얼"],
+        }})
+
+        daily = daily_search.search(
+            daily_target, UserProfile(purpose="데일리", desired_style="캐주얼"), limit=1,
+        )
+        date = date_search.search(
+            date_target, UserProfile(purpose="데이트", desired_style="캐주얼"), limit=1,
+        )
+
+        self.assertEqual(daily[0].product_id, "MS1")
+        self.assertEqual(date[0].product_id, "MS2")
+
+    def test_tshirt_does_not_receive_button_shirt_item_type_score(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        attributes = {"item_type": ["셔츠"]}
+
+        tee_score, _ = search._score(item(1, "그래픽 티셔츠"), attributes, 0)
+        shirt_score, _ = search._score(item(2, "옥스포드 셔츠"), attributes, 0)
+
+        self.assertEqual(tee_score, 0.0)
+        self.assertEqual(shirt_score, 5.0)
+
     def test_trend_bonus_is_disabled_for_formal_work_interview_and_classic(self):
         profiles = (
             UserProfile(purpose="출근", desired_style="캐주얼"),

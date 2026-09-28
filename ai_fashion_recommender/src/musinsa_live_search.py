@@ -173,6 +173,22 @@ class MusinsaLiveSearch:
         value = values[0]
         return MusinsaLiveSearch._aliases(value)[0]
 
+    @classmethod
+    def _keyword_matches_text(cls, attribute: str, keyword: str, text: str) -> bool:
+        # Korean "티셔츠" contains the substring "셔츠". Treating a tee as a
+        # button shirt erased the intended daily/date distinction.
+        normalized_keyword = cls._normalized(keyword)
+        if attribute == "item_type" and normalized_keyword in {"셔츠", "shirt"}:
+            non_button = (
+                "티셔츠", "t-shirt", "tshirt", "스웨트셔츠", "sweatshirt",
+                "폴로셔츠", "피케셔츠", "럭비셔츠",
+            )
+            return (
+                any(cls._normalized(alias) in text for alias in cls._aliases(keyword))
+                and not any(cls._normalized(term) in text for term in non_button)
+            )
+        return any(cls._normalized(alias) in text for alias in cls._aliases(keyword))
+
     def _queries(
         self,
         category: str,
@@ -185,7 +201,12 @@ class MusinsaLiveSearch:
                 (color, item_type), (item_type,),
             )))
             return list(dict.fromkeys(candidates))
-        item_type = self._preferred_term(attributes, "item_type")
+        item_types = list(dict.fromkeys(
+            self._aliases(value)[0]
+            for value in attributes.get("item_type", [])
+            if value
+        ))[:3]
+        item_type = item_types[0] if item_types else ""
         fit = self._preferred_term(attributes, "fit")
         style = self._preferred_term(attributes, "style")
         color = self._preferred_term(attributes, "color")
@@ -201,16 +222,24 @@ class MusinsaLiveSearch:
             if value
         ))[:MAX_MATERIAL_QUERY_TERMS]
         material_queries = [f"{material} {noun}" for material in materials]
+        item_type_queries = [
+            " ".join(value for value in (color or style, item) if value)
+            for item in item_types
+        ]
         fits = attributes.get("fit", [])
         alternative_fit = fits[1] if len(fits) > 1 else (self._aliases(fits[0])[-1] if fits else "")
         context_material = materials[0] if materials else noun
         candidates = [
             *material_queries,
-            " ".join(value for value in (color or style, context_material) if value),
+            *item_type_queries,
+            " ".join(value for value in (color or style, context_material) if value)
+            if not item_type_queries else "",
             f"{alternative_fit or fit} {noun}" if fit else "",
-            fallback_noun,
         ]
-        return list(dict.fromkeys(value.strip() for value in candidates if value.strip()))[:5]
+        specific = list(dict.fromkeys(value.strip() for value in candidates if value.strip()))
+        # Keep one broad query for resilience, but spend the other slots on
+        # separate item types so the candidate set cannot collapse to shirts.
+        return list(dict.fromkeys([*specific[:4], fallback_noun]))[:5]
 
     def _fetch(
         self, category: str, query: str, size: int = PAGE_SIZE, *,
@@ -275,7 +304,7 @@ class MusinsaLiveSearch:
         matched_axes = set()
         for attribute, weight in ATTRIBUTE_WEIGHTS.items():
             for keyword in attributes.get(attribute, []):
-                if any(self._normalized(alias) in text for alias in self._aliases(keyword)):
+                if self._keyword_matches_text(attribute, keyword, text):
                     score += weight
                     matched.append(keyword)
                     matched_axes.add(attribute)

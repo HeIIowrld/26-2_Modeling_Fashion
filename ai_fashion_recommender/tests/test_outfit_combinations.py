@@ -87,7 +87,7 @@ class OutfitCombinationTests(unittest.TestCase):
             },
         )
 
-    def test_three_outfits_replace_selected_categories_and_keep_current_bottom(self):
+    def test_outfits_replace_selected_categories_and_keep_current_bottom_without_reuse(self):
         products = [
             product("T1", "top", ["오버핏", "스트리트"]),
             product("T2", "top", ["레귤러", "스트리트"]),
@@ -101,9 +101,10 @@ class OutfitCombinationTests(unittest.TestCase):
                 products, self.profile, self.pose, self.outfit, self.targets, recommender, limit=3,
             )
 
-        self.assertEqual(len(outfits), 3)
-        self.assertEqual([item.combination_id for item in outfits], ["OUTFIT-1", "OUTFIT-2", "OUTFIT-3"])
-        self.assertEqual(len({tuple(item.product_ids) for item in outfits}), 3)
+        # 카테고리별 고유 상품이 둘뿐이면 상품을 재활용해 세 번째 LOOK을 만들지 않는다.
+        self.assertEqual(len(outfits), 2)
+        self.assertEqual([item.combination_id for item in outfits], ["OUTFIT-1", "OUTFIT-2"])
+        self.assertEqual(len({tuple(item.product_ids) for item in outfits}), 2)
         self.assertTrue(all(len(item.product_ids) == 2 for item in outfits))
         self.assertTrue(all(item.product_ids[0].startswith("T") for item in outfits))
         self.assertTrue(all(item.product_ids[1].startswith("S") for item in outfits))
@@ -190,6 +191,8 @@ class OutfitCombinationTests(unittest.TestCase):
                     for item in outfits]
         self.assertEqual(len(set(top_ids)), 3)
         self.assertEqual(len(set(shoe_ids)), 3)
+        all_product_ids = [product_id for outfit in outfits for product_id in outfit.product_ids]
+        self.assertEqual(len(all_product_ids), len(set(all_product_ids)))
 
     def test_each_public_outfit_contains_at_most_three_verified_facts(self):
         products = [
@@ -203,6 +206,8 @@ class OutfitCombinationTests(unittest.TestCase):
         self.assertLessEqual(len(payload["evidence"]), 3)
         self.assertEqual(len(payload["evidence"]), len(payload["evidence_labels"]))
         self.assertNotIn("예산", payload["reason"])
+        self.assertNotIn("상품명", payload["reason"])
+        self.assertNotIn("T1 상품", payload["reason"])
 
     def test_long_sleeve_knit_and_shorts_combination_is_excluded(self):
         profile = UserProfile(
@@ -309,6 +314,28 @@ class OutfitCombinationTests(unittest.TestCase):
 
         self.assertEqual(len(outfits), 1)
         self.assertEqual(outfits[0].policy_penalty, 0.0)
+
+    def test_multiple_preferred_materials_are_mixed_across_the_outfit(self):
+        profile = UserProfile(
+            desired_style="캐주얼", change_categories=["top", "bottom"],
+        )
+        targets = TargetKeywordResult("user_input", {
+            "top": {"material": ["데님", "니트"], "style": ["캐주얼"]},
+            "bottom": {"material": ["데님"], "style": ["캐주얼"]},
+        })
+        denim_top = product("T-DENIM", "top", ["데님", "캐주얼"])
+        denim_top.name = "중청 데님 셔츠"
+        knit_top = product("T-KNIT", "top", ["니트", "캐주얼"])
+        knit_top.name = "크루넥 니트"
+        bottom = product("B-DENIM", "bottom", ["데님", "캐주얼"])
+        bottom.name = "중청 데님 팬츠"
+
+        outfits = recommend_outfit_combinations(
+            [denim_top, knit_top, bottom], profile, self.pose, self.outfit,
+            targets, FakeRecommender(), limit=1,
+        )
+
+        self.assertEqual(outfits[0].product_ids, ["T-KNIT", "B-DENIM"])
 
     def test_sporty_outfit_cannot_be_carried_by_running_shoes_alone(self):
         profile = UserProfile(
@@ -451,6 +478,39 @@ class OutfitCombinationTests(unittest.TestCase):
 
         self.assertEqual(outfits[0].reason_source, "rules")
         self.assertNotIn("예산", outfits[0].reason)
+
+    def test_llm_combination_reason_that_mentions_product_name_is_rejected(self):
+        products = [
+            product("T1", "top", ["오버핏", "스트리트"]),
+            product("S1", "shoes", ["스니커즈", "스트리트"]),
+        ]
+        generated = json.dumps({"items": [{
+            "combination_id": "OUTFIT-1",
+            "summary": "상품명에서 오버핏이 확인돼 추천해요.",
+            "evidence_ids": ["OUTFIT-1-E1"],
+        }]}, ensure_ascii=False)
+
+        class FakeResponse:
+            def __enter__(self): return self
+            def __exit__(self, *_args): return False
+            def read(self):
+                return json.dumps({"candidates": [{"content": {"parts": [{"text": generated}]}}]},
+                                  ensure_ascii=False).encode("utf-8")
+
+        settings = {
+            "FASHION_LLM_REASONS": "1", "FASHION_LLM_PROVIDER": "gemini",
+            "GEMINI_API_KEY": "test-key",
+        }
+        with patch.dict(os.environ, settings, clear=False), patch(
+            "outfit_combination_recommender.urllib.request.urlopen", return_value=FakeResponse()
+        ):
+            outfits = recommend_outfit_combinations(
+                products, self.profile, self.pose, self.outfit, self.targets,
+                FakeRecommender(), limit=1,
+            )
+
+        self.assertEqual(outfits[0].reason_source, "rules")
+        self.assertNotIn("상품명", outfits[0].reason)
 
 
 if __name__ == "__main__":

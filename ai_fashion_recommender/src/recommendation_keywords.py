@@ -26,6 +26,7 @@ from schemas import (
 from fashion_ranking_policy import (
     formal_context_enabled,
     formal_context_item_types,
+    purpose_context_item_types,
     sporty_context_enabled,
     sporty_context_item_types,
     trend_context_enabled,
@@ -40,6 +41,7 @@ SCOPE_CATEGORIES = {
     "현재 유지": (),
 }
 CATEGORY_LABELS = {"top": "상의", "bottom": "하의", "shoes": "신발"}
+TOP_ONLY_PREFERRED_MATERIALS = {"니트", "쉬폰", "가죽", "레더", "leather"}
 
 
 def selected_categories(profile: UserProfile) -> tuple[str, ...]:
@@ -195,7 +197,7 @@ class RecommendationKeywordGenerator:
                     if category == "bottom":
                         category_values = [
                             value for value in category_values
-                            if value not in {"가죽", "레더", "leather"}
+                            if value not in TOP_ONLY_PREFERRED_MATERIALS
                         ]
                 if not category_values:
                     continue
@@ -238,6 +240,8 @@ class RecommendationKeywordGenerator:
             for category, material in category_materials.items():
                 if category not in targets or not self._usable(material):
                     continue
+                if category == "bottom" and material in TOP_ONLY_PREFERRED_MATERIALS:
+                    continue
                 self._add(targets[category], "material", material)
                 sources[f"{category}.material"] = "photo_fallback"
                 used_photo = True
@@ -266,6 +270,10 @@ class RecommendationKeywordGenerator:
             context_types = (
                 formal_context_item_types(profile, category)
                 or sporty_context_item_types(profile, category)
+                or (
+                    purpose_context_item_types(profile, category)
+                    if self._provided(profile, "purpose") else ()
+                )
             )
             if not context_types:
                 continue
@@ -348,8 +356,9 @@ class RecommendationKeywordGenerator:
                     shoe_type = outfit.shoes["item_type"]
                     default_source = "photo_shoe_head"
                     used_photo = True
-                self._add(target, "item_type", shoe_type)
-                sources["shoes.item_type"] = default_source
+                if not target.get("item_type"):
+                    self._add(target, "item_type", shoe_type)
+                    sources["shoes.item_type"] = default_source
                 self._rule(rules, "R-CTX-01")
                 self._rule(rules, "R-ACC-06")
                 continue

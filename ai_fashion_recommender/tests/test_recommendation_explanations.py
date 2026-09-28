@@ -250,7 +250,7 @@ class RecommendationExplanationTests(unittest.TestCase):
         prompt_payload = json.loads(captured["contents"][0]["parts"][0]["text"])
         self.assertEqual(set(prompt_payload), {"products"})
         sent_product = prompt_payload["products"][0]
-        self.assertEqual(sent_product["name"], "세미 와이드 팬츠")
+        self.assertNotIn("name", sent_product)
         self.assertNotIn("search_keywords", sent_product)
         self.assertNotIn("user_context", prompt_payload)
         self.assertNotIn("body_analysis", prompt_payload)
