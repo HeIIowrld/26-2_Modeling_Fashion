@@ -32,8 +32,29 @@ class SizeFitUITests(unittest.TestCase):
         self.assertNotIn("<script>", html)
         self.assertIn("&lt;script&gt;", html)
         self.assertIn("가슴단면 0cm", html)
-        self.assertIn("재고 확인 필요", html)
+        # 값이 없는 칸은 '—'로 채워 표의 칸이 밀리지 않게 한다.
         self.assertIn("<td>—</td>", html)
+        # 2026-09-29: '판매 상태' 칸을 뺐다. 무신사 응답에 옵션별 재고가 없어
+        # (available=None) 거의 모든 줄이 '재고 확인 필요'로 차 아무것도 알려 주지
+        # 못했다. 재고 안내는 표 위 한 문장으로 남기고, 표에는 고른 사이즈를 짚어 준다.
+        self.assertNotIn("재고 확인 필요", html)
+        self.assertIn('<th scope="col">추천</th>', html)
+        self.assertIn("<td>이 사이즈</td>", html)
+        self.assertIn("해당 옵션의 재고는 상품 페이지에서 확인해주세요.", html)
+
+    def test_pick_column_is_omitted_when_no_size_was_chosen(self):
+        """추천 사이즈가 없으면 '추천' 칸은 빈 칸만 되므로 만들지 않는다."""
+        source = (STATIC / "app.js").read_text(encoding="utf-8")
+        function = source[source.index("function renderSizeFit("):source.index("function renderShoppingProducts(")]
+        code = "const escapeHtml = (s) => String(s);\n" + function
+        code += "\nconsole.log(JSON.stringify(renderSizeFit(" + json.dumps({
+            "status": "compared", "summary": "실측만 있어요", "closest_size": "",
+            "columns": {"chest_width_cm": "가슴단면"},
+            "size_options": [{"size": "M", "measurements": {"chest_width_cm": 54}, "available": None}],
+        }) + ")));"
+        html = self.run_js(code)
+        self.assertNotIn("추천", html)
+        self.assertIn('<th scope="row">M</th>', html)
 
     def test_form_serializes_reference_dimensions_without_using_height_as_garment_length(self):
         source = (STATIC / "app.js").read_text(encoding="utf-8")

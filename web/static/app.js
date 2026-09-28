@@ -594,7 +594,11 @@ function renderSizeFit(fit) {
   ).join(" · ");
   const columns = Object.entries(fit.columns || {});
   const rows = fit.size_options || [];
-  const date = fit.fetched_at ? new Date(fit.fetched_at).toLocaleDateString("ko-KR") : "";
+  /* '판매 상태' 칸을 두었지만 무신사 응답에 옵션별 재고가 없어 거의 모든 줄이
+     '재고 확인 필요'로 채워졌다. 아무것도 알려 주지 않는 칸이라 뺀다.
+     대신 고른 사이즈를 표 안에서 짚어 준다 — 표를 여는 이유가 그것이다.
+     추천 사이즈가 없으면 이 칸도 빈 칸만 되므로 아예 만들지 않는다. */
+  const pickColumn = Boolean(fit.closest_size);
   const cells = (measurements) => columns.map(([key]) =>
     `<td>${measurements?.[key] == null ? "—" : escapeHtml(String(measurements[key]))}</td>`
   ).join("");
@@ -606,12 +610,11 @@ function renderSizeFit(fit) {
     ${rows.length ? `<details><summary>사이즈별 실측 보기 (cm)</summary>
       <div class="size-table-scroll"><table>
         <caption class="sr-only">상품 사이즈별 실측과 기준 옷의 치수, 단위 cm</caption>
-        <thead><tr><th scope="col">사이즈</th>${columns.map(([, label]) => `<th scope="col">${escapeHtml(label)}</th>`).join("")}<th scope="col">판매 상태</th></tr></thead>
-        <tbody>${Object.keys(fit.reference || {}).length ? `<tr class="size-reference"><th scope="row">기준 옷</th>${cells(fit.reference)}<td>—</td></tr>` : ""}
-          ${rows.map((row) => `<tr${row.size === fit.closest_size ? ' class="size-closest"' : ""}><th scope="row">${escapeHtml(row.size)}</th>${cells(row.measurements)}<td>${row.available === false ? "품절·비활성" : row.available === true ? "조회 시 판매 가능" : "재고 확인 필요"}</td></tr>`).join("")}
+        <thead><tr><th scope="col">사이즈</th>${columns.map(([, label]) => `<th scope="col">${escapeHtml(label)}</th>`).join("")}${pickColumn ? '<th scope="col">추천</th>' : ""}</tr></thead>
+        <tbody>${Object.keys(fit.reference || {}).length ? `<tr class="size-reference"><th scope="row">기준 옷</th>${cells(fit.reference)}${pickColumn ? "<td></td>" : ""}</tr>` : ""}
+          ${rows.map((row) => `<tr${row.size === fit.closest_size ? ' class="size-closest"' : ""}><th scope="row">${escapeHtml(row.size)}</th>${cells(row.measurements)}${pickColumn ? `<td>${row.size === fit.closest_size ? "이 사이즈" : ""}</td>` : ""}</tr>`).join("")}
         </tbody></table></div>
       ${fit.measurement_note ? `<small>${escapeHtml(fit.measurement_note)}</small>` : ""}
-      ${date ? `<small>실측 조회: ${escapeHtml(date)} · 무신사 상품 표기 기준</small>` : ""}
     </details>` : ""}
   </section>`;
 }
@@ -705,18 +708,45 @@ function lookStatus(entry) {
   return item ? item.status : "";
 }
 
+const CATEGORY_LABEL = { top: "상의", bottom: "하의", shoes: "신발" };
+
+/* 상품명을 ' + '로 이어 붙이면 긴 무신사 이름 세 개가 한 덩어리로 흘러 읽히지 않는다
+   ("…레귤러 셔츠_블랙 + [시누 PICK] 아르코 … + SP2604 …").
+   부위별로 한 줄씩 끊고 라벨을 붙인다. */
+function lookItemList(result) {
+  const names = result.names || [];
+  const categories = result.categories || [];
+  if (!names.length) return "";
+  const rows = names.map((name, index) => ({
+    label: CATEGORY_LABEL[categories[index]] || "",
+    name,
+  }));
+  // 부위를 모르면 라벨 없이 줄만 나눈다. 순서는 상의 → 하의 → 신발.
+  const order = ["상의", "하의", "신발", ""];
+  rows.sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
+  return `<ul class="look-items">${rows.map((row) =>
+    `<li>${row.label ? `<b>${escapeHtml(row.label)}</b>` : ""}<span>${escapeHtml(row.name)}</span></li>`
+  ).join("")}</ul>`;
+}
+
 function renderLookRender(entry) {
   const result = lookResult(entry.key);
   if (result) {
-    const warnings = result.warnings?.length
-      ? `<div class="tryon-warning"><strong>생성 품질 확인 필요</strong><ul>${result.warnings
-          .map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul></div>`
+    /* 상품마다 같은 경고가 따로 올라와 같은 문장이 반복됐다. 파일명·수치를 뺀 뒤로는
+       완전히 같은 문장이 되므로 합친다. 그리고 기본은 접어 둔다 — 결과를 보러 온
+       사람에게 먼저 보여야 할 것은 사진이지 주의사항 목록이 아니다. */
+    const notes = [...new Set(result.warnings || [])];
+    const warnings = notes.length
+      ? `<details class="tryon-warning">
+          <summary>이 사진에서 참고할 점 ${notes.length}가지</summary>
+          <ul>${notes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}</ul>
+        </details>`
       : "";
     return `<figure class="look-shot">
         <img src="${API_BASE}/api/jobs/${state.jobId}/images/${result.image}"
              alt="${escapeHtml(entry.label)}을 적용한 예상 착장샷" />
         <figcaption>
-          <span>${result.names.map((name) => escapeHtml(name)).join(" + ")}</span>
+          ${lookItemList(result)}
           <a href="${API_BASE}/api/jobs/${state.jobId}/images/${result.image}"
              download="fitta-look-${escapeHtml(entry.label)}.jpg">사진 저장</a>
         </figcaption>
@@ -750,7 +780,7 @@ function renderLookPanel(entry, index) {
   const open = state.lookEvidenceOpen.has(entry.key) ? " open" : "";
   return `<section class="look-panel" role="tabpanel" id="look-panel-${index}"
       aria-labelledby="look-tab-${index}" tabindex="0">
-    <p class="look-summary">${escapeHtml(outfit?.reason
+    <p class="look-summary">${sentenceLines(outfit?.reason
       || "직접 고른 조합입니다. 상품을 바꿔 다시 렌더링할 수 있어요.")}</p>
     ${currentItems ? `<div class="outfit-current-items" aria-label="그대로 입는 현재 아이템">${currentItems}</div>` : ""}
     ${evidence.length ? `<details class="outfit-combination-evidence" data-look-evidence="${escapeHtml(entry.key)}"${open}>
@@ -1368,6 +1398,18 @@ function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (ch) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch])
   );
+}
+
+/* 추천 근거는 문장 두 개를 공백으로 이어 붙인 값이다(outfit_combination_recommender.py).
+   한 문단으로 흘리면 문장 경계가 아니라 아무 데서나 줄이 넘어가 읽기 나쁘다.
+   문장마다 한 줄씩 준다. */
+function sentenceLines(text) {
+  return String(text ?? "")
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean)
+    .map((sentence) => `<span class="summary-sentence">${escapeHtml(sentence)}</span>`)
+    .join("");
 }
 
 /* ── 초기화 ───────────────────────────────────────────── */
