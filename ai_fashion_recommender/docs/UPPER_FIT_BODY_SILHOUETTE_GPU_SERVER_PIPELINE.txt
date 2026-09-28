@@ -1,0 +1,813 @@
+FITTA 상의 핏 파인튜닝 → 전신 Body Proxy → 생성모델 → 공개 서버 적용 파이프라인
+작성일: 2026-09-27
+
+======================================================================
+0. 최종 목표
+======================================================================
+
+1) 사용자 사진과 상품 사진에서 상의·하의 핏을 같은 CV 모델로 판정한다.
+2) 사용자의 핏, 관절, 보이는 피부 경계와 의류 마스크를 결합해 옷 아래 신체 라인의
+   확률 분포와 불확실성을 추정한다.
+3) 두꺼운 외투, 오버핏 상의, 와이드 바지의 바깥 윤곽을 실제 몸으로 오인하지 않는다.
+4) 현재 옷 전체를 지울 영역, 옷 아래 신체가 있을 법한 영역, 새 옷을 그릴 영역을
+   서로 분리한다.
+5) 추정한 Body Proxy 위에 추천 상품을 생성하고, 생성 결과의 핏을 같은 모델로 재검사한다.
+6) 검증이 끝난 코드와 체크포인트를 GPU 서버에 배포하여
+   http://afsd.iptime.org:80 에서 실시간으로 사용한다.
+
+주의:
+Body Proxy는 옷 아래의 실제 신체 치수나 정확한 체형 복원이 아니다. 관절, 보이는 피부,
+의류 마스크와 핏 분류를 근거로 생성모델에 제공하는 확률적 편집 가이드다. UI에서 실제
+신체 치수처럼 표시하면 안 된다.
+
+
+======================================================================
+1. 2026-09-27 기준 GitHub 구현 상태
+======================================================================
+
+최신 main
+  - commit: 7fd0af0
+  - 로컬 main도 이 커밋까지 업데이트 완료
+
+공용 핏 모델 기반 코드(main에 있음)
+  - src/fit_vision_schema.py
+    상의 핏/기장, 하의 핏/기장, quality 라벨 계약
+  - src/fit_vision_model.py
+    FashionSigLIP + 분류 헤드 + RGB/mask/geometry 입력
+  - src/fit_vision_training.py
+    임베딩 캐시와 멀티태스크 학습
+  - src/outfit_analyzer.py
+    사용자 사진의 current fit 분석 연결
+  - src/live_product_attributes.py
+    상품 사진의 target fit 분석 연결
+  - src/musinsa_live_search.py
+    상품 사진의 핏을 검색 결과 재정렬에 사용
+
+하의 4종 부트스트랩 실험 브랜치
+  - origin/codex/fit-vision-bootstrap-20260925
+  - commit: b0bc66c
+  - 클래스: 슬림 / 스트레이트 / 세미와이드 / 와이드
+  - 800장 자동 약지도 실험이며 사람 검수 전 연구용
+  - 원본 이미지와 체크포인트는 GitHub에 없음
+  - 이 브랜치를 최신 main에 통째로 merge하면 최신 변경을 되돌릴 수 있으므로 금지한다.
+    필요한 prepare_fit_vision_bootstrap.py와 학습 변경만 새 통합 브랜치에서 선택적으로 옮긴다.
+
+팀원의 외투 제거·신체 영역 실험 브랜치
+  - origin/codex/outerwear-source-preservation
+  - commit: 2465d2a
+  - 핵심: src/outerwear_top_tryon.py
+  - erase_mask와 pose 기반 target_body_mask를 분리
+  - FLUX 외투 제거 + 선택적 CatVTON/FLUX 2차 상의 생성
+  - 연구용이며 아직 main/운영 VTON에 연결되지 않음
+  - 실사진 4장 검토 단계이며 지퍼·털·주머니 속 손·외곽 잔상 문제가 남아 있음
+
+
+======================================================================
+2. 데스크탑 GPU 작업 브랜치 준비
+======================================================================
+
+원칙
+  - main에서 바로 실험하지 않는다.
+  - 팀원 외투 브랜치를 기반으로 새 통합 브랜치를 만든다.
+  - 데이터, 마스크 캐시, 체크포인트, 사용자 사진, API 키는 Git에 올리지 않는다.
+
+PowerShell 또는 VS Code 터미널:
+
+  cd <26-2_Modeling_Fashion 저장소 경로>
+  git fetch --prune origin
+  git switch main
+  git pull --ff-only origin main
+  git switch -c feature/fit-body-silhouette
+  git merge --no-ff origin/codex/outerwear-source-preservation
+
+확인:
+
+  git status --short --branch
+  git log --oneline --decorate -5
+
+하의 부트스트랩 브랜치는 통째로 병합하지 않는다. 아래 파일이 필요할 때만 최신 main과
+비교하여 옮긴다.
+
+  ai_fashion_recommender/scripts/prepare_fit_vision_bootstrap.py
+  ai_fashion_recommender/reports/FIT_VISION_BOOTSTRAP_CRITERIA.md
+  ai_fashion_recommender/reports/FIT_VISION_BOOTSTRAP_RESULTS.md
+
+
+======================================================================
+3. 상의 핏 파인튜닝 데이터 규격
+======================================================================
+
+필수 분류 클래스
+
+upper_fit
+  - 슬림핏: 몸통과 팔의 신체선을 비교적 가깝게 따름
+  - 레귤러핏: 표준 어깨선과 적당한 여유
+  - 여유핏: 레귤러보다 품과 소매가 넉넉하지만 의도적인 과대 실루엣은 아님
+  - 오버핏: 드롭 숄더, 넓은 품, 큰 소매 등 과대 실루엣이 분명함
+
+upper_length
+  - 크롭
+  - 기본 기장
+  - 롱
+
+quality
+  - 판정 가능
+  - 가림
+  - 측면·교차 자세
+  - 잘림
+  - 평면 상품
+  - 판정 불가
+
+권장 수량
+  - 1차 파일럿: upper_fit 클래스당 최소 200장
+  - 본 학습: 클래스당 300장 이상
+  - 각 클래스 안에서 user 착용 사진과 shop 착용 사진을 가능한 한 1:1로 구성
+  - 경계 표본(레귤러↔여유, 여유↔오버)을 의도적으로 충분히 포함
+  - 같은 사람+착장 또는 같은 상품은 동일 group_id 사용
+
+권장 데이터 구성
+  - user domain: 전신 또는 상반신 착용 사진
+  - shop domain: 모델이 실제로 착용한 상품 사진
+  - 평면 누끼 상품 사진은 quality="평면 상품"으로 분리하거나 학습 대상에서 제외
+  - 사용하려는 공개 데이터셋은 반드시 해당 데이터셋의 이용 조건과 비영리 사용 범위를
+    팀에서 다시 확인한다.
+  - 무신사 이미지를 학습에 사용할 경우 서비스 이용약관과 이미지 이용 조건을 확인하고,
+    원본 이미지는 GitHub에 커밋하지 않는다.
+
+CSV 시작 파일
+
+  ai_fashion_recommender/data/fit_vision_annotations.template.csv
+
+실제 파일 예시
+
+  work/fit-data/dataset/annotations.csv
+  work/fit-data/images/...
+  work/fit-data/masks/...
+
+원본/마스크/캐시/체크포인트는 저장소 바깥 또는 .gitignore가 적용된 work 폴더에 둔다.
+
+
+======================================================================
+4. 라벨링·마스크 생성·누수 검사
+======================================================================
+
+라벨링 시 반드시 확인할 것
+  - 상품명만 보고 핏을 정하지 않고 실제 착용 실루엣을 본다.
+  - 아우터 자체가 큰 것과 착용자의 몸이 큰 것을 구분한다.
+  - 소매만 넓고 몸통은 레귤러인 경계 표본은 review note를 남긴다.
+  - 같은 상품의 색상 변형과 같은 영상 프레임은 동일 group_id로 묶는다.
+  - train/val/test에 동일 group_id가 나뉘면 안 된다.
+
+마스크 생성:
+
+  python ai_fashion_recommender/scripts/build_fit_masks.py `
+    --annotations-csv work/fit-data/dataset/annotations.csv `
+    --dataset-root work/fit-data `
+    --mask-dir work/fit-data/masks
+
+macOS/Linux에서는 줄바꿈 문자 ` 대신 역슬래시 \를 사용한다.
+
+감사:
+
+  python ai_fashion_recommender/scripts/audit_fit_annotations.py `
+    --annotations-csv work/fit-data/dataset/annotations.csv `
+    --dataset-root work/fit-data
+
+통과 조건
+  - missing_masks = 0
+  - split별 클래스가 한쪽으로 몰리지 않음
+  - user/shop 도메인이 각 split에 존재
+  - group_id 누수 없음
+  - quality="판정 가능"이 아닌 사진이 핏 정답으로 무리하게 사용되지 않음
+
+
+======================================================================
+5. 데스크탑 GPU 학습
+======================================================================
+
+권장 환경
+  - Python 3.11
+  - NVIDIA GPU + CUDA 지원 PyTorch
+  - 프로젝트 requirements 설치
+  - Marqo/marqo-fashionSigLIP 가중치를 받을 수 있는 인터넷 또는 사전 캐시
+
+먼저 GPU 확인:
+
+  python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"
+
+FashionSigLIP 임베딩 캐시:
+
+  python ai_fashion_recommender/scripts/train_fit_vision.py cache `
+    --annotations-csv work/fit-data/dataset/annotations.csv `
+    --image-root work/fit-data `
+    --train-cache work/fit-data/cache/train.pt `
+    --val-cache work/fit-data/cache/val.pt `
+    --device cuda `
+    --batch-size 32
+
+동일 split로 다음 5개 ablation을 모두 학습한다.
+
+  rgb_only
+  masked_only
+  rgb_mask
+  rgb_geometry
+  rgb_mask_geometry
+
+학습 명령 예시:
+
+  python ai_fashion_recommender/scripts/train_fit_vision.py train `
+    --train-cache work/fit-data/cache/train.pt `
+    --val-cache work/fit-data/cache/val.pt `
+    --output-checkpoint work/fit-data/outputs/fit_rgb_mask_geometry.pt `
+    --feature-mode rgb_mask_geometry `
+    --device cuda `
+    --epochs 40 `
+    --batch-size 128
+
+모델 선택 기준
+  - 전체 accuracy 하나만 보지 않는다.
+  - upper_fit macro-F1
+  - 클래스별 F1, 특히 레귤러↔여유와 여유↔오버
+  - user domain macro-F1
+  - shop domain macro-F1
+  - 사람 검수 test set 결과
+  - confidence calibration과 보류율
+
+주의:
+자동 약지도 test 결과만으로 운영 모델로 승격하지 않는다. 최소한 별도의 사람 검수 test
+set을 만들어야 한다. 기존 하의 체크포인트도 같은 검수 기준을 적용한다.
+
+최종 산출물
+
+  ai_fashion_recommender/models/fit_vision_heads.pt
+  또는
+  work/fit-data/outputs/fit_vision_heads.pt
+
+핏 모델 검증 후 별도 Body Proxy 학습 단계에서 생성할 산출물
+
+  work/body-proxy/outputs/body_proxy_heads.pt
+  work/body-proxy/outputs/body_proxy_heads.metrics.json
+
+큰 체크포인트는 Git에 커밋하지 않는다. SHA-256을 기록한다.
+
+Windows PowerShell:
+
+  Get-FileHash work/fit-data/outputs/fit_vision_heads.pt -Algorithm SHA256
+
+Linux 서버:
+
+  sha256sum fit_vision_heads.pt
+
+
+======================================================================
+6. 핏 모델을 Body Proxy에 연결하는 코드 구조
+======================================================================
+
+새 공용 계약 권장
+
+  src/body_proxy.py
+
+  BodyProxyResult
+    - category: top | bottom
+    - source_fit_label / source_fit_confidence
+    - target_fit_label / target_fit_confidence
+    - source_erase_mask
+    - body_proxy_mask
+    - target_garment_envelope
+    - protected_mask
+    - uncertainty
+    - fallback_reason
+
+핏 모델을 두 번 사용한다.
+
+  A. 사용자 사진
+    outfit_analyzer.py
+      -> current upper_fit / bottom_silhouette
+      -> 현재 옷 외곽을 신체 라인으로 얼마나 신뢰할지 결정
+
+  B. 추천 상품 사진
+    live_product_attributes.py
+      -> target upper_fit / bottom_silhouette
+      -> 새 옷의 target garment envelope 결정
+
+핏 클래스만으로 신체 폭을 단정하면 안 된다.
+
+  - 슬림/레귤러 현재 옷: 관절 + 관측된 안쪽 의류 경계를 제한적으로 사용
+  - 여유/오버/와이드 현재 옷: 옷 바깥 윤곽 신뢰도를 낮추고 관절 기반 proxy 우선
+  - confidence가 낮거나 quality가 판정 불가: 기존 마스크 정책으로 fallback
+
+
+======================================================================
+6-1. 핵심 CV 연구 주제: 확률적 신체 라인 분포 추정
+======================================================================
+
+이 단계가 프로젝트의 핵심 Computer Vision 기여다.
+
+문제 정의
+
+  P(hidden body contour | RGB, pose, garment mask, visible skin, fit posterior)
+
+즉, "오버핏이면 몸이 이 정도일 것이다"라는 고정 규칙을 쓰는 것이 아니라 다음 관측을
+결합해 옷 아래 신체가 존재할 가능성을 픽셀별 또는 높이별 분포로 출력한다.
+
+입력
+  - 사용자 RGB 이미지
+  - 상의·하의 의류 segmentation mask
+  - 피부·손·발·얼굴 등 관측 가능한 신체 mask
+  - MediaPipe 관절 heatmap
+    상체: 어깨 / 팔꿈치 / 손목 / 골반
+    하체: 골반 / 무릎 / 발목
+  - 핏 모델의 단일 label이 아니라 클래스별 posterior probability
+    예: {슬림: 0.03, 레귤러: 0.08, 여유: 0.24, 오버: 0.65}
+  - 각 관절 visibility와 quality head 결과
+
+출력
+  - body occupancy probability map: H×W, 각 픽셀이 신체 내부일 확률
+  - body centerline heatmap: 몸통 중심과 좌우 팔다리 중심선 확률
+  - 높이별 좌우 경계 분포
+    left_x(y)  ~ Normal(mu_left(y), sigma_left(y))
+    right_x(y) ~ Normal(mu_right(y), sigma_right(y))
+  - 단면별 반폭 분포
+    상체: shoulder / chest / waist / hip / upper-arm / forearm
+    하체: hip / thigh / knee / calf / ankle
+  - body_proxy_confidence
+  - 관절 누락, 가림, 측면 자세 등에 따른 uncertainty
+
+손목·발목의 역할
+  - 손목과 발목은 몸통 폭을 직접 정하는 값이 아니다.
+  - 팔·다리 중심선의 끝점과 방향을 정하고, 보이는 손/발 영역과 결합해 소매·바짓단 아래의
+    신체 위치를 제한한다.
+  - 팔꿈치·무릎은 굽은 팔다리의 경로를 정한다.
+  - 어깨·골반은 몸통과 사지 폭을 정규화하는 주요 anchor다.
+
+확률 분포가 필요한 이유
+  - 두꺼운 옷 아래 실제 경계는 사진만으로 하나의 정답으로 확정할 수 없다.
+  - 오버핏·와이드일수록 sigma를 크게 하고, 슬림핏이나 피부가 보이는 구간은 sigma를 작게 한다.
+  - 생성 마스크는 목적에 따라 확률 등고선을 다르게 사용할 수 있다.
+    body core: 높은 확률 영역
+    target garment envelope: 중간 확률 영역 + 목표 핏 여유
+    안전한 erase 영역: 현재 옷 전체 영역
+  - confidence가 낮으면 분포를 억지로 좁히지 않고 기존 마스크로 fallback한다.
+
+권장 모델 구조
+
+  Branch A: Fit encoder
+    FashionSigLIP RGB/masked RGB 특징 + geometry
+    -> upper_fit 또는 bottom_silhouette posterior
+
+  Branch B: Pose/visibility encoder
+    관절 Gaussian heatmap + visibility map + skin/hand/foot mask
+
+  Branch C: Garment encoder
+    현재 의류 mask + 거리 변환(distance transform) + RGB feature
+
+  Fusion decoder
+    A/B/C 특징을 결합한 작은 U-Net 또는 heatmap decoder
+    -> occupancy logits
+    -> centerline heatmaps
+    -> boundary mean/log-variance
+
+처음부터 생성모델 전체를 재학습하지 않는다. FashionSigLIP과 pose/parser는 우선 동결하고,
+핏 head와 작은 body-proxy decoder를 학습한다. 필요할 때만 일부 블록을 LoRA로 미세조정한다.
+
+권장 코드 파일
+  - src/body_proxy_schema.py
+  - src/body_proxy_model.py
+  - src/body_proxy_dataset.py
+  - src/body_proxy_training.py
+  - scripts/build_body_proxy_pseudo_labels.py
+  - scripts/train_body_proxy.py
+  - tests/test_body_proxy.py
+
+
+======================================================================
+6-2. 숨겨진 신체 정답 데이터 만드는 방법
+======================================================================
+
+헐렁한 옷 사진에는 숨겨진 실제 신체 경계 정답이 없으므로 사람이 상상해서 라벨링하면 안 된다.
+다음 pseudo-supervision을 사용한다.
+
+A. 보이는 신체/타이트한 착장 기반 pseudo ground truth
+  - 슬림핏 상의, 레깅스, 스키니 등 신체 윤곽이 상대적으로 잘 보이는 사진을 모은다.
+  - pose + human parser + 관측 경계로 body proxy 정답을 만든다.
+  - 피부가 실제로 보이는 팔·발목 구간은 높은 신뢰도 anchor로 기록한다.
+
+B. Synthetic loose-garment occlusion
+  - A의 body proxy 정답은 그대로 유지한다.
+  - 의류 마스크만 여유/오버/세미와이드/와이드/벌룬 형태로 인공 확장한다.
+  - RGB에는 실제 옷 texture를 합성하거나 마스크 기반 occlusion augmentation을 적용한다.
+  - 모델은 넓어진 옷 외곽이 아니라 원래 body proxy 분포를 복원하도록 학습한다.
+
+C. Paired consistency
+  - 동일 인물이 타이트한 옷과 헐렁한 옷을 입은 paired 사진이 있으면 사용한다.
+  - 포즈를 정렬한 두 이미지의 body proxy가 지나치게 달라지지 않도록 consistency loss를 준다.
+
+D. 선택 사항: SMPL/가상 인체
+  - 이용 허가된 3D 인체 렌더가 있으면 실제 body silhouette 정답을 보조 데이터로 사용한다.
+  - 실제 사진 도메인과 차이가 있으므로 단독 학습 데이터로 사용하지 않는다.
+
+따라서 body line 단계도 수작업으로 숨은 몸을 그리는 대규모 라벨링보다, 관측 가능한 타이트
+착장 + synthetic occlusion을 이용하는 것이 현실적이다.
+
+권장 loss
+
+  total_loss = fit_classification_loss
+             + occupancy_bce_dice_loss
+             + centerline_heatmap_loss
+             + boundary_gaussian_nll
+             + uncertainty_calibration_loss
+             + paired_consistency_loss
+
+평가 지표
+  - occupancy IoU / Dice
+  - 좌우 경계 MAE(어깨·골반 폭 또는 신장으로 정규화)
+  - centerline PCK
+  - Gaussian NLL
+  - 50%/80%/90% 예측 구간 coverage
+  - uncertainty calibration error
+  - downstream VTON의 목표 핏 일치율과 원래 옷 잔류율
+
+필수 ablation
+  - B0: pose only
+  - B1: pose + segmentation
+  - B2: pose + segmentation + fit posterior
+  - B3: pose + segmentation + fit posterior + RGB feature
+  - B4: B3 + learned uncertainty
+
+핏 정보를 추가했을 때 B1보다 B2/B3의 경계 오차, calibration, downstream VTON이 실제로
+개선되는지 확인해야 "핏 인식이 신체 라인 추정에 도움을 줬다"고 주장할 수 있다.
+
+
+======================================================================
+7. 상체 Body Proxy 구현
+======================================================================
+
+팀원 코드에서 재사용할 것
+
+  src/outerwear_top_tryon.py
+    - build_outerwear_top_masks()
+    - OuterwearTopMasks
+    - erase_mask / target_body_mask / outer_ring / protected_mask 분리
+    - FLUX 외투 제거와 선택적 2차 생성
+
+변경할 것
+
+1) target_width_scale(product)의 상품명 휴리스틱을 주 경로로 쓰지 않는다.
+
+   기존:
+     product.fit / product.name 문자열에서 슬림·오버를 탐색
+
+   개선:
+     상품 사진 FitVisionPredictor.upper_fit
+       -> 슬림핏 / 레귤러핏 / 여유핏 / 오버핏
+       -> target garment envelope 폭
+
+   상품명은 모델이 보류했을 때만 fallback으로 남긴다.
+
+2) 사용자의 current upper_fit도 context에 전달한다.
+
+   outfit_analyzer.py
+     -> upper_fit label/confidence/quality
+   web/pipeline.py
+     -> VTON context에 fit 결과 전달
+   outerwear_top_tryon.py
+     -> current fit에 따라 관측 의류 경계 신뢰도 조절
+
+3) target_body_mask를 공용 body_proxy_mask로 승격한다.
+
+   기본 입력:
+     - left/right shoulder
+     - left/right elbow
+     - left/right wrist
+     - left/right hip
+     - 보이는 피부/손
+     - 현재 상의 segmentation
+     - current upper_fit + confidence
+
+4) 세 영역을 끝까지 분리한다.
+
+   source_erase_mask
+     기존 외투/상의 전체를 지우는 영역
+
+   body_proxy_mask
+     관절을 따라 추정한 몸통·팔의 생성 가이드
+
+   target_garment_envelope
+     새 상품의 핏과 기장에 맞게 옷을 그릴 목표 영역
+
+5) 2-pass 권장
+
+   Pass 1
+     부피가 큰 기존 외투를 제거하고 외투 바깥쪽은 배경으로 복원
+
+   Pass 2
+     body proxy + target envelope 위에 새 상의를 생성
+
+
+======================================================================
+8. 하체 Body Proxy 구현
+======================================================================
+
+기존 코드
+
+  catvton_tryon.py
+    - long_bottom_mask(): 긴 바지용 convex hull
+    - shape_lower_mask(): 상품 바지가 더 넓을 때만 마스크 확장
+
+한계
+  - 현재 와이드 바지를 목표 스트레이트로 좁히는 경우를 직접 해결하지 못함
+  - 넓은 현재 바지의 옆부분을 실제 다리 공간으로 오인할 수 있음
+
+새 함수 권장
+
+  build_lower_body_proxy()
+  fit_aware_lower_mask()
+
+입력
+  - left/right hip
+  - left/right knee
+  - left/right ankle
+  - 현재 lower_style_mask
+  - current bottom_silhouette + confidence
+  - target bottom_silhouette + confidence
+  - target bottom_length
+
+출력
+  - 현재 바지 전체 source_erase_mask
+  - 좌우 관절 중심선을 따르는 두 개의 leg body proxy
+  - 목표 핏별 target garment envelope
+  - uncertainty/fallback 사유
+
+목표 envelope 예시
+  - 슬림: 관절 중심 가까이 좁게
+  - 스트레이트: 무릎부터 밑단까지 폭 변화가 작게
+  - 세미와이드: 허벅지와 밑단을 중간 폭으로
+  - 와이드: 허벅지부터 밑단까지 넓게
+  - 벌룬: 허벅지·무릎은 넓고 밑단은 다시 좁게
+  - 플레어: 무릎 아래부터 확장
+
+와이드 현재 바지 → 스트레이트 목표 바지는 2-pass 우선 실험
+
+  Pass 1: 기존 와이드 바지 전체와 옆 잔상을 지우고 배경/공간 복원
+  Pass 2: leg body proxy와 스트레이트 envelope 위에 새 바지 생성
+
+
+======================================================================
+9. 생성 결과 재검사
+======================================================================
+
+같은 FitVisionPredictor를 생성 결과에도 다시 사용한다.
+
+검사 항목
+  - 생성 결과 target_fit 일치 여부
+  - 관절 중심선과 생성 옷 중심선 거리
+  - 원래 current_fit 실루엣 잔류 여부
+  - source erase 영역의 기존 옷 잔상
+  - 보호해야 할 얼굴·머리·손·가방·신발 보존
+  - 배경 복원 오류
+
+자동 처리
+  - confidence가 충분하고 target_fit 불일치: 다른 seed 또는 마스크로 1회 재시도
+  - confidence가 낮음: 실패 단정 없이 경고
+  - 신체 proxy confidence가 낮음: 기존 VTON 경로로 fallback
+
+
+======================================================================
+10. 실험 설계와 배포 승인 기준
+======================================================================
+
+최소 A/B
+
+  A0: 기존 CatVTON 마스크
+  A1: 팀원 pose 기반 상체 target_body_mask
+  A2: fit class + pose 기반 상·하체 body proxy
+  A3: fit class + pose + 상품 이미지 target envelope + 2-pass
+
+평가 세트
+  - 최소 50~100명/사진
+  - 오버핏 상의, 모피/패딩/롱코트
+  - 와이드→스트레이트, 슬림→와이드 등 방향별 변환
+  - 정면 외에도 허용 범위의 자세와 가림 사례
+  - 상품과 사용자의 성별/카테고리 오류가 없는 고정 세트
+
+필수 지표
+  - target fit 재분류 정확도
+  - 원래 핏 잔류율
+  - 관절 중심 보존
+  - 배경 복원 오류율
+  - 얼굴·손·하의·신발 보존율
+  - 상품 디테일 재현
+  - 사람 평가: 자연스러움/핏 충실도/상품 충실도
+
+배포 전 통과 조건
+  - 단위 테스트 전체 통과
+  - 사람 검수 test set에서 user/shop 양쪽 성능 확인
+  - 기존 A0보다 주요 실패율이 악화되지 않음
+  - 모피/패딩/와이드 사례에서 개선이 반복 재현됨
+  - 실패 시 기존 경로로 fallback됨
+  - API 응답에 body proxy를 신체 치수로 노출하지 않음
+
+환경 플래그 권장
+
+  FASHION_BODY_PROXY_MODE=off|pose|fit_pose
+  FASHION_UPPER_BODY_PROXY=1
+  FASHION_LOWER_BODY_PROXY=1
+  FASHION_BODY_PROXY_CHECKPOINT=<body_proxy_heads.pt 절대경로>
+
+처음에는 기본값 off로 배포하고 내부 검증 후 fit_pose로 전환한다.
+
+
+======================================================================
+11. GitHub 반영
+======================================================================
+
+커밋을 기능별로 나눈다.
+
+  1) 상의 핏 데이터/학습 스크립트
+  2) 공용 BodyProxyResult와 상체 연동
+  3) 하체 body proxy와 fit-aware mask
+  4) 생성 결과 fit 재검사
+  5) 테스트·문서·서버 플래그
+
+절대 커밋하지 않을 것
+  - 원본 학습 이미지
+  - 사용자 사진
+  - 생성 결과 대량 이미지
+  - .env와 API 키
+  - 대용량 캐시
+  - 검증 전 연구 체크포인트
+
+push:
+
+  git status --short
+  git add <검토한 파일만>
+  git commit -m "Add fit-aware full-body proxy for virtual try-on"
+  git push -u origin feature/fit-body-silhouette
+
+PR 검토 후 main에 병합한다. 서버 배포는 GitHub main 병합 후 진행한다.
+
+
+======================================================================
+12. 데스크탑 체크포인트를 서버로 전송
+======================================================================
+
+체크포인트는 GitHub가 아니라 서버 artifact 경로로 직접 보낸다.
+
+PowerShell 예시:
+
+  scp -P 222 work/fit-data/outputs/fit_vision_heads.pt `
+    dsl01@afsd.iptime.org:/data1/dsl01/artifacts/fit_vision_heads.pt
+
+  scp -P 222 work/body-proxy/outputs/body_proxy_heads.pt `
+    dsl01@afsd.iptime.org:/data1/dsl01/artifacts/body_proxy_heads.pt
+
+서버에서 SHA-256 비교:
+
+  ssh -p 222 dsl01@afsd.iptime.org
+  sha256sum /data1/dsl01/artifacts/fit_vision_heads.pt
+
+API 키는 체크포인트, 코드, 문서에 넣지 않는다.
+
+
+======================================================================
+13. GPU 서버 release 생성
+======================================================================
+
+서버의 /data1/dsl01/releases/fitta_current는 Git 저장소가 아니라 release 심볼릭
+링크다. 따라서 그 폴더에서 git pull을 실행하지 않는다.
+
+hpcmaster 접속 후:
+
+  ssh -p 222 dsl01@afsd.iptime.org
+
+  RELEASE_NAME=fitta_YYYYMMDD_fit_body
+  NEW_RELEASE=/data1/dsl01/releases/$RELEASE_NAME
+  CURRENT_RELEASE=$(readlink -f /data1/dsl01/releases/fitta_current)
+
+  git clone --depth 1 --branch main `
+    https://github.com/HeIIowrld/26-2_Modeling_Fashion.git `
+    "$NEW_RELEASE"
+
+체크포인트 설치:
+
+  cp /data1/dsl01/artifacts/fit_vision_heads.pt `
+    "$NEW_RELEASE/ai_fashion_recommender/models/fit_vision_heads.pt"
+
+  cp /data1/dsl01/artifacts/body_proxy_heads.pt `
+    "$NEW_RELEASE/ai_fashion_recommender/models/body_proxy_heads.pt"
+
+대용량 데이터셋·상품 이미지·서버 전용 파일은 새 clone에 없을 수 있다. 현재 release에서
+무조건 덮어쓰기하지 말고, 필요한 경로를 먼저 확인한 뒤 복사 또는 심볼릭 링크한다.
+
+  ls -ld "$CURRENT_RELEASE/datasets" "$NEW_RELEASE/datasets"
+  ls -lh "$CURRENT_RELEASE/ai_fashion_recommender/data/products_musinsa_enriched.csv"
+
+서버 .env 또는 서비스 환경변수는 GitHub에서 가져오지 않는다. 기존 키를 화면에 출력하지
+말고 서버 운영 방식에 따라 안전하게 유지한다.
+
+
+======================================================================
+14. 서버 검증과 공개 사이트 반영
+======================================================================
+
+CPU 단위 테스트를 먼저 수행한다. 이후 GPU smoke test는 Slurm 계산 노드에서 실행한다.
+계산 노드에서는 공유 경로가 /mnt/data1/dsl01임을 잊지 않는다.
+
+필수 확인
+  - 체크포인트 로드
+  - 사용자 상·하의 current fit 추론
+  - 상품 target fit 추론
+  - upper/lower body proxy 생성
+  - fallback 경로
+  - 외투 제거 + 새 상의 생성
+  - 와이드→스트레이트 하의 생성
+  - 결과 fit 재검사
+
+release 전환:
+
+  /data1/dsl01/releases/fitta_current/gpu_server/scripts/swap_release.sh `
+    "$RELEASE_NAME"
+
+중요:
+  - Python 코드와 체크포인트가 바뀌므로 GPU worker 재시작이 필요하다.
+  - fitta-web Slurm 작업이 RUNNING이면 재시작 후 GPU 큐에 다시 들어간다.
+  - 작업이 PENDING이면 시작할 때 새 fitta_current를 읽으므로 자동 모드는 불필요한
+    재제출을 피한다.
+  - 직접 scancel하기보다 systemctl --user로 관리한다.
+
+상태 확인:
+
+  readlink -f /data1/dsl01/releases/fitta_current
+  systemctl --user is-active fitta-web.service
+  systemctl --user status fitta-web.service --no-pager
+  squeue -u dsl01
+  journalctl --user-unit fitta-web.service -n 100 --no-pager
+
+공개 사이트 구조
+
+  http://afsd.iptime.org:80
+    -> 192.168.0.110:8000 공개 웹 게이트웨이
+    -> SSH 터널
+    -> Slurm GPU worker API
+
+Body Proxy/VTON 백엔드만 바꾸고 API 응답 형식을 유지하면 GPU worker가 새 release로
+정상 기동된 뒤 공개 사이트도 같은 기능을 사용한다. web/static 또는 gateway 코드까지
+바꿨다면 192.168.0.110 컨테이너에도 최신 웹 파일을 배포하고 아래 서비스를 재시작한다.
+
+  systemctl restart fitta-gpu-tunnel.service fitta-web.service
+
+
+======================================================================
+15. 배포 후 실제 점검
+======================================================================
+
+1) http://afsd.iptime.org:80 접속
+2) 일반 레귤러핏 사진으로 기존 기능 회귀 확인
+3) 모피코트/패딩 사진 → 상의 교체
+4) 오버핏 상의 → 레귤러 또는 슬림 상의 교체
+5) 와이드 바지 → 스트레이트 바지 교체
+6) 슬림 바지 → 와이드 바지 교체
+7) 결과 이미지와 서버 로그에서 다음 확인
+   - current_fit / target_fit
+   - body proxy confidence
+   - 사용한 mode: off / pose / fit_pose
+   - fallback 사유
+   - target fit 재검사 결과
+8) 사용자 응답에는 실제 신체 치수 또는 숨겨진 신체를 확정하는 문구가 없는지 확인
+
+
+======================================================================
+16. 롤백
+======================================================================
+
+배포 전에 기존 release 경로를 기록한다.
+
+  OLD_RELEASE=$(readlink /data1/dsl01/releases/fitta_current)
+  echo "$OLD_RELEASE"
+
+문제가 생기면 기존 release로 링크를 되돌리고 서비스를 재시작한다.
+
+  ln -sfn "$OLD_RELEASE" /data1/dsl01/releases/fitta_current
+  systemctl --user restart fitta-web.service
+
+재시작하면 GPU 큐 대기 시간이 초기화될 수 있으므로, 장애 영향과 현재 Slurm 상태를 확인한
+뒤 수행한다.
+
+
+======================================================================
+17. 작업 우선순위 요약
+======================================================================
+
+1) 데스크탑에 최신 main + outerwear 실험 브랜치 통합
+2) 상의 4핏/3기장 데이터 라벨링과 사람 검수 test set 확보
+3) GPU에서 5개 feature mode 파인튜닝 및 비교
+4) 타이트 착장과 synthetic occlusion으로 probabilistic body proxy 데이터 생성
+5) pose + segmentation + fit posterior 기반 body-proxy decoder 학습
+6) 사용자 current fit + 상품 target fit 공용 추론 연결
+7) 팀원 상체 erase/body/target 마스크 구조에 확률적 body proxy 결합
+8) 같은 계약으로 하체 leg body proxy와 fit-aware mask 구현
+9) 생성 결과를 같은 핏 모델로 재검사
+10) A0~A3 및 B0~B4 오프라인 평가
+11) GitHub PR → main 병합
+12) 두 체크포인트 별도 전송 → 새 release 검증 → fitta_current 전환
+13) GPU worker 재기동 후 http://afsd.iptime.org:80 실사용 점검

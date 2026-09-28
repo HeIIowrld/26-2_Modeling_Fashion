@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 import urllib.parse
 import threading
@@ -34,6 +35,7 @@ from fashion_ranking_policy import (
 
 API_URL = "https://api.musinsa.com/api2/dp/v2/plp/goods"
 CATEGORY_CODES = {"top": "001", "bottom": "003", "shoes": "103"}
+OUTERWEAR_CATEGORY_CODE = "002"
 CATEGORY_FALLBACK_QUERY = {"top": "베이직 상의", "bottom": "팬츠", "shoes": "신발"}
 SORT_CODES = ("POPULAR", "NEW")
 PAGE_SIZE = 100
@@ -42,6 +44,55 @@ CASUAL_SHIRT_LIMIT = 1
 SHIRT_DIVERSITY_EXEMPT_PURPOSES = {"데이트", "소개팅", "출근", "면접"}
 SHIRT_DIVERSITY_EXEMPT_STYLES = {"포멀", "클래식"}
 SHIRT_DIVERSITY_EXEMPT_DRESS_CODES = {"비즈니스 캐주얼", "포멀", "비즈니스 포멀", "클래식"}
+OUTERWEAR_TERMS = (
+    "재킷", "자켓", "점퍼", "블루종", "블레이저", "코트", "가디건", "카디건",
+    "셔켓", "야상", "바람막이", "윈드브레이커", "아노락", "베스트", "패딩",
+    "다운", "무스탕", "파카", "플리스",
+)
+SUMMER_TOP_TERMS = (
+    "반팔", "반소매", "숏슬리브", "하프슬리브", "민소매", "슬리브리스",
+    "short sleeve", "sleeveless",
+)
+NON_SUMMER_SHORT_SLEEVE_TERMS = (
+    *SUMMER_TOP_TERMS,
+    "하프 니트", "하프니트", "하프 셔츠", "하프셔츠", "하프 티", "하프티",
+    "하프 폴로", "하프폴로", "half knit", "half shirt", "half tee", "half polo",
+)
+SUMMER_BOTTOM_TERMS = (
+    "반바지", "쇼츠", "숏팬츠", "하프팬츠", "버뮤다", "shorts", "bermuda",
+)
+WINTER_TOP_TERMS = (
+    "패딩", "다운", "코트", "무스탕", "플리스", "니트", "스웨터", "기모", "울",
+    "후드", "맨투맨", "재킷", "자켓", "점퍼", "파카",
+)
+WINTER_HEAVY_OUTER_TERMS = (
+    "패딩", "다운", "구스", "덕다운", "충전재", "푸퍼", "코트", "무스탕",
+    "파카", "플리스", "양털", "퍼", "헤비", "울",
+)
+WINTER_WARM_INNER_TERMS = (
+    "니트", "스웨터", "기모", "헤비웨이트", "헤비 웨이트", "울", "캐시미어",
+    "후드", "맨투맨",
+)
+COLOR_VARIANT_TERMS = (
+    "라이트 블루", "라이트블루", "다크 블루", "다크블루", "스카이 블루", "스카이블루",
+    "멜란지 그레이", "멜란지그레이", "오트밀", "오프화이트", "오프 화이트", "아이보리",
+    "버건디", "차콜", "네이비", "브라운", "베이지", "카키", "그레이", "블랙",
+    "화이트", "블루", "그린", "레드", "핑크", "옐로", "퍼플", "오렌지", "크림",
+    "light blue", "dark blue", "sky blue", "off white", "ivory", "burgundy", "charcoal",
+    "navy", "brown", "beige", "khaki", "grey", "gray", "black", "white", "blue",
+    "green", "red", "pink", "yellow", "purple", "orange", "cream",
+    "검정", "흰색", "회색", "남색", "소라", "연청", "중청", "진청",
+    "blk", "wht", "gry", "nvy", "brn", "bge", "khk", "bk", "wh", "iv",
+)
+TOP_FAMILY_TERMS = (
+    ("outerwear", OUTERWEAR_TERMS),
+    ("knit", ("니트", "스웨터", "풀오버")),
+    ("sweat", ("맨투맨", "스웨트셔츠", "후드")),
+    ("tee", ("티셔츠", "반팔티", "긴팔티", "t-shirt", "tshirt")),
+    ("polo", ("폴로 셔츠", "폴로셔츠", "피케 셔츠", "피케셔츠", "카라티")),
+    # '티셔츠'에도 '셔츠'가 들어가므로 button shirt 판정은 tee 뒤에 둔다.
+    ("shirt", ("셔츠", "남방", "블라우스")),
+)
 # 입력 속성과 관련 있는 세부 분류만 추가한다. 무관한 품목은 검색하지 않는다.
 SUBCATEGORIES = {
     "top": {"셔츠": "001002", "니트": "001006", "후드": "001008", "맨투맨": "001004"},
@@ -136,6 +187,8 @@ class MusinsaLiveSearch:
         measurements: ProductMeasurementClient | None = None,
         candidates_per_category: int = 300, measurement_candidates: int = 8,
         photo_provider=None, photo_candidates: int = 8, photo_budget: float = 1.0,
+        final_sleeve_candidates: int = 12, final_sleeve_budget: float = 2.5,
+        final_bottom_candidates: int = 12, final_bottom_budget: float = 2.5,
     ) -> None:
         self.timeout = timeout
         self.cache_ttl = cache_ttl
@@ -147,6 +200,12 @@ class MusinsaLiveSearch:
         self.photo_provider = photo_provider
         self.photo_candidates = min(8, max(0, photo_candidates))
         self.photo_budget = max(0, photo_budget)
+        self.final_sleeve_candidates = max(1, final_sleeve_candidates)
+        self.final_sleeve_budget = max(0, final_sleeve_budget)
+        self.final_bottom_candidates = max(1, final_bottom_candidates)
+        self.final_bottom_budget = max(0, final_bottom_budget)
+        self.final_validation_batch_size = 4
+        self.final_validation_target = 3
         self._cache: dict[tuple, tuple[float, list[dict]]] = {}
         self._cache_lock = threading.Lock()
         self._executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="fitta-products")
@@ -205,7 +264,28 @@ class MusinsaLiveSearch:
             self._aliases(value)[0]
             for value in attributes.get("item_type", [])
             if value
-        ))[:3]
+        ))
+        season = next(iter(attributes.get("season", [])), "")
+        if season == "여름":
+            seasonal_terms = (*SUMMER_TOP_TERMS, *SUMMER_BOTTOM_TERMS, "폴로", "블라우스")
+        elif season in {"봄", "가을"} and category == "top":
+            seasonal_terms = ("니트", *OUTERWEAR_TERMS)
+        elif season == "겨울" and category == "top":
+            seasonal_terms = ("맨투맨", "후드", "니트", "스웨터", "기모", "울", *OUTERWEAR_TERMS)
+        elif season == "겨울" and category == "bottom":
+            seasonal_terms = ("기모", "울", "코듀로이", "데님")
+        else:
+            seasonal_terms = ()
+        if seasonal_terms:
+            seasonal_types = [
+                item for item in item_types
+                if any(term in item.lower() for term in seasonal_terms)
+            ]
+            item_types = [
+                *seasonal_types,
+                *[item for item in item_types if item not in seasonal_types],
+            ]
+        item_types = item_types[:5]
         item_type = item_types[0] if item_types else ""
         fit = self._preferred_term(attributes, "fit")
         style = self._preferred_term(attributes, "style")
@@ -226,6 +306,17 @@ class MusinsaLiveSearch:
             " ".join(value for value in (color or style, item) if value)
             for item in item_types
         ]
+        # 제한된 검색 슬롯 안에 계절 핵심 품목 요청을 반드시 남긴다.
+        priority_terms = seasonal_terms
+        priority_queries = [
+            query for item, query in zip(item_types, item_type_queries)
+            if any(term in item.lower() for term in priority_terms)
+        ]
+        if priority_queries:
+            item_type_queries = [
+                *priority_queries,
+                *[query for query in item_type_queries if query not in priority_queries],
+            ]
         fits = attributes.get("fit", [])
         alternative_fit = fits[1] if len(fits) > 1 else (self._aliases(fits[0])[-1] if fits else "")
         context_material = materials[0] if materials else noun
@@ -335,6 +426,37 @@ class MusinsaLiveSearch:
         return (-(product.retrieval_score + bonus), -product.review_score,
                 -product.review_count, product.product_id)
 
+    @classmethod
+    def _product_model_key(cls, product: ShoppingProduct) -> str:
+        """색상별 상품 ID가 달라도 같은 디자인이면 같은 키를 만든다."""
+        # 공백을 먼저 지우면 `재킷 네이비`가 `재킷네이비`가 되어 색상 경계를
+        # 잃는다. 원문에서 색상/옵션을 제거한 뒤 마지막에 정규화한다.
+        text = str(product.name or "").lower().strip()
+        for term in sorted(COLOR_VARIANT_TERMS, key=len, reverse=True):
+            escaped = re.escape(str(term).lower())
+            # '블루종'에서 '블루'를 지우지 않도록 글자 경계를 확인한다.
+            text = re.sub(
+                rf"(?<![0-9a-z가-힣]){escaped}(?![0-9a-z가-힣])",
+                " ", text, flags=re.IGNORECASE,
+            )
+        # 색상별 끝자리만 달라지는 판매 SKU는 모델 판정에서 제외한다.
+        tokens = [
+            token for token in re.split(r"[^0-9a-z가-힣]+", text)
+            if token and not (
+                (
+                    len(token) >= 5
+                    and any(char.isdigit() for char in token)
+                    and any("a" <= char <= "z" for char in token)
+                )
+            )
+        ]
+        base_name = cls._normalized(" ".join(tokens))
+        # 모델명을 전혀 남길 수 없는 상품끼리는 과도하게 합치지 않는다.
+        if not base_name:
+            base_name = f"id:{product.product_id}"
+        brand = cls._normalized(product.brand)
+        return f"{product.category}|{brand}|{base_name}"
+
     def _search_plan(self, targets: TargetKeywordResult) -> list[tuple[str, str, str, str]]:
         plans = {}
         for category, attributes in targets.targets.items():
@@ -343,7 +465,14 @@ class MusinsaLiveSearch:
             words = " ".join(word for values in attributes.values() for word in values)
             subcategory = next((code for term, code in SUBCATEGORIES.get(category, {}).items() if term in words), None)
             plans[category] = [
-                (category, query, sort_code, subcategory if index == 1 and subcategory else CATEGORY_CODES[category])
+                (
+                    category,
+                    query,
+                    sort_code,
+                    OUTERWEAR_CATEGORY_CODE
+                    if category == "top" and any(term in query for term in OUTERWEAR_TERMS)
+                    else subcategory if index == 1 and subcategory else CATEGORY_CODES[category],
+                )
                 for index, query in enumerate(self._queries(category, attributes))
                 for sort_code in SORT_CODES
             ]
@@ -487,6 +616,12 @@ class MusinsaLiveSearch:
         self._apply_fashion_policy_adjustments(grouped, profile)
         for products in grouped.values():
             products.sort(key=self._sort_key)
+        self._validate_final_top_sleeves(
+            grouped, targets, profile, limit, photo_loader,
+        )
+        self._validate_final_bottom_lengths(
+            grouped, targets, profile, limit, photo_loader,
+        )
         selected = self._select(grouped, targets, limit, profile)
         self.last_search_stats["total_elapsed_seconds"] = round(time.monotonic() - started, 4)
         self.last_search_stats["vision_ranked_products"] = sum(
@@ -494,6 +629,180 @@ class MusinsaLiveSearch:
             for products in grouped.values() for product in products
         )
         return selected
+
+    def _validate_final_top_sleeves(
+        self, grouped, targets, profile, limit: int, photo_loader,
+    ) -> None:
+        """비여름 최종 상의 후보는 상품 사진에서 소매 판정을 마친 뒤에만 통과시킨다."""
+        season = str(profile.season or "").strip()
+        if (
+            season == "여름"
+            or not season
+            or self.photo_provider is None
+            or photo_loader is None
+            or self.final_sleeve_budget <= 0
+            or not grouped.get("top")
+        ):
+            self.last_search_stats["final_sleeve_validation"] = {"enabled": False}
+            return
+
+        provisional = self._select(
+            grouped, targets, max(limit, self.final_sleeve_candidates), profile,
+        )
+        finalists = [product for product in provisional if product.category == "top"]
+        finalists = finalists[:self.final_sleeve_candidates]
+        verified = []
+        fallback = []
+        rejected = 0
+        unverified = 0
+        analyzed = 0
+        processed = 0
+        started = time.monotonic()
+        for start in range(0, len(finalists), self.final_validation_batch_size):
+            remaining = self.final_sleeve_budget - (time.monotonic() - started)
+            if remaining <= 0 or len(verified) >= self.final_validation_target:
+                break
+            batch = finalists[start:start + self.final_validation_batch_size]
+            try:
+                prefetched = self.photo_provider.prefetch(batch, photo_loader)
+                records = self.photo_provider.get_many(
+                    batch, photo_loader, remaining, prefetched=prefetched,
+                )
+            except Exception:
+                records = {}
+            analyzed += len(records)
+            processed = start + len(batch)
+            for product in batch:
+                raw = records.get(product.product_id, {})
+                sleeve = raw.get("sleeve_length", {})
+                if not sleeve:
+                    sleeve = (product.photo_attributes or {}).get("sleeve_length", {})
+                confident = (
+                    sleeve.get("source") == "product_photo"
+                    and float(sleeve.get("confidence") or 0) >= 0.70
+                    and sleeve.get("label") in {"민소매", "반팔", "7부 소매", "긴팔"}
+                )
+                if not confident:
+                    unverified += 1
+                    fallback.append(product)
+                    continue
+                product.photo_attributes = {
+                    **(product.photo_attributes or {}), "sleeve_length": sleeve,
+                }
+                if sleeve.get("label") in {"민소매", "반팔"}:
+                    rejected += 1
+                    continue
+                verified.append(product)
+
+        if len(verified) < self.final_validation_target and processed < len(finalists):
+            remaining_fallback = finalists[processed:]
+            fallback.extend(remaining_fallback)
+            unverified += len(remaining_fallback)
+
+        # 세 벌을 검증했다면 확정 상품만 쓴다. 부족할 때에만 명시적 반팔이 아닌
+        # 미판정 후보를 뒤에 붙여 코디가 통째로 사라지는 것을 막는다.
+        grouped["top"] = (
+            verified
+            if len(verified) >= self.final_validation_target
+            else [*verified, *fallback]
+        )
+        self.last_search_stats["final_sleeve_validation"] = {
+            "enabled": True,
+            "candidates": len(finalists),
+            "analyzed": analyzed,
+            "verified": len(verified),
+            "rejected_short_sleeve": rejected,
+            "unverified": unverified,
+            "fallback_used": len(verified) < self.final_validation_target,
+            "elapsed_seconds": round(time.monotonic() - started, 4),
+        }
+
+    def _validate_final_bottom_lengths(
+        self, grouped, targets, profile, limit: int, photo_loader,
+    ) -> None:
+        """비여름 최종 하의 후보는 상품 사진에서 긴 하의임을 확인해야 통과한다."""
+        season = str(profile.season or "").strip()
+        if (
+            season == "여름"
+            or not season
+            or self.photo_provider is None
+            or photo_loader is None
+            or self.final_bottom_budget <= 0
+            or not grouped.get("bottom")
+        ):
+            self.last_search_stats["final_bottom_length_validation"] = {"enabled": False}
+            return
+
+        provisional = self._select(
+            grouped, targets, max(limit, self.final_bottom_candidates), profile,
+        )
+        finalists = [product for product in provisional if product.category == "bottom"]
+        finalists = finalists[:self.final_bottom_candidates]
+        verified = []
+        fallback = []
+        rejected = 0
+        unverified = 0
+        analyzed = 0
+        processed = 0
+        started = time.monotonic()
+        for start in range(0, len(finalists), self.final_validation_batch_size):
+            remaining = self.final_bottom_budget - (time.monotonic() - started)
+            if remaining <= 0 or len(verified) >= self.final_validation_target:
+                break
+            batch = finalists[start:start + self.final_validation_batch_size]
+            try:
+                prefetched = self.photo_provider.prefetch(batch, photo_loader)
+                records = self.photo_provider.get_many(
+                    batch, photo_loader, remaining, prefetched=prefetched,
+                )
+            except Exception:
+                records = {}
+            analyzed += len(records)
+            processed = start + len(batch)
+            for product in batch:
+                raw = records.get(product.product_id, {})
+                length = raw.get("lower_length", {})
+                if not length:
+                    length = (product.photo_attributes or {}).get("lower_length", {})
+                confident = (
+                    length.get("source") == "product_photo"
+                    and float(length.get("confidence") or 0) >= 0.70
+                    and length.get("label") in {
+                        "쇼츠·미니 기장", "무릎 기장", "미디·7부 기장", "롱·긴바지 기장",
+                    }
+                )
+                if not confident:
+                    unverified += 1
+                    fallback.append(product)
+                    continue
+                product.photo_attributes = {
+                    **(product.photo_attributes or {}), "lower_length": length,
+                }
+                if length.get("label") in {"쇼츠·미니 기장", "무릎 기장"}:
+                    rejected += 1
+                    continue
+                verified.append(product)
+
+        if len(verified) < self.final_validation_target and processed < len(finalists):
+            remaining_fallback = finalists[processed:]
+            fallback.extend(remaining_fallback)
+            unverified += len(remaining_fallback)
+
+        grouped["bottom"] = (
+            verified
+            if len(verified) >= self.final_validation_target
+            else [*verified, *fallback]
+        )
+        self.last_search_stats["final_bottom_length_validation"] = {
+            "enabled": True,
+            "candidates": len(finalists),
+            "analyzed": analyzed,
+            "verified": len(verified),
+            "rejected_shorts": rejected,
+            "unverified": unverified,
+            "fallback_used": len(verified) < self.final_validation_target,
+            "elapsed_seconds": round(time.monotonic() - started, 4),
+        }
 
     def _drop_wrong_category(self, grouped) -> None:
         """무신사 카테고리가 틀린 상품을 실측표로 걸러낸다. 추가 요청은 없다.
@@ -640,10 +949,15 @@ class MusinsaLiveSearch:
                 conflicts[f"{axis}_conflict"] = dict(value)
                 product.retrieval_score -= ATTRIBUTE_WEIGHTS[axis]
             design = raw_evidence.get("design", {})
+            sleeve = raw_evidence.get("sleeve_length", {})
+            lower_length = raw_evidence.get("lower_length", {})
             product.photo_attributes = {
                 **evidence,
                 **conflicts,
                 **({"design": design} if design.get("source") == "product_photo" else {}),
+                **({"sleeve_length": sleeve} if sleeve.get("source") == "product_photo" else {}),
+                **({"lower_length": lower_length}
+                   if lower_length.get("source") == "product_photo" else {}),
             }
             if product.photo_attributes:
                 product.ranking_evidence_source = "title+photo"
@@ -717,19 +1031,115 @@ class MusinsaLiveSearch:
             and str(profile.dress_code or "").strip() not in SHIRT_DIVERSITY_EXEMPT_DRESS_CODES
         )
 
+    @classmethod
+    def _top_family(cls, product: ShoppingProduct) -> str:
+        text = cls._normalized(product.name)
+        return next((family for family, terms in TOP_FAMILY_TERMS
+                     if any(cls._normalized(term) in text for term in terms)), "other")
+
+    @staticmethod
+    def _top_family_diversity_enabled(profile: UserProfile) -> bool:
+        return (
+            str(profile.purpose or "").strip() not in {"출근", "면접"}
+            and str(profile.desired_style or "").strip() not in {"포멀", "클래식"}
+            and str(profile.dress_code or "").strip()
+            not in {"비즈니스 캐주얼", "포멀", "비즈니스 포멀", "클래식"}
+        )
+
+    @classmethod
+    def _season_eligible_products(
+        cls, products: list[ShoppingProduct], category: str, season: str,
+    ) -> list[ShoppingProduct]:
+        if category == "top" and season and season != "여름":
+            # 반팔을 겨울에만 막으면 봄/가을/사계절 선택에서 같은 문제가 반복된다.
+            # 제목의 명시적 반팔 표현과 상품 사진의 소매 판정을 모두 하드 제외한다.
+            products = [
+                product for product in products
+                if not any(
+                    term in cls._normalized(product.name)
+                    for term in NON_SUMMER_SHORT_SLEEVE_TERMS
+                )
+                and not cls._photo_has_summer_sleeve(product)
+            ]
+        if category == "bottom" and season and season != "여름":
+            products = [
+                product for product in products
+                if not any(
+                    term in cls._normalized(product.name)
+                    for term in SUMMER_BOTTOM_TERMS
+                )
+                and not cls._photo_has_summer_bottom(product)
+            ]
+        if season == "여름" and category in {"top", "bottom"}:
+            terms = SUMMER_TOP_TERMS if category == "top" else SUMMER_BOTTOM_TERMS
+            # 여름에는 긴팔·긴바지를 섞어 비율을 희석하지 않는다. 검색 장애로
+            # 계절 후보가 하나도 없으면 빈 결과로 두어 잘못된 추천을 피한다.
+            return [product for product in products
+                    if any(term in cls._normalized(product.name) for term in terms)]
+        if season == "겨울" and category == "top":
+            warm = [
+                product for product in products
+                if any(term in cls._normalized(product.name) for term in WINTER_TOP_TERMS)
+                # `반팔 니트`처럼 소재명만 따뜻한 여름 상품은 겨울 상의가 아니다.
+                and not any(
+                    term in cls._normalized(product.name)
+                    for term in NON_SUMMER_SHORT_SLEEVE_TERMS
+                )
+                and not cls._photo_has_summer_sleeve(product)
+            ]
+            return warm or products
+        if season == "겨울" and category == "bottom":
+            long_bottoms = [product for product in products
+                            if not any(term in cls._normalized(product.name) for term in SUMMER_BOTTOM_TERMS)]
+            return long_bottoms or products
+        return products
+
+    @staticmethod
+    def _photo_has_summer_sleeve(product: ShoppingProduct) -> bool:
+        evidence = (product.photo_attributes or {}).get("sleeve_length", {})
+        return (
+            evidence.get("source") == "product_photo"
+            and float(evidence.get("confidence") or 0) >= 0.70
+            and evidence.get("label") in {"민소매", "반팔"}
+        )
+
+    @staticmethod
+    def _photo_has_summer_bottom(product: ShoppingProduct) -> bool:
+        evidence = (product.photo_attributes or {}).get("lower_length", {})
+        return (
+            evidence.get("source") == "product_photo"
+            and float(evidence.get("confidence") or 0) >= 0.70
+            and evidence.get("label") in {"쇼츠·미니 기장", "무릎 기장"}
+        )
+
     def _select(self, grouped, targets, limit, profile):
         # 최신 화면 계약: 카테고리마다 최대 limit개. 실측 기반 재정렬도 유지한다.
-        selected, seen_ids, brand_counts = [], set(), {}
+        selected, seen_ids, seen_model_keys, brand_counts = [], set(), set(), {}
+        # 사진에서 관찰한 현재 소재는 검색 점수의 참고 근거일 뿐, 세 LOOK을
+        # 같은 소재로 고정하는 사용자 선호가 아니다.
+        user_selected_materials = (
+            targets.sources.get("material") == "user_input"
+            or (not targets.sources and targets.mode == "user_input")
+        )
         requested_materials = {
             category: list(dict.fromkeys(attributes.get("material", [])))
-            if category != "shoes" else []
+            if category != "shoes" and user_selected_materials else []
             for category, attributes in targets.targets.items()
         }
         used_materials = {category: set() for category in targets.targets}
         shirt_counts = {category: 0 for category in targets.targets}
+        top_family_counts: dict[str, int] = {}
+        outerwear_count = 0
         for category in targets.targets:
-            for _ in range(limit):
-                products = [p for p in grouped.get(category, []) if p.product_id not in seen_ids]
+            for slot_index in range(limit):
+                products = [
+                    product for product in grouped.get(category, [])
+                    if product.product_id not in seen_ids
+                    and self._product_model_key(product) not in seen_model_keys
+                ]
+                products = self._season_eligible_products(
+                    products, category, str(profile.season or "").strip()
+                )
                 if not products:
                     break
                 # 복수 소재를 선택했다면 각 소재 후보를 최소 한 번 먼저 보여 준다.
@@ -758,6 +1168,98 @@ class MusinsaLiveSearch:
                         alternatives = [product for product in products if not self._button_shirt(product)]
                     if alternatives:
                         material_pool = alternatives
+                if category == "top" and self._top_family_diversity_enabled(profile):
+                    # 첫 세 LOOK은 같은 니트/셔츠 계열을 반복하지 않는다. 후보가
+                    # 실제로 없을 때만 이미 쓴 계열로 돌아간다.
+                    family_alternatives = [
+                        product for product in material_pool
+                        if not top_family_counts.get(self._top_family(product), 0)
+                    ]
+                    if not family_alternatives and not requested_materials[category]:
+                        family_alternatives = [
+                            product for product in products
+                            if not top_family_counts.get(self._top_family(product), 0)
+                        ]
+                    if family_alternatives:
+                        material_pool = family_alternatives
+
+                season = str(profile.season or "").strip()
+                outer_slots = {
+                    "봄": {2},
+                    "가을": {1, 2},
+                    "겨울": {1, 2},
+                }.get(season, set())
+                seasonal_outer_policy = (
+                    category == "top"
+                    and bool(outer_slots)
+                    and limit >= 3
+                )
+                seasonal_outer_slot = (
+                    seasonal_outer_policy
+                    and slot_index in outer_slots
+                    and outerwear_count < len(outer_slots)
+                )
+                if seasonal_outer_slot:
+                    outer_candidates = [
+                        product for product in material_pool
+                        if self._top_family(product) == "outerwear"
+                    ]
+                    if not outer_candidates and not requested_materials[category]:
+                        outer_candidates = [
+                            product for product in products
+                            if self._top_family(product) == "outerwear"
+                        ]
+                    if season == "겨울":
+                        # 겨울의 두 아우터 자리는 얇은 셔켓/바람막이보다 패딩·다운·
+                        # 코트·무스탕처럼 보온 근거가 있는 상품을 먼저 쓴다.
+                        heavy_outer_candidates = [
+                            product for product in outer_candidates
+                            if any(
+                                term in self._normalized(product.name)
+                                for term in WINTER_HEAVY_OUTER_TERMS
+                            )
+                        ]
+                        if not heavy_outer_candidates and not requested_materials[category]:
+                            heavy_outer_candidates = [
+                                product for product in products
+                                if self._top_family(product) == "outerwear"
+                                and any(
+                                    term in self._normalized(product.name)
+                                    for term in WINTER_HEAVY_OUTER_TERMS
+                                )
+                            ]
+                        if heavy_outer_candidates:
+                            outer_candidates = heavy_outer_candidates
+                    if outer_candidates:
+                        material_pool = outer_candidates
+                elif seasonal_outer_policy and slot_index < min(outer_slots) and outerwear_count == 0:
+                    # 첫 아우터 슬롯 전에는 이너형 상품을 남겨 계절별 목표 비율을 맞춘다.
+                    non_outer = [
+                        product for product in material_pool
+                        if self._top_family(product) != "outerwear"
+                    ]
+                    if not non_outer:
+                        non_outer = [
+                            product for product in products
+                            if self._top_family(product) != "outerwear"
+                        ]
+                    if season == "겨울":
+                        warm_inner_candidates = [
+                            product for product in non_outer
+                            if any(
+                                term in self._normalized(product.name)
+                                for term in WINTER_WARM_INNER_TERMS
+                            )
+                            and not any(
+                                term in self._normalized(product.name)
+                                for term in SUMMER_TOP_TERMS
+                            )
+                            and not self._photo_has_summer_sleeve(product)
+                        ]
+                        if warm_inner_candidates:
+                            non_outer = warm_inner_candidates
+                    if non_outer:
+                        material_pool = non_outer
                 best = material_pool[0]
                 tied = [
                     product for product in material_pool
@@ -766,7 +1268,12 @@ class MusinsaLiveSearch:
                 best = next((p for p in tied if not p.brand or brand_counts.get(p.brand, 0) < 2), best)
                 selected.append(best)
                 seen_ids.add(best.product_id)
+                seen_model_keys.add(self._product_model_key(best))
                 shirt_counts[category] += int(category == "top" and self._button_shirt(best))
+                if category == "top":
+                    family = self._top_family(best)
+                    top_family_counts[family] = top_family_counts.get(family, 0) + 1
+                    outerwear_count += int(family == "outerwear")
                 brand_counts[best.brand] = brand_counts.get(best.brand, 0) + 1
                 used_materials[category].update(
                     material for material in requested_materials[category]
