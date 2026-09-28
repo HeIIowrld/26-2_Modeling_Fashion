@@ -40,3 +40,32 @@ collect/tools/
 .github/skills/
 .github/agents/impeccable-*
 .github/hooks/impeccable.json
+
+# ── 로컬 보관물. `git add -A` 로 딸려 들어가면 저장소가 수백 MB 늘어난다 ──
+# 2026-09-28 기준 아래 네 항목을 합치면 220MB 이고, .git 은 이미 1GB 다.
+
+# 2026-08-22 동기화 전 저장소 사본(179MB). 복구용 로컬 보관물이다.
+/backup_before_sync_2026-08-22/
+
+# 실험 스크래치. detectron2·densepose·schp 를 벤더링해 두었으므로
+# /third_party/ 와 같은 이유로 막는다 — 외부 코드는 커밋하지 않는다.
+/tmp/
+
+# 옛 체크포인트 보관(14MB). models/ 의 현역 가중치만 커밋한다.
+/ai_fashion_recommender/models/archive/
+
+# 에이전트 도구가 남기는 작업 파일
+/.agents/
+/.codex/
+/.codex_tmp/
+
+# 다른 수업 발표자료. 이 프로젝트 산출물이 아니다.
+# 저장소가 OneDrive 바탕화면 폴더와 겹쳐 있어 여기로 모인다.
+/*.pdf
+/*.pptx
+
+# PROJECT_HANDBOOK.md 를 보기 좋게 렌더한 사본. 원본 .md 만 커밋한다.
+/PROJECT_HANDBOOK.html
+
+# 발표자료를 어디로 옮겼는지 적어 둔 개인 메모
+/발표자료 위치.txt

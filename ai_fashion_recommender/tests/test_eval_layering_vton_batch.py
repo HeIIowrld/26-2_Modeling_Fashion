@@ -15,7 +15,10 @@ from eval_layering_vton_batch import load_cases  # noqa: E402
 class LVTONBatchManifestTests(unittest.TestCase):
     def test_resolves_three_distinct_cases(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            # load_cases 는 경로를 resolve 한다(출력이 입력과 겹치는지 보려면 정규화가 필요하다).
+            # 기댓값도 같이 resolve 해야 한다. Windows 에서 사용자명이 8자를 넘으면 %TEMP% 가
+            # 8.3 단축명으로 나와서(RUNNER~1 ↔ runneradmin) 두 값이 갈라진다.
+            root = Path(directory).resolve()
             (root / "person.jpg").touch()
             (root / "garment.jpg").touch()
             manifest = root / "cases.json"
@@ -31,7 +34,10 @@ class LVTONBatchManifestTests(unittest.TestCase):
 
     def test_rejects_colliding_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            # load_cases 는 경로를 resolve 한다(출력이 입력과 겹치는지 보려면 정규화가 필요하다).
+            # 기댓값도 같이 resolve 해야 한다. Windows 에서 사용자명이 8자를 넘으면 %TEMP% 가
+            # 8.3 단축명으로 나와서(RUNNER~1 ↔ runneradmin) 두 값이 갈라진다.
+            root = Path(directory).resolve()
             (root / "person.jpg").touch()
             (root / "garment.jpg").touch()
             manifest = root / "cases.json"

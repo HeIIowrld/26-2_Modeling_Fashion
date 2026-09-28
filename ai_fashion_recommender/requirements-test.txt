@@ -1,0 +1,24 @@
+# 테스트만 돌리는 데 필요한 것. 학습·합성 실행에는 requirements.txt 를 쓴다.
+#
+# 왜 따로 두나: requirements.txt 는 gradio·jupyter·accelerate 까지 끌어와
+# CI 설치가 몇 분 더 걸리는데 테스트는 그 어느 것도 import 하지 않는다.
+# 여기 없는 패키지를 테스트가 import 하기 시작하면 CI 가 곧바로 깨져서 알려준다.
+#
+# torch 는 CPU 휠을 따로 받는다(워크플로의 별도 단계). GPU 휠은 2GB 가 넘고
+# CI 러너에는 GPU 가 없다.
+numpy<2                      # mediapipe 0.10.x 가 numpy 1.x 를 요구한다
+Pillow
+pillow-heif                  # 아이폰 HEIC 업로드 경로 테스트가 이걸 요구한다
+opencv-python-headless       # CI 러너에는 디스플레이가 없다
+mediapipe==0.10.14
+transformers
+open-clip-torch==3.3.0
+ftfy==6.3.1
+fashn-human-parser==0.1.1
+diffusers
+pyarrow                      # scripts/prepare_fashion200k_bottoms.py 가 import 한다
+scikit-learn                 # 넣으면 신발 학습 테스트 4개가 스킵되지 않고 돌아간다
+fastapi
+httpx                        # TestClient 가 쓴다
+python-multipart             # 파일 업로드 엔드포인트
+pytest
