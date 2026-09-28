@@ -48,6 +48,54 @@ class RecommendationKeywordTests(unittest.TestCase):
         self.assertEqual(result.sources["style"], "user_input")
         self.assertEqual(result.mode, "mixed")  # 체형·비율은 사진에서 보충
 
+    def test_spring_date_top_keywords_include_an_outerwear_candidate(self):
+        profile = UserProfile(
+            purpose="데이트",
+            desired_style="미니멀",
+            change_categories=["top"],
+            season="봄",
+            provided_fields=["purpose", "desired_style", "change_categories", "season"],
+        )
+
+        result = self.generator.generate(profile, self.pose, self.outfit)
+
+        self.assertEqual(
+            result.targets["top"]["item_type"],
+            ["셔츠", "니트", "가디건", "재킷"],
+        )
+        self.assertEqual(result.sources["top.item_type"], "context_rule")
+
+    def test_summer_keywords_seed_short_sleeves_and_shorts(self):
+        profile = UserProfile(
+            purpose="데일리", desired_style="캐주얼",
+            change_categories=["top", "bottom"], season="여름",
+            provided_fields=["purpose", "desired_style", "change_categories", "season"],
+        )
+
+        result = self.generator.generate(profile, self.pose, self.outfit)
+
+        self.assertIn("반팔 티셔츠", result.targets["top"]["item_type"])
+        self.assertIn("반팔 셔츠", result.targets["top"]["item_type"])
+        self.assertIn("반팔 니트", result.targets["top"]["item_type"])
+        self.assertIn("반팔 폴로 셔츠", result.targets["top"]["item_type"])
+        self.assertIn("반팔 블라우스", result.targets["top"]["item_type"])
+        self.assertIn("반바지", result.targets["bottom"]["item_type"])
+        self.assertIn("버뮤다 쇼츠", result.targets["bottom"]["item_type"])
+
+    def test_winter_keywords_seed_warm_tops_and_long_bottoms(self):
+        profile = UserProfile(
+            purpose="데일리", desired_style="미니멀",
+            change_categories=["top", "bottom"], season="겨울",
+            provided_fields=["purpose", "desired_style", "change_categories", "season"],
+        )
+
+        result = self.generator.generate(profile, self.pose, self.outfit)
+
+        self.assertIn("패딩", result.targets["top"]["item_type"])
+        self.assertIn("코트", result.targets["top"]["item_type"])
+        self.assertIn("기모 팬츠", result.targets["bottom"]["item_type"])
+        self.assertIn("울 팬츠", result.targets["bottom"]["item_type"])
+
     def test_shoes_ignore_body_and_clothing_material(self):
         profile = UserProfile(change_categories=["shoes"], desired_style="미니멀",
                               purpose="데이트", provided_fields=["desired_style", "purpose"])

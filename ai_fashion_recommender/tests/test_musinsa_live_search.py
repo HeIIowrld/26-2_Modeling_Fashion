@@ -373,7 +373,147 @@ class MusinsaLiveSearchTests(unittest.TestCase):
 
         self.assertEqual([product.product_id for product in results], ["S1", "T1", "K1"])
 
-    def test_date_context_keeps_normal_shirt_ranking(self):
+    def test_spring_date_results_use_three_top_families_with_one_outerwear(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        products = [
+            ShoppingProduct("K1", "크루넥 니트 1", "", 1, "", "", "top", retrieval_score=10),
+            ShoppingProduct("K2", "크루넥 니트 2", "", 1, "", "", "top", retrieval_score=9),
+            ShoppingProduct("K3", "크루넥 니트 3", "", 1, "", "", "top", retrieval_score=8),
+            ShoppingProduct("S1", "미니멀 옥스포드 셔츠", "", 1, "", "", "top", retrieval_score=7),
+            ShoppingProduct("J1", "미니멀 블루종 재킷", "", 1, "", "", "top", retrieval_score=6),
+            ShoppingProduct("T1", "긴팔 티셔츠", "", 1, "", "", "top", retrieval_score=5),
+        ]
+        targets = TargetKeywordResult(
+            "mixed",
+            {"top": {"material": ["니트"], "season": ["봄"]}},
+            sources={"top.material": "photo_fallback"},
+        )
+
+        results = search._select(
+            {"top": products}, targets, 6,
+            UserProfile(purpose="데이트", desired_style="미니멀", season="봄"),
+        )
+
+        first_three = results[:3]
+        self.assertEqual([product.product_id for product in first_three], ["K1", "S1", "J1"])
+        self.assertEqual(sum(search._top_family(product) == "outerwear" for product in first_three), 1)
+        self.assertEqual(len({search._top_family(product) for product in first_three}), 3)
+
+    def test_autumn_first_three_tops_contain_two_outerwear_items(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        products = [
+            ShoppingProduct("K1", "울 크루넥 니트", "", 1, "", "", "top", retrieval_score=10),
+            ShoppingProduct("S1", "옥스포드 셔츠", "", 1, "", "", "top", retrieval_score=9),
+            ShoppingProduct("J1", "미니멀 블루종 재킷", "", 1, "", "", "top", retrieval_score=8),
+            ShoppingProduct("C1", "울 가디건", "", 1, "", "", "top", retrieval_score=7),
+        ]
+        targets = TargetKeywordResult("user_input", {"top": {"season": ["가을"]}})
+
+        results = search._select(
+            {"top": products}, targets, 3,
+            UserProfile(purpose="데이트", desired_style="미니멀", season="가을"),
+        )
+
+        self.assertEqual([product.product_id for product in results], ["K1", "J1", "C1"])
+        self.assertEqual(sum(search._top_family(product) == "outerwear" for product in results), 2)
+
+    def test_summer_selection_excludes_long_sleeves_and_long_bottoms(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        tops = [
+            ShoppingProduct("TL", "긴팔 티셔츠", "", 1, "", "", "top", retrieval_score=20),
+            ShoppingProduct("T1", "반팔 티셔츠", "", 1, "", "", "top", retrieval_score=9),
+            ShoppingProduct("T2", "반소매 셔츠", "", 1, "", "", "top", retrieval_score=8),
+            ShoppingProduct("T3", "반팔 니트", "", 1, "", "", "top", retrieval_score=7),
+        ]
+        bottoms = [
+            ShoppingProduct("BL", "와이드 긴바지", "", 1, "", "", "bottom", retrieval_score=20),
+            ShoppingProduct("B1", "버뮤다 쇼츠", "", 1, "", "", "bottom", retrieval_score=9),
+            ShoppingProduct("B2", "코튼 반바지", "", 1, "", "", "bottom", retrieval_score=8),
+            ShoppingProduct("B3", "나일론 숏팬츠", "", 1, "", "", "bottom", retrieval_score=7),
+        ]
+        targets = TargetKeywordResult("user_input", {"top": {}, "bottom": {}})
+
+        results = search._select(
+            {"top": tops, "bottom": bottoms}, targets, 3,
+            UserProfile(purpose="데일리", desired_style="캐주얼", season="여름"),
+        )
+
+        selected_tops = [product for product in results if product.category == "top"]
+        selected_bottoms = [product for product in results if product.category == "bottom"]
+        self.assertEqual(len(selected_tops), 3)
+        self.assertEqual(len(selected_bottoms), 3)
+        self.assertNotIn("TL", [product.product_id for product in selected_tops])
+        self.assertNotIn("BL", [product.product_id for product in selected_bottoms])
+
+    def test_winter_first_three_tops_use_two_outerwear_and_no_shorts(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        tops = [
+            ShoppingProduct("K1", "울 니트", "", 1, "", "", "top", retrieval_score=10),
+            ShoppingProduct("P1", "구스다운 패딩", "", 1, "", "", "top", retrieval_score=9),
+            ShoppingProduct("C1", "울 코트", "", 1, "", "", "top", retrieval_score=8),
+            ShoppingProduct("T1", "반팔 티셔츠", "", 1, "", "", "top", retrieval_score=30),
+        ]
+        bottoms = [
+            ShoppingProduct("BS", "코튼 반바지", "", 1, "", "", "bottom", retrieval_score=30),
+            ShoppingProduct("B1", "기모 와이드 팬츠", "", 1, "", "", "bottom", retrieval_score=9),
+            ShoppingProduct("B2", "울 슬랙스", "", 1, "", "", "bottom", retrieval_score=8),
+            ShoppingProduct("B3", "데님 팬츠", "", 1, "", "", "bottom", retrieval_score=7),
+        ]
+        targets = TargetKeywordResult("user_input", {"top": {}, "bottom": {}})
+
+        results = search._select(
+            {"top": tops, "bottom": bottoms}, targets, 3,
+            UserProfile(purpose="데일리", desired_style="미니멀", season="겨울"),
+        )
+
+        selected_tops = [product for product in results if product.category == "top"]
+        selected_bottoms = [product for product in results if product.category == "bottom"]
+        self.assertEqual([product.product_id for product in selected_tops], ["K1", "P1", "C1"])
+        self.assertEqual(sum(search._top_family(product) == "outerwear" for product in selected_tops), 2)
+        self.assertNotIn("BS", [product.product_id for product in selected_bottoms])
+
+    def test_explicit_single_material_preference_stays_prominent_with_one_outerwear(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        products = [
+            ShoppingProduct(f"K{index}", f"크루넥 니트 {index}", "", 1, "", "", "top",
+                            retrieval_score=10 - index)
+            for index in range(1, 4)
+        ] + [
+            ShoppingProduct("J1", "코튼 블루종 재킷", "", 1, "", "", "top", retrieval_score=10),
+        ]
+        targets = TargetKeywordResult(
+            "user_input",
+            {"top": {"material": ["니트"], "season": ["봄"]}},
+            sources={"material": "user_input"},
+        )
+
+        results = search._select(
+            {"top": products}, targets, 3,
+            UserProfile(purpose="데이트", desired_style="미니멀", season="봄"),
+        )
+
+        self.assertEqual([product.product_id for product in results], ["K1", "K2", "J1"])
+
+    def test_spring_outerwear_query_uses_musinsa_outer_category(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        targets = TargetKeywordResult("user_input", {"top": {
+            "item_type": ["셔츠", "니트", "가디건", "재킷"],
+            "style": ["미니멀"], "season": ["봄"],
+        }})
+
+        plan = search._search_plan(targets)
+
+        outer_plans = [entry for entry in plan if "재킷" in entry[1]]
+        self.assertTrue(outer_plans)
+        self.assertTrue(all(entry[3] == "002" for entry in outer_plans))
+
+    def test_date_context_does_not_fill_all_slots_with_shirts(self):
         search = MusinsaLiveSearch()
         self.addCleanup(search.close)
         products = [
@@ -387,7 +527,7 @@ class MusinsaLiveSearchTests(unittest.TestCase):
             UserProfile(purpose="데이트", desired_style="캐주얼"),
         )
 
-        self.assertEqual([product.product_id for product in results], ["S1", "S2", "S3"])
+        self.assertEqual([product.product_id for product in results], ["S1", "T1", "S2"])
 
     def test_daily_and_date_contexts_rank_different_top_products(self):
         rows = [

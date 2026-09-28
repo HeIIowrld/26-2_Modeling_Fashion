@@ -63,6 +63,29 @@ PURPOSE_CONTEXT_ITEM_TYPES = {
     },
 }
 
+# 봄·가을에는 이너만 세 벌 제시하지 않도록 아우터 검색 후보를 함께 만든다.
+# 최종 3개 중 한 벌만 우선 배정하는 것은 live search의 다양성 선택기가 담당한다.
+SPRING_AUTUMN_OUTERWEAR_ITEM_TYPES = {
+    "스트리트": ("재킷", "점퍼"),
+    "캐주얼": ("재킷", "가디건"),
+    "미니멀": ("재킷", "가디건"),
+    "포멀": ("블레이저", "재킷"),
+    "로맨틱": ("가디건", "재킷"),
+    "스포티": ("트랙 재킷", "아노락"),
+}
+
+SUMMER_ITEM_TYPES = {
+    "top": (
+        "반팔 티셔츠", "반팔 셔츠", "반팔 니트", "반팔 폴로 셔츠", "반팔 블라우스",
+    ),
+    "bottom": ("반바지", "버뮤다 쇼츠"),
+}
+WINTER_ITEM_TYPES = {
+    "top": ("패딩", "코트", "니트"),
+    "bottom": ("기모 팬츠", "울 팬츠", "데님"),
+    "shoes": ("부츠",),
+}
+
 SPORTY_STYLES = {"스포티"}
 SPORTY_PURPOSES = {"운동", "스포츠", "러닝"}
 SPORTY_CONTEXT_ITEM_TYPES = {
@@ -209,6 +232,27 @@ def formal_context_item_types(profile: Any, category: str) -> tuple[str, ...]:
 def purpose_context_item_types(profile: Any, category: str) -> tuple[str, ...]:
     purpose = str(getattr(profile, "purpose", "") or "").strip()
     return PURPOSE_CONTEXT_ITEM_TYPES.get(purpose, {}).get(category, ())
+
+
+def seasonal_context_item_types(profile: Any, category: str) -> tuple[str, ...]:
+    season = str(getattr(profile, "season", "") or "").strip()
+    if season == "여름":
+        return SUMMER_ITEM_TYPES.get(category, ())
+    if season == "겨울":
+        base = WINTER_ITEM_TYPES.get(category, ())
+        if category != "top":
+            return base
+        style = str(getattr(profile, "desired_style", "") or "").strip()
+        outer = SPRING_AUTUMN_OUTERWEAR_ITEM_TYPES.get(
+            style, SPRING_AUTUMN_OUTERWEAR_ITEM_TYPES["캐주얼"]
+        )
+        return tuple(dict.fromkeys((*base, *outer)))
+    if category != "top" or season not in {"봄", "가을"}:
+        return ()
+    style = str(getattr(profile, "desired_style", "") or "").strip()
+    return SPRING_AUTUMN_OUTERWEAR_ITEM_TYPES.get(
+        style, SPRING_AUTUMN_OUTERWEAR_ITEM_TYPES["캐주얼"]
+    )
 
 
 def sporty_context_enabled(profile: Any) -> bool:

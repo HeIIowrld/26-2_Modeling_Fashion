@@ -27,6 +27,7 @@ from fashion_ranking_policy import (
     formal_context_enabled,
     formal_context_item_types,
     purpose_context_item_types,
+    seasonal_context_item_types,
     sporty_context_enabled,
     sporty_context_item_types,
     trend_context_enabled,
@@ -275,6 +276,9 @@ class RecommendationKeywordGenerator:
                     if self._provided(profile, "purpose") else ()
                 )
             )
+            context_types = tuple(dict.fromkeys(
+                (*context_types, *seasonal_context_item_types(profile, category))
+            ))
             if not context_types:
                 continue
             self._add(target, "item_type", *context_types)
