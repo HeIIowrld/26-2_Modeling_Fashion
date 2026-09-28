@@ -1,0 +1,117 @@
+{
+  "scope": "Archived quality scores; not re-evaluated under the newly changed quality rules",
+  "seeds": {
+    "pairs": 160,
+    "seeds": 3,
+    "retry_decision_agreement_all_seeds": 0.825,
+    "seed42_retry_pairs": 11,
+    "retry_flags_cleared_in_second_attempt": 8,
+    "selected_all_checks_passed_after_retry": 6,
+    "improved_penalty": 8,
+    "selected_retry_rate": 0.01875,
+    "selected_any_failure_rate": 0.10625,
+    "seed42_retry_rate": 0.06875,
+    "structural_pairs": 12,
+    "structural_persisting_in_second_seed": 10,
+    "metric_spread": {
+      "torso_skin_inside_mask": {
+        "pairs": 72,
+        "median_std": 0.0,
+        "p90_std": 0.02087852326447821
+      },
+      "garment_coverage": {
+        "pairs": 144,
+        "median_std": 0.007517586419983752,
+        "p90_std": 0.11515484190187687
+      },
+      "color_fidelity": {
+        "pairs": 160,
+        "median_std": 1.005646697727181,
+        "p90_std": 8.94714018882572
+      },
+      "reference_fidelity": {
+        "pairs": 160,
+        "median_std": 0.01960862071667077,
+        "p90_std": 0.05001066705882399
+      }
+    }
+  },
+  "lower_shape": {
+    "pairs": 168,
+    "people": 8,
+    "shaped_pairs": 46,
+    "shaped_by_seller_fit": {
+      "슬림핏": 9,
+      "레귤러핏": 14,
+      "여유핏": 9,
+      "오버핏": 14
+    },
+    "shaped_wide_named": 29,
+    "native_gap": [
+      0.009145072115384609,
+      -0.043774999999999994,
+      0.05059972956730776
+    ],
+    "variant_gap": [
+      0.03337427884615396,
+      -0.051758470552884454,
+      0.14563265324519256
+    ],
+    "criteria": [
+      {
+        "criterion": "L0 고정한 부위의 폭 측정 누락 없음",
+        "passed": true,
+        "detail": {
+          "expected": 168,
+          "measured": 168
+        }
+      },
+      {
+        "criterion": "L1 같은 사람 안 와이드−나머지 폭 차이 증가(CI 하한>0)",
+        "passed": false,
+        "detail": [
+          0.02422920673076935,
+          -0.03999666165865379,
+          0.11280525240384648
+        ]
+      },
+      {
+        "criterion": "L2 슬림·레귤러(와이드 이름 제외) 폭 증가 없음(CI 상한≤0.02)",
+        "passed": false,
+        "detail": [
+          0.10838906249999998,
+          0.016070039062499968,
+          0.25305625
+        ]
+      },
+      {
+        "criterion": "L3 자기 상품 top-1 비열등(CI 하한≥-0.05)",
+        "passed": true,
+        "detail": [
+          0.04166666666666663,
+          0.01785714285714285,
+          0.07738095238095233
+        ]
+      },
+      {
+        "criterion": "L4 하의 기장·색·충실도 실패율 증가 없음(CI 상한≤0.05)",
+        "passed": true,
+        "detail": [
+          -0.005952380952380945,
+          -0.017857142857142863,
+          0.0
+        ]
+      }
+    ],
+    "adopt": false
+  },
+  "source_sha256": {
+    "tmp\\vton_followup\\q_base.jsonl": "21d69d3a930455d02b0ed7244915eb69dfec6f20aaac810d59f644e9628f9083",
+    "tmp\\vton_followup\\q_seed43.jsonl": "edae195746f397520dd8efffe0468cd1b623494343fa6a5b4997f51fae250c9e",
+    "tmp\\vton_followup\\q_seed44.jsonl": "513d9d31428f9a84d4efa5d0ec96eb148dc1869c96608ba80b0442f47345b006",
+    "tmp\\vton_followup\\results_lower_shape.jsonl": "151b169ddb9cd0c5e1ad1254612aecdbccc9cfdeea674ea23c7b1abfd26c9e1b",
+    "tmp\\vton_followup\\q_lower_shape.jsonl": "f9ddce5edd3125ff8ebc4ed6b4541bf139b2d89aa88e2177a6413888be641c12",
+    "tmp\\vton_followup\\refs_full.json": "b01ac44261c00ce6058d396a86ba5926ac839d8ddb08d973f4ebc9187b7b4b74",
+    "tmp\\vton_review\\results.jsonl": "7d6734fbf418127e1d6e602b5d01ba9658c678fe636b03c66451910bb6ac2f2c"
+  }
+}

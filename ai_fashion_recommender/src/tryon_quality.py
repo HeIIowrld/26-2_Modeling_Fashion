@@ -250,7 +250,9 @@ def assess_tryon(
         value = float(target_after[core].mean())
         add(QualityCheck("garment_coverage", round(value, 4), limits["coverage_min"],
                          value >= limits["coverage_min"], True,
-                         f"{label} 상품이 몸통을 충분히 덮지 못했습니다(덮인 비율 {value:.0%})."))
+                         # 비율은 QualityCheck 의 value·limit 에 그대로 남아 리포트로 간다.
+                         # 화면 문구에서는 빼고, 사용자가 무엇을 볼지만 말한다.
+                         f"{label}가 몸을 다 덮지 못한 채로 그려졌어요. 옷 길이를 확인해 주세요."))
 
     # 3) 상의 크롭화: 의도하지 않은 배 노출. 마스크 안(생성 실패)과 밖(마스크 구조)을 나눈다.
     if category == "top" and band is not None and band.sum() >= 200 \

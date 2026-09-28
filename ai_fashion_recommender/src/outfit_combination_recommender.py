@@ -82,12 +82,19 @@ def _usable(value: str) -> bool:
     return bool(value and not any(marker in value for marker in blocked))
 
 
-def _particle(value: str, with_final: str, without_final: str) -> str:
-    """마지막 한글 음절의 받침에 맞는 짧은 조사를 고른다."""
+def korean_particle(value: str, with_final: str, without_final: str) -> str:
+    """마지막 한글 음절의 받침에 맞는 짧은 조사를 고른다.
+
+    recommendation_engine 도 쓴다. 거기서 조사를 '를'로 박아 두어 화면에
+    "'톤온톤'를"이 나갔다. 같은 규칙을 두 번 쓰지 않도록 여기서 공개한다.
+    """
     if not value:
         return without_final
     code = ord(value[-1]) - 0xAC00
     return with_final if 0 <= code <= 11171 and code % 28 else without_final
+
+
+_particle = korean_particle  # 이 모듈 안의 기존 호출부가 쓰는 이름
 
 
 def _fit_value(value: str, category: str) -> str:

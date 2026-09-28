@@ -1,0 +1,62 @@
+# 테스트를 PR마다 돌린다.
+#
+# 왜 필요한가: 2026-09-28까지 이 저장소의 워크플로는 static.yml(화면 배포) 하나뿐이었고,
+# 테스트 891개가 PR에서 한 번도 돌지 않았다. 그 사이에 실제로 다음이 새어 나갔다.
+#   · #49  web/pipeline.py 의 STAGES 순서가 바뀌었는데 스모크가 옛 순서를 기대해 배포 중 발견
+#   · #47·#56  Windows 에서만 깨지는 cp949 인코딩·mmap 핸들 문제
+# 두 번째 때문에 ubuntu 만으로는 부족하다. windows 잡을 같이 돌린다.
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+
+# 같은 브랜치에 연달아 푸시하면 앞 실행은 취소한다.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    name: pytest (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      # 한쪽이 깨져도 다른 쪽 결과는 봐야 한다.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"   # mediapipe 0.10.14 가 3.12 이상 휠을 내지 않는다
+          cache: pip
+          cache-dependency-path: ai_fashion_recommender/requirements-test.txt
+
+      # mediapipe 가 headless 가 아닌 opencv-python 을 끌어온다. 그 휠은 libGL 을 찾는다.
+      - name: 리눅스 그래픽 라이브러리
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libgl1 libglib2.0-0
+
+      # 기본 PyPI 의 리눅스 torch 는 CUDA 의존성까지 2GB 넘게 받는다. 러너에 GPU 는 없다.
+      - name: torch (CPU 휠)
+        run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: 테스트 의존성
+        run: python -m pip install -r ai_fashion_recommender/requirements-test.txt
+
+      - name: 설치된 버전 기록
+        run: python -m pip list
+
+      # pytest.ini 가 두 묶음(ai_fashion_recommender/tests, web/tests)을 모두 가리킨다.
+      - name: pytest
+        run: python -m pytest -q

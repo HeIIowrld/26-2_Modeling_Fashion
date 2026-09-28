@@ -252,11 +252,18 @@ class RetryPolicyTests(unittest.TestCase):
         self.assertIn("원래 옷 모양", adapter.last_warnings[0])
 
     def test_persistent_failure_is_disclosed_after_retry(self):
+        """다시 만들어도 남은 문제라는 사실을 사용자에게 알린다.
+
+        문구는 2026-09-29 에 "합성 품질 점검(다시 생성 1회 후): …" 에서 평서문으로
+        바꿨다. 내부 용어를 화면에서 뺀 것이고, 재시도했다는 사실 자체는 계속 알린다 —
+        사용자가 '다시 생성'을 또 누를지 판단하는 근거다.
+        """
         bad = TryOnQualityReport("top", [QualityCheck("garment_coverage", 0.2, 0.5, False, True, "덜 덮음")])
         adapter, pipeline = self._adapter([bad, bad])
         self._run(adapter)
         self.assertEqual(pipeline.calls, 2)
-        self.assertIn("다시 생성 1회 후", adapter.last_warnings[0])
+        self.assertIn("다시 만들어 봤지만", adapter.last_warnings[0])
+        self.assertIn("덜 덮음", adapter.last_warnings[0])
 
     def test_gate_can_be_disabled(self):
         adapter, pipeline = self._adapter([])

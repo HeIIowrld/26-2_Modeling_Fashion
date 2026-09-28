@@ -1081,14 +1081,21 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         # 다른 옷이 그려지는 주원인은 사진 구성이고, 그건 _reject_cropped_reference 가 막는다.
         if report.get("coverage", 1.0) < self.min_reference_coverage:
             self._add_warning(
-                f"레퍼런스 해상도 낮음({name}): coverage={report['coverage']:.2f} < "
-                f"{self.min_reference_coverage}. 조건 입력으로 확대되므로 옷감 질감이 흐려지거나 "
-                "얇은 옷이 비쳐 보이게 그려질 수 있습니다(참고 지표)."
+                "상품 사진에 옷이 작게 담겨 있어요. 확대해서 합성하다 보니 "
+                "옷감 질감이 실제보다 흐릿하게 보일 수 있어요.",
+                detail=(f"레퍼런스 해상도 낮음({name}): coverage={report['coverage']:.2f}"
+                        f" < {self.min_reference_coverage}"),
             )
 
-    def _add_warning(self, message: str) -> None:
+    def _add_warning(self, message: str, *, detail: str = "") -> None:
+        """화면에는 사용자가 읽을 문장만, 수치와 파일명은 서버 로그에만 남긴다.
+
+        예전에는 `coverage=0.24 < 0.25` 와 `shopping_41a5….png` 가 그대로 화면에
+        나갔다. 처음 쓰는 사람에게는 뜻이 닿지 않고, 같은 경고가 상품 수만큼
+        반복돼 읽히지도 않았다. 진단에 필요한 값은 로그에 그대로 남는다.
+        """
         self.last_warnings.append(message)
-        print(message)
+        print(f"{message} | {detail}" if detail else message)
 
     def _check_length_gap(self, garment: Image.Image, category: str, context: dict,
                           *, product=None, source_image=None) -> str:
@@ -1518,9 +1525,13 @@ class CatVTONTryOn(VirtualTryOnAdapter):
                                               "assess_seconds": round(assess_seconds, 3)})
             failed = report.warnings()
             if failed:
-                prefix = "합성 품질 점검" + (f"(다시 생성 {attempts - 1}회 후)" if attempts > 1 else "")
+                # "합성 품질 점검(다시 생성 1회 후):" 은 내부 용어라 화면에서 뺀다.
+                # 다만 다시 만들어도 남은 문제라는 사실은 알린다 — 사용자가 '다시 생성'을
+                # 또 누를지 판단하는 근거이고, 시도한 사실을 숨기지 않기 위해서다.
+                retried = "다시 만들어 봤지만 " if attempts > 1 else ""
                 for message in failed:
-                    self._add_warning(f"{prefix}: {message}")
+                    self._add_warning(f"{retried}{message}",
+                                      detail=f"합성 품질 점검 attempts={attempts}")
         return result
 
     def generate(
