@@ -208,7 +208,8 @@ input, textarea, select { caret-color: var(--signal); }
 }
 .full-body-guide h2 { font-size: .92rem; margin: 0 0 8px; }
 .full-body-guide ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.full-body-guide li { color: var(--ink-soft); font-size: .78rem; line-height: 1.45; }
+/* 좁은 칸이라 음절 단위로 끊기기 쉽다. 여기도 낱말 단위로 묶는다. */
+.full-body-guide li { color: var(--ink-soft); font-size: .78rem; line-height: 1.45; word-break: keep-all; }
 .full-body-guide li::before { content: "•"; color: var(--signal); margin-right: 6px; }
 
 .dropzone {
@@ -259,7 +260,12 @@ input, textarea, select { caret-color: var(--signal); }
 .tips li { font-size: .92rem; color: var(--ink-soft); display: flex; gap: 9px; line-height: 1.6; }
 .tips li::before { content: "—"; color: var(--signal); flex-shrink: 0; font-weight: 700; }
 .tips li strong { color: var(--ink); font-weight: 700; flex: none; white-space: nowrap; }
-.tips-note { font-size: .82rem; color: var(--ink-soft); margin: 18px 0 0; max-width: 46ch; }
+/* 한국어는 기본값(word-break: normal)에서 음절 사이 아무 데나 끊긴다.
+   그래서 '코디'가 '코 / 디'로 갈라졌다. 낱말 단위로만 끊는다. */
+.tips-note {
+  font-size: .82rem; color: var(--ink-soft); margin: 18px 0 0; max-width: 46ch;
+  word-break: keep-all;
+}
 .hero-primary-action { align-items: flex-start; }
 .photo-gate-note {
   flex: 1 0 100%; margin: 0 0 2px;
@@ -666,15 +672,18 @@ select {
   line-height: 1.55;
 }
 
-.tryon-warning strong {
-  display: block;
-  margin-bottom: 3px;
+/* 접어 둔 상태에서는 요약 한 줄만 보인다. 펼치면 목록이 나온다. */
+.tryon-warning summary {
+  cursor: pointer;
+  font-weight: 700;
+  list-style-position: outside;
 }
-
 .tryon-warning ul {
-  margin: 0;
+  margin: 6px 0 0;
   padding-left: 18px;
+  word-break: keep-all;
 }
+.tryon-warning li + li { margin-top: 4px; }
 .reco-head {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
   flex-wrap: wrap;
@@ -751,7 +760,12 @@ select {
 .look-summary {
   margin: 0; max-width: 62ch; color: var(--ink);
   font-size: .95rem; line-height: 1.6;
+  /* 한 문단으로 흘리면 '상·하의'가 '상 / ·하의'로 갈라졌다. 낱말 단위로만 끊는다. */
+  word-break: keep-all;
 }
+/* 근거는 문장이 두 개 이어 붙은 값이다. 문장마다 줄을 나눠야 읽힌다. */
+.summary-sentence { display: block; }
+.summary-sentence + .summary-sentence { margin-top: 4px; }
 .look-body {
   display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
   gap: 28px; margin-top: 22px;
@@ -763,6 +777,14 @@ select {
   color: var(--ink-soft); font-size: .73rem; line-height: 1.5;
 }
 .look-shot figcaption a { color: var(--ink); font-weight: 700; }
+/* 부위별로 한 줄씩. 라벨 폭을 고정해 상품명 시작선을 맞춘다. */
+.look-items { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.look-items li { display: flex; gap: 8px; align-items: baseline; }
+.look-items b {
+  flex: 0 0 2.4em; color: var(--ink); font-weight: 700;
+  white-space: nowrap;
+}
+.look-items span { flex: 1 1 auto; min-width: 0; word-break: keep-all; }
 .look-shot.is-empty {
   display: grid; place-items: center; min-height: 340px; padding: 24px;
   border: 1px dashed var(--line); text-align: center;
@@ -852,8 +874,18 @@ select {
 .shopping-evidence { margin: 0 15px 12px; border-top: 1px solid var(--line); padding-top: 10px; }
 .shopping-evidence summary { cursor: pointer; font-size: .78rem; font-weight: 800; }
 .shopping-evidence-body { padding-top: 8px; color: var(--ink-soft); font-size: .74rem; line-height: 1.5; }
-.shopping-evidence-body ul { margin: 6px 0 0; padding-left: 18px; }
-.shopping-evidence-body li { display: flex; gap: 6px; margin-top: 5px; }
+.shopping-evidence-body ul { margin: 6px 0 0; padding-left: 0; list-style: none; }
+/* 라벨에 flex-shrink 를 막아 두지 않아 '핏'·'종류'·'색상'이 눌려 세로로 갈라졌다
+   ('종 / 류'). 라벨은 고정 폭으로 잡고, 설명은 남은 폭을 쓴다. */
+.shopping-evidence-body li {
+  display: flex; gap: 8px; margin-top: 5px; align-items: baseline;
+}
+.shopping-evidence-body li b {
+  flex: 0 0 2.8em;            /* 세 라벨의 시작선을 맞춘다 */
+  color: var(--ink); font-weight: 700;
+  word-break: keep-all; white-space: nowrap;
+}
+.shopping-evidence-body li span { flex: 1 1 auto; min-width: 0; word-break: keep-all; }
 .shopping-bottom {
   display: flex; align-items: end; justify-content: space-between; gap: 10px; margin-top: 14px;
 }
