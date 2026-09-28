@@ -159,14 +159,15 @@ $("clear-image").addEventListener("click", (event) => {
   $("photo-gate-note").dataset.tone = "wait";
 });
 
-/* 아이폰 기본 저장 형식(HEIC)을 받는다. iOS 가 형식을 비워 보내는 경우가 있어
-   확장자로도 한 번 본다. 최종 판정은 서버가 다시 한다. */
-const IMAGE_TYPES = /^image\/(jpeg|png|webp|heic|heif)$/;
-const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|heic|heif)$/i;
-const IMAGE_HINT = "JPG, PNG, WEBP, HEIC 이미지만 지원합니다.";
+/* 같은 아이폰 사진도 macOS·브라우저 조합에 따라 image/heic 대신
+   image/heic-sequence 같은 MIME으로 전달될 수 있다. MIME 또는 확장자 중
+   하나가 맞으면 업로드하고, 실제 파일 형식은 서버가 다시 검증한다. */
+const IMAGE_TYPES = /^image\/(jpeg|jpg|pjpeg|png|webp|heic|heif|heic-sequence|heif-sequence|avif)$/i;
+const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|heic|heif|avif)$/i;
+const IMAGE_HINT = "JPG, PNG, WEBP, HEIC, AVIF 이미지만 지원합니다.";
 
 function isSupportedImage(file) {
-  return IMAGE_TYPES.test(file.type) || (!file.type && IMAGE_EXTENSIONS.test(file.name || ""));
+  return IMAGE_TYPES.test(file.type || "") || IMAGE_EXTENSIONS.test(file.name || "");
 }
 
 function acceptFile(file) {

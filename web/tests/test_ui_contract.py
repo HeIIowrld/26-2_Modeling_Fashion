@@ -86,6 +86,17 @@ class UIContractTests(unittest.TestCase):
         self.assertIn('goto(2);', javascript)
         self.assertIn('state.photoValidation', javascript)
 
+    def test_mobile_image_mime_variants_reach_server_validation(self):
+        html = (STATIC / "index.html").read_text(encoding="utf-8")
+        javascript = (STATIC / "app.js").read_text(encoding="utf-8")
+        self.assertIn("heic-sequence", javascript)
+        self.assertIn("heif-sequence", javascript)
+        self.assertIn("avif", javascript)
+        self.assertIn('IMAGE_EXTENSIONS.test(file.name || "")', javascript)
+        self.assertNotIn('!file.type && IMAGE_EXTENSIONS', javascript)
+        self.assertIn("image/heic-sequence", html)
+        self.assertIn("image/avif", html)
+
     def test_preflight_warning_is_shown_without_blocking_the_next_step(self):
         javascript = (STATIC / "app.js").read_text(encoding="utf-8")
         active_css = (STATIC / "lookbook.css").read_text(encoding="utf-8")

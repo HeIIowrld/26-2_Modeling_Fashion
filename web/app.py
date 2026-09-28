@@ -99,8 +99,10 @@ try:
 except ImportError:  # pragma: no cover - 설치 여부에 따라 갈린다
     HEIF_READY = False
 
-ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"} | ({"HEIF", "HEIC", "AVIF"} if HEIF_READY else set())
-ALLOWED_FORMATS_LABEL = "JPG, PNG, WEBP" + (", HEIC" if HEIF_READY else "")
+# 아이폰 인물 사진이나 일부 Android 카메라는 확장자는 JPG 이지만 여러 프레임을
+# 담은 MPO 로 저장한다. 첫 프레임은 일반 JPEG처럼 안전하게 정규화할 수 있다.
+ALLOWED_FORMATS = {"JPEG", "MPO", "PNG", "WEBP"} | ({"HEIF", "HEIC", "AVIF"} if HEIF_READY else set())
+ALLOWED_FORMATS_LABEL = "JPG, PNG, WEBP" + (", HEIC, AVIF" if HEIF_READY else "")
 JOB_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 IMAGE_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*\.jpg$")
 PRODUCT_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,80}$")

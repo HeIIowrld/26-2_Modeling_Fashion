@@ -87,7 +87,7 @@ class OutfitCombinationTests(unittest.TestCase):
             },
         )
 
-    def test_three_outfits_replace_selected_categories_and_keep_current_bottom(self):
+    def test_outfits_replace_selected_categories_and_keep_current_bottom_without_reuse(self):
         products = [
             product("T1", "top", ["오버핏", "스트리트"]),
             product("T2", "top", ["레귤러", "스트리트"]),
@@ -101,9 +101,10 @@ class OutfitCombinationTests(unittest.TestCase):
                 products, self.profile, self.pose, self.outfit, self.targets, recommender, limit=3,
             )
 
-        self.assertEqual(len(outfits), 3)
-        self.assertEqual([item.combination_id for item in outfits], ["OUTFIT-1", "OUTFIT-2", "OUTFIT-3"])
-        self.assertEqual(len({tuple(item.product_ids) for item in outfits}), 3)
+        # 카테고리별 고유 상품이 둘뿐이면 상품을 재활용해 세 번째 LOOK을 만들지 않는다.
+        self.assertEqual(len(outfits), 2)
+        self.assertEqual([item.combination_id for item in outfits], ["OUTFIT-1", "OUTFIT-2"])
+        self.assertEqual(len({tuple(item.product_ids) for item in outfits}), 2)
         self.assertTrue(all(len(item.product_ids) == 2 for item in outfits))
         self.assertTrue(all(item.product_ids[0].startswith("T") for item in outfits))
         self.assertTrue(all(item.product_ids[1].startswith("S") for item in outfits))
@@ -190,6 +191,8 @@ class OutfitCombinationTests(unittest.TestCase):
                     for item in outfits]
         self.assertEqual(len(set(top_ids)), 3)
         self.assertEqual(len(set(shoe_ids)), 3)
+        all_product_ids = [product_id for outfit in outfits for product_id in outfit.product_ids]
+        self.assertEqual(len(all_product_ids), len(set(all_product_ids)))
 
     def test_each_public_outfit_contains_at_most_three_verified_facts(self):
         products = [

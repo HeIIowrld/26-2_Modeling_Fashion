@@ -563,43 +563,22 @@ def recommend_outfit_combinations(
         candidate for candidate in candidates
         if candidate.score >= MIN_SAFE_COMBINATION_SCORE
     ]
-    category_by_product = {
-        product.product_id: product.category
-        for products in grouped.values() for product in products
-    }
-    # Products arrive after context and photo reranking. Diversity is therefore
-    # the final constraint, not a substitute for Fashion Rules. If a category
-    # has at least `limit` candidates, use a different item in every outfit.
-    unique_required = {
-        category for category, products in grouped.items()
-        if len(products) >= max(1, limit)
-    }
-    used_by_category = {category: set() for category in selected_categories}
+    # 한 번 노출한 상품은 다른 LOOK에서 다시 쓰지 않는다. 후보가 부족하더라도
+    # 같은 상의·하의·신발로 세 벌을 억지로 채우지 않고 코디 수를 줄인다.
+    used_product_ids: set[str] = set()
     while remaining and len(selected_outfits) < max(0, limit):
-        def product_overlap(candidate: OutfitCombination) -> float:
-            return max((
-                len(set(candidate.product_ids) & set(chosen.product_ids)) / max(1, len(candidate.product_ids))
-                for chosen in selected_outfits
-            ), default=0.0)
-
         eligible = [
             candidate for candidate in remaining
-            if all(
-                product_id not in used_by_category[category_by_product[product_id]]
-                for product_id in candidate.product_ids
-                if category_by_product[product_id] in unique_required
-            )
+            if used_product_ids.isdisjoint(candidate.product_ids)
         ]
-        pool = eligible or remaining
-        # 안전선을 넘은 후보는 검색 순서를 유지하되, 이미 고른 코디와
-        # 겹치지 않는 조합을 우선한다. min은 동률이면 기존 순서를 유지한다.
-        next_outfit = min(pool, key=lambda candidate: (
-            product_overlap(candidate), candidate.policy_penalty,
-        ))
+        if not eligible:
+            break
+        # 안전선을 넘은 고유 후보 중 정책 감점이 가장 작은 조합을 고른다.
+        # min은 동률이면 기존 검색 순서를 유지한다.
+        next_outfit = min(eligible, key=lambda candidate: candidate.policy_penalty)
         remaining.remove(next_outfit)
         selected_outfits.append(next_outfit)
-        for product_id in next_outfit.product_ids:
-            used_by_category[category_by_product[product_id]].add(product_id)
+        used_product_ids.update(next_outfit.product_ids)
 
     for rank, combination in enumerate(selected_outfits, 1):
         combination.combination_id = f"OUTFIT-{rank}"

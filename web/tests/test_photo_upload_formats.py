@@ -30,6 +30,18 @@ def _portrait_stored_sideways() -> bytes:
     return buffer.getvalue()
 
 
+def _multipicture_jpeg() -> bytes:
+    """아이폰 인물 사진처럼 JPG 확장자로 전달될 수 있는 다중 프레임 MPO."""
+    buffer = BytesIO()
+    Image.new("RGB", (40, 90), "white").save(
+        buffer,
+        "MPO",
+        save_all=True,
+        append_images=[Image.new("RGB", (40, 90), "gray")],
+    )
+    return buffer.getvalue()
+
+
 class PhotoUploadFormatTests(unittest.TestCase):
     def test_exif_rotation_is_applied_to_the_pixels(self):
         with TemporaryDirectory() as raw:
@@ -61,6 +73,18 @@ class PhotoUploadFormatTests(unittest.TestCase):
         with TemporaryDirectory() as raw:
             target = Path(raw) / "original.jpg"
             web_app._save_upload(raw_heic, target, "전신 사진")
+            with Image.open(target) as saved:
+                self.assertEqual(saved.format, "JPEG")
+                self.assertEqual((saved.width, saved.height), (40, 90))
+
+    def test_multipicture_jpeg_uses_first_frame_and_is_stored_as_jpeg(self):
+        raw_mpo = _multipicture_jpeg()
+        with Image.open(BytesIO(raw_mpo)) as opened:
+            self.assertEqual(opened.format, "MPO")
+            self.assertEqual(opened.n_frames, 2)
+        with TemporaryDirectory() as raw:
+            target = Path(raw) / "original.jpg"
+            web_app._save_upload(raw_mpo, target, "전신 사진")
             with Image.open(target) as saved:
                 self.assertEqual(saved.format, "JPEG")
                 self.assertEqual((saved.width, saved.height), (40, 90))
