@@ -222,6 +222,29 @@ def _denim_tone_penalty(top: dict[str, Any], bottom: dict[str, Any]) -> float:
     return 0.0
 
 
+def _material_repetition_penalty(
+    top: dict[str, Any], bottom: dict[str, Any], targets: TargetKeywordResult,
+) -> float:
+    top_material = str(top.get("material") or "").strip().lower()
+    bottom_material = str(bottom.get("material") or "").strip().lower()
+    if not top_material or top_material != bottom_material:
+        return 0.0
+    requested = {
+        str(value).strip().lower()
+        for category in ("top", "bottom")
+        for value in targets.targets.get(category, {}).get("material", [])
+        if value
+    }
+    # When several materials were requested, using the same one for both
+    # garments defeats the user's choice. A single denim request remains the
+    # explicit denim-on-denim exception governed by tone compatibility.
+    if len(requested) > 1:
+        return 0.12
+    if any(term in top_material for term in DENIM_TERMS):
+        return 0.0
+    return 0.10
+
+
 def _current_item(category: str, outfit: OutfitAnalysis) -> dict[str, str]:
     summary = outfit.to_summary_dict()
     if category == "top":
@@ -496,7 +519,9 @@ def recommend_outfit_combinations(
             continue
         harmony, _, harmony_reasons, harmony_rules = recommender._outfit_harmony_score(top, bottom, profile)
         denim_penalty = _denim_tone_penalty(top, bottom)
-        harmony = max(0.0, harmony - denim_penalty)
+        material_penalty = _material_repetition_penalty(top, bottom, targets)
+        combination_penalty = max(denim_penalty, material_penalty)
+        harmony = max(0.0, harmony - combination_penalty)
         shoe_score, shoe_reason = (1.0, "")
         if "shoes" in by_category:
             shoe_score, shoe_reason = _shoe_score(by_category["shoes"], profile, targets)
@@ -524,7 +549,7 @@ def recommend_outfit_combinations(
         candidates.append(OutfitCombination(
             f"OUTFIT-{index}", [product.product_id for product in chosen],
             list(current_by_category.values()), avoidance_score, evidence,
-            policy_penalty=denim_penalty,
+            policy_penalty=combination_penalty,
         ))
 
     selected_outfits: list[OutfitCombination] = []

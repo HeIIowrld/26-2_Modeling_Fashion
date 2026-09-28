@@ -47,6 +47,22 @@ FORMAL_CONTEXT_ITEM_TYPES = {
     "shoes": ("더비슈즈", "로퍼"),
 }
 
+# Purpose is separate from aesthetic style. These seeds make daily/casual and
+# date/casual retrieve genuinely different pools instead of carrying an unused
+# purpose label through an otherwise identical search.
+PURPOSE_CONTEXT_ITEM_TYPES = {
+    "데일리": {
+        "top": ("티셔츠", "맨투맨", "니트"),
+        "bottom": ("데님", "카고팬츠", "치노 팬츠"),
+        "shoes": ("스니커즈",),
+    },
+    "데이트": {
+        "top": ("셔츠", "니트", "가디건", "재킷"),
+        "bottom": ("슬랙스", "데님"),
+        "shoes": ("로퍼",),
+    },
+}
+
 SPORTY_STYLES = {"스포티"}
 SPORTY_PURPOSES = {"운동", "스포츠", "러닝"}
 SPORTY_CONTEXT_ITEM_TYPES = {
@@ -188,6 +204,11 @@ def formal_context_item_types(profile: Any, category: str) -> tuple[str, ...]:
     if not formal_context_enabled(profile):
         return ()
     return FORMAL_CONTEXT_ITEM_TYPES.get(category, ())
+
+
+def purpose_context_item_types(profile: Any, category: str) -> tuple[str, ...]:
+    purpose = str(getattr(profile, "purpose", "") or "").strip()
+    return PURPOSE_CONTEXT_ITEM_TYPES.get(purpose, {}).get(category, ())
 
 
 def sporty_context_enabled(profile: Any) -> bool:

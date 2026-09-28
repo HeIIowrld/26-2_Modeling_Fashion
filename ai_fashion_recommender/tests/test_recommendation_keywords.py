@@ -70,8 +70,20 @@ class RecommendationKeywordTests(unittest.TestCase):
         result = self.generator.generate(profile, self.pose, self.outfit)
 
         self.assertEqual(result.targets["top"]["material"], ["데님", "니트", "가죽"])
-        self.assertEqual(result.targets["bottom"]["material"], ["데님", "니트"])
+        self.assertEqual(result.targets["bottom"]["material"], ["데님"])
         self.assertNotIn("material", result.targets["shoes"])
+
+    def test_generic_knit_preference_is_applied_to_tops_only(self):
+        profile = UserProfile(
+            change_categories=["top", "bottom"],
+            preferred_materials=["니트"],
+            provided_fields=["change_categories", "preferred_materials"],
+        )
+
+        result = self.generator.generate(profile, self.pose, self.outfit)
+
+        self.assertEqual(result.targets["top"]["material"], ["니트"])
+        self.assertNotIn("material", result.targets["bottom"])
 
     def test_generic_leather_preference_does_not_search_for_leather_bottoms(self):
         profile = UserProfile(
@@ -162,6 +174,27 @@ class RecommendationKeywordTests(unittest.TestCase):
         self.assertNotIn("R-TREND-01", formal.applied_rules)
         self.assertIn("R-CTX-01", formal.applied_rules)
 
+    def test_daily_and_date_generate_different_product_type_seeds(self):
+        daily = self.generator.generate(
+            UserProfile(
+                change_categories=["top", "bottom", "shoes"], purpose="데일리",
+                desired_style="캐주얼", provided_fields=["purpose", "desired_style"],
+            ), self.pose, self.outfit,
+        )
+        date = self.generator.generate(
+            UserProfile(
+                change_categories=["top", "bottom", "shoes"], purpose="데이트",
+                desired_style="캐주얼", provided_fields=["purpose", "desired_style"],
+            ), self.pose, self.outfit,
+        )
+
+        self.assertEqual(daily.targets["top"]["item_type"][:3], ["티셔츠", "맨투맨", "니트"])
+        self.assertEqual(date.targets["top"]["item_type"][:3], ["셔츠", "니트", "가디건"])
+        self.assertEqual(daily.targets["bottom"]["item_type"][:2], ["데님", "카고팬츠"])
+        self.assertEqual(date.targets["bottom"]["item_type"][:2], ["슬랙스", "데님"])
+        self.assertEqual(daily.targets["shoes"]["item_type"], ["스니커즈"])
+        self.assertEqual(date.targets["shoes"]["item_type"], ["로퍼"])
+
     def test_formal_context_collects_formal_item_types_before_photo_material(self):
         profile = UserProfile(
             change_categories=["top", "bottom", "shoes"], purpose="출근",
@@ -198,9 +231,9 @@ class RecommendationKeywordTests(unittest.TestCase):
         result = self.generator.generate(profile, self.pose, self.outfit)
 
         self.assertEqual(result.targets["top"]["material"], ["니트"])
-        self.assertEqual(result.targets["bottom"]["material"], ["가죽"])
+        self.assertNotIn("material", result.targets["bottom"])
         self.assertEqual(result.sources["top.material"], "photo_fallback")
-        self.assertEqual(result.sources["bottom.material"], "photo_fallback")
+        self.assertNotIn("bottom.material", result.sources)
 
     def test_unreliable_photo_and_no_inputs_still_produce_searchable_keywords(self):
         unknown_outfit = OutfitAnalysis(

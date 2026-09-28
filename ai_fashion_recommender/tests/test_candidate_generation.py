@@ -51,6 +51,17 @@ class CandidateGenerationTests(unittest.TestCase):
         self.assertTrue(any("니트" in query for query in top_queries))
         self.assertFalse(any("데님" in query or "니트" in query for query in shoe_queries))
 
+    def test_multiple_context_item_types_receive_separate_queries(self):
+        queries = self.search._queries("top", {
+            "item_type": ["티셔츠", "맨투맨", "니트"],
+            "style": ["캐주얼"], "fit": ["여유핏"],
+        })
+
+        self.assertIn("캐주얼 티셔츠", queries)
+        self.assertIn("캐주얼 맨투맨", queries)
+        self.assertIn("캐주얼 니트", queries)
+        self.assertIn("베이직 상의", queries)
+
     def test_result_beyond_position_forty_is_considered(self):
         rows = [item(i, "베이직 상의") for i in range(1, 61)] + [item(61, "오버핏 니트 캐주얼")]
         with patch.object(self.search, "_fetch", return_value=rows):

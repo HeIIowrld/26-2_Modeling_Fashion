@@ -310,6 +310,28 @@ class OutfitCombinationTests(unittest.TestCase):
         self.assertEqual(len(outfits), 1)
         self.assertEqual(outfits[0].policy_penalty, 0.0)
 
+    def test_multiple_preferred_materials_are_mixed_across_the_outfit(self):
+        profile = UserProfile(
+            desired_style="캐주얼", change_categories=["top", "bottom"],
+        )
+        targets = TargetKeywordResult("user_input", {
+            "top": {"material": ["데님", "니트"], "style": ["캐주얼"]},
+            "bottom": {"material": ["데님"], "style": ["캐주얼"]},
+        })
+        denim_top = product("T-DENIM", "top", ["데님", "캐주얼"])
+        denim_top.name = "중청 데님 셔츠"
+        knit_top = product("T-KNIT", "top", ["니트", "캐주얼"])
+        knit_top.name = "크루넥 니트"
+        bottom = product("B-DENIM", "bottom", ["데님", "캐주얼"])
+        bottom.name = "중청 데님 팬츠"
+
+        outfits = recommend_outfit_combinations(
+            [denim_top, knit_top, bottom], profile, self.pose, self.outfit,
+            targets, FakeRecommender(), limit=1,
+        )
+
+        self.assertEqual(outfits[0].product_ids, ["T-KNIT", "B-DENIM"])
+
     def test_sporty_outfit_cannot_be_carried_by_running_shoes_alone(self):
         profile = UserProfile(
             purpose="데일리", desired_style="스포티",
