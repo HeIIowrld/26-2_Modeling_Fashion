@@ -14,7 +14,9 @@ sys.path.insert(0, str(ROOT / "src"))
 from live_product_attributes import (LiveProductAttributes, POLICY_VERSION,
                                      SHARED_FIT_POLICY_VERSION, accepted_attributes,
                                      accepted_shared_fit_attributes,
-                                     accepted_design_attributes, flat_product_design_metrics,
+                                     accepted_design_attributes, accepted_product_sleeve,
+                                     accepted_product_bottom_length,
+                                     flat_product_design_metrics,
                                      photo_matches, photo_validation_axes,
                                      rule_backed_photo_attributes, title_has_axis)
 from musinsa_live_search import MusinsaLiveSearch, ShoppingProduct
@@ -33,6 +35,24 @@ def row(number, name="팬츠", reviews=1, brand=""):
 
 
 class PhotoSearchTests(unittest.TestCase):
+    def test_product_photo_preserves_confident_short_sleeve_evidence(self):
+        result = accepted_product_sleeve("top", {
+            "sleeve_length": {
+                "labels": ["반팔"], "confidence": .91, "accepted": True,
+            }
+        })
+
+        self.assertEqual(result["sleeve_length"]["label"], "반팔")
+
+    def test_product_photo_preserves_confident_shorts_evidence(self):
+        result = accepted_product_bottom_length("bottom", {
+            "lower_length": {
+                "labels": ["쇼츠·미니 기장"], "confidence": .93, "accepted": True,
+            }
+        })
+
+        self.assertEqual(result["lower_length"]["label"], "쇼츠·미니 기장")
+
     def setUp(self):
         self.provider = Mock(last_stats={})
         self.provider.get_many.return_value = {"MS2": evidence()}
@@ -109,7 +129,9 @@ class PhotoSearchTests(unittest.TestCase):
 
     def test_photo_failure_preserves_baseline(self):
         self.provider.get_many.side_effect = RuntimeError("GPU unavailable")
-        with patch.object(self.search, "_fetch", return_value=[row(1), row(2)]):
+        with patch.object(self.search, "_fetch", return_value=[
+            row(1, "팬츠 모델1"), row(2, "팬츠 모델2"),
+        ]):
             result = self.search.search(self.targets, UserProfile())
         self.assertEqual([p.product_id for p in result], ["MS1", "MS2"])
         self.assertTrue(self.search.last_search_stats["photo"]["failed"])
@@ -309,7 +331,10 @@ class PhotoCacheTests(unittest.TestCase):
         def sizes(product_id):
             time.sleep(.08)
             return {"status": "unavailable"}
-        search = MusinsaLiveSearch(photo_provider=self.provider, measurements=SimpleNamespace(get=sizes), photo_budget=.01)
+        search = MusinsaLiveSearch(
+            photo_provider=self.provider, measurements=SimpleNamespace(get=sizes),
+            photo_budget=.01, final_bottom_budget=0,
+        )
         self.addCleanup(search.close)
         targets = TargetKeywordResult("mixed", {"bottom": {"fit": ["와이드"]}})
         with patch.object(search, "_fetch", return_value=[row(1)]):

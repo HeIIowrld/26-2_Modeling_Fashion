@@ -14,6 +14,7 @@ POLICY_VERSION = "worn-fit-length-v1"
 SHARED_FIT_POLICY_VERSION = "shared-fit-v1"
 SUPPORTED_FIT_POLICIES = {POLICY_VERSION, SHARED_FIT_POLICY_VERSION}
 DESIGN_POLICY_VERSION = "product-design-v1"
+SLEEVE_POLICY_VERSION = "product-sleeve-v1"
 MIN_CONFIDENCE = 0.90
 SHARED_FIT_MIN_CONFIDENCE = 0.70
 DESIGN_MIN_CONFIDENCE = 0.70
@@ -27,7 +28,11 @@ TASKS = {
         "length": ("lower_length",),
     },
 }
-DESIGN_TASKS = {"top": ("category", "pattern", "detail")}
+DESIGN_TASKS = {"top": ("category", "pattern", "detail", "sleeve_length")}
+PRODUCT_IMAGE_TASKS = {
+    "top": ("sleeve_length",),
+    "bottom": ("lower_length",),
+}
 MODEL_LABELS = {
     "스키니": "슬림핏",
     "스트레이트": "스트레이트핏",
@@ -352,6 +357,48 @@ def accepted_design_attributes(category: str, predictions: dict, metrics: dict |
     }
 
 
+def accepted_product_sleeve(category: str, predictions: dict) -> dict:
+    """상품명에 소매 길이가 없어도 사진 헤드의 보수적인 단일 판정을 보존한다."""
+    if category != "top":
+        return {}
+    value = predictions.get("sleeve_length", {})
+    if hasattr(value, "to_dict"):
+        value = value.to_dict()
+    labels = list(value.get("labels") or [])
+    confidence = float(value.get("confidence") or 0)
+    if not value.get("accepted") or len(labels) != 1 or confidence < DESIGN_MIN_CONFIDENCE:
+        return {}
+    return {
+        "sleeve_length": {
+            "label": labels[0],
+            "confidence": confidence,
+            "source": "product_photo",
+            "policy": SLEEVE_POLICY_VERSION,
+        }
+    }
+
+
+def accepted_product_bottom_length(category: str, predictions: dict) -> dict:
+    """착용 사진이 아닌 상품 단독 사진에서도 하의 길이 판정을 보존한다."""
+    if category != "bottom":
+        return {}
+    value = predictions.get("lower_length", {})
+    if hasattr(value, "to_dict"):
+        value = value.to_dict()
+    labels = list(value.get("labels") or [])
+    confidence = float(value.get("confidence") or 0)
+    if not value.get("accepted") or len(labels) != 1 or confidence < DESIGN_MIN_CONFIDENCE:
+        return {}
+    return {
+        "lower_length": {
+            "label": labels[0],
+            "confidence": confidence,
+            "source": "product_photo",
+            "policy": "product-bottom-length-v1",
+        }
+    }
+
+
 class LiveProductAttributes:
     """Reuse loaded models on the caller's inference thread; only downloads run in workers.
 
@@ -407,6 +454,7 @@ class LiveProductAttributes:
             context = worn_evidence(parsed["segmentation"], category)
             garment_mask = parsed["upper_mask"] if category == "top" else parsed["lower_mask"]
         tasks = list(DESIGN_TASKS.get(category, ()))
+        tasks.extend(PRODUCT_IMAGE_TASKS.get(category, ()))
         if context["worn"]:
             tasks.extend(task for axis_tasks in TASKS[category].values() for task in axis_tasks)
         tasks = list(dict.fromkeys(tasks))
@@ -429,6 +477,8 @@ class LiveProductAttributes:
         metrics = flat_product_design_metrics(image) if category == "top" else {}
         context["design_metrics"] = metrics
         attributes.update(accepted_design_attributes(category, serialized, metrics))
+        attributes.update(accepted_product_sleeve(category, serialized))
+        attributes.update(accepted_product_bottom_length(category, serialized))
         return {
             "context": context,
             "predictions": serialized,
@@ -453,7 +503,9 @@ class LiveProductAttributes:
         if pending and loader and time.monotonic() < deadline:
             # Reserve part of the budget for inference. Slow downloads can finish
             # caching a file, but can never mutate returned products or run models.
-            download_budget = min(0.15, max(0, deadline - time.monotonic()) * 0.6)
+            # 최종 후보 사진은 원격 이미지 응답이 조금 느려도 소매 판정을 건너뛰지
+            # 않도록 최대 0.5초까지 다운로드를 기다린다.
+            download_budget = min(0.5, max(0, deadline - time.monotonic()) * 0.6)
             prefetched = prefetched or {}
             futures = [prefetched[key] if key in prefetched else
                        self._downloads.submit(loader, product, timeout=download_budget)

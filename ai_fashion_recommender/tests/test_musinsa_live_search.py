@@ -78,7 +78,7 @@ class CategoryCheckTests(unittest.TestCase):
         return TargetKeywordResult(mode="user_input", targets={"top": {"category": ["상의"]}})
 
     def search_with(self, types_by_id):
-        search = StubSearch({"top": [item(1, "베이직 반팔 티셔츠"), item(2, "와이드 팬츠")]})
+        search = StubSearch({"top": [item(1, "베이직 긴팔 티셔츠"), item(2, "와이드 팬츠")]})
         search.measurements = StubMeasurements({}, types_by_id)
         profile = UserProfile(budget=120_000, change_scope="전체 변경",
                               provided_fields=["budget", "change_scope"])
@@ -119,7 +119,7 @@ class ColorOptionTests(unittest.TestCase):
                                    targets={"top": {"category": ["상의"], "color": [color]}})
 
     def search_with(self, colors_by_id, profile=None, color="블랙"):
-        search = StubSearch({"top": [item(1, "베이직 반팔 티셔츠"), item(2, "무지 반팔 티셔츠")]})
+        search = StubSearch({"top": [item(1, "베이직 긴팔 티셔츠"), item(2, "무지 긴팔 티셔츠")]})
         search.measurements = StubMeasurements(colors_by_id)
         profile = profile or UserProfile(budget=120_000, change_scope="전체 변경",
                                          provided_fields=["budget", "change_scope"])
@@ -201,11 +201,44 @@ class MusinsaLiveSearchTests(unittest.TestCase):
         self.assertEqual(len(results), 4)  # 부족한 후보를 복제하거나 다른 카테고리로 채우지 않음
         self.assertEqual([result.category for result in results], ["top", "top", "bottom", "bottom"])
 
+    def test_color_variants_of_the_same_product_are_not_reused(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        products = [
+            ShoppingProduct("K-BK", "에센셜 크루넥 니트 블랙", "같은브랜드", 1, "", "", "top",
+                            retrieval_score=10),
+            ShoppingProduct("K-IV", "에센셜 크루넥 니트 아이보리", "같은브랜드", 1, "", "", "top",
+                            retrieval_score=9),
+            ShoppingProduct("S1", "옥스포드 셔츠 화이트", "같은브랜드", 1, "", "", "top",
+                            retrieval_score=8),
+            ShoppingProduct("J1", "블루종 재킷 네이비", "같은브랜드", 1, "", "", "top",
+                            retrieval_score=7),
+        ]
+        targets = TargetKeywordResult("user_input", {"top": {}})
+
+        results = search._select(
+            {"top": products}, targets, 3,
+            UserProfile(purpose="데이트", desired_style="미니멀", season="사계절"),
+        )
+
+        ids = [product.product_id for product in results]
+        self.assertIn("K-BK", ids)
+        self.assertNotIn("K-IV", ids)
+        self.assertEqual(len(ids), 3)
+
+    def test_blue_in_blouson_is_not_mistaken_for_a_color_token(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        blouson = ShoppingProduct("J1", "블루종 재킷 네이비", "브랜드", 1, "", "", "top")
+
+        self.assertIn("블루종", search._product_model_key(blouson))
+        self.assertNotIn("네이비", search._product_model_key(blouson))
+
     def test_three_each_for_all_categories(self):
         targets = TargetKeywordResult(mode="user_input", targets={
             "top": {}, "bottom": {}, "shoes": {"item_type": ["로퍼"], "color": ["블랙"]},
         })
-        search = StubSearch({category: [item(offset + i, "블랙 로퍼") for i in range(5)]
+        search = StubSearch({category: [item(offset + i, f"모델{i} 블랙 로퍼") for i in range(5)]
                              for category, offset in (("top", 10), ("bottom", 20), ("shoes", 30))})
         results = search.search(targets, self.profile)
         self.assertEqual(len(results), 9)
@@ -361,7 +394,7 @@ class MusinsaLiveSearchTests(unittest.TestCase):
             ShoppingProduct("S1", "옥스포드 셔츠", "", 1, "", "", "top", retrieval_score=10),
             ShoppingProduct("S2", "체크 오버핏 셔츠", "", 1, "", "", "top", retrieval_score=9),
             ShoppingProduct("S3", "데님 셔츠", "", 1, "", "", "top", retrieval_score=8),
-            ShoppingProduct("T1", "그래픽 반팔 티셔츠", "", 1, "", "", "top", retrieval_score=7),
+            ShoppingProduct("T1", "그래픽 긴팔 티셔츠", "", 1, "", "", "top", retrieval_score=7),
             ShoppingProduct("K1", "크루넥 니트", "", 1, "", "", "top", retrieval_score=6),
         ]
         targets = TargetKeywordResult("user_input", {"top": {"style": ["캐주얼"]}})
@@ -475,6 +508,143 @@ class MusinsaLiveSearchTests(unittest.TestCase):
         self.assertEqual([product.product_id for product in selected_tops], ["K1", "P1", "C1"])
         self.assertEqual(sum(search._top_family(product) == "outerwear" for product in selected_tops), 2)
         self.assertNotIn("BS", [product.product_id for product in selected_bottoms])
+
+    def test_winter_prefers_one_warm_inner_and_two_heavy_outerwear(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        tops = [
+            ShoppingProduct("TS", "긴팔 코튼 티셔츠", "", 1, "", "", "top", retrieval_score=30),
+            ShoppingProduct("SK", "반팔 카라 니트", "", 1, "", "", "top", retrieval_score=40),
+            ShoppingProduct(
+                "SP", "오픈 카라 니트", "", 1, "", "", "top", retrieval_score=50,
+                photo_attributes={"sleeve_length": {
+                    "label": "반팔", "confidence": .91, "source": "product_photo",
+                }},
+            ),
+            ShoppingProduct("K1", "울 크루넥 니트", "", 1, "", "", "top", retrieval_score=10),
+            ShoppingProduct("W1", "나일론 바람막이", "", 1, "", "", "top", retrieval_score=29),
+            ShoppingProduct("P1", "구스다운 패딩", "", 1, "", "", "top", retrieval_score=9),
+            ShoppingProduct("C1", "울 싱글 코트", "", 1, "", "", "top", retrieval_score=8),
+        ]
+        targets = TargetKeywordResult("user_input", {"top": {}})
+
+        results = search._select(
+            {"top": tops}, targets, 3,
+            UserProfile(purpose="데일리", desired_style="미니멀", season="겨울"),
+        )
+
+        self.assertEqual([product.product_id for product in results], ["K1", "P1", "C1"])
+        self.assertNotIn("W1", [product.product_id for product in results])
+        self.assertNotIn("SK", [product.product_id for product in results])
+        self.assertNotIn("SP", [product.product_id for product in results])
+
+    def test_short_and_half_sleeve_tops_are_blocked_outside_summer(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        products = [
+            ShoppingProduct("H1", "워셔블 크루즈 하프 니트 셔츠", "", 1, "", "", "top",
+                            retrieval_score=30),
+            ShoppingProduct("S1", "반팔 카라 니트", "", 1, "", "", "top",
+                            retrieval_score=29),
+            ShoppingProduct(
+                "V1", "워셔블 카라 니트", "", 1, "", "", "top", retrieval_score=40,
+                photo_attributes={"sleeve_length": {
+                    "label": "반팔", "confidence": .91, "source": "product_photo",
+                }},
+            ),
+            ShoppingProduct("L1", "긴팔 울 크루넥 니트", "", 1, "", "", "top",
+                            retrieval_score=10),
+        ]
+        targets = TargetKeywordResult("user_input", {"top": {}})
+
+        results = search._select(
+            {"top": products}, targets, 3,
+            UserProfile(purpose="데일리", desired_style="캐주얼", season="가을"),
+        )
+
+        self.assertEqual([product.product_id for product in results], ["L1"])
+
+    def test_final_non_summer_tops_require_product_photo_sleeve_verdict(self):
+        class SleeveProvider:
+            def prefetch(self, products, loader):
+                return {}
+
+            def get_many(self, products, loader, budget, prefetched=None):
+                return {
+                    "V1": {"sleeve_length": {
+                        "label": "반팔", "confidence": .94, "source": "product_photo",
+                    }},
+                    "V2": {"sleeve_length": {
+                        "label": "긴팔", "confidence": .92, "source": "product_photo",
+                    }},
+                    # V3는 판정 누락: 검증 상품이 3개보다 적을 때만 예비 후보로 남는다.
+                }
+
+            def close(self):
+                pass
+
+        search = MusinsaLiveSearch(photo_provider=SleeveProvider())
+        self.addCleanup(search.close)
+        grouped = {"top": [
+            ShoppingProduct("V1", "카라 니트 1", "", 1, "", "", "top", retrieval_score=30),
+            ShoppingProduct("V2", "카라 니트 2", "", 1, "", "", "top", retrieval_score=20),
+            ShoppingProduct("V3", "카라 니트 3", "", 1, "", "", "top", retrieval_score=10),
+        ]}
+        targets = TargetKeywordResult("user_input", {"top": {}})
+
+        search._validate_final_top_sleeves(
+            grouped, targets,
+            UserProfile(purpose="데일리", desired_style="캐주얼", season="가을"),
+            3, lambda product, timeout: "unused",
+        )
+
+        self.assertEqual([product.product_id for product in grouped["top"]], ["V2", "V3"])
+        self.assertEqual(
+            search.last_search_stats["final_sleeve_validation"]["rejected_short_sleeve"], 1,
+        )
+        self.assertEqual(search.last_search_stats["final_sleeve_validation"]["unverified"], 1)
+        self.assertTrue(search.last_search_stats["final_sleeve_validation"]["fallback_used"])
+
+    def test_final_non_summer_bottoms_require_product_photo_length_verdict(self):
+        class LengthProvider:
+            def prefetch(self, products, loader):
+                return {}
+
+            def get_many(self, products, loader, budget, prefetched=None):
+                return {
+                    "B1": {"lower_length": {
+                        "label": "쇼츠·미니 기장", "confidence": .95,
+                        "source": "product_photo",
+                    }},
+                    "B2": {"lower_length": {
+                        "label": "롱·긴바지 기장", "confidence": .94,
+                        "source": "product_photo",
+                    }},
+                }
+
+            def close(self):
+                pass
+
+        search = MusinsaLiveSearch(photo_provider=LengthProvider())
+        self.addCleanup(search.close)
+        grouped = {"bottom": [
+            ShoppingProduct("B1", "코튼 팬츠 1", "", 1, "", "", "bottom", retrieval_score=30),
+            ShoppingProduct("B2", "코튼 팬츠 2", "", 1, "", "", "bottom", retrieval_score=20),
+            ShoppingProduct("B3", "코튼 팬츠 3", "", 1, "", "", "bottom", retrieval_score=10),
+        ]}
+        targets = TargetKeywordResult("user_input", {"bottom": {}})
+
+        search._validate_final_bottom_lengths(
+            grouped, targets,
+            UserProfile(purpose="데일리", desired_style="캐주얼", season="가을"),
+            3, lambda product, timeout: "unused",
+        )
+
+        self.assertEqual([product.product_id for product in grouped["bottom"]], ["B2", "B3"])
+        stats = search.last_search_stats["final_bottom_length_validation"]
+        self.assertEqual(stats["rejected_shorts"], 1)
+        self.assertEqual(stats["unverified"], 1)
+        self.assertTrue(stats["fallback_used"])
 
     def test_explicit_single_material_preference_stays_prominent_with_one_outerwear(self):
         search = MusinsaLiveSearch()

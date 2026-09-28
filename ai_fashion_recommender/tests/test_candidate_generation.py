@@ -149,7 +149,9 @@ class CandidateGenerationTests(unittest.TestCase):
         self.assertEqual({p.category for p in result}, {"top", "bottom"})
 
     def test_same_brand_is_limited_when_equally_relevant_alternatives_exist(self):
-        rows = [item(i, "니트") for i in (1, 2, 3, 4)]
+        # 서로 다른 모델이되 같은 브랜드인 후보로 브랜드 다양성만 검증한다.
+        # 동일 상품의 색상 옵션은 별도 정책에서 하나의 모델로 묶는다.
+        rows = [item(i, f"니트 모델 {i}") for i in (1, 2, 3, 4)]
         rows[-1]["brandName"] = "다른 브랜드"
         with patch.object(self.search, "_fetch", return_value=rows):
             result = self.search.search(self.targets, self.profile, limit=3)
