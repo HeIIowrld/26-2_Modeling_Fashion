@@ -48,10 +48,14 @@ class RecommendationExplanationTests(unittest.TestCase):
         with patch.dict(os.environ, {"FASHION_LLM_REASONS": "0"}, clear=False):
             add_product_recommendation_reasons([product], self.profile, self.pose, targets)
 
+        # 2026-09-29: "추천 규칙에서 도출된 …"은 읽는 사람에게 "그 규칙이 뭔데?"만
+        # 남긴다. 조건이 나온 자리(sources)를 말하도록 바꿨다. 여기서는
+        # user_style_rule 이므로 고른 스타일에서 따라온 조건이다.
         self.assertEqual(
             product.recommendation_reason,
-            "추천 규칙에서 도출된 '세미와이드' 핏 조건을 충족합니다.",
+            "고르신 스타일에 맞춘 '세미와이드' 핏이에요.",
         )
+        self.assertNotIn("추천 규칙", product.recommendation_reason)
         self.assertNotIn("예산", product.recommendation_reason)
         self.assertNotIn("데이트", product.recommendation_reason)
         self.assertNotIn("체형", product.recommendation_reason)
@@ -70,7 +74,8 @@ class RecommendationExplanationTests(unittest.TestCase):
         )
         with patch.dict(os.environ, {"FASHION_LLM_REASONS": "0"}, clear=False):
             add_product_recommendation_reasons([product], self.profile, self.pose, targets)
-        self.assertEqual(product.recommendation_reason, "추천 조건에서 도출된 '로퍼' 종류에 해당합니다.")
+        self.assertEqual(product.recommendation_reason, "고르신 스타일에 맞춘 '로퍼' 종류예요.")
+        self.assertNotIn("추천 조건", product.recommendation_reason)
         self.assertNotIn("다리", product.recommendation_reason)
         self.assertNotIn("체형", product.recommendation_reason)
 

@@ -9,6 +9,7 @@ from typing import Callable
 from config import ENABLE_AUTO_BODY_SHAPE
 from fashion_rules import FashionRuleBook
 from outfit_analyzer import COLOR_PALETTE, NEUTRALS, color_harmony
+from outfit_combination_recommender import korean_particle
 from product_catalog import ProductCatalog
 from recommendation_keywords import RecommendationKeywordGenerator, TargetKeywordResult
 from schemas import (
@@ -1292,7 +1293,15 @@ class RecommendationEngine:
         }[harmony_name]
         if (top["color"] in NEUTRALS) != (bottom["color"] in NEUTRALS):
             color = max(color, 0.94)
-        reasons.append(f"색상 관계 '{harmony_name}'를 상·하의 연결감으로 평가했습니다.")
+        # 조사를 '를'로 박아 두어 화면에 "'톤온톤'를"로 나왔다. 현재 이름은 다섯 개가
+        # 모두 받침으로 끝나지만, 이름이 늘어도 맞도록 받침을 보고 고른다.
+        harmony_particle = korean_particle(harmony_name, "을", "를")
+        # '상·하의'의 가운뎃점(U+00B7)은 유니코드 줄바꿈 분류가 BA(뒤에서 끊기 허용)라
+        # word-break: keep-all 로도 막히지 않는다. 좁은 화면에서 '상 / ·하의'로 갈라졌다.
+        # 라벨이 아니라 문장이므로 풀어서 쓴다.
+        reasons.append(
+            f"색상 관계 '{harmony_name}'{harmony_particle} 상의와 하의의 연결감으로 평가했습니다."
+        )
         rules.append("R-COL-03")
 
         quiet_patterns = {"", "무지", "분석 보류", "패턴 불확실"}

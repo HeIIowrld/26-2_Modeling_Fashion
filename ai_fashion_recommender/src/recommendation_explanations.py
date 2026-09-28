@@ -60,6 +60,36 @@ class ProductEvidence:
     source: str = ""
 
 
+# 조건이 어디서 나왔는지를 그대로 말로 옮긴다. 값은 recommendation_keywords 가 넣는다.
+_SOURCE_PHRASES = {
+    "user_input": "직접 고르신",
+    "user_style_rule": "고르신 스타일에 맞춘",
+    "context_rule": "코디 목적에 맞춘",
+    "photo_fallback": "지금 착장에서 확인한",
+    "body_shape": "분석한 체형에 맞춘",
+    "proportion": "사진에서 잰 비율에 맞춘",
+}
+
+
+def _source_prefix(source: str) -> str:
+    """조건이 어디서 왔는지 한 마디로 밝힌다.
+
+    "추천 규칙에서 도출된 '레귤러' 핏 조건을 충족합니다"는 읽는 사람에게
+    "그 추천 규칙이 뭔데?"만 남긴다. 근거는 규칙 이름이 아니라 그 조건이 나온
+    자리다 — 직접 고른 값인지, 고른 스타일에서 따라온 값인지, 사진에서 읽은 값인지.
+    생성 문구 지침(build_reason_prompt)도 '추천 규칙에서 도출된'을 금지하고 있었는데
+    규칙 기반 경로만 그 문구를 그대로 내보내고 있었다.
+
+    모르는 출처면 빈 문자열을 준다. 없는 근거를 지어내느니 말하지 않는 쪽이 낫다.
+    """
+    return _SOURCE_PHRASES.get(source, "")
+
+
+def _with_source(source: str, rest: str) -> str:
+    prefix = _source_prefix(source)
+    return f"{prefix} {rest}" if prefix else rest
+
+
 def _shape_is_confident(pose: PoseAnalysis) -> bool:
     return bool(getattr(pose, "valid", False)) and getattr(pose, "body_shape", "") in BODY_SHAPES and float(getattr(pose, "body_shape_confidence", 0.0)) >= BODY_SHAPE_CONFIDENCE_THRESHOLD
 
@@ -126,7 +156,7 @@ def build_product_evidence(product: Any, profile: UserProfile, pose: PoseAnalysi
     if category != "shoes" and fit_keywords:
         fit_rules = tuple(dict.fromkeys(rule for keyword in fit_keywords for rule in rules_of(keyword)))
         fit_source = source_of(attribute_of(fit_keywords[0]))
-        text = f"추천 규칙에서 도출된 '{quoted(fit_keywords)}' 핏 조건을 충족합니다."
+        text = _with_source(fit_source, f"'{quoted(fit_keywords)}' 핏이에요.")
         evidence.append(ProductEvidence(
             "fit", "핏", text, fit_rules, "핏 규칙", tuple(fit_keywords), fit_source,
         ))
@@ -138,20 +168,22 @@ def build_product_evidence(product: Any, profile: UserProfile, pose: PoseAnalysi
     ]
     if item_keywords:
         item_rules = tuple(dict.fromkeys(rule for keyword in item_keywords for rule in rules_of(keyword)))
+        item_source = source_of("item_type")
         evidence.append(ProductEvidence(
             "item_type", "종류",
-            f"추천 조건에서 도출된 '{quoted(item_keywords)}' 종류에 해당합니다.",
-            item_rules, "상품 종류", tuple(item_keywords), source_of("item_type"),
+            _with_source(item_source, f"'{quoted(item_keywords)}' 종류예요."),
+            item_rules, "상품 종류", tuple(item_keywords), item_source,
         ))
         cited.update(item_keywords)
 
     style_keywords = [keyword for keyword in matched if keyword not in cited and attribute_of(keyword) == "style"]
     if style_keywords:
         style_source = source_of("style")
-        prefix = "선택한" if style_source == "user_input" else "현재 착장에서 확인된"
+        # 출처를 이분법으로 갈라 'user_style_rule'까지 사진에서 본 것처럼 말했다.
+        prefix = _source_prefix(style_source)
         evidence.append(ProductEvidence(
             "style", "스타일",
-            f"{prefix} '{style_keywords[0]}' 스타일 조건에 맞습니다.",
+            _with_source(style_source, f"'{style_keywords[0]}' 스타일이에요."),
             tuple(rules_of(style_keywords[0])), "스타일", tuple(style_keywords), style_source,
         ))
         cited.update(style_keywords)
@@ -160,10 +192,11 @@ def build_product_evidence(product: Any, profile: UserProfile, pose: PoseAnalysi
         labels = {"material": "소재", "color": "색상", "function": "기능"}
         names = "·".join(keyword if attr == "function" else f"{keyword} {labels[attr]}" for keyword, attr in details)
         detail_sources = [source_of(attribute) for _, attribute in details]
-        prefix = "현재 착장에서 확인된" if detail_sources and all(source == "photo_fallback" for source in detail_sources) else "선택한"
+        # 여러 출처가 섞이면 공통된 하나일 때만 밝힌다.
+        common = detail_sources[0] if detail_sources and len(set(detail_sources)) == 1 else ""
         evidence.append(ProductEvidence(
             "detail", "·".join(dict.fromkeys(labels[attr] for _, attr in details)),
-            f"{prefix} {names} 조건에 맞습니다.",
+            _with_source(common, f"{names} 조건에 맞습니다."),
             tuple(dict.fromkeys(rule for keyword, _ in details for rule in rules_of(keyword))),
             "상품 속성", tuple(keyword for keyword, _ in details),
             ",".join(dict.fromkeys(detail_sources)),
