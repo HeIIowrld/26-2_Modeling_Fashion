@@ -88,6 +88,7 @@ class ProductCatalog:
                 url=row.get("url", ""),
                 item_type=row.get("item_type", ""),
                 fit=row.get("fit", ""),
+                seller_fit=row.get("detail_fit", "") or "",
                 length=row.get("length", ""),
                 pattern=row.get("pattern", "무지") or "무지",
                 material=row.get("material", ""),
