@@ -37,6 +37,11 @@ CATEGORY_CODES = {"top": "001", "bottom": "003", "shoes": "103"}
 CATEGORY_FALLBACK_QUERY = {"top": "베이직 상의", "bottom": "팬츠", "shoes": "신발"}
 SORT_CODES = ("POPULAR", "NEW")
 PAGE_SIZE = 100
+MAX_MATERIAL_QUERY_TERMS = 3
+CASUAL_SHIRT_LIMIT = 1
+SHIRT_DIVERSITY_EXEMPT_PURPOSES = {"데이트", "소개팅", "출근", "면접"}
+SHIRT_DIVERSITY_EXEMPT_STYLES = {"포멀", "클래식"}
+SHIRT_DIVERSITY_EXEMPT_DRESS_CODES = {"비즈니스 캐주얼", "포멀", "비즈니스 포멀", "클래식"}
 # 입력 속성과 관련 있는 세부 분류만 추가한다. 무관한 품목은 검색하지 않는다.
 SUBCATEGORIES = {
     "top": {"셔츠": "001002", "니트": "001006", "후드": "001008", "맨투맨": "001004"},
@@ -176,14 +181,12 @@ class MusinsaLiveSearch:
         if category == "shoes":
             item_type = self._preferred_term(attributes, "item_type") or "스니커즈"
             color = self._preferred_term(attributes, "color")
-            material = self._preferred_term(attributes, "material")
             candidates = list(dict.fromkeys(" ".join(filter(None, terms)) for terms in (
-                (color, item_type), (material, item_type), (item_type,),
+                (color, item_type), (item_type,),
             )))
             return list(dict.fromkeys(candidates))
         item_type = self._preferred_term(attributes, "item_type")
         fit = self._preferred_term(attributes, "fit")
-        material = self._preferred_term(attributes, "material")
         style = self._preferred_term(attributes, "style")
         color = self._preferred_term(attributes, "color")
         fallback_noun = CATEGORY_FALLBACK_QUERY[category]
@@ -192,13 +195,22 @@ class MusinsaLiveSearch:
         # collect visually plausible items and let the trained fit heads apply
         # Fashion Rules to the candidate images.  A fit-text query remains as a
         # fallback for resilience when photo inference is unavailable.
-        primary = " ".join(value for value in (material, noun) if value)
+        materials = list(dict.fromkeys(
+            self._aliases(value)[0]
+            for value in attributes.get("material", [])
+            if value
+        ))[:MAX_MATERIAL_QUERY_TERMS]
+        material_queries = [f"{material} {noun}" for material in materials]
         fits = attributes.get("fit", [])
         alternative_fit = fits[1] if len(fits) > 1 else (self._aliases(fits[0])[-1] if fits else "")
-        candidates = [primary,
-                      " ".join(value for value in (color or style, material or noun) if value),
-                      f"{alternative_fit or fit} {noun}" if fit else "", fallback_noun]
-        return list(dict.fromkeys(value.strip() for value in candidates if value.strip()))[:4]
+        context_material = materials[0] if materials else noun
+        candidates = [
+            *material_queries,
+            " ".join(value for value in (color or style, context_material) if value),
+            f"{alternative_fit or fit} {noun}" if fit else "",
+            fallback_noun,
+        ]
+        return list(dict.fromkeys(value.strip() for value in candidates if value.strip()))[:5]
 
     def _fetch(
         self, category: str, query: str, size: int = PAGE_SIZE, *,
@@ -446,7 +458,7 @@ class MusinsaLiveSearch:
         self._apply_fashion_policy_adjustments(grouped, profile)
         for products in grouped.values():
             products.sort(key=self._sort_key)
-        selected = self._select(grouped, targets, limit)
+        selected = self._select(grouped, targets, limit, profile)
         self.last_search_stats["total_elapsed_seconds"] = round(time.monotonic() - started, 4)
         self.last_search_stats["vision_ranked_products"] = sum(
             bool(product.photo_attributes)
@@ -647,18 +659,88 @@ class MusinsaLiveSearch:
                 )
                 product.ranking_adjustments = adjustments
 
-    def _select(self, grouped, targets, limit):
+    @classmethod
+    def _product_matches_material(cls, product: ShoppingProduct, material: str) -> bool:
+        normalized = cls._normalized(material)
+        if any(cls._normalized(value) == normalized
+               for value in (getattr(product, "matched_keywords", None) or [])):
+            return True
+        text = cls._normalized(f"{product.name} {product.brand}")
+        return any(cls._normalized(alias) in text for alias in cls._aliases(material))
+
+    @classmethod
+    def _button_shirt(cls, product: ShoppingProduct) -> bool:
+        text = cls._normalized(product.name)
+        casual_non_button = (
+            "티셔츠", "t-shirt", "tshirt", "스웨트셔츠", "sweatshirt",
+            "폴로셔츠", "폴로 셔츠", "피케셔츠", "피케 셔츠", "럭비셔츠", "럭비 셔츠",
+        )
+        if any(cls._normalized(term) in text for term in casual_non_button):
+            return False
+        return any(cls._normalized(term) in text for term in ("셔츠", "남방", "블라우스", "shirt", "blouse"))
+
+    @staticmethod
+    def _casual_shirt_diversity_enabled(profile: UserProfile) -> bool:
+        return (
+            str(profile.desired_style or "").strip() == "캐주얼"
+            and str(profile.purpose or "").strip() not in SHIRT_DIVERSITY_EXEMPT_PURPOSES
+            and str(profile.desired_style or "").strip() not in SHIRT_DIVERSITY_EXEMPT_STYLES
+            and str(profile.dress_code or "").strip() not in SHIRT_DIVERSITY_EXEMPT_DRESS_CODES
+        )
+
+    def _select(self, grouped, targets, limit, profile):
         # 최신 화면 계약: 카테고리마다 최대 limit개. 실측 기반 재정렬도 유지한다.
         selected, seen_ids, brand_counts = [], set(), {}
+        requested_materials = {
+            category: list(dict.fromkeys(attributes.get("material", [])))
+            if category != "shoes" else []
+            for category, attributes in targets.targets.items()
+        }
+        used_materials = {category: set() for category in targets.targets}
+        shirt_counts = {category: 0 for category in targets.targets}
         for category in targets.targets:
             for _ in range(limit):
                 products = [p for p in grouped.get(category, []) if p.product_id not in seen_ids]
                 if not products:
                     break
-                best = products[0]
-                tied = [p for p in products if self._sort_key(p)[0] == self._sort_key(best)[0]]
+                # 복수 소재를 선택했다면 각 소재 후보를 최소 한 번 먼저 보여 준다.
+                # 요청 소재 후보가 부족한 경우에는 기존 검색 순위로 자연스럽게 fallback한다.
+                material_pool = products
+                for material in requested_materials[category]:
+                    if material in used_materials[category]:
+                        continue
+                    matching = [
+                        product for product in products
+                        if self._product_matches_material(product, material)
+                    ]
+                    if matching:
+                        material_pool = matching
+                        break
+                # 일반 캐주얼의 세 코디가 모두 버튼 셔츠로 수렴하지 않게 한다.
+                # 셔츠 한 벌은 허용하되 그 뒤에는 현재 소재 풀, 필요하면 전체
+                # 후보에서 티셔츠·니트·맨투맨·재킷 등의 다른 상의가 있으면 우선한다.
+                if (
+                    category == "top"
+                    and self._casual_shirt_diversity_enabled(profile)
+                    and shirt_counts[category] >= CASUAL_SHIRT_LIMIT
+                ):
+                    alternatives = [product for product in material_pool if not self._button_shirt(product)]
+                    if not alternatives:
+                        alternatives = [product for product in products if not self._button_shirt(product)]
+                    if alternatives:
+                        material_pool = alternatives
+                best = material_pool[0]
+                tied = [
+                    product for product in material_pool
+                    if self._sort_key(product)[0] == self._sort_key(best)[0]
+                ]
                 best = next((p for p in tied if not p.brand or brand_counts.get(p.brand, 0) < 2), best)
                 selected.append(best)
                 seen_ids.add(best.product_id)
+                shirt_counts[category] += int(category == "top" and self._button_shirt(best))
                 brand_counts[best.brand] = brand_counts.get(best.brand, 0) + 1
+                used_materials[category].update(
+                    material for material in requested_materials[category]
+                    if self._product_matches_material(best, material)
+                )
         return selected

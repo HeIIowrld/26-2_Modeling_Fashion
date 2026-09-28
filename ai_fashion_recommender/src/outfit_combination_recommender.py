@@ -22,6 +22,23 @@ LLM_ENABLED_VALUES = {"1", "true", "yes", "on"}
 STYLE_FORMALITY = {"스포티": 1, "스트리트": 1, "캐주얼": 2, "로맨틱": 3, "미니멀": 3, "포멀": 5}
 FORBIDDEN_COPY = ("예산", "가격", "할인", "가성비", "비용", "사이즈", "실측")
 MIN_SAFE_COMBINATION_SCORE = 0.75
+KNIT_TERMS = ("니트", "스웨터", "풀오버", "knit", "sweater", "pullover")
+SHORT_SLEEVE_TERMS = (
+    "반팔", "반소매", "하프슬리브", "숏슬리브", "민소매", "슬리브리스", "베스트", "조끼",
+    "short sleeve", "sleeveless", "vest",
+)
+SHORT_BOTTOM_TERMS = (
+    "반바지", "쇼츠", "숏팬츠", "하프팬츠", "버뮤다", "쇼츠·미니", "shorts", "bermuda",
+)
+DENIM_TERMS = ("데님", "청바지", "denim", "jeans", "jean")
+DENIM_TONE_TERMS = (
+    (0, ("화이트 데님", "화이트데님", "아이스 블루", "아이스블루", "블리치", "bleach", "white denim")),
+    (1, ("연청", "라이트 블루", "라이트블루", "페일 블루", "페일블루", "light blue", "light wash")),
+    (2, ("중청", "미드 블루", "미드블루", "mid blue", "medium wash", "그레이 데님", "그레이데님")),
+    (3, ("진청", "딥 인디고", "딥인디고", "다크 블루", "다크블루", "생지", "raw denim", "dark blue")),
+    (4, ("블랙 데님", "블랙데님", "black denim")),
+)
+DENIM_COLOR_TONES = {"화이트": 0, "아이보리": 0, "블루": 2, "네이비": 3, "블랙": 4}
 
 
 @dataclass
@@ -40,6 +57,7 @@ class OutfitCombination:
     evidence: list[CombinationEvidence] = field(default_factory=list)
     reason: str = ""
     reason_source: str = "rules"
+    policy_penalty: float = 0.0
 
     def public_dict(self) -> dict[str, Any]:
         return {
@@ -118,6 +136,8 @@ def _product_garment(product: Any, targets: TargetKeywordResult) -> dict[str, An
     length = visual_length or _attribute_value(product, targets, "length")
     return {
         "category": category,
+        "name": str(getattr(product, "name", "") or ""),
+        "item_type": _attribute_value(product, targets, "item_type"),
         "color": _attribute_value(product, targets, "color"),
         "style": style,
         "fit": _fit_value(fit, category),
@@ -129,7 +149,77 @@ def _product_garment(product: Any, targets: TargetKeywordResult) -> dict[str, An
         "fit_confidence": fit_confidence if visual_fit else 1.0 if fit else 0.0,
         "length_source": "product_photo" if visual_length else "product_title",
         "length_confidence": length_confidence if visual_length else 1.0 if length else 0.0,
+        "matched_keywords": list(getattr(product, "matched_keywords", []) or []),
     }
+
+
+def _garment_text(garment: dict[str, Any]) -> str:
+    values = [
+        garment.get("name", ""), garment.get("item_type", ""),
+        garment.get("material", ""), garment.get("length", ""),
+        garment.get("sleeve_length", ""),
+        *(garment.get("matched_keywords", []) or []),
+    ]
+    return " ".join(str(value).lower() for value in values if value)
+
+
+def _long_sleeve_knit_with_shorts(top: dict[str, Any], bottom: dict[str, Any]) -> bool:
+    """Block the obvious seasonal mismatch while preserving short-sleeve knitwear.
+
+    Most commerce titles omit "긴팔" for an ordinary sweater, so knitwear is
+    treated as long-sleeved unless the title, keyword evidence, or worn-outfit
+    analysis explicitly identifies a short/sleeveless design.
+    """
+    top_text = _garment_text(top)
+    bottom_text = _garment_text(bottom)
+    knit = any(term in top_text for term in KNIT_TERMS)
+    explicitly_short_sleeved = any(term in top_text for term in SHORT_SLEEVE_TERMS)
+    shorts = any(term in bottom_text for term in SHORT_BOTTOM_TERMS)
+    return knit and not explicitly_short_sleeved and shorts
+
+
+def _denim_tone(garment: dict[str, Any]) -> int | None:
+    text = _garment_text(garment)
+    if not any(term in text for term in DENIM_TERMS):
+        return None
+    for tone, terms in DENIM_TONE_TERMS:
+        if any(term in text for term in terms):
+            return tone
+
+    color = str(garment.get("color") or "")
+    if color in DENIM_COLOR_TONES:
+        return DENIM_COLOR_TONES[color]
+
+    # Current outfit analysis retains representative RGB values per garment.
+    # Product candidates usually have no trustworthy displayed-variant RGB;
+    # abstain instead of using every color option sold by the product.
+    palette = garment.get("palette") or []
+    rgb = palette[0].get("rgb") if palette and isinstance(palette[0], dict) else None
+    if isinstance(rgb, (list, tuple)) and len(rgb) == 3:
+        luminance = 0.2126 * float(rgb[0]) + 0.7152 * float(rgb[1]) + 0.0722 * float(rgb[2])
+        if luminance >= 205:
+            return 0
+        if luminance >= 150:
+            return 1
+        if luminance >= 90:
+            return 2
+        if luminance >= 45:
+            return 3
+        return 4
+    return None
+
+
+def _denim_tone_penalty(top: dict[str, Any], bottom: dict[str, Any]) -> float:
+    top_tone = _denim_tone(top)
+    bottom_tone = _denim_tone(bottom)
+    if top_tone is None or bottom_tone is None:
+        return 0.0
+    gap = abs(top_tone - bottom_tone)
+    if gap >= 3:
+        return 0.22
+    if gap == 2:
+        return 0.16
+    return 0.0
 
 
 def _current_item(category: str, outfit: OutfitAnalysis) -> dict[str, str]:
@@ -393,7 +483,20 @@ def recommend_outfit_combinations(
             _product_garment(by_category["bottom"], targets)
             if "bottom" in by_category else recommender._garment(None, "bottom", outfit)
         )
+        # Current-outfit garment dictionaries omit some observed fields. Keep
+        # enough photo evidence for pair-level seasonal compatibility checks.
+        if "top" not in by_category:
+            top = dict(top)
+            top.setdefault("name", outfit.upper_type)
+            top.setdefault("sleeve_length", outfit.sleeve_length)
+        if "bottom" not in by_category:
+            bottom = dict(bottom)
+            bottom.setdefault("name", outfit.lower_subtype or outfit.lower_type)
+        if _long_sleeve_knit_with_shorts(top, bottom):
+            continue
         harmony, _, harmony_reasons, harmony_rules = recommender._outfit_harmony_score(top, bottom, profile)
+        denim_penalty = _denim_tone_penalty(top, bottom)
+        harmony = max(0.0, harmony - denim_penalty)
         shoe_score, shoe_reason = (1.0, "")
         if "shoes" in by_category:
             shoe_score, shoe_reason = _shoe_score(by_category["shoes"], profile, targets)
@@ -421,6 +524,7 @@ def recommend_outfit_combinations(
         candidates.append(OutfitCombination(
             f"OUTFIT-{index}", [product.product_id for product in chosen],
             list(current_by_category.values()), avoidance_score, evidence,
+            policy_penalty=denim_penalty,
         ))
 
     selected_outfits: list[OutfitCombination] = []
@@ -458,7 +562,9 @@ def recommend_outfit_combinations(
         pool = eligible or remaining
         # 안전선을 넘은 후보는 검색 순서를 유지하되, 이미 고른 코디와
         # 겹치지 않는 조합을 우선한다. min은 동률이면 기존 순서를 유지한다.
-        next_outfit = min(pool, key=product_overlap)
+        next_outfit = min(pool, key=lambda candidate: (
+            product_overlap(candidate), candidate.policy_penalty,
+        ))
         remaining.remove(next_outfit)
         selected_outfits.append(next_outfit)
         for product_id in next_outfit.product_ids:

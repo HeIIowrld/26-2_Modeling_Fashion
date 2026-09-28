@@ -339,6 +339,56 @@ class MusinsaLiveSearchTests(unittest.TestCase):
         self.assertFalse(any(query.startswith("와이드 ") for category, query in search.calls
                              if category == "bottom"))
 
+    def test_multiple_preferred_materials_are_represented_in_final_products(self):
+        search = StubSearch({"top": [
+            item(1, "데님 셔츠", reviews=1000),
+            item(2, "데님 재킷", reviews=900),
+            item(3, "니트 스웨터", reviews=1),
+        ]})
+        target = TargetKeywordResult("user_input", {
+            "top": {"material": ["데님", "니트"], "style": ["캐주얼"]},
+        })
+
+        results = search.search(target, self.profile, limit=3)
+
+        self.assertEqual([product.product_id for product in results], ["MS1", "MS3", "MS2"])
+        self.assertIn("니트", results[1].matched_keywords)
+
+    def test_casual_top_results_do_not_fill_all_three_slots_with_shirts(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        products = [
+            ShoppingProduct("S1", "옥스포드 셔츠", "", 1, "", "", "top", retrieval_score=10),
+            ShoppingProduct("S2", "체크 오버핏 셔츠", "", 1, "", "", "top", retrieval_score=9),
+            ShoppingProduct("S3", "데님 셔츠", "", 1, "", "", "top", retrieval_score=8),
+            ShoppingProduct("T1", "그래픽 반팔 티셔츠", "", 1, "", "", "top", retrieval_score=7),
+            ShoppingProduct("K1", "크루넥 니트", "", 1, "", "", "top", retrieval_score=6),
+        ]
+        targets = TargetKeywordResult("user_input", {"top": {"style": ["캐주얼"]}})
+
+        results = search._select(
+            {"top": products}, targets, 3,
+            UserProfile(purpose="데일리", desired_style="캐주얼"),
+        )
+
+        self.assertEqual([product.product_id for product in results], ["S1", "T1", "K1"])
+
+    def test_date_context_keeps_normal_shirt_ranking(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        products = [
+            ShoppingProduct(f"S{index}", f"셔츠 {index}", "", 1, "", "", "top", retrieval_score=10 - index)
+            for index in range(1, 4)
+        ] + [ShoppingProduct("T1", "그래픽 티셔츠", "", 1, "", "", "top", retrieval_score=1)]
+        targets = TargetKeywordResult("user_input", {"top": {"style": ["캐주얼"]}})
+
+        results = search._select(
+            {"top": products}, targets, 3,
+            UserProfile(purpose="데이트", desired_style="캐주얼"),
+        )
+
+        self.assertEqual([product.product_id for product in results], ["S1", "S2", "S3"])
+
     def test_trend_bonus_is_disabled_for_formal_work_interview_and_classic(self):
         profiles = (
             UserProfile(purpose="출근", desired_style="캐주얼"),

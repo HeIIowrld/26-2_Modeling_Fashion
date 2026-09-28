@@ -61,6 +61,30 @@ class RecommendationKeywordTests(unittest.TestCase):
         self.assertNotIn("material", first.targets["shoes"])
         self.assertFalse(any(rule.startswith("R-BOD") for rule in first.applied_rules))
 
+    def test_user_selected_clothing_materials_never_become_shoe_keywords(self):
+        profile = UserProfile(
+            change_categories=["top", "bottom", "shoes"],
+            preferred_materials=["데님", "니트", "가죽"],
+            provided_fields=["change_categories", "preferred_materials"],
+        )
+        result = self.generator.generate(profile, self.pose, self.outfit)
+
+        self.assertEqual(result.targets["top"]["material"], ["데님", "니트", "가죽"])
+        self.assertEqual(result.targets["bottom"]["material"], ["데님", "니트"])
+        self.assertNotIn("material", result.targets["shoes"])
+
+    def test_generic_leather_preference_does_not_search_for_leather_bottoms(self):
+        profile = UserProfile(
+            change_categories=["bottom"],
+            preferred_materials=["가죽"],
+            provided_fields=["change_categories", "preferred_materials"],
+        )
+
+        result = self.generator.generate(profile, self.pose, self.outfit)
+
+        self.assertNotIn("material", result.targets["bottom"])
+        self.assertNotIn("R-MAT-01", result.applied_rules)
+
     def test_checkbox_combinations_override_legacy_scope(self):
         from itertools import combinations
         for count in (1, 2, 3):
