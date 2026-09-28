@@ -215,6 +215,31 @@ def _build_tryon() -> VirtualTryOnAdapter:
             if preset not in {"", "standard"}:
                 print(f"[VTON] 알 수 없는 프리셋 {preset!r}; standard를 사용합니다.")
             adapter = CatVTONTryOn()
+        sam3d_repo = Path(os.environ.get(
+            "FASHION_SAM3D_BODY_REPO",
+            str(PROJECT_DIR.parent / "third_party" / "sam-3d-body"),
+        )).expanduser()
+        sam3d_checkpoint = Path(os.environ.get(
+            "FASHION_SAM3D_BODY_CHECKPOINT",
+            str(PROJECT_DIR / "models" / "sam-3d-body-dinov3" / "model.ckpt"),
+        )).expanduser()
+        sam3d_mhr = Path(os.environ.get(
+            "FASHION_SAM3D_BODY_MHR",
+            str(PROJECT_DIR / "models" / "sam-3d-body-dinov3" / "assets" / "mhr_model.pt"),
+        )).expanduser()
+        if (
+            (sam3d_repo / "sam_3d_body").is_dir()
+            and sam3d_checkpoint.is_file()
+            and sam3d_mhr.is_file()
+        ):
+            from sam3d_body_prior import SAM3DBodyProvider
+
+            adapter.body_mesh_provider = SAM3DBodyProvider(
+                sam3d_repo, sam3d_checkpoint, sam3d_mhr,
+            )
+            print("[VTON] SAM 3D Body 기반 몸선·2단계 배경 복원을 사용합니다.")
+        else:
+            print("[VTON] SAM 3D Body 자산이 없어 관절 기반 body prior로 실행합니다.")
         shoe_model = os.environ.get("FASHION_SHOE_MODEL_PATH", "").strip()
         if shoe_model:
             from shoe_tryon import OutfitTryOn, ShoeTryOn

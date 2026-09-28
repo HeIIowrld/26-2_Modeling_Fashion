@@ -74,6 +74,7 @@ class BodyShapePrior:
     confidence_map: np.ndarray
     confidence: float
     landmarks_used: tuple[str, ...]
+    geometry_source: str = "pose_capsules"
 
     def to_diagnostic(self) -> dict:
         pixels = max(1, int(self.plausible_mask.size))
@@ -86,6 +87,7 @@ class BodyShapePrior:
             "central_fraction": round(float(self.central_mask.sum()) / pixels, 6),
             "plausible_fraction": round(float(self.plausible_mask.sum()) / pixels, 6),
             "landmarks_used": list(self.landmarks_used),
+            "geometry_source": self.geometry_source,
             "calibrated": False,
         }
 
@@ -212,6 +214,9 @@ def estimate_body_shape_prior(
     fit_source: str = "",
     layering_state: str = "",
     observed_mask: np.ndarray | None = None,
+    external_body_mask: np.ndarray | None = None,
+    external_confidence: float | None = None,
+    external_source: str = "",
 ) -> BodyShapePrior | None:
     """Build a pose-aligned central body region and uncertainty envelope."""
     segmentation = np.asarray(segmentation)
@@ -236,9 +241,39 @@ def estimate_body_shape_prior(
         left, right = _point(landmarks_px, "left_hip"), _point(landmarks_px, "right_hip")
         scale = float(np.linalg.norm(np.asarray(left) - np.asarray(right)))
         margins = {0: 0.07, 1: 0.13, 2: 0.22, 3: 0.32}
-    margin = max(2, round(scale * margins.get(level, 0.25)))
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * margin + 1, 2 * margin + 1))
-    plausible = cv2.dilate(central.astype(np.uint8), kernel).astype(bool) & main_person
+    geometry_source = "pose_capsules"
+    external = None
+    if external_body_mask is not None:
+        candidate = np.asarray(external_body_mask, dtype=bool)
+        if candidate.shape == central.shape and candidate.any():
+            # Select only this category from the full-body mesh.  A generous
+            # pose-aligned zone removes the opposite garment and dangling hands
+            # without copying the observed loose-clothing boundary.
+            zone_margin = max(3, round(scale * (0.48 if category == "bottom" else 0.36)))
+            zone_kernel = cv2.getStructuringElement(
+                cv2.MORPH_ELLIPSE, (2 * zone_margin + 1, 2 * zone_margin + 1)
+            )
+            zone = cv2.dilate(central.astype(np.uint8), zone_kernel).astype(bool)
+            external = candidate & zone & main_person
+            if external.sum() < max(64, central.sum() * 0.35):
+                external = None
+
+    if external is not None:
+        central = external
+        # Mesh recovery is still uncertain at loose-clothing boundaries.  Keep
+        # a small uncertainty band, independent of the observed garment fit.
+        margin = max(2, round(scale * 0.07))
+        kernel = cv2.getStructuringElement(
+            cv2.MORPH_ELLIPSE, (2 * margin + 1, 2 * margin + 1)
+        )
+        plausible = cv2.dilate(central.astype(np.uint8), kernel).astype(bool) & main_person
+        geometry_source = external_source or "external_body_mesh"
+    else:
+        margin = max(2, round(scale * margins.get(level, 0.25)))
+        kernel = cv2.getStructuringElement(
+            cv2.MORPH_ELLIPSE, (2 * margin + 1, 2 * margin + 1)
+        )
+        plausible = cv2.dilate(central.astype(np.uint8), kernel).astype(bool) & main_person
     # A fitted observation is useful evidence, but never permit parser speckles
     # outside the pose-selected person to enter the prior.
     if level == 0 and observed_mask is not None and np.asarray(observed_mask).shape == central.shape:
@@ -259,6 +294,10 @@ def estimate_body_shape_prior(
         confidence *= 0.72
     expected = 8 if category == "top" else 6
     confidence *= 0.85 + 0.15 * min(1.0, len(used) / expected)
+    if external is not None and external_confidence is not None:
+        # The mesh is the geometry source, while fit evidence remains useful
+        # for deciding whether a silhouette-changing route is necessary.
+        confidence = 0.75 * float(external_confidence) + 0.25 * confidence
     confidence = float(np.clip(confidence, 0.15, 0.9))
 
     confidence_map = np.zeros(segmentation.shape, np.float32)
@@ -274,4 +313,5 @@ def estimate_body_shape_prior(
         confidence_map=confidence_map,
         confidence=confidence,
         landmarks_used=used,
+        geometry_source=geometry_source,
     )

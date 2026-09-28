@@ -16,6 +16,7 @@ __pycache__/
 # 대용량 원본·외부 저장소는 커밋하지 않는다
 /모델링_인스타.zip
 /third_party/
+/ai_fashion_recommender/models/sam-3d-body-*/
 
 # 배포 압축본과 체크섬은 experiments/build_release_zip.py로 재생성한다.
 /packages/*.zip

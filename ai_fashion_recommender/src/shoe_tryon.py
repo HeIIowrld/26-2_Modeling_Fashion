@@ -5,6 +5,7 @@ mask is composited back, so a shoe edit cannot replace the face or outfit.
 """
 from __future__ import annotations
 
+import gc
 import json
 import os
 import tempfile
@@ -29,6 +30,13 @@ PROMPT = (
     "perspective. Keep the same two feet, ankle positions, legs, trousers and floor. "
     "Respect trouser hems overlapping the shoes. Natural contact shadows and lighting. "
     "A realistic worn pair of shoes, not a pasted product photograph. No extra feet or shoes."
+)
+
+BACKGROUND_RESTORE_PROMPT = (
+    "Remove the old garment pixels inside the mask and reconstruct only the scene that "
+    "would naturally be behind them. Continue the surrounding floor, wall, furniture, "
+    "lighting and shadows. Do not draw clothing, fabric, extra limbs, a different body, "
+    "or a cut-out edge. Keep every pixel outside the mask unchanged. Photorealistic."
 )
 
 
@@ -131,6 +139,17 @@ class ShoeTryOn:
             self._pipeline = pipeline
         return self._pipeline
 
+    def release_pipeline(self):
+        """Drop the lazy FLUX instance before another large GPU model runs."""
+        self._pipeline = None
+        gc.collect()
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
+
     def generate(self, person, reference, mask, *, prompt=None, full_context=False, seed=None):
         import torch
         # Clothing transitions need the face/visible limbs as skin and body context.
@@ -160,6 +179,60 @@ class ShoeTryOn:
                             "changed_fraction": changed_fraction, "crop": list(box),
                             "outside_mask_preserved": bool(np.all(changed[~mask] == 0)),
                             "reference_fidelity": "not_calibrated"}
+        return result
+
+    def restore_background(self, person, mask, *, prompt=None, seed=None):
+        """Fill a removed loose-garment ring with scene context before VTON.
+
+        No product reference is supplied here: reference-conditioning on the old
+        person image can copy the garment straight back into the residual ring.
+        The same already-loaded FLUX pipeline is shared with shoe and transition
+        edits, so this adds one inference pass but no second model checkpoint.
+        """
+        import torch
+
+        binary = np.asarray(mask, dtype=bool)
+        if binary.shape != (person.height, person.width) or binary.sum() < 32:
+            raise TryOnNotReady("배경으로 복원할 기존 옷 영역이 충분하지 않습니다.")
+        # Retain full-scene context while fitting the model's efficient side.
+        scale = min(1.0, 768 / max(person.size))
+        size = tuple(max(64, round(d * scale / 16) * 16) for d in person.size)
+        source = person.resize(size, Image.Resampling.LANCZOS)
+        mask_image = Image.fromarray(binary.astype(np.uint8) * 255).resize(
+            size, Image.Resampling.NEAREST
+        )
+        pipe = self._load_pipeline()
+        output = pipe(
+            image=source,
+            image_reference=None,
+            mask_image=mask_image,
+            prompt=BACKGROUND_RESTORE_PROMPT if prompt is None else prompt,
+            height=size[1], width=size[0], strength=1.0,
+            num_inference_steps=4, guidance_scale=1.0,
+            generator=torch.Generator(device="cuda").manual_seed(
+                self.seed if seed is None else seed
+            ),
+        ).images[0]
+        generated = output.resize(person.size, Image.Resampling.LANCZOS)
+        # Inward feather only; the original image outside the inferred garment
+        # ring remains bit-for-bit unchanged.
+        distance = cv2.distanceTransform(binary.astype(np.uint8), cv2.DIST_L2, 3)
+        alpha = np.clip(distance / max(2, person.height * 0.003), 0, 1)[..., None]
+        original = np.asarray(person)
+        edited = np.asarray(generated)
+        composed = np.rint(original * (1 - alpha) + edited * alpha).astype(np.uint8)
+        result = Image.fromarray(composed)
+        changed = np.max(np.abs(composed.astype(float) - original.astype(float)), axis=2)
+        changed_fraction = float(np.mean(changed[binary] > 8))
+        if changed_fraction < 0.02:
+            raise TryOnNotReady("기존 옷 바깥 영역의 배경 복원이 충분히 이루어지지 않았습니다.")
+        self.last_report = {
+            "backend": MODEL_ID,
+            "revision": MODEL_REVISION,
+            "operation": "background_restore",
+            "changed_fraction": changed_fraction,
+            "outside_mask_preserved": bool(np.all(changed[~binary] == 0)),
+        }
         return result
 
 

@@ -120,6 +120,22 @@ class BodyShapePriorTests(unittest.TestCase):
         self.assertGreater(prior.confidence_map[90, 90], 0)
         self.assertEqual(float(prior.confidence_map[0, 0]), 0.0)
 
+    def test_sam3d_body_mask_replaces_loose_garment_width(self):
+        seg = scene()
+        mesh = np.zeros_like(seg, dtype=bool)
+        mesh[145:305, 60:84] = True
+        mesh[145:305, 96:120] = True
+        prior = estimate_body_shape_prior(
+            seg, POINTS, "bottom", "와이드", fit_source="shared_fit_head",
+            observed_mask=seg != 0, external_body_mask=mesh,
+            external_confidence=0.88, external_source="sam-3d-body",
+        )
+
+        self.assertEqual(prior.geometry_source, "sam-3d-body")
+        self.assertFalse(prior.central_mask[220, 35])
+        self.assertTrue(prior.central_mask[220, 70])
+        self.assertEqual(prior.to_diagnostic()["geometry_source"], "sam-3d-body")
+
 
 class BodyPriorTryOnIntegrationTests(unittest.TestCase):
     def test_wide_to_straight_uses_existing_transition_editor(self):

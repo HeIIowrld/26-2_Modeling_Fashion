@@ -25,6 +25,7 @@ CatVTON(비상업 CC BY-NC-SA 4.0)의 디퓨전 파이프라인으로 추천 상
 """
 
 import json
+import gc
 import re
 import sys
 import time
@@ -606,6 +607,71 @@ def _dilate_mask(mask: np.ndarray, ratio: float = 0.03) -> np.ndarray:
     return cv2.dilate(binary, kernel, iterations=1)
 
 
+def mesh_target_mask(prior, category: str, target_fit: str) -> np.ndarray | None:
+    """Turn a clothing-oblivious body mesh into a conservative target garment area."""
+    if prior is None or prior.geometry_source != "sam-3d-body":
+        return None
+    level = fit_level(category, target_fit)
+    if level is None or level > 1:
+        return None
+    body = np.asarray(prior.central_mask, dtype=bool)
+    if not body.any():
+        return None
+    # Straight/regular garments need a little ease around the recovered body;
+    # fitted garments stay close to the mesh. Never reuse the source outline.
+    ratio = 0.018 if level == 0 else 0.035
+    return _dilate_mask(body, ratio=ratio) > 0
+
+
+def residual_garment_ring(
+    source_mask: np.ndarray,
+    target_mask: np.ndarray,
+    protect_mask: np.ndarray | None = None,
+) -> np.ndarray | None:
+    """Old loose-clothing pixels that must become background before VTON."""
+    import cv2
+
+    source = np.asarray(source_mask, dtype=bool)
+    target = np.asarray(target_mask, dtype=bool)
+    if source.shape != target.shape or not source.any() or not target.any():
+        return None
+    expanded_source = _dilate_mask(source, ratio=0.012) > 0
+    # Leave a tiny overlap below the target garment, preventing the old seam
+    # from surviving precisely at the two-stage boundary.
+    target_guard = cv2.erode(
+        target.astype(np.uint8), np.ones((3, 3), np.uint8)
+    ).astype(bool)
+    ring = expanded_source & ~target_guard
+    if protect_mask is not None and np.asarray(protect_mask).shape == ring.shape:
+        ring &= ~np.asarray(protect_mask, dtype=bool)
+    if ring.sum() < max(32, ring.size * 0.0005):
+        return None
+    return ring
+
+
+def observed_garment_mask(
+    style_mask: np.ndarray,
+    segmentation: np.ndarray | None,
+    category: str,
+) -> np.ndarray:
+    """Exclude visible skin/limbs from the pixels eligible for background fill.
+
+    FITTA's style masks intentionally include arms or legs so CatVTON can change
+    sleeve and trouser length.  That is useful for try-on but unsafe for stage-one
+    background restoration: only pixels the parser actually calls clothing may
+    be removed from the source photograph.
+    """
+    source = np.asarray(style_mask, dtype=bool)
+    labels = GARMENT_TARGET_LABELS.get(category)
+    if segmentation is None or labels is None:
+        return source
+    parsed = np.asarray(segmentation)
+    if parsed.shape != source.shape:
+        return source
+    garment = source & np.isin(parsed, labels)
+    return garment if garment.any() else source
+
+
 def _largest_component(mask: np.ndarray) -> np.ndarray:
     """나란히 놓인 다른 컬러웨이나 색상 스와치 점을 걸러내고 가장 큰 옷 덩어리만 남긴다."""
     import cv2
@@ -797,6 +863,8 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         transition_correction: bool = True,
         transition_editor=None,
         body_prior_policy: bool = True,
+        body_mesh_provider=None,
+        mesh_background_restore: bool = True,
     ) -> None:
         super().__init__(enabled=True)
         self.num_inference_steps = num_inference_steps
@@ -856,6 +924,8 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         # location prior.  It never replaces measured body dimensions; it only
         # routes silhouette-changing edits and widens their editable envelope.
         self.body_prior_policy = body_prior_policy
+        self.body_mesh_provider = body_mesh_provider
+        self.mesh_background_restore = mesh_background_restore
         # 마스크 정책:
         # upper "agnostic"(기본) = 원래 상의의 넥라인 구멍·짧은 밑단 단서를 지운 상체 마스크(골반까지 확장).
         #       2026-09-15 상의 288쌍 사전 기준 통과: 크롭 계열 실패 -18.1%p, 자기 상품 top-1 +11.5%p,
@@ -882,6 +952,7 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         self.last_raw_masks: dict[str, np.ndarray] = {}
         self.last_body_priors: dict[str, dict] = {}
         self.last_body_prior_maps: dict[str, dict[str, np.ndarray]] = {}
+        self.last_body_mesh: dict = {}
         self._quality_cache_data: dict[str, dict[str, float]] | None = None
         self._device_request = device
         self._pipeline = None
@@ -1239,7 +1310,73 @@ class CatVTONTryOn(VirtualTryOnAdapter):
                 self.last_mask_notes.append("lower:long-hull")
         return mask, released
 
-    def _estimate_body_prior(self, raw_mask, category, segmentation, landmarks_px, context):
+    def _estimate_body_mesh(self, person: Image.Image, segmentation):
+        provider = self.body_mesh_provider
+        if (
+            provider is None
+            or not getattr(provider, "available", False)
+            or segmentation is None
+        ):
+            return None
+        try:
+            projection = provider.estimate(
+                np.asarray(person), np.asarray(segmentation) != 0
+            )
+        except Exception as exc:
+            self.last_body_mesh = {
+                "backend": "sam-3d-body",
+                "status": "failed",
+                "error": f"{type(exc).__name__}: {exc}",
+            }
+            self.last_mask_notes.append("body-mesh:fallback(pose)")
+            return None
+        if projection is None:
+            self.last_body_mesh = {
+                "backend": "sam-3d-body", "status": "unreliable"
+            }
+            self.last_mask_notes.append("body-mesh:fallback(pose)")
+            return None
+        self.last_body_mesh = {
+            **dict(projection.diagnostics),
+            "status": "accepted",
+            "confidence": round(float(projection.confidence), 4),
+        }
+        self.last_mask_notes.append(
+            f"body-mesh:sam-3d-body(confidence={projection.confidence:.2f})"
+        )
+        return projection
+
+    def _release_generation_models_for_body_mesh(self) -> None:
+        """Bound peak VRAM before loading the SAM 3D Body backbone.
+
+        A warm web worker may still hold CatVTON and the shared FLUX editor from
+        the previous request.  The mesh provider is deliberately short-lived,
+        so trade model reload latency for predictable memory rather than trying
+        to keep three large pipelines resident at once.
+        """
+        released = self._pipeline is not None
+        self._pipeline = None
+        self._original_scheduler = None
+        self._active_scheduler = "ddim"
+        editor = self.transition_editor
+        if editor is not None and hasattr(editor, "release_pipeline"):
+            released = released or getattr(editor, "_pipeline", None) is not None
+            editor.release_pipeline()
+        if not released:
+            return
+        gc.collect()
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
+        self.last_mask_notes.append("gpu:released-generation-models-before-body-mesh")
+
+    def _estimate_body_prior(
+        self, raw_mask, category, segmentation, landmarks_px, context,
+        body_mesh_projection=None,
+    ):
         """Estimate and retain a non-metric hidden-body location prior."""
         if not self.body_prior_policy or segmentation is None:
             return None
@@ -1254,6 +1391,13 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             fit_source=source,
             layering_state=layering,
             observed_mask=raw_mask,
+            external_body_mask=(
+                body_mesh_projection.mask if body_mesh_projection is not None else None
+            ),
+            external_confidence=(
+                body_mesh_projection.confidence if body_mesh_projection is not None else None
+            ),
+            external_source="sam-3d-body" if body_mesh_projection is not None else "",
         )
         if prior is None:
             self.last_mask_notes.append(f"{category}:body-prior(unavailable)")
@@ -1562,6 +1706,7 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         self.last_raw_masks = {}  # 정책 적용 후 원본 좌표 마스크(평가 측정용)
         self.last_body_priors = {}
         self.last_body_prior_maps = {}
+        self.last_body_mesh = {}
         self.last_render_kind = ""
         person = Image.open(person_image).convert("RGB")
 
@@ -1612,9 +1757,18 @@ class CatVTONTryOn(VirtualTryOnAdapter):
             self.last_render_kind = "preview"
             return output
 
-        self._load_pipeline()
         # 얼굴·헤어·손·발·가방 등은 어떤 마스크에서도 제외해 원본을 보존한다.
         segmentation = context.get("segmentation")
+        # Run clothing-oblivious mesh recovery before CatVTON is loaded on a
+        # cold process. Deployments may offload the provider afterwards to keep
+        # peak GPU memory bounded.
+        if (
+            self.body_mesh_provider is not None
+            and getattr(self.body_mesh_provider, "available", False)
+        ):
+            self._release_generation_models_for_body_mesh()
+        body_mesh_projection = self._estimate_body_mesh(person, segmentation)
+        self._load_pipeline()
         protect = (
             np.isin(segmentation, PROTECT_LABELS) if segmentation is not None else None
         )
@@ -1662,14 +1816,20 @@ class CatVTONTryOn(VirtualTryOnAdapter):
                     f"스커트 레퍼런스({product.product_id}): guidance_scale "
                     f"{self.guidance_scale} → {guidance_override} (시스루 완화)"
                 )
+            source_garment_mask = observed_garment_mask(
+                raw_mask, segmentation, category
+            )
             body_prior = self._estimate_body_prior(
-                raw_mask, category, segmentation, landmarks_px, context
+                raw_mask, category, segmentation, landmarks_px, context,
+                body_mesh_projection=body_mesh_projection,
             )
             raw_mask, released = self._apply_mask_policy(
                 raw_mask, category, garment_path, garment, product, segmentation, landmarks_px, context,
                 reference_length=reference_length,
             )
             edit_prompt = ""
+            fit_narrowing = False
+            target_fit = ""
             if self.transition_correction:
                 outfit = context.get("outfit")
                 source_fit, _fit_source = current_fit_label(outfit, category)
@@ -1706,6 +1866,44 @@ class CatVTONTryOn(VirtualTryOnAdapter):
                             )
                     else:
                         self._add_warning("기장·핏 변경용 참조 편집 모델 또는 관절 정보가 없어 기본 합성을 사용합니다. 피부·옷 폭 복원에는 한계가 있습니다.")
+            if (
+                self.mesh_background_restore
+                and fit_narrowing
+                and body_prior is not None
+                and self.transition_editor is not None
+                and getattr(self.transition_editor, "available", False)
+                and hasattr(self.transition_editor, "restore_background")
+            ):
+                target_body = mesh_target_mask(body_prior, category, target_fit)
+                ring = (
+                    residual_garment_ring(source_garment_mask, target_body, protect)
+                    if target_body is not None else None
+                )
+                if ring is not None:
+                    ring_padded, _ = pad_to_aspect(
+                        Image.fromarray(ring.astype(np.uint8) * 255).convert("L"), target, 0
+                    )
+                    ring_model = np.asarray(resize_and_crop(ring_padded, target)) > 127
+                    try:
+                        result = self.transition_editor.restore_background(
+                            result, ring_model, seed=self.seed
+                        )
+                        # Stage two uses CatVTON only around the recovered body;
+                        # the old garment's outer volume is now scene background.
+                        raw_mask = target_body
+                        edit_prompt = ""
+                        self.last_mask_notes.append(
+                            f"{category}:sam3d-two-stage(background+catvton)"
+                        )
+                        self.last_body_priors[category]["background_ring_fraction"] = round(
+                            float(ring.mean()), 6
+                        )
+                    except Exception as exc:
+                        # Preserve the already validated one-pass transition route.
+                        self._add_warning(
+                            "3D 몸선 기반 배경 복원에 실패해 기존 핏 전환 방식으로 처리합니다: "
+                            f"{type(exc).__name__}"
+                        )
             self.last_raw_masks[category] = np.asarray(raw_mask).astype(bool)
             mask_np = _dilate_mask(_solidify_mask(raw_mask))
             if protect is not None:

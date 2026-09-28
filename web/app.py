@@ -635,6 +635,8 @@ def options() -> dict:
 def health() -> dict:
     """모델 적재 상태를 미리 알려 첫 분석의 대기 이유를 설명한다."""
     engine = get_engine()
+    clothing_tryon = getattr(engine.tryon, "clothing", engine.tryon)
+    body_mesh_provider = getattr(clothing_tryon, "body_mesh_provider", None)
     return {
         "device": engine.device,
         "trained_heads": engine.trained_heads,
@@ -642,6 +644,12 @@ def health() -> dict:
         "vton_enabled": engine.tryon.enabled,
         "tryon_categories": sorted(getattr(engine.tryon, "supported_categories", {"top", "bottom"}))
         if engine.tryon.available else [],
+        "body_geometry_backend": (
+            "sam-3d-body"
+            if body_mesh_provider is not None
+            and getattr(body_mesh_provider, "available", False)
+            else "pose-capsules"
+        ),
         "product_count": len(engine.recommender.catalog.products),
         "product_color_audits": len(engine.recommender.catalog.color_audits),
         "product_color_overrides": engine.recommender.catalog.color_override_count,
