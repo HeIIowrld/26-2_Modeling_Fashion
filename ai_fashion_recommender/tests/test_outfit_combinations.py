@@ -203,6 +203,8 @@ class OutfitCombinationTests(unittest.TestCase):
         self.assertLessEqual(len(payload["evidence"]), 3)
         self.assertEqual(len(payload["evidence"]), len(payload["evidence_labels"]))
         self.assertNotIn("예산", payload["reason"])
+        self.assertNotIn("상품명", payload["reason"])
+        self.assertNotIn("T1 상품", payload["reason"])
 
     def test_long_sleeve_knit_and_shorts_combination_is_excluded(self):
         profile = UserProfile(
@@ -473,6 +475,39 @@ class OutfitCombinationTests(unittest.TestCase):
 
         self.assertEqual(outfits[0].reason_source, "rules")
         self.assertNotIn("예산", outfits[0].reason)
+
+    def test_llm_combination_reason_that_mentions_product_name_is_rejected(self):
+        products = [
+            product("T1", "top", ["오버핏", "스트리트"]),
+            product("S1", "shoes", ["스니커즈", "스트리트"]),
+        ]
+        generated = json.dumps({"items": [{
+            "combination_id": "OUTFIT-1",
+            "summary": "상품명에서 오버핏이 확인돼 추천해요.",
+            "evidence_ids": ["OUTFIT-1-E1"],
+        }]}, ensure_ascii=False)
+
+        class FakeResponse:
+            def __enter__(self): return self
+            def __exit__(self, *_args): return False
+            def read(self):
+                return json.dumps({"candidates": [{"content": {"parts": [{"text": generated}]}}]},
+                                  ensure_ascii=False).encode("utf-8")
+
+        settings = {
+            "FASHION_LLM_REASONS": "1", "FASHION_LLM_PROVIDER": "gemini",
+            "GEMINI_API_KEY": "test-key",
+        }
+        with patch.dict(os.environ, settings, clear=False), patch(
+            "outfit_combination_recommender.urllib.request.urlopen", return_value=FakeResponse()
+        ):
+            outfits = recommend_outfit_combinations(
+                products, self.profile, self.pose, self.outfit, self.targets,
+                FakeRecommender(), limit=1,
+            )
+
+        self.assertEqual(outfits[0].reason_source, "rules")
+        self.assertNotIn("상품명", outfits[0].reason)
 
 
 if __name__ == "__main__":

@@ -402,7 +402,7 @@ def _build_result(profile: dict, image_seed: int) -> dict:
             "reason_source": "rules",
             "evidence": [
                 "현재 착장에 남는 아이템과 교체 상품의 상·하의 조화를 확인했습니다.",
-                f"선택한 {style} 스타일 키워드가 상품명에 실제로 포함된 상품을 묶었습니다.",
+                f"선택한 {style} 스타일과 일치하는 속성이 확인된 상품을 묶었습니다.",
             ],
             "evidence_labels": ["현재 착장", "스타일"],
             "rule_ids": ["R-CMP-03", "R-CTX-01"],

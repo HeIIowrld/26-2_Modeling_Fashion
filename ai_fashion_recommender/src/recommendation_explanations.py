@@ -272,7 +272,6 @@ def _llm_reasons(
         allowed_by_product[product.product_id] = allowed
         product_context.append({
             "product_id": product.product_id,
-            "name": product.name,
             "category": product.category,
             "allowed_evidence": payload_items,
         })
@@ -313,8 +312,8 @@ def _llm_reasons(
         "대화체로 바꾸는 것은 말투뿐이며 정보의 범위를 넓히는 것이 아닙니다. allowed_evidence에 정확히 없는 "
         "편안함·활동성·활용도·착용감·코디 효과를 추측하지 마세요. 예를 들어 확인된 근거가 '와이드 핏 "
         "조건을 충족함'뿐이라면 '와이드 핏을 찾으셨다면 이 바지를 눈여겨보세요'처럼 그 사실만 "
-        "자연스럽게 말하세요. 상품명은 상품 식별용으로만 참고하고, 추천 근거 문장에서는 상품명·제품명·"
-        "이름·타이틀을 근거로 언급하거나 실제 상품명을 문장에 옮기지 마세요. "
+        "자연스럽게 말하세요. 상품명은 입력으로 제공되지 않으며, 추천 근거 문장에서 상품명·제품명·"
+        "이름·타이틀을 근거로 언급하지 마세요. "
         "추천 여부와 근거는 서버가 결정했으므로 새로운 근거를 판단하거나 추가하지 마세요. "
         "각 상품의 allowed_evidence에 있는 사실과 matched_keywords만 사용하고, 사용한 근거의 "
         "evidence_id를 evidence_ids에 1~3개 반환하세요. 제공된 근거에 없는 속성, 사용자 목적, "

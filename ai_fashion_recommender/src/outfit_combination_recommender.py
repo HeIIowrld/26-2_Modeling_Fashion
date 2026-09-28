@@ -20,7 +20,10 @@ GEMINI_GENERATE_URL = "https://generativelanguage.googleapis.com/v1beta/models/{
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 LLM_ENABLED_VALUES = {"1", "true", "yes", "on"}
 STYLE_FORMALITY = {"스포티": 1, "스트리트": 1, "캐주얼": 2, "로맨틱": 3, "미니멀": 3, "포멀": 5}
-FORBIDDEN_COPY = ("예산", "가격", "할인", "가성비", "비용", "사이즈", "실측")
+FORBIDDEN_COPY = (
+    "예산", "가격", "할인", "가성비", "비용", "사이즈", "실측",
+    "상품명", "상품 이름", "제품명", "제품 이름", "이름에서", "이름에", "타이틀", "title",
+)
 MIN_SAFE_COMBINATION_SCORE = 0.75
 KNIT_TERMS = ("니트", "스웨터", "풀오버", "knit", "sweater", "pullover")
 SHORT_SLEEVE_TERMS = (
@@ -339,7 +342,10 @@ def _candidate_evidence(
         rule_ids = targets.keyword_rules.get(product.category, {}).get(keyword, [])
         active_rules = [rule_id for rule_id in rule_ids if rule_id in applied]
         if active_rules:
-            visual_fits.append(f"{product.name}: {label}({confidence:.0%})")
+            category_label = {"top": "추천 상의", "bottom": "추천 하의", "shoes": "추천 신발"}.get(
+                product.category, "추천 상품"
+            )
+            visual_fits.append(f"{category_label}: {label}({confidence:.0%})")
             visual_rules.extend(active_rules)
     if visual_fits and len(evidence) < 3:
         evidence.append(CombinationEvidence(
@@ -363,7 +369,7 @@ def _candidate_evidence(
         ))[:3]
         if keywords:
             evidence.append(CombinationEvidence(
-                "검색 조건", f"상품명에서 추천 키워드 '{'·'.join(keywords)}'가 실제로 확인됐습니다.",
+                "검색 조건", f"추천 조건과 일치하는 '{'·'.join(keywords)}' 속성이 확인됐습니다.",
             ))
     return evidence[:3]
 
