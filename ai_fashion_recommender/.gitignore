@@ -11,6 +11,7 @@ outputs/
 
 # 팀원마다 자신의 전신사진을 사용한다. 번호가 붙은 테스트 사진도 포함한다.
 data/input_person*.jpg
+data/input_person*.png
 
 # 원본 데이터셋과 모델 캐시는 저장소에 포함하지 않는다.
 datasets/
