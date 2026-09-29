@@ -19,14 +19,14 @@ def sample():
 
 
 @pytest.mark.parametrize('label', [4, 5])
-def test_skirt_or_dress_warns_and_disables_body_shape_without_blocking(label):
+def test_skirt_or_dress_blocks_input_before_body_shape_analysis(label):
     outfit, parsed = sample()
     parsed['segmentation'][50:] = label
     result = assess_body_visibility(outfit, parsed)
     assert result['status'] == 'occluded'
-    assert result['passed']
-    assert not result['issues']
-    assert any('치마' in warning for warning in result['warnings'])
+    assert not result['passed']
+    assert any('치마' in issue for issue in result['issues'])
+    assert result['issues'][0].count('\n') == 1
     assert not result['body_shape_reliable']
 
 
@@ -45,7 +45,23 @@ def test_loose_clothes_warn_but_continue_using_existing_attribute_evidence(field
     assert result['status'] == 'uncertain'
     assert result['passed']
     assert not result['issues']
-    assert any('참고값' in message for message in result['warnings'])
+    assert any('덜 정확' in message for message in result['warnings'])
+
+
+def test_thick_outerwear_and_wide_pants_warn_without_blocking():
+    outfit, parsed = sample()
+    outfit.outer_category = '패딩'
+    outer = assess_body_visibility(outfit, parsed)
+    assert outer['passed']
+    assert not outer['issues']
+    assert outer['warnings']
+
+    outfit.outer_category = ''
+    outfit.lower_fit = '와이드핏'
+    outfit.attribute_sources['lower_fit'] = 'trained_head'
+    allowed = assess_body_visibility(outfit, parsed)
+    assert allowed['passed']
+    assert not allowed['issues']
 
 
 def test_mask_width_alone_warns_instead_of_rejecting_the_photo():
@@ -57,7 +73,7 @@ def test_mask_width_alone_warns_instead_of_rejecting_the_photo():
     assert result['status'] == 'uncertain'
     assert result['passed']
     assert not result['issues']
-    assert any('체형으로 사용하지 않습니다' in message for message in result['warnings'])
+    assert result['warnings'][0].count('\n') == 2
     assert not result['calibrated']
 
 
@@ -92,11 +108,11 @@ def test_warnings_reach_the_caller_alongside_existing_quality_warnings():
     assert len(result['warnings']) > 1
 
 
-def test_occluded_photo_disables_only_photo_body_shape_rules():
+def test_occluded_photo_is_rejected_before_photo_body_shape_rules():
     outfit, parsed = sample()
     parsed['segmentation'][50:] = 5
     result = with_body_visibility({'passed': True, 'issues': [], 'warnings': []}, outfit, parsed)
-    assert result['passed']
+    assert not result['passed']
     assert not body_shape_analysis_allowed(result)
     assert body_shape_analysis_allowed(result, has_circumferences=True)
 
@@ -107,7 +123,7 @@ def test_padded_outerwear_warns_without_rejecting_the_photo():
     result = assess_body_visibility(outfit, parsed)
     assert result['status'] == 'occluded'
     assert result['passed'] and not result['issues']
-    assert any('외투' in warning for warning in result['warnings'])
+    assert result['warnings']
 
 
 def test_visibility_does_not_override_other_quality_failures():
@@ -115,6 +131,19 @@ def test_visibility_does_not_override_other_quality_failures():
     result = with_body_visibility({'passed': False, 'issues': ['blur']}, outfit, parsed)
     assert not result['passed']
     assert result['issues'] == ['blur']
+
+
+def test_non_front_and_skirt_issues_are_both_preserved():
+    outfit, parsed = sample()
+    parsed['segmentation'][50:] = 5
+    result = with_body_visibility({
+        'passed': False,
+        'issues': ['몸을 정면으로 향한 전신사진을 올려주세요.'],
+        'warnings': [],
+    }, outfit, parsed)
+    assert len(result['issues']) == 2
+    assert any('정면' in issue for issue in result['issues'])
+    assert any('치마·원피스' in issue for issue in result['issues'])
 
 
 def test_no_body_width_gender_or_weight_filter_for_regular_clothing():

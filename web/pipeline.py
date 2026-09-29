@@ -440,6 +440,43 @@ def _cache_live_shopping_image(product, output_dir: Path, *, timeout: float = 6.
     return target
 
 
+def _supplement_shopping_outfits(
+    shopping_results,
+    shopping_outfits,
+    expanded_results,
+    recommend_more,
+    *,
+    target_count: int = 3,
+):
+    """Preserve ranked LOOKs and fill only their missing tail from new products."""
+    existing_outfits = list(shopping_outfits)
+    missing_count = max(0, target_count - len(existing_outfits))
+    if not missing_count:
+        return list(shopping_results), existing_outfits
+
+    used_product_ids = {
+        product_id
+        for combination in existing_outfits
+        for product_id in combination.product_ids
+    }
+    supplemental_results = [
+        product for product in expanded_results
+        if product.product_id not in used_product_ids
+    ]
+    supplemental_outfits = list(recommend_more(supplemental_results, missing_count))
+    if not supplemental_outfits:
+        return list(shopping_results), existing_outfits
+
+    merged_products = {
+        product.product_id: product
+        for product in [*shopping_results, *expanded_results]
+    }
+    merged_outfits = [*existing_outfits, *supplemental_outfits]
+    for rank, combination in enumerate(merged_outfits, 1):
+        combination.combination_id = f"OUTFIT-{rank}"
+    return list(merged_products.values()), merged_outfits
+
+
 def _shopping_tryon_payloads(
     shopping_results: list,
     catalog_products: list[Product],
@@ -507,7 +544,10 @@ def validate_input_photo(image_path: Path, engine=None) -> dict:
     with _analysis_lock:
         pose = engine.pose_analyzer.analyze(image_path)
         quality = engine.quality_checker.check_input(image_path, pose=pose)
-        if not quality["passed"]:
+        # 비정면과 치마·원피스가 동시에 걸리면 두 이유를 한 번에
+        # 알릴 수 있게 비정면 사진은 착장 파싱까지 진행한다.
+        front_status = (quality.get("front_pose") or {}).get("status")
+        if not quality["passed"] and front_status != "non_front":
             return quality
         outfit, parsed = engine.outfit_analyzer.analyze(image_path, pose)
         return with_body_visibility(quality, outfit, parsed)
@@ -529,7 +569,8 @@ def run_pipeline(
         pose_result = engine.pose_analyzer.analyze(image_path)
         on_stage("quality")
         input_quality = engine.quality_checker.check_input(image_path, pose=pose_result)
-        if not input_quality["passed"]:
+        front_status = (input_quality.get("front_pose") or {}).get("status")
+        if not input_quality["passed"] and front_status != "non_front":
             raise PipelineError(
                 "전신사진 품질 기준을 통과하지 못했습니다: "
                 + " / ".join(input_quality["issues"])
@@ -638,6 +679,56 @@ def run_pipeline(
             engine.recommender,
             limit=3,
         )
+        # 첫 후보에서 고른 LOOK은 최선 순위 그대로 고정한다.
+        # 부족한 LOOK은 기존 상품을 검색·사진 판정 전에 제외하고 탐색
+        # 폭을 단계적으로 늘린다. 새 후보가 소진되면 무한 반복하지 않는다.
+        search_limit = 12
+        previous_candidate_ids: set[str] = set()
+        while product_search is not None and len(shopping_outfits) < 3:
+            try:
+                used_product_ids = {
+                    product_id
+                    for combination in shopping_outfits
+                    for product_id in combination.product_ids
+                }
+                expanded_results = product_search.search(
+                    target_keywords,
+                    profile,
+                    limit=search_limit,
+                    photo_loader=lambda product, timeout: _cache_live_shopping_image(
+                        product, output_dir, timeout=timeout),
+                    exclude_product_ids=used_product_ids,
+                )
+                candidate_ids = {product.product_id for product in expanded_results}
+                if not candidate_ids or candidate_ids.issubset(previous_candidate_ids):
+                    break
+                previous_candidate_ids.update(candidate_ids)
+                before_count = len(shopping_outfits)
+                shopping_results, shopping_outfits = _supplement_shopping_outfits(
+                    shopping_results,
+                    shopping_outfits,
+                    expanded_results,
+                    lambda products, missing_count: recommend_outfit_combinations(
+                        products,
+                        profile,
+                        pose_result,
+                        outfit_result,
+                        target_keywords,
+                        engine.recommender,
+                        limit=missing_count,
+                    ),
+                )
+                if len(shopping_outfits) >= 3:
+                    break
+                # 새 상품은 있었지만 조합 정책을 통과하지 못했다. 더 넓은 풀로
+                # 계속 탐색하되, 무신사 원천 후보 상한을 넘으면 자연스럽게 같은
+                # 후보 집합이 돌아와 위의 소진 조건에서 끝난다.
+                search_limit += 6
+                if len(shopping_outfits) == before_count and search_limit > 36:
+                    break
+            except Exception as exc:
+                print(f"[MUSINSA] expanded live search unavailable: {exc}")
+                break
         if shopping_outfits:
             selected_ids = list(dict.fromkeys(
                 product_id

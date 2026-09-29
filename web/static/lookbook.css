@@ -268,6 +268,7 @@ input, textarea, select { caret-color: var(--signal); }
 }
 .hero-primary-action { align-items: flex-start; }
 .photo-gate-note {
+  white-space: pre-line;
   flex: 1 0 100%; margin: 0 0 2px;
   font-size: .82rem; color: var(--ink-soft);
 }
@@ -729,16 +730,13 @@ select {
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px;
 }
 .shopping-grid.has-outfit-combinations { display: block; }
-.look-tabs {
-  display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: -1px;
-}
+.look-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: -1px; }
 .look-tabs button {
   display: inline-flex; align-items: baseline; gap: 8px;
   padding: 11px 20px; border: 1px solid var(--line); border-bottom-color: transparent;
   border-radius: var(--r-md) var(--r-md) 0 0; background: var(--bg);
   color: var(--ink-soft); font-family: var(--disp); font-size: .78rem;
   font-weight: 800; letter-spacing: .1em; cursor: pointer;
-  transition: color .16s ease, background-color .16s ease;
 }
 .look-tabs button:hover { color: var(--ink); background: var(--panel-2); }
 .look-tabs button.is-on {
@@ -759,24 +757,11 @@ select {
 .look-panel:focus-visible { outline: 3px solid var(--signal); outline-offset: -3px; }
 .look-summary {
   margin: 0; max-width: 62ch; color: var(--ink);
-  font-size: .95rem; line-height: 1.6;
-  /* 한 문단으로 흘리면 '상·하의'가 '상 / ·하의'로 갈라졌다. 낱말 단위로만 끊는다. */
-  word-break: keep-all;
+  font-size: .95rem; line-height: 1.6; word-break: keep-all;
 }
 /* 근거는 문장이 두 개 이어 붙은 값이다. 문장마다 줄을 나눠야 읽힌다. */
 .summary-sentence { display: block; }
 .summary-sentence + .summary-sentence { margin-top: 4px; }
-.look-body {
-  display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
-  gap: 28px; margin-top: 22px;
-}
-.look-shot { margin: 0; overflow: hidden; border-radius: var(--r-md); background: var(--bg); }
-.look-shot img { display: block; width: 100%; height: auto; }
-.look-shot figcaption {
-  display: grid; gap: 6px; padding: 12px 14px 14px;
-  color: var(--ink-soft); font-size: .73rem; line-height: 1.5;
-}
-.look-shot figcaption a { color: var(--ink); font-weight: 700; }
 /* 부위별로 한 줄씩. 라벨 폭을 고정해 상품명 시작선을 맞춘다. */
 .look-items { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
 .look-items li { display: flex; gap: 8px; align-items: baseline; }
@@ -785,16 +770,6 @@ select {
   white-space: nowrap;
 }
 .look-items span { flex: 1 1 auto; min-width: 0; word-break: keep-all; }
-.look-shot.is-empty {
-  display: grid; place-items: center; min-height: 340px; padding: 24px;
-  border: 1px dashed var(--line); text-align: center;
-}
-.look-shot.is-empty p { margin: 0; max-width: 24ch; color: var(--ink-soft); font-size: .8rem; line-height: 1.6; }
-.look-shot.is-empty[data-status="running"] { border-style: solid; border-color: var(--signal); }
-.look-products {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  align-content: start; gap: 16px;
-}
 .outfit-current-items { display: flex; flex-wrap: wrap; gap: 8px; margin: 15px 0; }
 .outfit-current-item {
   display: grid; gap: 3px; max-width: 100%; padding: 9px 12px;
@@ -805,7 +780,7 @@ select {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   color: var(--ink-soft); font-size: .74rem;
 }
-.outfit-combination-evidence { margin: 16px 0 0; }
+.outfit-combination-evidence { margin: 0 0 17px; }
 .outfit-combination-evidence summary { cursor: pointer; font-size: .79rem; font-weight: 900; }
 .outfit-combination-evidence ul {
   display: grid; gap: 7px; margin: 10px 0 0; padding: 0; list-style: none;
@@ -813,6 +788,36 @@ select {
 }
 .outfit-combination-evidence li { display: flex; gap: 8px; }
 .outfit-combination-evidence b { flex: 0 0 auto; color: var(--ink); }
+.look-body {
+  display: grid; grid-template-columns: minmax(240px, 1fr) minmax(0, 3fr);
+  align-items: start; gap: 16px; margin-top: 22px;
+}
+.look-render { min-width: 0; }
+.outfit-tryon-result {
+  margin: 0; overflow: hidden; border: 1px solid var(--line);
+  border-radius: var(--r-md); background: var(--bg);
+}
+.outfit-tryon-result > img {
+  display: block; width: 100%; max-height: 680px; object-fit: contain; background: #f4f4f4;
+}
+.outfit-tryon-result figcaption {
+  display: grid; gap: 10px; padding: 14px 16px;
+  color: var(--ink-soft); font-size: .73rem; line-height: 1.5;
+}
+.outfit-tryon-result figcaption a { color: var(--ink); font-weight: 800; }
+.outfit-tryon-result.is-pending {
+  display: grid; place-items: center; min-height: 420px; padding: 24px;
+  border-style: dashed; text-align: center;
+}
+.outfit-tryon-result.is-pending p {
+  margin: 0; max-width: 24ch; color: var(--ink-soft); font-size: .8rem; line-height: 1.6;
+}
+.outfit-tryon-result.is-pending[data-status="running"] {
+  border-style: solid; border-color: var(--signal);
+}
+.look-products {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;
+}
 .change-categories { display: flex; flex-wrap: wrap; gap: 12px; }
 .change-categories label {
   display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px;
@@ -953,6 +958,7 @@ select {
 .shopping-tryon-result-actions {
   display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 20px;
 }
+.shopping-tryon-result-actions .look-items { flex: 1 1 auto; }
 .shopping-tryon-result-actions span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft); font-size: .78rem; }
 .shopping-tryon-result-actions a {
   flex: none; padding: 9px 12px; border: 1px solid var(--line); border-radius: var(--r);
@@ -1214,7 +1220,8 @@ select {
   .hero-copy h1 { font-size: clamp(1.75rem, 8vw, 2.1rem); }
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
   .shopping-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .look-body { grid-template-columns: minmax(0, 260px) minmax(0, 1fr); gap: 20px; }
+  .look-products { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .look-body { grid-template-columns: minmax(220px, .8fr) minmax(0, 2fr); }
   .shopping-head { align-items: stretch; flex-direction: column; gap: 8px; }
   .current-score-content { grid-template-columns: 1fr; }
   .score-bar { grid-template-columns: 96px 1fr 30px; }
@@ -1252,8 +1259,9 @@ select {
   .shopping-grid { grid-template-columns: 1fr; }
   .look-panel { padding: 18px 14px; border-radius: var(--r-lg); }
   .look-tabs button { flex: 1 1 auto; justify-content: center; padding: 10px 12px; }
-  .look-body { grid-template-columns: 1fr; gap: 18px; }
-  .look-shot.is-empty { min-height: 220px; }
+  .look-body { grid-template-columns: 1fr; }
+  .look-products { grid-template-columns: 1fr; }
+  .outfit-tryon-result.is-pending { min-height: 260px; }
   .current-score-panel { padding: 18px 14px; }
   .current-score-head { align-items: flex-start; }
   .current-score-total strong { font-size: 2.2rem; }
