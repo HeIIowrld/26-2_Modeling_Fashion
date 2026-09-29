@@ -388,6 +388,36 @@ class OutfitCombinationTests(unittest.TestCase):
         self.assertIn("스포티 구성", outfits[0].public_dict()["evidence_labels"])
         self.assertIn("스포츠 브랜드 예외", outfits[0].reason)
 
+    def test_silhouette_and_color_lead_the_combination_reason(self):
+        class ColorRecommender(FakeRecommender):
+            def _outfit_harmony_score(self, top, bottom, _profile):
+                return (
+                    0.9, {},
+                    ["정돈된 상의에 볼륨 있는 하의를 매치해 실루엣 대비가 또렷해요.",
+                     "격식도",
+                     "기본색인 블루 하의가 레드 상의를 받쳐 줘 색이 과하지 않아요."],
+                    ["R-CMP-03", "R-SIL-01"],
+                )
+
+        top = product("T1", "top", ["레드"])
+        top.photo_attributes = {"fit": {
+            "label": "오버핏", "confidence": 0.96, "keyword": "오버핏",
+            "source": "product_photo", "policy": POLICY_VERSION,
+        }}
+        self.targets = TargetKeywordResult(
+            "mixed", {"top": {"fit": ["오버핏"], "color": ["레드"]}},
+            applied_rules=["R-SIL-01"], keyword_rules={"top": {"오버핏": ["R-SIL-01"]}},
+        )
+        with patch.dict(os.environ, {"FASHION_LLM_REASONS": "0"}, clear=False):
+            outfits = recommend_outfit_combinations(
+                [top], self.profile, self.pose, self.outfit,
+                self.targets, ColorRecommender(), limit=1,
+            )
+
+        labels = outfits[0].public_dict()["evidence_labels"]
+        self.assertEqual(labels[:2], ["실루엣", "색상"])
+        self.assertIn("블루 하의", outfits[0].reason)
+
     def test_visual_fit_is_used_by_fashion_rule_harmony(self):
         self.targets = TargetKeywordResult(
             "mixed",
