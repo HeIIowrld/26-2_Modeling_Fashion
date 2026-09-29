@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -480,6 +481,74 @@ class MusinsaLiveSearchTests(unittest.TestCase):
         self.assertEqual(len(selected_bottoms), 3)
         self.assertNotIn("TL", [product.product_id for product in selected_tops])
         self.assertNotIn("BL", [product.product_id for product in selected_bottoms])
+
+    def test_summer_keeps_recommendations_when_names_lack_short_sleeve_terms(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        products = [
+            ShoppingProduct("T1", "오버핏 티셔츠", "", 1, "", "", "top", retrieval_score=10),
+            ShoppingProduct("T2", "린넨 셔츠", "", 1, "", "", "top", retrieval_score=9),
+        ]
+        targets = TargetKeywordResult("user_input", {"top": {}})
+
+        results = search._select(
+            {"top": products}, targets, 3,
+            UserProfile(purpose="데일리", desired_style="캐주얼", season="여름"),
+        )
+
+        self.assertEqual([product.product_id for product in results], ["T1", "T2"])
+
+    def test_summer_photo_verified_short_sleeve_counts_as_summer_top(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        products = [
+            ShoppingProduct(
+                "T1", "카라 니트", "", 1, "", "", "top", retrieval_score=10,
+                photo_attributes={"sleeve_length": {
+                    "label": "반팔", "confidence": .91, "source": "product_photo",
+                }},
+            ),
+            ShoppingProduct("T2", "긴팔 티셔츠", "", 1, "", "", "top", retrieval_score=20),
+        ]
+        targets = TargetKeywordResult("user_input", {"top": {}})
+
+        results = search._select(
+            {"top": products}, targets, 3,
+            UserProfile(purpose="데일리", desired_style="캐주얼", season="여름"),
+        )
+
+        self.assertEqual([product.product_id for product in results], ["T1"])
+
+    def test_summer_falls_back_to_all_candidates_only_when_all_are_long(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        products = [
+            ShoppingProduct("T1", "긴팔 티셔츠", "", 1, "", "", "top", retrieval_score=10),
+            ShoppingProduct("T2", "롱슬리브 셔츠", "", 1, "", "", "top", retrieval_score=9),
+        ]
+        targets = TargetKeywordResult("user_input", {"top": {}})
+
+        results = search._select(
+            {"top": products}, targets, 3,
+            UserProfile(purpose="데일리", desired_style="캐주얼", season="여름"),
+        )
+
+        self.assertEqual([product.product_id for product in results], ["T1", "T2"])
+
+    def test_targets_without_sources_do_not_break_selection(self):
+        search = MusinsaLiveSearch()
+        self.addCleanup(search.close)
+        product = ShoppingProduct(
+            "T1", "오버핏 티셔츠", "", 1, "", "", "top", retrieval_score=10,
+        )
+        targets = SimpleNamespace(mode="mixed", targets={"top": {}})
+
+        results = search._select(
+            {"top": [product]}, targets, 1,
+            UserProfile(purpose="데일리", desired_style="캐주얼", season="사계절"),
+        )
+
+        self.assertEqual([result.product_id for result in results], ["T1"])
 
     def test_winter_first_three_tops_use_two_outerwear_and_no_shorts(self):
         search = MusinsaLiveSearch()
