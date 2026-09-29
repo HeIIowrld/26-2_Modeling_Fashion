@@ -83,11 +83,7 @@ def _usable(value: str) -> bool:
 
 
 def korean_particle(value: str, with_final: str, without_final: str) -> str:
-    """마지막 한글 음절의 받침에 맞는 짧은 조사를 고른다.
-
-    recommendation_engine 도 쓴다. 거기서 조사를 '를'로 박아 두어 화면에
-    "'톤온톤'를"이 나갔다. 같은 규칙을 두 번 쓰지 않도록 여기서 공개한다.
-    """
+    """마지막 한글 음절의 받침에 맞는 짧은 조사를 고른다."""
     if not value:
         return without_final
     code = ord(value[-1]) - 0xAC00
@@ -329,12 +325,21 @@ def _candidate_evidence(
     silhouette_known: bool,
     color_known: bool,
 ) -> list[CombinationEvidence]:
+    # 실루엣과 색 조합이 패션적인 추천 이유이므로 먼저 둔다. 요약 문장은 앞의 두 근거로
+    # 만들어지고 근거는 세 개까지만 보여서, 뒤에 두면 색 조합이 빠졌다.
     evidence: list[CombinationEvidence] = []
-    if current_items:
+    if (
+        any(category in selected_categories for category in ("top", "bottom"))
+        and harmony_reasons and silhouette_known
+    ):
+        evidence.append(CombinationEvidence("실루엣", harmony_reasons[0], tuple(harmony_rules[:2])))
+        if len(harmony_reasons) >= 3 and color_known:
+            evidence.append(CombinationEvidence("색상", harmony_reasons[2], ("R-COL-03",)))
+    if current_items and len(evidence) < 3:
         kept = "·".join(item["label"] for item in current_items)
         object_particle = _particle(kept, "을", "를")
         evidence.append(CombinationEvidence(
-            "현재 착장", f"{kept}{object_particle} 유지한 상태에서 교체할 아이템의 조화를 평가했습니다.",
+            "현재 착장", f"{kept}{object_particle} 그대로 입고 어울리는 아이템만 바꿨어요.",
             ("R-CMP-03",),
         ))
     visual_fits = []
@@ -360,13 +365,6 @@ def _candidate_evidence(
             "상품 사진에서 추정한 핏을 조합의 실루엣 평가에 반영했습니다: " + " · ".join(visual_fits),
             tuple(dict.fromkeys(visual_rules)),
         ))
-    if (
-        any(category in selected_categories for category in ("top", "bottom"))
-        and harmony_reasons and silhouette_known
-    ):
-        evidence.append(CombinationEvidence("실루엣", harmony_reasons[0], tuple(harmony_rules[:2])))
-        if len(harmony_reasons) >= 3 and color_known:
-            evidence.append(CombinationEvidence("색상", harmony_reasons[2], ("R-COL-03",)))
     if shoe_reason and len(evidence) < 3:
         evidence.append(CombinationEvidence("신발", shoe_reason, ("R-CTX-01", "R-ACC-06")))
     if len(evidence) < 3:
@@ -554,8 +552,8 @@ def recommend_outfit_combinations(
             color_known=_usable(top["color"]) and _usable(bottom["color"]),
         )
         if sporty_reason:
-            insert_at = 1 if current_items else 0
-            evidence.insert(insert_at, CombinationEvidence(
+            # 실루엣 다음, 요약 문장에 들어가는 두 번째 자리에 둔다.
+            evidence.insert(1, CombinationEvidence(
                 "스포티 구성", sporty_reason, ("R-CTX-01", "R-CMP-02"),
             ))
             evidence = evidence[:3]
