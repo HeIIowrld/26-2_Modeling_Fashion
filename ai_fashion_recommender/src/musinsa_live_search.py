@@ -8,7 +8,7 @@ import urllib.parse
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
-from functools import partial
+from functools import lru_cache, partial
 from typing import Iterable
 
 from product_colors import palettes_for
@@ -73,6 +73,12 @@ WINTER_WARM_INNER_TERMS = (
     "니트", "스웨터", "기모", "헤비웨이트", "헤비 웨이트", "울", "캐시미어",
     "후드", "맨투맨",
 )
+LONG_TOP_TERMS = (
+    "긴팔", "긴소매", "롱슬리브", "롱 슬리브", "long sleeve", "long-sleeve",
+)
+LONG_BOTTOM_TERMS = (
+    "긴바지", "롱 팬츠", "롱팬츠", "long pants", "full length", "full-length",
+)
 COLOR_VARIANT_TERMS = (
     "라이트 블루", "라이트블루", "다크 블루", "다크블루", "스카이 블루", "스카이블루",
     "멜란지 그레이", "멜란지그레이", "오트밀", "오프화이트", "오프 화이트", "아이보리",
@@ -83,6 +89,10 @@ COLOR_VARIANT_TERMS = (
     "green", "red", "pink", "yellow", "purple", "orange", "cream",
     "검정", "흰색", "회색", "남색", "소라", "연청", "중청", "진청",
     "blk", "wht", "gry", "nvy", "brn", "bge", "khk", "bk", "wh", "iv",
+)
+COLOR_VARIANT_PATTERN = re.compile(
+    rf"(?<![0-9a-z가-힣])(?:{'|'.join(re.escape(term) for term in sorted(COLOR_VARIANT_TERMS, key=len, reverse=True))})(?![0-9a-z가-힣])",
+    flags=re.IGNORECASE,
 )
 TOP_FAMILY_TERMS = (
     ("outerwear", OUTERWEAR_TERMS),
@@ -429,16 +439,20 @@ class MusinsaLiveSearch:
     @classmethod
     def _product_model_key(cls, product: ShoppingProduct) -> str:
         """색상별 상품 ID가 달라도 같은 디자인이면 같은 키를 만든다."""
+        return cls._cached_product_model_key(
+            str(product.category or ""), str(product.brand or ""),
+            str(product.name or ""), str(product.product_id or ""),
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=8192)
+    def _cached_product_model_key(
+        category: str, brand_value: str, name: str, product_id: str,
+    ) -> str:
+        """동일 모델 키를 한 번만 계산해 대규모 후보 선택 비용을 제한한다."""
         # 공백을 먼저 지우면 `재킷 네이비`가 `재킷네이비`가 되어 색상 경계를
         # 잃는다. 원문에서 색상/옵션을 제거한 뒤 마지막에 정규화한다.
-        text = str(product.name or "").lower().strip()
-        for term in sorted(COLOR_VARIANT_TERMS, key=len, reverse=True):
-            escaped = re.escape(str(term).lower())
-            # '블루종'에서 '블루'를 지우지 않도록 글자 경계를 확인한다.
-            text = re.sub(
-                rf"(?<![0-9a-z가-힣]){escaped}(?![0-9a-z가-힣])",
-                " ", text, flags=re.IGNORECASE,
-            )
+        text = COLOR_VARIANT_PATTERN.sub(" ", name.lower().strip())
         # 색상별 끝자리만 달라지는 판매 SKU는 모델 판정에서 제외한다.
         tokens = [
             token for token in re.split(r"[^0-9a-z가-힣]+", text)
@@ -450,12 +464,12 @@ class MusinsaLiveSearch:
                 )
             )
         ]
-        base_name = cls._normalized(" ".join(tokens))
+        base_name = MusinsaLiveSearch._normalized(" ".join(tokens))
         # 모델명을 전혀 남길 수 없는 상품끼리는 과도하게 합치지 않는다.
         if not base_name:
-            base_name = f"id:{product.product_id}"
-        brand = cls._normalized(product.brand)
-        return f"{product.category}|{brand}|{base_name}"
+            base_name = f"id:{product_id}"
+        brand = MusinsaLiveSearch._normalized(brand_value)
+        return f"{category}|{brand}|{base_name}"
 
     def _search_plan(self, targets: TargetKeywordResult) -> list[tuple[str, str, str, str]]:
         plans = {}
@@ -1049,6 +1063,7 @@ class MusinsaLiveSearch:
     @classmethod
     def _season_eligible_products(
         cls, products: list[ShoppingProduct], category: str, season: str,
+        pool: list[ShoppingProduct] | None = None,
     ) -> list[ShoppingProduct]:
         if category == "top" and season and season != "여름":
             # 반팔을 겨울에만 막으면 봄/가을/사계절 선택에서 같은 문제가 반복된다.
@@ -1072,10 +1087,36 @@ class MusinsaLiveSearch:
             ]
         if season == "여름" and category in {"top", "bottom"}:
             terms = SUMMER_TOP_TERMS if category == "top" else SUMMER_BOTTOM_TERMS
-            # 여름에는 긴팔·긴바지를 섞어 비율을 희석하지 않는다. 검색 장애로
-            # 계절 후보가 하나도 없으면 빈 결과로 두어 잘못된 추천을 피한다.
-            return [product for product in products
-                    if any(term in cls._normalized(product.name) for term in terms)]
+            category_pool = pool if pool is not None else products
+
+            def is_summer(product: ShoppingProduct) -> bool:
+                return (
+                    any(term in cls._normalized(product.name) for term in terms)
+                    or (
+                        cls._photo_has_summer_sleeve(product)
+                        if category == "top" else cls._photo_has_summer_bottom(product)
+                    )
+                )
+
+            confirmed = [product for product in products if is_summer(product)]
+            if any(is_summer(product) for product in category_pool):
+                return confirmed
+
+            # 상품명에 '반팔'이 생략된 티셔츠처럼 긴 옷이라는 근거도 없는
+            # 후보는 여름용으로 완화한다. 풀 전체에 이런 후보가 있으면, 이를
+            # 다 쓴 뒤 남은 명시적 긴 옷으로 빈자리를 채우지는 않는다.
+            uncertain = [
+                product for product in products
+                if not cls._title_or_photo_has_long_garment(product, category)
+            ]
+            if any(
+                not cls._title_or_photo_has_long_garment(product, category)
+                for product in category_pool
+            ):
+                return uncertain
+
+            # 검색 결과 전체가 긴 옷뿐일 때만 서비스 중단 대신 기존 후보를 쓴다.
+            return products
         if season == "겨울" and category == "top":
             warm = [
                 product for product in products
@@ -1112,33 +1153,58 @@ class MusinsaLiveSearch:
             and evidence.get("label") in {"쇼츠·미니 기장", "무릎 기장"}
         )
 
+    @classmethod
+    def _title_or_photo_has_long_garment(
+        cls, product: ShoppingProduct, category: str,
+    ) -> bool:
+        text = cls._normalized(product.name)
+        terms = LONG_TOP_TERMS if category == "top" else LONG_BOTTOM_TERMS
+        if any(term in text for term in terms):
+            return True
+        axis = "sleeve_length" if category == "top" else "lower_length"
+        evidence = (product.photo_attributes or {}).get(axis, {})
+        long_labels = {"긴팔"} if category == "top" else {"롱·긴바지 기장"}
+        return (
+            evidence.get("source") == "product_photo"
+            and float(evidence.get("confidence") or 0) >= 0.70
+            and evidence.get("label") in long_labels
+        )
+
     def _select(self, grouped, targets, limit, profile):
         # 최신 화면 계약: 카테고리마다 최대 limit개. 실측 기반 재정렬도 유지한다.
         selected, seen_ids, seen_model_keys, brand_counts = [], set(), set(), {}
+        target_map = getattr(targets, "targets", {}) or {}
+        sources = getattr(targets, "sources", {}) or {}
+        mode = getattr(targets, "mode", "") or ""
+        model_keys = {
+            id(product): self._product_model_key(product)
+            for products in grouped.values() for product in products
+        }
         # 사진에서 관찰한 현재 소재는 검색 점수의 참고 근거일 뿐, 세 LOOK을
         # 같은 소재로 고정하는 사용자 선호가 아니다.
         user_selected_materials = (
-            targets.sources.get("material") == "user_input"
-            or (not targets.sources and targets.mode == "user_input")
+            sources.get("material") == "user_input"
+            or (not sources and mode == "user_input")
         )
         requested_materials = {
             category: list(dict.fromkeys(attributes.get("material", [])))
             if category != "shoes" and user_selected_materials else []
-            for category, attributes in targets.targets.items()
+            for category, attributes in target_map.items()
         }
-        used_materials = {category: set() for category in targets.targets}
-        shirt_counts = {category: 0 for category in targets.targets}
+        used_materials = {category: set() for category in target_map}
+        shirt_counts = {category: 0 for category in target_map}
         top_family_counts: dict[str, int] = {}
         outerwear_count = 0
-        for category in targets.targets:
+        for category in target_map:
             for slot_index in range(limit):
                 products = [
                     product for product in grouped.get(category, [])
                     if product.product_id not in seen_ids
-                    and self._product_model_key(product) not in seen_model_keys
+                    and model_keys[id(product)] not in seen_model_keys
                 ]
                 products = self._season_eligible_products(
-                    products, category, str(profile.season or "").strip()
+                    products, category, str(profile.season or "").strip(),
+                    pool=grouped.get(category, []),
                 )
                 if not products:
                     break
@@ -1268,7 +1334,7 @@ class MusinsaLiveSearch:
                 best = next((p for p in tied if not p.brand or brand_counts.get(p.brand, 0) < 2), best)
                 selected.append(best)
                 seen_ids.add(best.product_id)
-                seen_model_keys.add(self._product_model_key(best))
+                seen_model_keys.add(model_keys[id(best)])
                 shirt_counts[category] += int(category == "top" and self._button_shirt(best))
                 if category == "top":
                     family = self._top_family(best)
