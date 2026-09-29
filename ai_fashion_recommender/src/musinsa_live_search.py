@@ -607,6 +607,7 @@ class MusinsaLiveSearch:
         limit: int = 3,
         fallback_products: Iterable[Product] = (),
         photo_loader=None,
+        exclude_product_ids: Iterable[str] = (),
     ) -> list[ShoppingProduct]:
         if limit <= 0:
             return []
@@ -628,6 +629,17 @@ class MusinsaLiveSearch:
         self._drop_fully_avoided_colors(grouped, profile)
         self._supplement_photos(grouped, targets, photo_loader, prefetched)
         self._apply_fashion_policy_adjustments(grouped, profile)
+        excluded = set(exclude_product_ids)
+        if excluded:
+            # 추가 LOOK 탐색에서는 이미 채택한 상품이 사진 판정 시간과 최종
+            # 선택 슬롯을 다시 차지하지 않게 검증 단계 이전에 제거한다.
+            grouped = {
+                category: [
+                    product for product in products
+                    if product.product_id not in excluded
+                ]
+                for category, products in grouped.items()
+            }
         for products in grouped.values():
             products.sort(key=self._sort_key)
         self._validate_final_top_sleeves(

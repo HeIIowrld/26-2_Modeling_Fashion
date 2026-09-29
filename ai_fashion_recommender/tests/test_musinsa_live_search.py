@@ -202,6 +202,19 @@ class MusinsaLiveSearchTests(unittest.TestCase):
         self.assertEqual(len(results), 4)  # 부족한 후보를 복제하거나 다른 카테고리로 채우지 않음
         self.assertEqual([result.category for result in results], ["top", "top", "bottom", "bottom"])
 
+    def test_expanded_search_excludes_products_before_final_selection(self):
+        search = StubSearch({
+            "top": [item(10, "오버핏 니트"), item(11, "루즈 니트"), item(12, "레귤러 니트")],
+        })
+        top_only = TargetKeywordResult(mode="mixed", targets={"top": self.targets.targets["top"]})
+
+        results = search.search(
+            top_only, self.profile, limit=2, exclude_product_ids={"MS10"},
+        )
+
+        self.assertNotIn("MS10", [product.product_id for product in results])
+        self.assertEqual(len(results), 2)
+
     def test_color_variants_of_the_same_product_are_not_reused(self):
         search = MusinsaLiveSearch()
         self.addCleanup(search.close)

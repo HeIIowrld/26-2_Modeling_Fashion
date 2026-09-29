@@ -144,6 +144,7 @@ class FrontFullBodyValidationTests(unittest.TestCase):
         result = checked(current)
         self.assertFalse(result["passed"])
         self.assertEqual(result["front_pose"]["status"], "non_front")
+        self.assertIn("몸을 정면으로 향한 전신사진을 올려주세요.", result["issues"])
 
     def test_arms_down_passes(self):
         self.assertEqual(assess_arm_pose(landmarks())["status"], "arms_down")

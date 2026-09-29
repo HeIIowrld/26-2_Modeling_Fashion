@@ -104,9 +104,14 @@ class UIContractTests(unittest.TestCase):
         javascript = (STATIC / "app.js").read_text(encoding="utf-8")
         active_css = (STATIC / "lookbook.css").read_text(encoding="utf-8")
         self.assertIn('payload.warnings', javascript)
-        self.assertIn('note.dataset.tone = warnings.length ? "warn" : "ok"', javascript)
+        self.assertIn('state.photoWarningFile = file', javascript)
+        self.assertIn('경고 확인 후 조건 입력', javascript)
+        self.assertIn('state.photoWarningFile === state.file', javascript)
+        self.assertIn('replace(/([.!?。])\\s+/g, "$1\\n")', javascript)
+        self.assertIn('.join("\\n")', javascript)
         # 경고 문구가 본문 색과 같으면 화면에서 눈에 띄지 않는다.
         self.assertIn('.photo-gate-note[data-tone="warn"]', active_css)
+        self.assertIn('white-space: pre-line', active_css)
 
     def test_musinsa_outfits_are_automatically_rendered_inline(self):
         html = (STATIC / "index.html").read_text(encoding="utf-8")

@@ -30,6 +30,7 @@ const state = {
   preferredMaterials: new Set(),
   wardrobe: [],
   photoValidation: false,
+  photoWarningFile: null,
 };
 
 const BUDGET_MIN = 30000;
@@ -149,6 +150,7 @@ $("clear-image").addEventListener("click", (event) => {
   event.stopPropagation();
   state.file = null;
   state.photoValidation = false;
+  state.photoWarningFile = null;
   fileInput.value = "";
   $("dropzone-preview").hidden = true;
   $("dropzone-empty").hidden = false;
@@ -179,6 +181,7 @@ function acceptFile(file) {
   }
   state.file = file;
   state.photoValidation = false;
+  state.photoWarningFile = null;
   $("preview-img").src = URL.createObjectURL(file);
   $("dropzone-empty").hidden = true;
   $("dropzone-preview").hidden = false;
@@ -227,6 +230,12 @@ $("clear-body-image").addEventListener("click", (event) => {
 
 async function validatePhotoBeforeNext() {
   if (!state.file || state.photoValidation) return;
+  if (state.photoWarningFile === state.file) {
+    state.photoWarningFile = null;
+    unlock(2);
+    goto(2);
+    return;
+  }
   const file = state.file;
   const button = $("to-step-2");
   const note = $("photo-gate-note");
@@ -247,17 +256,27 @@ async function validatePhotoBeforeNext() {
     }
     if (state.file !== file) return;
     if (!response.ok) throw new Error(payload.detail || "사진 확인에 실패했어요. 잠시 후 다시 시도해 주세요.");
+    const gateMessage = (messages) => (messages || [])
+      .map((message) => String(message).trim().replace(/([.!?。])\s+/g, "$1\n"))
+      .filter(Boolean)
+      .join("\n");
     if (!payload.valid) {
-      note.textContent = (payload.issues || []).join(" ") || "사진에서 사람의 정면 전신을 확인할 수 없습니다. 다시 촬영해 주세요.";
+      state.photoWarningFile = null;
+      note.textContent = gateMessage(payload.issues) || "사진에서 사람의 정면 전신을 확인할 수 없습니다.\n다시 촬영해 주세요.";
       note.dataset.tone = "bad";
       return;
     }
-    // 통과했더라도 옷 때문에 체형 판정이 흔들릴 수 있으면 그대로 알린다. 진행은 막지 않는다.
+    // 통과 경고를 1페이지에서 읽을 수 있게 한 번 멈춘다.
+    // 사용자가 확인 버튼을 다시 누르면 조건 페이지로 이동한다.
     const warnings = payload.warnings || [];
-    note.textContent = warnings.length
-      ? warnings.join(" ")
-      : "사진이 확인됐어요. 조건을 입력해주세요.";
-    note.dataset.tone = warnings.length ? "warn" : "ok";
+    if (warnings.length) {
+      note.textContent = gateMessage(warnings);
+      note.dataset.tone = "warn";
+      state.photoWarningFile = file;
+      return;
+    }
+    note.textContent = "사진이 확인됐어요. 조건을 입력해주세요.";
+    note.dataset.tone = "ok";
     unlock(2);
     goto(2);
   } catch (error) {
@@ -265,7 +284,9 @@ async function validatePhotoBeforeNext() {
     note.dataset.tone = "error";
   } finally {
     state.photoValidation = false;
-    button.textContent = "다음: 조건 입력";
+    button.textContent = state.photoWarningFile === file
+      ? "경고 확인 후 조건 입력"
+      : "다음: 조건 입력";
     button.disabled = !state.file;
   }
 }
