@@ -253,7 +253,7 @@ class QualityChecker:
         if lower["status"] == "cropped":
             issues.append("발목 또는 발끝이 사진 밖에 있습니다. 발끝까지 들어오는 전신사진으로 다시 촬영해 주세요.")
         if front["status"] == "non_front":
-            issues.append("몸을 정면으로 향하고 양쪽 어깨가 모두 보이도록 다시 촬영해 주세요.")
+            issues.append("몸을 정면으로 향한 전신사진을 올려주세요.")
         if arms["status"] == "arms_raised_or_open":
             issues.append("팔을 몸 옆에 자연스럽게 내리고 몸통을 가리지 않도록 다시 촬영해 주세요.")
         if arms["status"] == "arms_crossed_or_occluded":

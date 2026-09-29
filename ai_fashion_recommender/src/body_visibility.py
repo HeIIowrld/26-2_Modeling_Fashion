@@ -17,7 +17,9 @@ reports/body_visibility_2026-09-23.md) 차단 신호를 정했다.
 않고 경고로 남긴다. 로컬 서비스 실험에서는 넉넉한 핏이 일반적인 사용자 사진을 지나치게 많이
 막는 문제를 먼저 확인하기 위해, 학습 헤드가 지지한 넉넉한 상·하의도 차단 대신 경고로 낮춘다.
 옷에 따른 왜곡(허리 +6%)은 실제로 체형 분류를 25% 뒤집으므로 결과는 참고값으로 표시한다.
-치마·원피스와 두꺼운 외투도 서비스 입력을 막지 않고 사진 기반 체형 규칙만 보류한다.
+치마·원피스는 다리 분리를 너무 크게 가려 입력 단계에서 차단한다.
+두꺼운 외투와 일반적인 와이드·배기·벌룬 팬츠는 통과시키고
+사진 기반 체형 신뢰도만 낮춘다.
 측정 잡음 수준(+2%)에서도 8%가 뒤집히므로 입력 통과 자체가 체형 정확도 보장은 아니다.
 """
 from __future__ import annotations
@@ -25,15 +27,15 @@ from __future__ import annotations
 import numpy as np
 
 
-PHOTO_GUIDANCE = "체형 분석 정확도를 높이려면 몸선을 가리지 않는 옷을 입은 정면 전신사진을 사용할 수 있습니다. 현재 사진으로도 확인 가능한 착장 분석은 계속합니다."
-UNCERTAIN_NOTE = "옷 때문에 체형 판정이 정확하지 않을 수 있습니다. 실제 둘레를 입력하면 그 값을 우선 사용합니다."
+LOOSE_WARNING = "옷이 몸선을 일부 가리고 있어요.\n체형 분석 결과가 덜 정확할 수 있습니다.\n계속하려면 아래 버튼을 한 번 더 눌러주세요."
+OCCLUSION_RETAKE = "옷이 다리 몸선을 많이 가려 체형을 확인하기 어려워요.\n치마·원피스가 아닌 바지 차림의 사진을 사용해 주세요."
 LOOSE = ("오버", "여유", "루즈", "와이드", "배기", "벌룬", "플레어")
 UNKNOWN = ("불가", "보류", "불확실")
 SKIRT_FRACTION_LIMIT = 0.01
 
 
 def assess_body_visibility(outfit, parsed: dict) -> dict:
-    """Record occlusion as capability evidence without rejecting the photo.
+    """Reject clear silhouette occlusion while allowing ordinary loose pants.
 
     No BMI, gender, body width, or assumed 'normal' body shape is used here.
     A mask-only loose-fit label is uncertainty, not proof of oversized clothing,
@@ -49,7 +51,7 @@ def assess_body_visibility(outfit, parsed: dict) -> dict:
         skirt_fraction = float(np.count_nonzero(np.isin(seg, (4, 5))) / person_area)
         evidence.append({"source": "parser", "skirt_or_dress_fraction": round(skirt_fraction, 4)})
         if skirt_fraction >= SKIRT_FRACTION_LIMIT:
-            reasons.append("치마·원피스가 골반과 다리 윤곽을 가려 사진 기반 체형 분석에 적합하지 않습니다.")
+            reasons.append("치마·원피스")
 
     sources = getattr(outfit, "attribute_sources", {})
     for key, name in (("fit", "상의"), ("lower_fit", "하의")):
@@ -69,20 +71,18 @@ def assess_body_visibility(outfit, parsed: dict) -> dict:
     outer = getattr(outfit, "outer_category", "")
     upper = getattr(outfit, "upper_type", "")
     if any(word in f"{outer} {upper}" for word in ("코트", "패딩", "다운", "판초")):
-        reasons.append("두꺼운 외투가 몸선을 가려 체형 분석에 적합하지 않습니다.")
+        uncertain.append("두꺼운 외투가 상체 몸선을 가릴 수 있습니다.")
     status = "occluded" if reasons else "uncertain" if uncertain else "no_obvious_occlusion"
     return {
         "status": status,
-        # 근거가 약한 '보류'는 막지 않는다. 막으면 정상 사진 대부분이 거절된다(위 표).
-        "passed": True,
-        "issues": [],
-        "warnings": (
-            reasons + uncertain + [UNCERTAIN_NOTE, PHOTO_GUIDANCE]
-            if reasons or uncertain else []
-        ),
+        # 치마·원피스만 차단한다. 근거가 약한 마스크 폭과
+        # 학습 헤드의 와이드 팬츠 판정은 정상 사진 오차단을 피해 경고만 남긴다.
+        "passed": not reasons,
+        "issues": [OCCLUSION_RETAKE] if reasons else [],
+        "warnings": [LOOSE_WARNING] if uncertain and not reasons else [],
         "body_shape_reliable": status == "no_obvious_occlusion",
         "evidence": evidence,
-        "policy_version": "2026-09-25-loose-fit-warning",
+        "policy_version": "2026-09-29-occluding-garment-block",
         "calibrated": False,
     }
 
@@ -97,7 +97,8 @@ def with_body_visibility(quality: dict, outfit, parsed: dict) -> dict:
         **quality,
         "body_visibility": visibility,
         "analysis_capabilities": capabilities,
-        "issues": list(dict.fromkeys(quality.get("issues", []))),
+        "passed": bool(quality.get("passed", True) and visibility["passed"]),
+        "issues": list(dict.fromkeys(quality.get("issues", []) + visibility["issues"])),
         "warnings": list(dict.fromkeys(quality.get("warnings", []) + visibility["warnings"])),
     }
 

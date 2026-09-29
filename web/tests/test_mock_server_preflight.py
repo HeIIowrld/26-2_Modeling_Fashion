@@ -63,11 +63,10 @@ class MockPreflightTests(unittest.TestCase):
         self.assertTrue(payload["warnings"])
         self.assertEqual(payload["quality"]["body_visibility"]["status"], "uncertain")
 
-    def test_occluding_photo_passes_with_a_body_shape_warning(self):
+    def test_occluding_photo_is_blocked_before_the_next_step(self):
         payload = self.post("/api/validate-photo", multipart("skirt-person.jpg"))
-        self.assertTrue(payload["valid"])
-        self.assertEqual(payload["issues"], [])
-        self.assertTrue(any("치마" in warning for warning in payload["warnings"]))
+        self.assertFalse(payload["valid"])
+        self.assertTrue(any("치마" in issue for issue in payload["issues"]))
         self.assertEqual(payload["quality"]["body_visibility"]["status"], "occluded")
 
     def test_analyze_still_reads_the_profile_after_sharing_the_upload_reader(self):
