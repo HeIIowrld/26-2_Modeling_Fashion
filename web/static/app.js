@@ -18,9 +18,7 @@ const state = {
   profile: null,
   shoppingProducts: [],
   shoppingOutfits: [],
-  shoppingEvidenceOpen: new Set(),
   lookSelected: 0,
-  lookEvidenceOpen: new Set(),
   shoppingTryonResults: [],
   shoppingTryonBatch: null,
   shoppingTryonPoll: null,
@@ -573,7 +571,6 @@ function renderResult(result) {
   state.shoppingTryonResults = [];
   state.shoppingTryonBatch = null;
   state.lookSelected = 0;
-  state.lookEvidenceOpen.clear();
   $("shopping-tryon-panel").hidden = true;
   if (result.tryon) state.tryon = result.tryon;
   renderRequestSummary(result?.request);
@@ -662,8 +659,7 @@ function renderShoppingProductCard(product) {
               `<span class="shopping-keyword">${escapeHtml(keyword)}</span>`
             ).join("")}
           </div>` : ""}
-        ${product.recommendation_reason ? `
-          <p class="shopping-reason"><b>상품 선택 근거</b>${escapeHtml(product.recommendation_reason)}</p>` : ""}
+        ${renderShoppingReason(product)}
         <div class="shopping-bottom">
           <strong>${Number(product.price).toLocaleString("ko-KR")}원</strong>
           <span>무신사에서 보기 ↗</span>
@@ -671,7 +667,6 @@ function renderShoppingProductCard(product) {
       </div>
     </a>
     ${renderSizeFit(product.size_fit)}
-    ${renderShoppingEvidence(product)}
   </article>`;
 }
 
@@ -767,16 +762,17 @@ function renderLookPanel(outfit, index) {
     </div>`).join("");
   const evidence = (outfit.evidence || []).slice(0, 3);
   const labels = outfit.evidence_labels || [];
-  const open = state.lookEvidenceOpen.has(entry.key) ? " open" : "";
+  /* 규칙 문장일 때 outfit.reason 은 근거 앞의 두 문장을 이어 붙인 값이라, 요약과
+     근거 펼침에 같은 문장이 두 번 보였다. 근거를 라벨과 함께 바로 보이고,
+     LLM 이 근거를 합쳐 다듬은 문장이 있을 때만 그 문장을 대신 보인다. */
+  const reasons = outfit.reason_source === "llm" || !evidence.length
+    ? `<p class="look-summary">${sentenceLines(outfit.reason
+        || "현재 착장과 선택 조건을 함께 고려한 조합입니다.")}</p>`
+    : `<ul class="look-reasons">${evidence.map((text, evidenceIndex) => `<li>${labels[evidenceIndex] ? `<b>${escapeHtml(labels[evidenceIndex])}</b>` : ""}<span>${escapeHtml(text)}</span></li>`).join("")}</ul>`;
   return `<section class="look-panel" role="tabpanel" id="look-panel-${index}"
       aria-labelledby="look-tab-${index}" tabindex="0">
-    <p class="look-summary">${sentenceLines(outfit.reason
-      || "현재 착장과 선택 조건을 함께 고려한 조합입니다.")}</p>
+    ${reasons}
     ${currentItems ? `<div class="outfit-current-items" aria-label="그대로 입는 현재 아이템">${currentItems}</div>` : ""}
-    ${evidence.length ? `<details class="outfit-combination-evidence" data-look-evidence="${escapeHtml(entry.key)}"${open}>
-      <summary>왜 이 조합인가요?</summary>
-      <ul>${evidence.map((text, evidenceIndex) => `<li>${labels[evidenceIndex] ? `<b>${escapeHtml(labels[evidenceIndex])}</b>` : ""}<span>${escapeHtml(text)}</span></li>`).join("")}</ul>
-    </details>` : ""}
     <div class="look-body">
       <div class="look-render" data-outfit-render="${escapeHtml(entry.key)}">
         ${renderOutfitTryon(entry)}
@@ -853,34 +849,25 @@ function renderShoppingProducts(products, outfits = []) {
       selectLook(moves[event.key], true);
     });
   });
-  grid.querySelectorAll("[data-look-evidence]").forEach((details) => {
-    details.addEventListener("toggle", () => {
-      if (details.open) state.lookEvidenceOpen.add(details.dataset.lookEvidence);
-      else state.lookEvidenceOpen.delete(details.dataset.lookEvidence);
-    });
-  });
-  grid.querySelectorAll("[data-evidence-for]").forEach((details) => {
-    details.addEventListener("toggle", () => {
-      if (details.open) state.shoppingEvidenceOpen.add(details.dataset.evidenceFor);
-      else state.shoppingEvidenceOpen.delete(details.dataset.evidenceFor);
-    });
-  });
   renderShoppingTryonPanel();
   section.hidden = false;
 }
 
-function renderShoppingEvidence(product) {
+/* 규칙 문장일 때 recommendation_reason 은 근거 목록의 첫 문장을 그대로 복사한 값이라,
+   요약과 목록을 함께 보이면 같은 문장이 두 번 나왔다. 근거 목록을 라벨과 함께 한 칸에
+   보이고, LLM 이 근거를 합쳐 다듬은 문장이 있을 때만 그 문장을 대신 보인다. */
+function renderShoppingReason(product) {
   const evidence = (product.fit_evidence || []).slice(0, 3);
-  if (!evidence.length) return "";
   const labels = product.fit_evidence_labels || [];
   const ruleIds = (product.reason_rule_ids || []).join(" ");
-  const open = state.shoppingEvidenceOpen.has(product.product_id);
-  return `<details class="shopping-evidence" data-evidence-for="${escapeHtml(product.product_id)}" data-reason-rule-ids="${escapeHtml(ruleIds)}"${open ? " open" : ""}>
-    <summary>왜 추천했나요? <span aria-hidden="true">▼</span></summary>
-    <div class="shopping-evidence-body"><strong>추천 근거</strong><ul>
-      ${evidence.map((text, index) => `<li>${labels[index] ? `<b>${escapeHtml(labels[index])}</b>` : ""}<span>${escapeHtml(text)}</span></li>`).join("")}
-    </ul></div>
-  </details>`;
+  const useSentence = product.recommendation_reason_source === "llm" || !evidence.length;
+  if (useSentence && !product.recommendation_reason) return "";
+  const body = useSentence
+    ? `<span>${escapeHtml(product.recommendation_reason)}</span>`
+    : `<ul>${evidence.map((text, index) => `<li>${labels[index] ? `<b>${escapeHtml(labels[index])}</b>` : ""}<span>${escapeHtml(text)}</span></li>`).join("")}</ul>`;
+  return `<div class="shopping-reason" data-reason-rule-ids="${escapeHtml(ruleIds)}">
+    <b>상품 선택 근거</b>${body}
+  </div>`;
 }
 
 function refreshOutfitTryonRenders() {

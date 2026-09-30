@@ -337,6 +337,35 @@ class OutfitCombinationTests(unittest.TestCase):
 
         self.assertEqual(outfits[0].product_ids, ["T-KNIT", "B-DENIM"])
 
+    def test_shoe_reason_explains_the_style_match_in_plain_words(self):
+        from outfit_combination_recommender import _shoe_score
+
+        targets = TargetKeywordResult("user_input", {"shoes": {"item_type": ["로퍼", "러닝화"]}})
+        minimal = UserProfile(desired_style="미니멀")
+        _, reason = _shoe_score(product("S1", "shoes", ["로퍼"]), minimal, targets)
+        self.assertEqual(reason, "로퍼는 미니멀 스타일에 자주 매치하는 신발이라 코디를 깔끔하게 마무리해 줘요.")
+        # 스타일과 어울린다고 볼 근거가 없으면 이유를 지어내지 않는다.
+        _, reason = _shoe_score(product("S2", "shoes", ["러닝화"]), minimal, targets)
+        self.assertEqual(reason, "")
+
+    def test_shoe_reason_connects_the_shoe_to_the_bottom_silhouette(self):
+        from outfit_combination_recommender import _shoe_silhouette_reason
+
+        wide = {"fit": "와이드핏", "length": "풀렝스", "name": "와이드 팬츠"}
+        straight = {"fit": "스트레이트핏", "length": "풀렝스", "name": "슬랙스"}
+        self.assertEqual(
+            _shoe_silhouette_reason("스니커즈", wide),
+            "통이 넓은 하의 밑단을 볼륨 있는 스니커즈가 받쳐 줘 실루엣이 안정적이에요.",
+        )
+        self.assertEqual(
+            _shoe_silhouette_reason("로퍼", straight),
+            "곧게 떨어지는 하의에 날렵한 로퍼를 매치해 발끝까지 깔끔하게 이어져요.",
+        )
+        # 근거가 없는 조합, 반바지, 핏을 모르는 하의에는 문장을 만들지 않는다.
+        self.assertEqual(_shoe_silhouette_reason("로퍼", wide), "")
+        self.assertEqual(_shoe_silhouette_reason("스니커즈", {"fit": "와이드핏", "name": "와이드 쇼츠"}), "")
+        self.assertEqual(_shoe_silhouette_reason("스니커즈", {"fit": "분석 보류"}), "")
+
     def test_sporty_outfit_cannot_be_carried_by_running_shoes_alone(self):
         profile = UserProfile(
             purpose="데일리", desired_style="스포티",
