@@ -121,7 +121,7 @@ def test_padded_outerwear_warns_without_rejecting_the_photo():
     outfit, parsed = sample()
     outfit.outer_category = '패딩'
     result = assess_body_visibility(outfit, parsed)
-    assert result['status'] == 'occluded'
+    assert result['status'] == 'uncertain'
     assert result['passed'] and not result['issues']
     assert result['warnings']
 
