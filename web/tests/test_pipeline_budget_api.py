@@ -153,13 +153,14 @@ class PipelineBudgetAPITests(unittest.TestCase):
         engine.pose_analyzer.analyze = Mock(side_effect=[main_pose, body_pose])
         with tempfile.TemporaryDirectory() as temporary, patch.object(pipeline, 'get_engine', return_value=engine), patch.object(pipeline, 'classify') as classify:
             body_path = Path(temporary) / 'body.jpg'
-            result = run_pipeline(
-                Path(temporary) / 'person.jpg', pipeline.build_profile({}),
-                Path(temporary), lambda stage: None, body_path,
-            )
+            # 치마·원피스로 다리 몸선이 가려진 체형 사진은 입력 단계에서 차단한다.
+            with self.assertRaisesRegex(pipeline.PipelineError, "체형 파악용 사진"):
+                run_pipeline(
+                    Path(temporary) / 'person.jpg', pipeline.build_profile({}),
+                    Path(temporary), lambda stage: None, body_path,
+                )
             self.assertEqual(engine.pose_analyzer.analyze.call_args.args, (body_path,))
             classify.assert_not_called()
-            self.assertEqual(result.payload['pose']['body_shape'], '분석 불확실')
 
     def test_valid_separate_body_photo_supplies_its_pose_to_body_classifier(self):
         import pipeline
