@@ -121,16 +121,26 @@ def current_fit_label(outfit, category: str) -> tuple[str, str]:
 
 
 def target_fit_label(product, category: str) -> str:
-    """Prefer structured product fit, then conservatively parse the product name."""
+    """Use seller fit, then a clear name silhouette, then an inferred fit."""
+    seller = getattr(product, "seller_fit", "") or ""
+    if fit_level(category, seller) is not None:
+        return seller
+    name = getattr(product, "name", "") or ""
+    patterns = _TOP_NAME if category == "top" else _BOTTOM_NAME
+    matches = [(level, match.start(), match.end(), match.group(0)) for level, pattern in patterns
+               if (match := pattern.search(name))]
+    # "세미와이드" also contains "와이드". A shorter overlapping token is
+    # the same evidence, whereas separate slim/wide claims are ambiguous.
+    distinct = [item for item in matches if not any(
+        other is not item and other[1] <= item[1] and item[2] <= other[2]
+        and other[2] - other[1] > item[2] - item[1]
+        for other in matches
+    )]
+    if distinct and len({level for level, *_rest in distinct}) == 1:
+        return distinct[0][3]
     structured = getattr(product, "fit", "") or ""
     if fit_level(category, structured) is not None:
         return structured
-    name = getattr(product, "name", "") or ""
-    patterns = _TOP_NAME if category == "top" else _BOTTOM_NAME
-    for _level, pattern in patterns:
-        match = pattern.search(name)
-        if match:
-            return match.group(0)
     return ""
 
 

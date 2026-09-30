@@ -9,7 +9,6 @@ from typing import Callable
 from config import ENABLE_AUTO_BODY_SHAPE
 from fashion_rules import FashionRuleBook
 from outfit_analyzer import COLOR_PALETTE, NEUTRALS, color_harmony
-from outfit_combination_recommender import korean_particle
 from product_catalog import ProductCatalog
 from recommendation_keywords import RecommendationKeywordGenerator, TargetKeywordResult
 from schemas import (
@@ -1259,6 +1258,30 @@ class RecommendationEngine:
         confidence = min(item["confidence"], max(pose.full_body_score, pose.body_shape_confidence))
         return self._shrink_to_neutral(max(0.0, min(1.0, score)), confidence), reasons, list(dict.fromkeys(rules))
 
+    @staticmethod
+    def _color_reason(top_color: str, bottom_color: str, harmony_name: str) -> str:
+        """실제 색 이름으로 두 옷의 색 관계를 고객에게 설명한다(R-COL-03)."""
+        # '상·하의'의 가운뎃점(U+00B7)은 좁은 화면에서 '상 / ·하의'로 갈라진다.
+        # 문장에서는 풀어서 쓴다.
+        if top_color not in COLOR_PALETTE or bottom_color not in COLOR_PALETTE:
+            return "상의와 하의의 색이 크게 부딪히지 않아요."
+        pair = f"{top_color} 상의와 {bottom_color} 하의"
+        if harmony_name == "톤온톤":
+            return f"상의와 하의를 같은 {top_color} 계열로 맞춰 톤온톤으로 깔끔하게 이어져요."
+        if harmony_name == "안정적인 무채색 조합":
+            if top_color in NEUTRALS and bottom_color in NEUTRALS:
+                return f"{pair}가 모두 기본색이라 차분하게 어울려요."
+            if top_color in NEUTRALS:
+                base, accent = f"{top_color} 상의", f"{bottom_color} 하의"
+            else:
+                base, accent = f"{bottom_color} 하의", f"{top_color} 상의"
+            return f"기본색인 {base}가 {accent}를 받쳐 줘 색이 과하지 않아요."
+        if harmony_name == "유사색 조합":
+            return f"{pair}는 비슷한 계열 색이라 부드럽게 이어져요."
+        if harmony_name == "대비색 조합":
+            return f"{pair}는 대비되는 색이라 서로를 또렷하게 살려 줘요."
+        return f"{pair}는 크게 부딪히지 않는 색 조합이에요."
+
     def _outfit_harmony_score(
         self, top: dict, bottom: dict, profile: UserProfile,
     ) -> tuple[float, dict[str, float], list[str], list[str]]:
@@ -1273,19 +1296,19 @@ class RecommendationEngine:
         bottom_long = any(word in bottom["length"] for word in ("롱", "긴바지", "풀렝스", "맥시", "장기장"))
         if top_large and top_long and bottom_large and bottom_long:
             silhouette = 0.96
-            reasons.append("롱 오버핏 상의와 롱 와이드 하의의 연속된 볼륨을 의도적인 트렌드 실루엣으로 평가했습니다.")
+            reasons.append("긴 오버핏 상의와 긴 와이드 하의가 이어지며 여유 있는 롱 실루엣을 만들어요.")
         elif top_large and bottom_ordered:
             silhouette = 0.72
-            reasons.append("오버핏 상의와 스트레이트 계열 하의는 안정적이지만 무난한 기본 조합이라 평균권으로 평가했습니다.")
+            reasons.append("오버핏 상의를 곧게 떨어지는 하의가 잡아 줘 안정적인 기본 실루엣이에요.")
         elif bottom_large and not top_large:
             silhouette = 0.90
-            reasons.append("정돈된 상의와 볼륨 하의가 선명한 실루엣 대비를 만듭니다.")
+            reasons.append("정돈된 상의에 볼륨 있는 하의를 매치해 실루엣 대비가 또렷해요.")
         elif top_large and bottom_large:
             silhouette = 0.88
-            reasons.append("상·하의의 큰 볼륨이 하나의 의도된 실루엣으로 이어집니다.")
+            reasons.append("상의와 하의 모두 여유 있는 핏이라 하나의 루즈한 실루엣으로 이어져요.")
         else:
             silhouette = 0.80
-            reasons.append("상·하의의 기본 볼륨 관계가 크게 충돌하지 않습니다.")
+            reasons.append("상의와 하의의 핏이 부딪히지 않고 무난하게 이어져요.")
         rules.append("R-SIL-01")
 
         formality_gap = abs(top["formality"] - bottom["formality"])
@@ -1305,15 +1328,7 @@ class RecommendationEngine:
         }[harmony_name]
         if (top["color"] in NEUTRALS) != (bottom["color"] in NEUTRALS):
             color = max(color, 0.94)
-        # 조사를 '를'로 박아 두어 화면에 "'톤온톤'를"로 나왔다. 현재 이름은 다섯 개가
-        # 모두 받침으로 끝나지만, 이름이 늘어도 맞도록 받침을 보고 고른다.
-        harmony_particle = korean_particle(harmony_name, "을", "를")
-        # '상·하의'의 가운뎃점(U+00B7)은 유니코드 줄바꿈 분류가 BA(뒤에서 끊기 허용)라
-        # word-break: keep-all 로도 막히지 않는다. 좁은 화면에서 '상 / ·하의'로 갈라졌다.
-        # 라벨이 아니라 문장이므로 풀어서 쓴다.
-        reasons.append(
-            f"색상 관계 '{harmony_name}'{harmony_particle} 상의와 하의의 연결감으로 평가했습니다."
-        )
+        reasons.append(self._color_reason(top["color"], bottom["color"], harmony_name))
         rules.append("R-COL-03")
 
         quiet_patterns = {"", "무지", "분석 보류", "패턴 불확실"}

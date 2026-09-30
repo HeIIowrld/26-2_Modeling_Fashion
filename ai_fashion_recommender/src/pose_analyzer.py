@@ -280,8 +280,6 @@ class PoseAnalyzer:
             warnings.append("일부 관절이 옷이나 물체에 가려졌습니다.")
         if body_shape == SHAPE_UNCERTAIN:
             warnings.append("촬영 자세 또는 경계에 가까운 비율 때문에 체형 분류를 보류했습니다.")
-        warnings.append("어깨·골반 값은 관절 간격 기반 상대 추정치이며 실제 신체 치수가 아닙니다.")
-
         return PoseAnalysis(
             valid=full_body_score >= MIN_FULL_BODY_SCORE,
             full_body_score=round(full_body_score, 4),

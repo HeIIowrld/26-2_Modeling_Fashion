@@ -330,6 +330,8 @@ class Product:
     color_options: list[str] = field(default_factory=list)
     measurement_record: dict = field(default_factory=dict)
     stock_checked_at: str = ""
+    # 판매자가 제공한 핏 태그. 추정된 fit과 구분해 합성 경로를 선택한다.
+    seller_fit: str = ""
 
 
 @dataclass

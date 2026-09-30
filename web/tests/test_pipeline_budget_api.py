@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from pipeline import run_pipeline, PipelineResult, UserProfile
+from pipeline import run_pipeline, PipelineError, PipelineResult, UserProfile
 
 class FakePoseAnalyzer:
     def analyze(self, image_path):
@@ -76,7 +76,8 @@ class FakeProductSearch:
     def __init__(self):
         self.called = False
 
-    def search(self, targets, profile, limit=3, fallback_products=(), photo_loader=None):
+    def search(self, targets, profile, limit=3, fallback_products=(), photo_loader=None,
+               exclude_product_ids=()):
         self.called = True
         if not callable(photo_loader):
             raise AssertionError("실시간 사진 로더가 검색에 연결되어야 합니다.")
@@ -97,21 +98,48 @@ class FakeEngine:
         self.parser_backend = "fashn"
 
 class PipelineBudgetAPITests(unittest.TestCase):
-    def test_hidden_body_skips_photo_body_shape_but_keeps_outfit_search(self):
+    def test_expanded_search_preserves_ranked_looks_and_only_fills_missing_tail(self):
+        import pipeline
+
+        products = [SimpleNamespace(product_id=value) for value in ("T1", "S1")]
+        expanded = [SimpleNamespace(product_id=value) for value in ("T1", "S1", "T2", "S2", "T3", "S3")]
+        first = SimpleNamespace(combination_id="OUTFIT-1", product_ids=["T1", "S1"])
+        second = SimpleNamespace(combination_id="OUTFIT-1", product_ids=["T2", "S2"])
+        third = SimpleNamespace(combination_id="OUTFIT-2", product_ids=["T3", "S3"])
+
+        def recommend_more(candidates, missing_count):
+            self.assertEqual(missing_count, 2)
+            self.assertEqual([item.product_id for item in candidates], ["T2", "S2", "T3", "S3"])
+            return [second, third]
+
+        merged_products, merged_outfits = pipeline._supplement_shopping_outfits(
+            products, [first], expanded, recommend_more,
+        )
+
+        self.assertIs(merged_outfits[0], first)
+        self.assertEqual(
+            [item.combination_id for item in merged_outfits],
+            ["OUTFIT-1", "OUTFIT-2", "OUTFIT-3"],
+        )
+        self.assertEqual(
+            [item.product_id for item in merged_products],
+            ["T1", "S1", "T2", "S2", "T3", "S3"],
+        )
+
+    def test_skirt_or_dress_blocks_direct_analysis_before_search(self):
         import pipeline
         engine = FakeEngine()
         outfit, parsed = engine.outfit_analyzer.analyze(None, None)
         parsed['segmentation'][:] = 5
         engine.outfit_analyzer.analyze = Mock(return_value=(outfit, parsed))
         with tempfile.TemporaryDirectory() as temporary, patch.object(pipeline, 'get_engine', return_value=engine), patch.object(pipeline, 'classify') as classify:
-            result = run_pipeline(
-                Path(temporary) / 'person.jpg', pipeline.build_profile({}),
-                Path(temporary), lambda stage: None,
-            )
+            with self.assertRaisesRegex(PipelineError, '치마·원피스'):
+                run_pipeline(
+                    Path(temporary) / 'person.jpg', pipeline.build_profile({}),
+                    Path(temporary), lambda stage: None,
+                )
             classify.assert_not_called()
-            self.assertTrue(engine.product_search.called)
-            self.assertEqual(result.payload['pose']['body_shape'], '분석 불확실')
-            self.assertTrue(any('치마' in warning for warning in result.payload['input_quality']['warnings']))
+            self.assertFalse(engine.product_search.called)
 
     def test_separate_body_photo_is_checked_with_its_own_pose(self):
         import pipeline
@@ -124,13 +152,14 @@ class PipelineBudgetAPITests(unittest.TestCase):
         engine.pose_analyzer.analyze = Mock(side_effect=[main_pose, body_pose])
         with tempfile.TemporaryDirectory() as temporary, patch.object(pipeline, 'get_engine', return_value=engine), patch.object(pipeline, 'classify') as classify:
             body_path = Path(temporary) / 'body.jpg'
-            result = run_pipeline(
-                Path(temporary) / 'person.jpg', pipeline.build_profile({}),
-                Path(temporary), lambda stage: None, body_path,
-            )
+            # 치마·원피스로 다리 몸선이 가려진 체형 사진은 입력 단계에서 차단한다.
+            with self.assertRaisesRegex(pipeline.PipelineError, "체형 파악용 사진"):
+                run_pipeline(
+                    Path(temporary) / 'person.jpg', pipeline.build_profile({}),
+                    Path(temporary), lambda stage: None, body_path,
+                )
             self.assertEqual(engine.pose_analyzer.analyze.call_args.args, (body_path,))
             classify.assert_not_called()
-            self.assertEqual(result.payload['pose']['body_shape'], '분석 불확실')
 
     def test_valid_separate_body_photo_supplies_its_pose_to_body_classifier(self):
         import pipeline

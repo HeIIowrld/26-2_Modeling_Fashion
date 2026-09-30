@@ -130,6 +130,18 @@ class RecommendationTests(unittest.TestCase):
     def test_neutral_color_harmony(self):
         self.assertEqual(color_harmony("화이트", "네이비"), "안정적인 무채색 조합")
 
+    def test_color_reason_names_the_actual_colors(self):
+        reason = RecommendationEngine._color_reason
+        self.assertEqual(
+            reason("레드", "블랙", "안정적인 무채색 조합"),
+            "기본색인 블랙 하의가 레드 상의를 받쳐 줘 색이 과하지 않아요.",
+        )
+        self.assertIn("네이비 상의와 화이트 하의", reason("네이비", "화이트", "안정적인 무채색 조합"))
+        self.assertIn("같은 블랙 계열", reason("블랙", "블랙", "톤온톤"))
+        self.assertIn("레드 상의와 핑크 하의", reason("레드", "핑크", "유사색 조합"))
+        # 색을 모르면 색 이름을 지어내지 않는다.
+        self.assertNotIn("분석 보류", reason("분석 보류", "블랙", "보통 조합"))
+
     def test_dominant_color_returns_rgb_triplet(self):
         image = np.full((20, 20, 3), (200, 80, 120), dtype=np.uint8)
         mask = np.ones((20, 20), dtype=bool)

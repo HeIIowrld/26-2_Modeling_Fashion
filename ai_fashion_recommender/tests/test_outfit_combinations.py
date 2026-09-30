@@ -337,6 +337,35 @@ class OutfitCombinationTests(unittest.TestCase):
 
         self.assertEqual(outfits[0].product_ids, ["T-KNIT", "B-DENIM"])
 
+    def test_shoe_reason_explains_the_style_match_in_plain_words(self):
+        from outfit_combination_recommender import _shoe_score
+
+        targets = TargetKeywordResult("user_input", {"shoes": {"item_type": ["로퍼", "러닝화"]}})
+        minimal = UserProfile(desired_style="미니멀")
+        _, reason = _shoe_score(product("S1", "shoes", ["로퍼"]), minimal, targets)
+        self.assertEqual(reason, "로퍼는 미니멀 스타일에 자주 매치하는 신발이라 코디를 깔끔하게 마무리해 줘요.")
+        # 스타일과 어울린다고 볼 근거가 없으면 이유를 지어내지 않는다.
+        _, reason = _shoe_score(product("S2", "shoes", ["러닝화"]), minimal, targets)
+        self.assertEqual(reason, "")
+
+    def test_shoe_reason_connects_the_shoe_to_the_bottom_silhouette(self):
+        from outfit_combination_recommender import _shoe_silhouette_reason
+
+        wide = {"fit": "와이드핏", "length": "풀렝스", "name": "와이드 팬츠"}
+        straight = {"fit": "스트레이트핏", "length": "풀렝스", "name": "슬랙스"}
+        self.assertEqual(
+            _shoe_silhouette_reason("스니커즈", wide),
+            "통이 넓은 하의 밑단을 볼륨 있는 스니커즈가 받쳐 줘 실루엣이 안정적이에요.",
+        )
+        self.assertEqual(
+            _shoe_silhouette_reason("로퍼", straight),
+            "곧게 떨어지는 하의에 날렵한 로퍼를 매치해 발끝까지 깔끔하게 이어져요.",
+        )
+        # 근거가 없는 조합, 반바지, 핏을 모르는 하의에는 문장을 만들지 않는다.
+        self.assertEqual(_shoe_silhouette_reason("로퍼", wide), "")
+        self.assertEqual(_shoe_silhouette_reason("스니커즈", {"fit": "와이드핏", "name": "와이드 쇼츠"}), "")
+        self.assertEqual(_shoe_silhouette_reason("스니커즈", {"fit": "분석 보류"}), "")
+
     def test_sporty_outfit_cannot_be_carried_by_running_shoes_alone(self):
         profile = UserProfile(
             purpose="데일리", desired_style="스포티",
@@ -387,6 +416,36 @@ class OutfitCombinationTests(unittest.TestCase):
         self.assertEqual(len(outfits), 1)
         self.assertIn("스포티 구성", outfits[0].public_dict()["evidence_labels"])
         self.assertIn("스포츠 브랜드 예외", outfits[0].reason)
+
+    def test_silhouette_and_color_lead_the_combination_reason(self):
+        class ColorRecommender(FakeRecommender):
+            def _outfit_harmony_score(self, top, bottom, _profile):
+                return (
+                    0.9, {},
+                    ["정돈된 상의에 볼륨 있는 하의를 매치해 실루엣 대비가 또렷해요.",
+                     "격식도",
+                     "기본색인 블루 하의가 레드 상의를 받쳐 줘 색이 과하지 않아요."],
+                    ["R-CMP-03", "R-SIL-01"],
+                )
+
+        top = product("T1", "top", ["레드"])
+        top.photo_attributes = {"fit": {
+            "label": "오버핏", "confidence": 0.96, "keyword": "오버핏",
+            "source": "product_photo", "policy": POLICY_VERSION,
+        }}
+        self.targets = TargetKeywordResult(
+            "mixed", {"top": {"fit": ["오버핏"], "color": ["레드"]}},
+            applied_rules=["R-SIL-01"], keyword_rules={"top": {"오버핏": ["R-SIL-01"]}},
+        )
+        with patch.dict(os.environ, {"FASHION_LLM_REASONS": "0"}, clear=False):
+            outfits = recommend_outfit_combinations(
+                [top], self.profile, self.pose, self.outfit,
+                self.targets, ColorRecommender(), limit=1,
+            )
+
+        labels = outfits[0].public_dict()["evidence_labels"]
+        self.assertEqual(labels[:2], ["실루엣", "색상"])
+        self.assertIn("블루 하의", outfits[0].reason)
 
     def test_visual_fit_is_used_by_fashion_rule_harmony(self):
         self.targets = TargetKeywordResult(

@@ -36,7 +36,28 @@ def image_upload():
 
 
 class PhotoPreflightTests(unittest.TestCase):
-    def test_skirt_is_a_body_shape_warning_and_temp_photo_is_deleted(self):
+    def test_non_front_skirt_reports_both_independent_issues(self):
+        engine = FakeEngine(True)
+        outfit, parsed = engine.outfit_analyzer.analyze(None, None)
+        parsed['segmentation'][:] = 5
+        engine.outfit_analyzer.analyze = Mock(return_value=(outfit, parsed))
+        engine.quality_checker.check_input = Mock(return_value={
+            'passed': False,
+            'issues': ['몸을 정면으로 향한 전신사진을 올려주세요.'],
+            'warnings': [],
+            'front_pose': {'status': 'non_front', 'metrics': {}},
+        })
+        with tempfile.TemporaryDirectory() as temporary, patch.object(
+            web_app, 'SESSION_ROOT', Path(temporary),
+        ), patch.object(web_app, 'get_engine', return_value=engine):
+            payload = json.loads(asyncio.run(web_app.validate_photo(image_upload())).body)
+
+        self.assertFalse(payload['valid'])
+        self.assertEqual(len(payload['issues']), 2)
+        self.assertTrue(any('정면' in issue for issue in payload['issues']))
+        self.assertTrue(any('치마·원피스' in issue for issue in payload['issues']))
+
+    def test_skirt_blocks_the_next_step_and_temp_photo_is_deleted(self):
         engine = FakeEngine(True)
         outfit, parsed = engine.outfit_analyzer.analyze(None, None)
         parsed['segmentation'][:] = 5
@@ -44,10 +65,10 @@ class PhotoPreflightTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary, patch.object(web_app, 'SESSION_ROOT', Path(temporary)), patch.object(web_app, 'get_engine', return_value=engine):
             response = asyncio.run(web_app.validate_photo(image_upload()))
             payload = json.loads(response.body)
-            self.assertTrue(payload['valid'])
+            self.assertFalse(payload['valid'])
             self.assertEqual(payload['quality']['body_visibility']['status'], 'occluded')
-            self.assertEqual(payload['issues'], [])
-            self.assertTrue(any('치마' in warning for warning in payload['warnings']))
+            self.assertTrue(any('치마' in issue for issue in payload['issues']))
+            self.assertEqual(payload['issues'][0].count('\n'), 1)
             self.assertEqual(list(Path(temporary).iterdir()), [])
 
     def test_loose_looking_clothes_pass_with_a_warning_instead_of_a_retake(self):

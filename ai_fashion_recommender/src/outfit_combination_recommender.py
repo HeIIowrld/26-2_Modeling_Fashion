@@ -12,6 +12,7 @@ from itertools import product as cartesian_product
 from typing import Any, Iterable
 
 from fashion_ranking_policy import sporty_context_enabled, sporty_product_evidence
+from recommendation_engine import RecommendationEngine
 from recommendation_keywords import TargetKeywordResult
 from schemas import OutfitAnalysis, PoseAnalysis, UserProfile
 
@@ -25,6 +26,13 @@ FORBIDDEN_COPY = (
     "상품명", "상품 이름", "제품명", "제품 이름", "이름에서", "이름에", "타이틀", "title",
 )
 MIN_SAFE_COMBINATION_SCORE = 0.75
+SHOE_STYLE_MOOD = {
+    "스트리트": "개성 있게", "캐주얼": "편안하게", "미니멀": "깔끔하게",
+    "포멀": "단정하게", "스포티": "활동적으로", "로맨틱": "부드럽게",
+}
+# 신발 종류로 본 볼륨. 사진으로 잰 값이 아니라 종류에서 추정한 값이다.
+VOLUME_SHOES = {"스니커즈", "러닝화", "부츠", "워커"}
+SLEEK_SHOES = {"로퍼", "더비슈즈", "메리제인", "펌프스"}
 KNIT_TERMS = ("니트", "스웨터", "풀오버", "knit", "sweater", "pullover")
 SHORT_SLEEVE_TERMS = (
     "반팔", "반소매", "하프슬리브", "숏슬리브", "민소매", "슬리브리스", "베스트", "조끼",
@@ -83,11 +91,7 @@ def _usable(value: str) -> bool:
 
 
 def korean_particle(value: str, with_final: str, without_final: str) -> str:
-    """마지막 한글 음절의 받침에 맞는 짧은 조사를 고른다.
-
-    recommendation_engine 도 쓴다. 거기서 조사를 '를'로 박아 두어 화면에
-    "'톤온톤'를"이 나갔다. 같은 규칙을 두 번 쓰지 않도록 여기서 공개한다.
-    """
+    """마지막 한글 음절의 받침에 맞는 짧은 조사를 고른다."""
     if not value:
         return without_final
     code = ord(value[-1]) - 0xAC00
@@ -283,8 +287,39 @@ def _shoe_score(product: Any, profile: UserProfile, targets: TargetKeywordResult
         "스포티": {"러닝화", "스니커즈"}, "로맨틱": {"메리제인", "로퍼"},
     }.get(profile.desired_style, {"스니커즈"})
     score = 0.92 if item_type in preferred else 0.72
-    subject = _particle(item_type, "이", "가")
-    return score, f"'{item_type}'{subject} 선택한 {profile.desired_style} 스타일의 코디 흐름을 이어 줍니다."
+    # 실루엣·색 조합은 상의와 하의만 비교하므로 신발은 스타일에 맞는지로 따로 설명한다.
+    # 스타일과 어울리는 신발일 때만 이유를 말하고, 아니면 지어내지 않는다.
+    mood = SHOE_STYLE_MOOD.get(profile.desired_style)
+    if item_type not in preferred or not mood:
+        return score, ""
+    topic = _particle(item_type, "은", "는")
+    return score, (
+        f"{item_type}{topic} {profile.desired_style} 스타일에 자주 매치하는 신발이라 "
+        f"코디를 {mood} 마무리해 줘요."
+    )
+
+
+def _shoe_silhouette_reason(shoe_type: str, bottom: dict[str, Any]) -> str:
+    """R-ACC-06: 신발이 하의 실루엣과 어떻게 이어지는지 설명한다.
+
+    실루엣·색 조합 근거는 상의와 하의만 비교하므로, 신발은 하의 핏과의 관계로 따로
+    설명한다. 어울린다고 볼 수 있는 두 경우만 말하고 나머지는 지어내지 않는다.
+    """
+    fit = str(bottom.get("fit") or "")
+    if not shoe_type or not _usable(fit):
+        return ""
+    if any(term in _garment_text(bottom) for term in SHORT_BOTTOM_TERMS):
+        return ""
+    if shoe_type in VOLUME_SHOES and RecommendationEngine._is_large_fit(fit, "bottom"):
+        subject = _particle(shoe_type, "이", "가")
+        return f"통이 넓은 하의 밑단을 볼륨 있는 {shoe_type}{subject} 받쳐 줘 실루엣이 안정적이에요."
+    if (
+        shoe_type in SLEEK_SHOES and RecommendationEngine._is_ordered_bottom(fit)
+        and not RecommendationEngine._is_large_fit(fit, "bottom")
+    ):
+        obj = _particle(shoe_type, "을", "를")
+        return f"곧게 떨어지는 하의에 날렵한 {shoe_type}{obj} 매치해 발끝까지 깔끔하게 이어져요."
+    return ""
 
 
 def _sporty_combination_coverage(
@@ -329,19 +364,28 @@ def _candidate_evidence(
     silhouette_known: bool,
     color_known: bool,
 ) -> list[CombinationEvidence]:
+    # 실루엣과 색 조합이 패션적인 추천 이유이므로 먼저 둔다. 요약 문장은 앞의 두 근거로
+    # 만들어지고 근거는 세 개까지만 보여서, 뒤에 두면 색 조합이 빠졌다.
     evidence: list[CombinationEvidence] = []
-    if current_items:
+    if (
+        any(category in selected_categories for category in ("top", "bottom"))
+        and harmony_reasons and silhouette_known
+    ):
+        evidence.append(CombinationEvidence("실루엣", harmony_reasons[0], tuple(harmony_rules[:2])))
+        if len(harmony_reasons) >= 3 and color_known:
+            evidence.append(CombinationEvidence("색상", harmony_reasons[2], ("R-COL-03",)))
+    if current_items and len(evidence) < 3:
         kept = "·".join(item["label"] for item in current_items)
         object_particle = _particle(kept, "을", "를")
         evidence.append(CombinationEvidence(
-            "현재 착장", f"{kept}{object_particle} 유지한 상태에서 교체할 아이템의 조화를 평가했습니다.",
+            "현재 착장", f"{kept}{object_particle} 그대로 입고 어울리는 아이템만 바꿨어요.",
             ("R-CMP-03",),
         ))
     visual_fits = []
     visual_rules = []
     applied = set(targets.applied_rules)
     for product in products:
-        label, confidence, keyword = _visual_attribute(product, "fit")
+        label, _, keyword = _visual_attribute(product, "fit")
         # Only positive matches carry a keyword. Confident conflicts influence
         # ranking and harmony but are never presented as a recommendation fact.
         if not label or not keyword:
@@ -352,21 +396,15 @@ def _candidate_evidence(
             category_label = {"top": "추천 상의", "bottom": "추천 하의", "shoes": "추천 신발"}.get(
                 product.category, "추천 상품"
             )
-            visual_fits.append(f"{category_label}: {label}({confidence:.0%})")
+            visual_fits.append(f"{category_label}의 {label}")
             visual_rules.extend(active_rules)
     if visual_fits and len(evidence) < 3:
         evidence.append(CombinationEvidence(
             "상품 핏",
-            "상품 사진에서 추정한 핏을 조합의 실루엣 평가에 반영했습니다: " + " · ".join(visual_fits),
+            "상품 사진으로 " + ", ".join(visual_fits)
+            + _particle(visual_fits[-1], "을", "를") + " 확인했어요.",
             tuple(dict.fromkeys(visual_rules)),
         ))
-    if (
-        any(category in selected_categories for category in ("top", "bottom"))
-        and harmony_reasons and silhouette_known
-    ):
-        evidence.append(CombinationEvidence("실루엣", harmony_reasons[0], tuple(harmony_rules[:2])))
-        if len(harmony_reasons) >= 3 and color_known:
-            evidence.append(CombinationEvidence("색상", harmony_reasons[2], ("R-COL-03",)))
     if shoe_reason and len(evidence) < 3:
         evidence.append(CombinationEvidence("신발", shoe_reason, ("R-CTX-01", "R-ACC-06")))
     if len(evidence) < 3:
@@ -376,7 +414,7 @@ def _candidate_evidence(
         ))[:3]
         if keywords:
             evidence.append(CombinationEvidence(
-                "검색 조건", f"추천 조건과 일치하는 '{'·'.join(keywords)}' 속성이 확인됐습니다.",
+                "추천 조건", f"{', '.join(keywords)} 조건에 맞는 상품으로 골랐어요.",
             ))
     return evidence[:3]
 
@@ -538,6 +576,9 @@ def recommend_outfit_combinations(
         shoe_score, shoe_reason = (1.0, "")
         if "shoes" in by_category:
             shoe_score, shoe_reason = _shoe_score(by_category["shoes"], profile, targets)
+            # 하의 실루엣과의 연결이 스타일보다 코디 설명에 가까우므로 있으면 먼저 쓴다.
+            shoe_type = _attribute_value(by_category["shoes"], targets, "item_type")
+            shoe_reason = _shoe_silhouette_reason(shoe_type, bottom) or shoe_reason
         # 개별 상품의 적합도는 이미 검색 단계에서 검증되어 순서에 반영됐다. 여기서는
         # 좋은 점수를 더 높이는 대신, 실제로 교체하는 영역 중 가장 약한 연결을 조합의
         # 안전 점수로 삼아 저득점 조합만 제외한다.
@@ -554,8 +595,8 @@ def recommend_outfit_combinations(
             color_known=_usable(top["color"]) and _usable(bottom["color"]),
         )
         if sporty_reason:
-            insert_at = 1 if current_items else 0
-            evidence.insert(insert_at, CombinationEvidence(
+            # 실루엣 다음, 요약 문장에 들어가는 두 번째 자리에 둔다.
+            evidence.insert(1, CombinationEvidence(
                 "스포티 구성", sporty_reason, ("R-CTX-01", "R-CMP-02"),
             ))
             evidence = evidence[:3]

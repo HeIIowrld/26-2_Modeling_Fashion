@@ -5,6 +5,12 @@ set -euo pipefail
 # 할당한 계산 노드에서만 실행하고, 이 프로세스는 제출·감시·취소만 담당한다.
 PROJECT_MASTER=${FITTA_PROJECT_MASTER:-/data1/dsl01/releases/fitta_current}
 PROJECT_COMPUTE=${FITTA_PROJECT_COMPUTE:-/mnt/data1/dsl01/releases/fitta_current}
+# Pin the submitted worker to a concrete release. The mutable NFS symlink can
+# still resolve to the previous target on another node immediately after a swap.
+PROJECT_MASTER=$(readlink -f "$PROJECT_MASTER")
+if [[ "$PROJECT_COMPUTE" == */releases/fitta_current ]]; then
+    PROJECT_COMPUTE="${PROJECT_COMPUTE%/*}/${PROJECT_MASTER##*/}"
+fi
 STATE_DIR=${FITTA_SERVICE_STATE_DIR:-/data1/dsl01/.local/state/fitta-web}
 JOB_FILE=$STATE_DIR/job_id
 JOB_SCRIPT=$PROJECT_MASTER/gpu_server/jobs/web_service.sbatch

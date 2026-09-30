@@ -126,6 +126,13 @@ class LongHullPolicyTests(unittest.TestCase):
         self.assertIsNone(released)
         self.assertIs(mask, lower)
 
+    def test_explicit_wide_product_name_beats_conflicting_slim_fit(self):
+        lower, (mask, released) = self._apply(
+            "롱·긴바지 기장", name="와이드 데님 팬츠", fit="슬림핏"
+        )
+        self.assertIsNotNone(released)
+        self.assertGreater(mask.sum(), lower.sum())
+
     def test_long_hull_is_the_default(self):
         self.assertEqual(CatVTONTryOn().lower_mask_policy, "long-hull")
         self.assertEqual(CatVTONTryOn.fast().lower_mask_policy, "long-hull")
