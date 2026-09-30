@@ -18,7 +18,6 @@ const state = {
   profile: null,
   shoppingProducts: [],
   shoppingOutfits: [],
-  shoppingEvidenceOpen: new Set(),
   lookSelected: 0,
   lookEvidenceOpen: new Set(),
   shoppingTryonResults: [],
@@ -662,8 +661,7 @@ function renderShoppingProductCard(product) {
               `<span class="shopping-keyword">${escapeHtml(keyword)}</span>`
             ).join("")}
           </div>` : ""}
-        ${product.recommendation_reason ? `
-          <p class="shopping-reason"><b>상품 선택 근거</b>${escapeHtml(product.recommendation_reason)}</p>` : ""}
+        ${renderShoppingReason(product)}
         <div class="shopping-bottom">
           <strong>${Number(product.price).toLocaleString("ko-KR")}원</strong>
           <span>무신사에서 보기 ↗</span>
@@ -671,7 +669,6 @@ function renderShoppingProductCard(product) {
       </div>
     </a>
     ${renderSizeFit(product.size_fit)}
-    ${renderShoppingEvidence(product)}
   </article>`;
 }
 
@@ -859,28 +856,25 @@ function renderShoppingProducts(products, outfits = []) {
       else state.lookEvidenceOpen.delete(details.dataset.lookEvidence);
     });
   });
-  grid.querySelectorAll("[data-evidence-for]").forEach((details) => {
-    details.addEventListener("toggle", () => {
-      if (details.open) state.shoppingEvidenceOpen.add(details.dataset.evidenceFor);
-      else state.shoppingEvidenceOpen.delete(details.dataset.evidenceFor);
-    });
-  });
   renderShoppingTryonPanel();
   section.hidden = false;
 }
 
-function renderShoppingEvidence(product) {
+/* 규칙 문장일 때 recommendation_reason 은 근거 목록의 첫 문장을 그대로 복사한 값이라,
+   요약과 목록을 함께 보이면 같은 문장이 두 번 나왔다. 근거 목록을 라벨과 함께 한 칸에
+   보이고, LLM 이 근거를 합쳐 다듬은 문장이 있을 때만 그 문장을 대신 보인다. */
+function renderShoppingReason(product) {
   const evidence = (product.fit_evidence || []).slice(0, 3);
-  if (!evidence.length) return "";
   const labels = product.fit_evidence_labels || [];
   const ruleIds = (product.reason_rule_ids || []).join(" ");
-  const open = state.shoppingEvidenceOpen.has(product.product_id);
-  return `<details class="shopping-evidence" data-evidence-for="${escapeHtml(product.product_id)}" data-reason-rule-ids="${escapeHtml(ruleIds)}"${open ? " open" : ""}>
-    <summary>왜 추천했나요? <span aria-hidden="true">▼</span></summary>
-    <div class="shopping-evidence-body"><strong>추천 근거</strong><ul>
-      ${evidence.map((text, index) => `<li>${labels[index] ? `<b>${escapeHtml(labels[index])}</b>` : ""}<span>${escapeHtml(text)}</span></li>`).join("")}
-    </ul></div>
-  </details>`;
+  const useSentence = product.recommendation_reason_source === "llm" || !evidence.length;
+  if (useSentence && !product.recommendation_reason) return "";
+  const body = useSentence
+    ? `<span>${escapeHtml(product.recommendation_reason)}</span>`
+    : `<ul>${evidence.map((text, index) => `<li>${labels[index] ? `<b>${escapeHtml(labels[index])}</b>` : ""}<span>${escapeHtml(text)}</span></li>`).join("")}</ul>`;
+  return `<div class="shopping-reason" data-reason-rule-ids="${escapeHtml(ruleIds)}">
+    <b>상품 선택 근거</b>${body}
+  </div>`;
 }
 
 function refreshOutfitTryonRenders() {

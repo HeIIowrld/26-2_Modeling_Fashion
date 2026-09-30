@@ -55,7 +55,8 @@ class UIContractTests(unittest.TestCase):
         self.assertIn('id="current-outfit-points"', html)
         self.assertIn("renderCurrentOutfitEvaluation(result.current_outfit_evaluation)", javascript)
         self.assertIn("product.recommendation_reason", javascript)
-        self.assertIn("왜 추천했나요?", javascript)
+        # 상품 선택 근거와 근거 목록이 같은 문장을 반복하지 않도록 한 칸으로 합쳤다.
+        self.assertNotIn("왜 추천했나요?", javascript)
         self.assertIn("product.fit_evidence", javascript)
         self.assertIn("product.reason_rule_ids", javascript)
         self.assertNotIn('id="reco-picker"', html)
