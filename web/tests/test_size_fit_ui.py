@@ -25,7 +25,7 @@ class SizeFitUITests(unittest.TestCase):
 const escapeHtml = (s) => String(s).replaceAll('<', '&lt;');
 const state = {shoppingSelection: {}, tryon: {available: false}};
 const renderSizeFit = () => '';
-const renderShoppingEvidence = () => '';
+const renderShoppingReason = () => '';
 const product = {product_id: 'MS1', name: '셔츠', category: 'top', price: 100,
                  url: '', image_url: '', source: 'musinsa_catalog_fallback'};
 """
