@@ -46,7 +46,7 @@ python ai_fashion_recommender/scripts/backfill_product_measurements.py --limit 2
 python ai_fashion_recommender/scripts/backfill_product_colors.py --from-measurement-cache ai_fashion_recommender/data/cache/product_measurements --preserve-existing-colors
 ```
 
-실측 캐시는 Git 추적 대상이 아니다. 전달용 `outputs/catalog_backfill/catalog_enrichment_2026-09-29.zip`(약 3.8MB)에 실측 캐시 전부, 보강 CSV, 사진 판정 근거 CSV, 전체 집계, 상품별 실측 목록을 넣었다. 대상 프로젝트의 `data/`와 같은 구조이며, 교체 전 대상 데이터는 별도 보관해야 한다. 운영 배포는 수행하지 않았다. 실행 중인 서버가 새 카탈로그를 읽으려면 재시작이 필요하다.
+실측 캐시는 Git 추적 대상이 아니다. 전달용 `outputs/catalog_backfill/catalog_enrichment_2026-09-29.zip`(약 3.8MB)에 실측 캐시 전부, 보강 CSV, 사진 판정 근거 CSV, 전체 집계, 상품별 실측 목록을 넣었다. 대상 프로젝트의 `data/`와 같은 구조이며, 교체 전 대상 데이터는 별도 보관해야 한다. 수집 완료 당시에는 운영 배포를 수행하지 않았다. 2026-10-01 백엔드 운영 반영 결과와 별도 웹 서버의 미반영 사항은 `PRODUCTION_DEPLOY_2026-10-01.md`를 참고한다. 실행 중인 서버가 새 카탈로그를 읽으려면 재시작이 필요하다.
 
 ## 검증
 
