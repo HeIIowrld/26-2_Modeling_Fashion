@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch, PropertyMock
 
 import numpy as np
 import pytest
@@ -12,6 +12,29 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 from schemas import Product, Recommendation
 from shoe_tryon import OutfitTryOn, ShoeTryOn, composite_feet, edit_crop, foot_edit_mask
 from virtual_tryon import TryOnNotReady
+
+
+def test_missing_checkpoint_fails_before_diffusers_import(tmp_path):
+    import builtins
+    original_import = builtins.__import__
+    def guarded(name, *args, **kwargs):
+        if name == "diffusers":
+            raise AssertionError("must check checkpoint first")
+        return original_import(name, *args, **kwargs)
+    with patch("builtins.__import__", side_effect=guarded), pytest.raises(TryOnNotReady):
+        ShoeTryOn(tmp_path)._load_pipeline()
+
+
+def test_old_diffusers_is_reported_as_not_ready(tmp_path):
+    import builtins
+    original_import = builtins.__import__
+    def guarded(name, *args, **kwargs):
+        if name == "diffusers":
+            raise ImportError("no Flux2KleinInpaintPipeline")
+        return original_import(name, *args, **kwargs)
+    with patch.object(ShoeTryOn, "available", new_callable=PropertyMock, return_value=True):
+        with patch("builtins.__import__", side_effect=guarded), pytest.raises(TryOnNotReady, match="의존성"):
+            ShoeTryOn(tmp_path)._load_pipeline()
 
 
 def context():

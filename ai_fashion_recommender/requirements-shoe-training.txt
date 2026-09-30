@@ -1,10 +1,11 @@
 # Install the CUDA build of torch/torchvision from pytorch.org first.
+# This is an isolated shoe environment; do not combine with requirements.txt.
+-r requirements-shoe-runtime.txt
 numpy
 Pillow
 opencv-python
 fashn-human-parser==0.1.1
 open-clip-torch==3.3.0
-transformers
 scikit-learn
 ImageHash
 pycocotools

@@ -59,7 +59,7 @@ def main():
     root = args.root
     if (root / "manifest.json").exists():
         raise RuntimeError("동결된 표본을 덮어쓰지 않습니다. 새 평가 폴더를 사용하세요.")
-    data = json.loads((root / "fashionpedia_val.json").read_text())
+    data = json.loads((root / "fashionpedia_val.json").read_text(encoding="utf-8"))
     licenses = {r["id"]: r for r in data["licenses"]}
     previous = {}
     for directory in args.exclude:

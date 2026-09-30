@@ -50,7 +50,8 @@ class FakeRecommender:
         raise AssertionError("CSV 카탈로그 추천은 웹 파이프라인에서 호출하면 안 됩니다.")
 
     def generate_target_keywords(self, profile, pose_result, outfit_result):
-        return SimpleNamespace(targets={"top": {}, "bottom": {}})
+        from recommendation_keywords import TargetKeywordResult
+        return TargetKeywordResult(mode="mixed", targets={"top": {}, "bottom": {}})
 
     def evaluate_current_outfit(self, profile, pose_result, outfit_result):
         from ai_fashion_recommender.src.schemas import CurrentOutfitEvaluation

@@ -21,6 +21,7 @@ import time
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 import sys
@@ -162,6 +163,7 @@ class CrawledProduct:
     gender: str = ""
     image_url: str = ""
     image_path: str = ""
+    stock_checked_at: str = ""
     # 아래는 상세 API에서 받아오는 "무신사가 직접 표기한 값"이다. 상품명 키워드
     # 추측과 달리 사실이므로, enrich_catalog.py 가 모델 판정보다 우선해서 쓴다.
     detail_color: str = ""      # 옵션 COLOR_CHIP 의 첫 색(대표 색)
@@ -255,6 +257,7 @@ def parse_item(item: dict, category: str) -> CrawledProduct | None:
         price=price,
         season=_match_keyword(name, SEASON_KEYWORDS, "사계절"),
         stock=True,
+        stock_checked_at=datetime.now(timezone.utc).isoformat(),
         url=item.get("goodsLinkUrl") or f"https://www.musinsa.com/products/{goods_no}",
         brand=item.get("brandName") or item.get("brand") or "",
         gender=item.get("displayGenderText") or "공용",
@@ -368,11 +371,13 @@ def fetch_detail(goods_no: str) -> dict:
     return out
 
 
-def crawl(per_category: int, delay: float, max_price: int | None = None) -> list[CrawledProduct]:
+def crawl(per_category: int, delay: float, max_price: int | None = None, only_category: str | None = None) -> list[CrawledProduct]:
     products: list[CrawledProduct] = []
     seen: set[str] = set()
     sort_quotas = _split_quota(per_category, len(SORT_CODES))
     for code, category in CATEGORY_MAP.items():
+        if only_category and category != only_category:
+            continue
         category_collected = 0
         for sort_code, quota in zip(SORT_CODES, sort_quotas):
             collected = 0
@@ -414,7 +419,7 @@ def save_csv(products: list[CrawledProduct], csv_path: Path) -> None:
     fields = [
         "product_id", "name", "category", "color", "style", "purposes",
         "body_shapes", "price", "season", "stock", "url",
-        "brand", "gender", "image_url", "image_path",
+        "brand", "gender", "image_url", "image_path", "stock_checked_at",
         # 무신사가 직접 표기한 값. 상품명 추측이 아니라 사실이다.
         "detail_color", "detail_colors", "detail_season", "detail_fit",
         "detail_thickness", "detail_sheer", "detail_category",
@@ -434,6 +439,7 @@ def main() -> None:
     parser.add_argument("--per-category", type=int, default=200, help="카테고리당 수집 개수(정렬 기준 합산, 정렬당 최대 100)")
     parser.add_argument("--delay", type=float, default=1.0, help="요청 간격(초)")
     parser.add_argument("--max-price", type=int, default=300_000, help="이 가격을 넘는 상품 제외")
+    parser.add_argument("--category", choices=("top", "bottom"), help="부족한 부위만 수집")
     parser.add_argument("--skip-images", action="store_true", help="이미지 다운로드 생략")
     parser.add_argument(
         "--refresh-images", action="store_true",
@@ -448,7 +454,9 @@ def main() -> None:
     parser.add_argument("--detail-delay", type=float, default=0.6, help="상세 조회 간격(초)")
     args = parser.parse_args()
 
-    products = crawl(args.per_category, args.delay, args.max_price)
+    if args.category and not args.output:
+        parser.error("부분 수집은 --output으로 별도 CSV를 지정해주세요.")
+    products = crawl(args.per_category, args.delay, args.max_price, args.category)
 
     if not args.skip_details:
         filled = 0

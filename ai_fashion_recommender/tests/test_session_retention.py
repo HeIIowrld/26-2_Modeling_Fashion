@@ -62,7 +62,7 @@ class PruneSessionTests(unittest.TestCase):
             self.assertEqual(removed, [])
             self.assertTrue(running.exists())
 
-    def test_oldest_sessions_drop_once_the_cap_is_passed(self):
+    def test_capacity_does_not_delete_unexpired_results(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             for index in range(5):
@@ -70,10 +70,9 @@ class PruneSessionTests(unittest.TestCase):
 
             removed = web_app.prune_sessions(root, ttl=timedelta(hours=24), max_sessions=3)
 
-            self.assertEqual(len(removed), 2)
-            self.assertEqual(len(list(root.iterdir())), 3)
-            # 남는 것은 가장 최근 3개다.
-            self.assertNotIn(f"{4:032x}", [path.name for path in root.iterdir()])
+            self.assertEqual(removed, [])
+            self.assertEqual(len(list(root.iterdir())), 5)
+            self.assertTrue((root / f"{4:032x}" / "original.jpg").is_file())
 
     def test_missing_root_is_not_an_error(self):
         with tempfile.TemporaryDirectory() as directory:

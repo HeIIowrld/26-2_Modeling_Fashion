@@ -113,7 +113,7 @@ class ShoeTryOn:
         if not all((self.model_path / p).is_file() for p in required):
             return False
         try:
-            index = json.loads((self.model_path / "text_encoder/model.safetensors.index.json").read_text())
+            index = json.loads((self.model_path / "text_encoder/model.safetensors.index.json").read_text(encoding="utf-8"))
             shards = set(index["weight_map"].values())
             return bool(shards) and all((self.model_path / "text_encoder" / p).is_file() for p in shards)
         except (OSError, ValueError, KeyError, TypeError, AttributeError):
@@ -121,8 +121,13 @@ class ShoeTryOn:
 
     def _load_pipeline(self):
         if self._pipeline is None:
-            import torch
-            from diffusers import Flux2KleinInpaintPipeline
+            if not self.available:
+                raise TryOnNotReady("신발 합성 모델이 준비되지 않았습니다.")
+            try:
+                import torch
+                from diffusers import Flux2KleinInpaintPipeline
+            except ImportError as exc:
+                raise TryOnNotReady("신발 합성에 필요한 Flux2KleinInpaintPipeline 의존성이 준비되지 않았습니다.") from exc
             if not self.available or not torch.cuda.is_available():
                 raise TryOnNotReady("신발 합성 모델 또는 GPU가 준비되지 않았습니다.")
             pipeline = Flux2KleinInpaintPipeline.from_pretrained(

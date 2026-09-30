@@ -656,6 +656,7 @@ function renderShoppingProductCard(product) {
       </div>
     </a>
     ${renderSizeFit(product.size_fit)}
+    ${product.source === "musinsa_catalog_fallback" ? `<small>${product.stock_checked_at ? `${escapeHtml(new Date(product.stock_checked_at).toLocaleDateString("ko-KR"))} 수집 기준` : "재고 확인 시점 미상"} · 구매 전 상품 페이지에서 가격과 재고를 확인해주세요.</small>` : ""}
     ${renderShoppingEvidence(product)}
     <div class="shopping-tryon-choice">
       <button type="button" data-shopping-select="${escapeHtml(product.product_id)}"

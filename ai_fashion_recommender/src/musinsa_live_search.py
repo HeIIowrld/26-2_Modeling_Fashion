@@ -16,7 +16,7 @@ from product_measurements import ProductMeasurementClient, category_from_type_na
 from recommendation_keywords import TargetKeywordResult
 from schemas import Product, UserProfile
 from shopping_http import bounded_results, fetch_json
-from size_fit import compare_sizes
+from size_fit import compare_sizes, size_score
 from live_product_attributes import (
     confident_fit_evidence,
     missing_photo_axes,
@@ -84,6 +84,11 @@ COLOR_VARIANT_TERMS = (
     "검정", "흰색", "회색", "남색", "소라", "연청", "중청", "진청",
     "blk", "wht", "gry", "nvy", "brn", "bge", "khk", "bk", "wh", "iv",
 )
+# 상품마다 같은 정규식을 다시 컴파일하지 않는다. 후보 선택의 시간 예산을 지킨다.
+COLOR_VARIANT_PATTERNS = tuple(
+    re.compile(rf"(?<![0-9a-z가-힣]){re.escape(term.lower())}(?![0-9a-z가-힣])", re.IGNORECASE)
+    for term in sorted(COLOR_VARIANT_TERMS, key=len, reverse=True)
+)
 TOP_FAMILY_TERMS = (
     ("outerwear", OUTERWEAR_TERMS),
     ("knit", ("니트", "스웨터", "풀오버")),
@@ -150,6 +155,7 @@ class ShoppingProduct:
     review_count: int = 0
     review_score: float = 0.0
     source: str = "musinsa_live"
+    stock_checked_at: str = ""
     search_keywords: list[str] = field(default_factory=list)
     matched_keywords: list[str] = field(default_factory=list)
     photo_attributes: dict = field(default_factory=dict)
@@ -175,6 +181,8 @@ class ShoppingProduct:
         data.pop("photo_attributes", None)
         data.pop("ranking_adjustments", None)
         data["size_fit"].pop("ranking_bonus", None)
+        data["size_fit"].pop("score", None)
+        data["size_fit"].pop("scoring_active", None)
         return data
 
 
@@ -422,8 +430,12 @@ class MusinsaLiveSearch:
 
     @staticmethod
     def _sort_key(product: ShoppingProduct) -> tuple:
-        bonus = product.size_fit.get("ranking_bonus", 0.0)
-        return (-(product.retrieval_score + bonus), -product.review_score,
+        score = product.retrieval_score
+        if product.size_fit.get("scoring_active"):
+            fit = size_score(product.size_fit)
+            # 텍스트/사진 축의 최대 기본 배점을 같은 척도로 환산해 15%를 반영한다.
+            score = 0.85 * score + 0.15 * (50 if fit is None else fit) / 100 * (2 * sum(ATTRIBUTE_WEIGHTS.values()))
+        return (-score, -product.review_score,
                 -product.review_count, product.product_id)
 
     @classmethod
@@ -432,13 +444,8 @@ class MusinsaLiveSearch:
         # 공백을 먼저 지우면 `재킷 네이비`가 `재킷네이비`가 되어 색상 경계를
         # 잃는다. 원문에서 색상/옵션을 제거한 뒤 마지막에 정규화한다.
         text = str(product.name or "").lower().strip()
-        for term in sorted(COLOR_VARIANT_TERMS, key=len, reverse=True):
-            escaped = re.escape(str(term).lower())
-            # '블루종'에서 '블루'를 지우지 않도록 글자 경계를 확인한다.
-            text = re.sub(
-                rf"(?<![0-9a-z가-힣]){escaped}(?![0-9a-z가-힣])",
-                " ", text, flags=re.IGNORECASE,
-            )
+        for pattern in COLOR_VARIANT_PATTERNS:
+            text = pattern.sub(" ", text)
         # 색상별 끝자리만 달라지는 판매 SKU는 모델 판정에서 제외한다.
         tokens = [
             token for token in re.split(r"[^0-9a-z가-힣]+", text)
@@ -528,6 +535,12 @@ class MusinsaLiveSearch:
         return candidates
 
     def _compare_shortlist(self, grouped: dict[str, list[ShoppingProduct]], profile: UserProfile) -> None:
+        for category, products in grouped.items():
+            if category not in {"top", "bottom"}:
+                continue
+            for product in products:
+                product.size_fit = {"status": "unavailable", "scoring_active": bool(profile.reference_measurements.get(category)),
+                                    "summary": "상품 실측을 아직 확인하지 못했어요. 구매 전 상품 페이지의 사이즈표를 확인해주세요."}
         if self.measurements is None:
             return
         # 최종 3개를 고르기 전에 카테고리별 상위 후보의 실측을 비교한다.
@@ -539,12 +552,14 @@ class MusinsaLiveSearch:
             record = records[index] if index < len(records) else None
             product.size_fit = compare_sizes(record or {"status": "unavailable"}, product.category,
                                             profile.reference_measurements.get(product.category))
+            product.size_fit["scoring_active"] = bool(profile.reference_measurements.get(product.category))
             # 같은 응답에 색 옵션과 실측표 종류가 들어 있다. 추가 요청은 없다.
             product.color_options = list((record or {}).get("color_options") or [])
             product.measurement_type = str((record or {}).get("type_name") or "")
         self.last_search_stats["measurement_candidates"] = len(shortlist)
         self.last_search_stats["measurement_tables"] = sum(bool(r and r.get("sizes")) for r in records)
         for products in grouped.values():
+            products[:] = [p for p in products if p.size_fit.get("status") != "no_available_sizes"]
             products.sort(key=self._sort_key)
 
     def _local_fallback(
@@ -576,6 +591,7 @@ class MusinsaLiveSearch:
                 category=product.category,
                 gender=product.gender or "공용",
                 source="musinsa_catalog_fallback",
+                stock_checked_at=product.stock_checked_at,
                 search_keywords=self._representative_keywords(
                     matched, targets.targets[product.category]
                 ),

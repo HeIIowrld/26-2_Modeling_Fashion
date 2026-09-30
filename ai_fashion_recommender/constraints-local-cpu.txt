@@ -1,0 +1,16 @@
+# 2026-09-28 Windows Python 3.11의 모델/추천 회귀검사 환경.
+# GPU 생성 검증 또는 모든 전이 의존성의 lockfile이 아니다.
+torch==2.10.0
+torchvision==0.25.0
+numpy==1.26.4
+Pillow==11.1.0
+opencv-python==4.10.0.84
+opencv-contrib-python==4.11.0.86
+mediapipe==0.10.14
+transformers==4.44.2
+diffusers==0.30.3
+accelerate==0.33.0
+huggingface-hub==0.24.6
+protobuf==4.25.8
+jax==0.7.1
+jaxlib==0.7.1

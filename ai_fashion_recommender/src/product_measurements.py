@@ -96,9 +96,10 @@ def category_from_type_name(type_name: str, rules: dict | None = None) -> str:
 
 
 def color_options_from(options: dict | None) -> list[str]:
-    """구매 가능한 색 이름을 모두 돌려준다. 대표 색 하나만 쓰면 나머지를 잃는다.
+    """상품에 등록된 색 이름을 돌려준다. 색 옵션 자체는 재고 보장이 아니다.
 
-    색은 `basic` 의 COLOR_CHIP 에서만 읽는다. `optionItems` 안의 `optionName` 은
+    색은 `basic` 의 COLOR_CHIP 또는 명시적인 color 메타데이터에서 읽는다.
+    표시 방식이 DROPDOWN이어도 colorCode가 있는 값은 색 옵션이다. `optionItems` 안의 `optionName` 은
     판매자가 정하는 값이라("컬러" 대신 "C" 인 상품이 있다) 색 옵션을 가려낼 수 없다.
     """
     data = (options or {}).get("data") or {}
@@ -106,9 +107,15 @@ def color_options_from(options: dict | None) -> list[str]:
         return []
     names: list[str] = []
     for option in _rows(data.get("basic")):
-        if option.get("displayType") != "COLOR_CHIP":
+        if option.get("isDeleted") is True:
             continue
         for value in _rows(option.get("optionValues")):
+            if value.get("isDeleted") is True:
+                continue
+            color = value.get("color")
+            if option.get("displayType") != "COLOR_CHIP" and not (
+                    isinstance(color, dict) and color.get("colorCode")):
+                continue
             name = str(value.get("name") or "").strip()
             if name and name not in names:
                 names.append(name)
