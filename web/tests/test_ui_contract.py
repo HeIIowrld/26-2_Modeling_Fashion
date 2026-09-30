@@ -42,7 +42,9 @@ class UIContractTests(unittest.TestCase):
         self.assertIn("renderRequestSummary(result?.request)", javascript)
         self.assertIn("무신사 상품 추천", html)
         self.assertIn("renderShoppingProducts(result.shopping_results || [], result.shopping_outfits || [])", javascript)
-        self.assertIn("왜 이 조합인가요?", javascript)
+        # 조합 요약과 근거 목록이 같은 문장을 반복하지 않도록 근거를 바로 보인다.
+        self.assertNotIn("왜 이 조합인가요?", javascript)
+        self.assertIn('class="look-reasons"', javascript)
         # LOOK 1~3은 탭으로 전환하고, 선택한 탭 안에 합성 사진과 상품을 나란히 둔다.
         self.assertIn("LOOK ${index + 1}", javascript)
         self.assertIn('role="tablist" aria-label="추천 코디 조합"', javascript)

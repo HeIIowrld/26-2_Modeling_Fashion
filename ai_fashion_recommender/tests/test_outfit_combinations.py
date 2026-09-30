@@ -337,6 +337,17 @@ class OutfitCombinationTests(unittest.TestCase):
 
         self.assertEqual(outfits[0].product_ids, ["T-KNIT", "B-DENIM"])
 
+    def test_shoe_reason_explains_the_style_match_in_plain_words(self):
+        from outfit_combination_recommender import _shoe_score
+
+        targets = TargetKeywordResult("user_input", {"shoes": {"item_type": ["로퍼", "러닝화"]}})
+        minimal = UserProfile(desired_style="미니멀")
+        _, reason = _shoe_score(product("S1", "shoes", ["로퍼"]), minimal, targets)
+        self.assertEqual(reason, "로퍼는 미니멀 스타일에 자주 매치하는 신발이라 코디를 깔끔하게 마무리해 줘요.")
+        # 스타일과 어울린다고 볼 근거가 없으면 이유를 지어내지 않는다.
+        _, reason = _shoe_score(product("S2", "shoes", ["러닝화"]), minimal, targets)
+        self.assertEqual(reason, "")
+
     def test_sporty_outfit_cannot_be_carried_by_running_shoes_alone(self):
         profile = UserProfile(
             purpose="데일리", desired_style="스포티",

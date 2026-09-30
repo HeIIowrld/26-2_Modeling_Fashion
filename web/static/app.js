@@ -19,7 +19,6 @@ const state = {
   shoppingProducts: [],
   shoppingOutfits: [],
   lookSelected: 0,
-  lookEvidenceOpen: new Set(),
   shoppingTryonResults: [],
   shoppingTryonBatch: null,
   shoppingTryonPoll: null,
@@ -572,7 +571,6 @@ function renderResult(result) {
   state.shoppingTryonResults = [];
   state.shoppingTryonBatch = null;
   state.lookSelected = 0;
-  state.lookEvidenceOpen.clear();
   $("shopping-tryon-panel").hidden = true;
   if (result.tryon) state.tryon = result.tryon;
   renderRequestSummary(result?.request);
@@ -764,16 +762,17 @@ function renderLookPanel(outfit, index) {
     </div>`).join("");
   const evidence = (outfit.evidence || []).slice(0, 3);
   const labels = outfit.evidence_labels || [];
-  const open = state.lookEvidenceOpen.has(entry.key) ? " open" : "";
+  /* 규칙 문장일 때 outfit.reason 은 근거 앞의 두 문장을 이어 붙인 값이라, 요약과
+     근거 펼침에 같은 문장이 두 번 보였다. 근거를 라벨과 함께 바로 보이고,
+     LLM 이 근거를 합쳐 다듬은 문장이 있을 때만 그 문장을 대신 보인다. */
+  const reasons = outfit.reason_source === "llm" || !evidence.length
+    ? `<p class="look-summary">${sentenceLines(outfit.reason
+        || "현재 착장과 선택 조건을 함께 고려한 조합입니다.")}</p>`
+    : `<ul class="look-reasons">${evidence.map((text, evidenceIndex) => `<li>${labels[evidenceIndex] ? `<b>${escapeHtml(labels[evidenceIndex])}</b>` : ""}<span>${escapeHtml(text)}</span></li>`).join("")}</ul>`;
   return `<section class="look-panel" role="tabpanel" id="look-panel-${index}"
       aria-labelledby="look-tab-${index}" tabindex="0">
-    <p class="look-summary">${sentenceLines(outfit.reason
-      || "현재 착장과 선택 조건을 함께 고려한 조합입니다.")}</p>
+    ${reasons}
     ${currentItems ? `<div class="outfit-current-items" aria-label="그대로 입는 현재 아이템">${currentItems}</div>` : ""}
-    ${evidence.length ? `<details class="outfit-combination-evidence" data-look-evidence="${escapeHtml(entry.key)}"${open}>
-      <summary>왜 이 조합인가요?</summary>
-      <ul>${evidence.map((text, evidenceIndex) => `<li>${labels[evidenceIndex] ? `<b>${escapeHtml(labels[evidenceIndex])}</b>` : ""}<span>${escapeHtml(text)}</span></li>`).join("")}</ul>
-    </details>` : ""}
     <div class="look-body">
       <div class="look-render" data-outfit-render="${escapeHtml(entry.key)}">
         ${renderOutfitTryon(entry)}
@@ -848,12 +847,6 @@ function renderShoppingProducts(products, outfits = []) {
       if (!(event.key in moves)) return;
       event.preventDefault();
       selectLook(moves[event.key], true);
-    });
-  });
-  grid.querySelectorAll("[data-look-evidence]").forEach((details) => {
-    details.addEventListener("toggle", () => {
-      if (details.open) state.lookEvidenceOpen.add(details.dataset.lookEvidence);
-      else state.lookEvidenceOpen.delete(details.dataset.lookEvidence);
     });
   });
   renderShoppingTryonPanel();

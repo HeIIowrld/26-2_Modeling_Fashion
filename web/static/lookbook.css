@@ -780,14 +780,17 @@ select {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   color: var(--ink-soft); font-size: .74rem;
 }
-.outfit-combination-evidence { margin: 0 0 17px; }
-.outfit-combination-evidence summary { cursor: pointer; font-size: .79rem; font-weight: 900; }
-.outfit-combination-evidence ul {
-  display: grid; gap: 7px; margin: 10px 0 0; padding: 0; list-style: none;
-  color: var(--ink-soft); font-size: .75rem; line-height: 1.5;
+/* 조합 근거. 라벨 폭을 고정해 설명의 시작선을 맞춘다. */
+.look-reasons {
+  display: grid; gap: 6px; max-width: 70ch; margin: 0; padding: 0; list-style: none;
+  color: var(--ink); font-size: .92rem; line-height: 1.55;
 }
-.outfit-combination-evidence li { display: flex; gap: 8px; }
-.outfit-combination-evidence b { flex: 0 0 auto; color: var(--ink); }
+.look-reasons li { display: flex; gap: 12px; align-items: baseline; }
+.look-reasons b {
+  flex: 0 0 4.6em; color: var(--signal-ink); font-size: .78rem; font-weight: 800;
+  white-space: nowrap;
+}
+.look-reasons span { flex: 1 1 auto; min-width: 0; word-break: keep-all; }
 .look-body {
   display: grid; grid-template-columns: minmax(240px, 1fr) minmax(0, 3fr);
   align-items: start; gap: 16px; margin-top: 22px;

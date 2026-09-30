@@ -25,6 +25,10 @@ FORBIDDEN_COPY = (
     "상품명", "상품 이름", "제품명", "제품 이름", "이름에서", "이름에", "타이틀", "title",
 )
 MIN_SAFE_COMBINATION_SCORE = 0.75
+SHOE_STYLE_MOOD = {
+    "스트리트": "개성 있게", "캐주얼": "편안하게", "미니멀": "깔끔하게",
+    "포멀": "단정하게", "스포티": "활동적으로", "로맨틱": "부드럽게",
+}
 KNIT_TERMS = ("니트", "스웨터", "풀오버", "knit", "sweater", "pullover")
 SHORT_SLEEVE_TERMS = (
     "반팔", "반소매", "하프슬리브", "숏슬리브", "민소매", "슬리브리스", "베스트", "조끼",
@@ -279,8 +283,16 @@ def _shoe_score(product: Any, profile: UserProfile, targets: TargetKeywordResult
         "스포티": {"러닝화", "스니커즈"}, "로맨틱": {"메리제인", "로퍼"},
     }.get(profile.desired_style, {"스니커즈"})
     score = 0.92 if item_type in preferred else 0.72
-    subject = _particle(item_type, "이", "가")
-    return score, f"'{item_type}'{subject} 선택한 {profile.desired_style} 스타일의 코디 흐름을 이어 줍니다."
+    # 실루엣·색 조합은 상의와 하의만 비교하므로 신발은 스타일에 맞는지로 따로 설명한다.
+    # 스타일과 어울리는 신발일 때만 이유를 말하고, 아니면 지어내지 않는다.
+    mood = SHOE_STYLE_MOOD.get(profile.desired_style)
+    if item_type not in preferred or not mood:
+        return score, ""
+    topic = _particle(item_type, "은", "는")
+    return score, (
+        f"{item_type}{topic} {profile.desired_style} 스타일에 자주 매치하는 신발이라 "
+        f"코디를 {mood} 마무리해 줘요."
+    )
 
 
 def _sporty_combination_coverage(
@@ -346,7 +358,7 @@ def _candidate_evidence(
     visual_rules = []
     applied = set(targets.applied_rules)
     for product in products:
-        label, confidence, keyword = _visual_attribute(product, "fit")
+        label, _, keyword = _visual_attribute(product, "fit")
         # Only positive matches carry a keyword. Confident conflicts influence
         # ranking and harmony but are never presented as a recommendation fact.
         if not label or not keyword:
@@ -357,12 +369,13 @@ def _candidate_evidence(
             category_label = {"top": "추천 상의", "bottom": "추천 하의", "shoes": "추천 신발"}.get(
                 product.category, "추천 상품"
             )
-            visual_fits.append(f"{category_label}: {label}({confidence:.0%})")
+            visual_fits.append(f"{category_label}의 {label}")
             visual_rules.extend(active_rules)
     if visual_fits and len(evidence) < 3:
         evidence.append(CombinationEvidence(
             "상품 핏",
-            "상품 사진에서 추정한 핏을 조합의 실루엣 평가에 반영했습니다: " + " · ".join(visual_fits),
+            "상품 사진으로 " + ", ".join(visual_fits)
+            + _particle(visual_fits[-1], "을", "를") + " 확인했어요.",
             tuple(dict.fromkeys(visual_rules)),
         ))
     if shoe_reason and len(evidence) < 3:
@@ -374,7 +387,7 @@ def _candidate_evidence(
         ))[:3]
         if keywords:
             evidence.append(CombinationEvidence(
-                "검색 조건", f"추천 조건과 일치하는 '{'·'.join(keywords)}' 속성이 확인됐습니다.",
+                "추천 조건", f"{', '.join(keywords)} 조건에 맞는 상품으로 골랐어요.",
             ))
     return evidence[:3]
 
