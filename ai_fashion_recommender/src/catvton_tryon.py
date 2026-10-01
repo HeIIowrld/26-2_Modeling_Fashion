@@ -920,6 +920,13 @@ class CatVTONTryOn(VirtualTryOnAdapter):
         params.update(overrides)
         return cls(**params)
 
+    def warmup(self) -> None:
+        self._apply_scheduler(self._load_pipeline())
+        if self.clean_garment_refs:
+            self._get_garment_parser()
+        if self.transition_editor is not None:
+            self.transition_editor.warmup()
+
     def _load_pipeline(self):
         if self._pipeline is not None:
             return self._pipeline

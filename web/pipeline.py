@@ -193,6 +193,15 @@ def get_engine() -> Engine:
         return _engine
 
 
+def warmup_engine() -> None:
+    """Preload the same model instances used by requests; never use user photos."""
+    with _analysis_lock:
+        engine = get_engine()
+        if ENABLE_VTON and not engine.tryon.available:
+            raise TryOnNotReady("가상 피팅 모델을 준비할 수 없습니다.")
+        engine.tryon.warmup()
+
+
 def _build_tryon() -> VirtualTryOnAdapter:
     """생성 모델을 쓸 수 있으면 CatVTON을, 아니면 비활성 어댑터를 준다.
 
