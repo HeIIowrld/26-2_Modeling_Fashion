@@ -27,6 +27,10 @@ cd "$PROJECT"
 export HOME=$BASE
 export PYTHONPATH=$BASE/web-site-packages:$BASE/site-packages:$PROJECT/ai_fashion_recommender/src
 export HF_HOME=$BASE/hf_cache
+# Serving uses pre-provisioned checkpoints, never Hub downloads on a user request.
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export FASHION_PRELOAD_MODELS=1
 export MPLCONFIGDIR=$BASE/.cache/matplotlib
 export FASHION_DATASETS_DIR=$PROJECT/datasets
 export FASHION_PRODUCTS_CSV=$PROJECT/ai_fashion_recommender/data/products_musinsa_enriched.csv
