@@ -558,16 +558,22 @@ class MusinsaLiveSearch:
                      for category, products in grouped.items() if category in {"top", "bottom"} and index < len(products)]
         records = bounded_results(self._executor, [partial(self.measurements.get, p.product_id) for p in shortlist],
                                   time.monotonic() + self.measurement_budget)
+        sold_out_ids = set()
         for index, product in enumerate(shortlist):
             record = records[index] if index < len(records) else None
             product.size_fit = size_table(record or {"status": "unavailable"}, product.category)
+            # 확인된 사이즈가 모두 품절이면 살 수 없는 상품이라 후보에서 뺀다.
+            # 조회에 실패해 sizes 가 비었으면 거르지 않는다 — 모르는 것과 품절은 다르다.
+            sizes = (record or {}).get("sizes") or []
+            if sizes and all(size.get("available") is False for size in sizes):
+                sold_out_ids.add(product.product_id)
             # 같은 응답에 색 옵션과 실측표 종류가 들어 있다. 추가 요청은 없다.
             product.color_options = list((record or {}).get("color_options") or [])
             product.measurement_type = str((record or {}).get("type_name") or "")
         self.last_search_stats["measurement_candidates"] = len(shortlist)
         self.last_search_stats["measurement_tables"] = sum(bool(r and r.get("sizes")) for r in records)
         for products in grouped.values():
-            products[:] = [p for p in products if p.size_fit.get("status") != "no_available_sizes"]
+            products[:] = [p for p in products if p.product_id not in sold_out_ids]
             products.sort(key=self._sort_key)
 
     def _local_fallback(
