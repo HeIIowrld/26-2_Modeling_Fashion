@@ -416,10 +416,6 @@ function collectProfile() {
     activity_level: data.get("activity_level"),
     height_cm: numeric("height_cm"),
     weight_kg: numeric("weight_kg"),
-    reference_measurements: {
-      top: { chest_width_cm: numeric("reference_top_chest_cm"), length_cm: numeric("reference_top_length_cm") },
-      bottom: { waist_width_cm: numeric("reference_bottom_waist_cm"), length_cm: numeric("reference_bottom_length_cm") },
-    },
     preferred_colors: [...state.preferredColors],
     avoided_colors: [...state.avoidedColors],
     preferred_materials: [...state.preferredMaterials],
@@ -602,35 +598,23 @@ function renderResult(result) {
 }
 
 function renderSizeFit(fit) {
-  if (!fit || !fit.status) return "";
-  const deltaText = (value) => `${value > 0 ? "+" : ""}${Number(value).toLocaleString("ko-KR")}cm`;
-  const differences = (fit.differences || []).map((difference) =>
-    `${difference.label} ${deltaText(difference.delta_cm)}`
-  ).join(" · ");
-  const columns = Object.entries(fit.columns || {});
-  const rows = fit.size_options || [];
-  /* '판매 상태' 칸을 두었지만 무신사 응답에 옵션별 재고가 없어 거의 모든 줄이
-     '재고 확인 필요'로 채워졌다. 아무것도 알려 주지 않는 칸이라 뺀다.
-     대신 고른 사이즈를 표 안에서 짚어 준다 — 표를 여는 이유가 그것이다.
-     추천 사이즈가 없으면 이 칸도 빈 칸만 되므로 아예 만들지 않는다. */
-  const pickColumn = Boolean(fit.closest_size);
+  /* 기준 옷 입력을 없앴으므로(2026-10-01, 팀 결정) 비교는 하지 않는다.
+     상품이 표기한 실측 자체는 참조값과 무관하게 쓸모가 있어 표만 남긴다. */
+  const columns = Object.entries(fit?.columns || {});
+  const rows = fit?.size_options || [];
+  if (!rows.length || !columns.length) return "";
   const cells = (measurements) => columns.map(([key]) =>
     `<td>${measurements?.[key] == null ? "—" : escapeHtml(String(measurements[key]))}</td>`
   ).join("");
-  return `<section class="shopping-size-fit" aria-label="상품 실측과 사이즈 비교">
-    <b>사이즈 비교</b>
-    <p>${escapeHtml(fit.summary || "실측 정보를 확인해주세요.")}</p>
-    ${differences ? `<p class="size-differences">${escapeHtml(fit.compared_size || "")} · ${escapeHtml(differences)}</p>` : ""}
-    ${fit.closest_size ? `<small>실측 차이를 기준으로 골랐어요. 소재와 신축성에 따라 착용감은 달라질 수 있어요.${fit.availability == null ? " 해당 옵션의 재고는 상품 페이지에서 확인해주세요." : ""}</small>` : ""}
-    ${rows.length ? `<details><summary>사이즈별 실측 보기 (cm)</summary>
+  return `<section class="shopping-size-fit" aria-label="상품 실측">
+    <details><summary>사이즈별 실측 보기 (cm)</summary>
       <div class="size-table-scroll"><table>
-        <caption class="sr-only">상품 사이즈별 실측과 기준 옷의 치수, 단위 cm</caption>
-        <thead><tr><th scope="col">사이즈</th>${columns.map(([, label]) => `<th scope="col">${escapeHtml(label)}</th>`).join("")}${pickColumn ? '<th scope="col">추천</th>' : ""}</tr></thead>
-        <tbody>${Object.keys(fit.reference || {}).length ? `<tr class="size-reference"><th scope="row">기준 옷</th>${cells(fit.reference)}${pickColumn ? "<td></td>" : ""}</tr>` : ""}
-          ${rows.map((row) => `<tr${row.size === fit.closest_size ? ' class="size-closest"' : ""}><th scope="row">${escapeHtml(row.size)}</th>${cells(row.measurements)}${pickColumn ? `<td>${row.size === fit.closest_size ? "이 사이즈" : ""}</td>` : ""}</tr>`).join("")}
-        </tbody></table></div>
-      ${fit.measurement_note ? `<small>${escapeHtml(fit.measurement_note)}</small>` : ""}
-    </details>` : ""}
+        <caption class="sr-only">상품 사이즈별 실측, 단위 cm</caption>
+        <thead><tr><th scope="col">사이즈</th>${columns.map(([, label]) => `<th scope="col">${escapeHtml(label)}</th>`).join("")}</tr></thead>
+        <tbody>${rows.map((row) => `<tr><th scope="row">${escapeHtml(row.size)}</th>${cells(row.measurements)}</tr>`).join("")}</tbody>
+      </table></div>
+      <small>무신사 상품 표기 기준이에요. 소재와 신축성에 따라 착용감은 달라질 수 있어요.</small>
+    </details>
   </section>`;
 }
 

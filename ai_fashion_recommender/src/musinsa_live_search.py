@@ -16,7 +16,7 @@ from product_measurements import ProductMeasurementClient, category_from_type_na
 from recommendation_keywords import TargetKeywordResult
 from schemas import Product, UserProfile
 from shopping_http import bounded_results, fetch_json
-from size_fit import compare_sizes, size_score
+from size_fit import size_table
 from live_product_attributes import (
     confident_fit_evidence,
     missing_photo_axes,
@@ -187,7 +187,6 @@ class ShoppingProduct:
         data.pop("ranking_adjustments", None)
         data["size_fit"].pop("ranking_bonus", None)
         data["size_fit"].pop("score", None)
-        data["size_fit"].pop("scoring_active", None)
         return data
 
 
@@ -435,11 +434,9 @@ class MusinsaLiveSearch:
 
     @staticmethod
     def _sort_key(product: ShoppingProduct) -> tuple:
+        # 기준 옷 입력을 없애(2026-10-01) 사이즈 유사도 항이 사라졌다.
+        # 남은 축은 텍스트/사진 검색 점수와 리뷰다.
         score = product.retrieval_score
-        if product.size_fit.get("scoring_active"):
-            fit = size_score(product.size_fit)
-            # 텍스트/사진 축의 최대 기본 배점을 같은 척도로 환산해 15%를 반영한다.
-            score = 0.85 * score + 0.15 * (50 if fit is None else fit) / 100 * (2 * sum(ATTRIBUTE_WEIGHTS.values()))
         return (-score, -product.review_score,
                 -product.review_count, product.product_id)
 
@@ -553,8 +550,7 @@ class MusinsaLiveSearch:
             if category not in {"top", "bottom"}:
                 continue
             for product in products:
-                product.size_fit = {"status": "unavailable", "scoring_active": bool(profile.reference_measurements.get(category)),
-                                    "summary": "상품 실측을 아직 확인하지 못했어요. 구매 전 상품 페이지의 사이즈표를 확인해주세요."}
+                product.size_fit = size_table(None, category)
         if self.measurements is None:
             return
         # 최종 3개를 고르기 전에 카테고리별 상위 후보의 실측을 비교한다.
@@ -564,9 +560,7 @@ class MusinsaLiveSearch:
                                   time.monotonic() + self.measurement_budget)
         for index, product in enumerate(shortlist):
             record = records[index] if index < len(records) else None
-            product.size_fit = compare_sizes(record or {"status": "unavailable"}, product.category,
-                                            profile.reference_measurements.get(product.category))
-            product.size_fit["scoring_active"] = bool(profile.reference_measurements.get(product.category))
+            product.size_fit = size_table(record or {"status": "unavailable"}, product.category)
             # 같은 응답에 색 옵션과 실측표 종류가 들어 있다. 추가 요청은 없다.
             product.color_options = list((record or {}).get("color_options") or [])
             product.measurement_type = str((record or {}).get("type_name") or "")

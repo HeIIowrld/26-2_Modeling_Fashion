@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from product_measurements import ProductMeasurementClient, normalize_size_table
-from size_fit import compare_sizes, validate_references
+from size_fit import size_table
 
 
 def actual(sizes=None, unit="cm"):
@@ -93,61 +93,44 @@ class MeasurementTests(unittest.TestCase):
         self.assertIn("options_unavailable", result["issues"])
 
 
-class SizeComparisonTests(unittest.TestCase):
+class SizeTableTests(unittest.TestCase):
+    """기준 옷 비교를 없앤 뒤(2026-10-01) 남은 것은 상품 실측표뿐이다.
+
+    표를 못 만드는 경우에도 '안 맞는다'로 단정하지 않는다 —
+    모르는 것과 안 맞는 것은 다르다.
+    """
+
     def setUp(self):
         self.record = normalize_size_table("MS1", actual())
-        self.reference = {"chest_width_cm": 55, "length_cm": 70}
 
-    def test_nearest_size_and_signed_flat_width_differences(self):
-        result = compare_sizes(self.record, "top", self.reference)
-        self.assertEqual(result["closest_size"], "M")
-        self.assertEqual([d["delta_cm"] for d in result["differences"]], [-1, 0])
-        self.assertGreater(result["ranking_bonus"], 0)
+    def test_table_keeps_every_size_row_and_its_columns(self):
+        result = size_table(self.record, "top")
+        self.assertEqual(result["status"], "available")
+        self.assertEqual([row["size"] for row in result["size_options"]], ["S", "M", "L"])
+        self.assertEqual(result["columns"], {"chest_width_cm": "가슴단면", "length_cm": "총장"})
+        self.assertEqual(result["size_options"][1]["measurements"]["chest_width_cm"], 54)
 
-    def test_missing_data_and_missing_reference_are_neutral(self):
-        for record, reference, status in [(self.record, {}, "needs_reference"), ({}, self.reference, "missing_measurements")]:
-            result = compare_sizes(record, "top", reference)
-            self.assertEqual(result["status"], status)
-            self.assertIsNone(result["closest_size"])
-            self.assertEqual(result["ranking_bonus"], 0)
-
-    def test_length_alone_does_not_confirm_a_size(self):
-        result = compare_sizes(self.record, "top", {"length_cm": 70})
-        self.assertEqual(result["status"], "partial")
-        self.assertIsNone(result["closest_size"])
-        self.assertEqual(result["ranking_bonus"], 0)
-
-    def test_chest_alone_is_also_only_a_partial_comparison(self):
-        result = compare_sizes(self.record, "top", {"chest_width_cm": 54})
-        self.assertEqual(result["status"], "partial")
-        self.assertIsNone(result["closest_size"])
-        self.assertEqual(result["ranking_bonus"], 0)
-
-    def test_pants_compare_waist_flat_width_without_doubling_it(self):
+    def test_bottom_uses_waist_not_chest(self):
         record = normalize_size_table("MS2", actual([{"name": "28", "items": [
             {"name": "허리단면", "value": 38.5}, {"name": "총장", "value": 103}]}]))
-        result = compare_sizes(record, "bottom", {"waist_width_cm": 38, "length_cm": 102})
-        self.assertEqual(result["closest_size"], "28")
-        self.assertEqual([d["delta_cm"] for d in result["differences"]], [0.5, 1])
+        result = size_table(record, "bottom")
+        self.assertEqual(result["columns"], {"waist_width_cm": "허리단면", "length_cm": "총장"})
+        self.assertEqual(result["size_options"][0]["measurements"]["waist_width_cm"], 38.5)
 
-    def test_missing_measurement_does_not_beat_more_complete_size(self):
-        del self.record["sizes"][1]["measurements"]["chest_width_cm"]
-        result = compare_sizes(self.record, "top", self.reference)
-        self.assertEqual(result["closest_size"], "L")
+    def test_missing_or_unavailable_record_is_not_a_misfit_verdict(self):
+        for record, status in (({}, "missing_measurements"),
+                               ({"status": "unavailable"}, "unavailable"),
+                               (None, "missing_measurements")):
+            with self.subTest(status=status):
+                result = size_table(record, "top")
+                self.assertEqual(result["status"], status)
+                self.assertEqual(result["size_options"], [])
 
-    def test_known_sold_out_size_is_not_selected(self):
-        self.record["sizes"][1]["available"] = False
-        self.assertNotEqual(compare_sizes(self.record, "top", self.reference)["closest_size"], "M")
-        for size in self.record["sizes"]:
-            size["available"] = False
-        self.assertEqual(compare_sizes(self.record, "top", self.reference)["status"], "no_available_sizes")
+    def test_unknown_category_yields_no_columns(self):
+        self.assertEqual(size_table(self.record, "shoes")["columns"], {})
 
-    def test_invalid_user_dimensions_are_rejected(self):
-        for value in (0, -1, float("nan"), float("inf"), True, 251, "54cm"):
-            with self.subTest(value=value), self.assertRaises(ValueError):
-                validate_references({"top": {"chest_width_cm": value}})
-        self.assertEqual(validate_references({"top": {"chest_width_cm": "54.5", "length_cm": None}}),
-                         {"top": {"chest_width_cm": 54.5}})
+    def test_measurement_note_rides_along_for_the_caption(self):
+        self.assertIn("오차", size_table(self.record, "top")["measurement_note"])
 
 
 if __name__ == "__main__":

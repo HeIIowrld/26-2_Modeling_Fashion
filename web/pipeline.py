@@ -51,7 +51,6 @@ from recommendation_engine import CHANGE_SCOPE_MAP, PURPOSE_STYLES, Recommendati
 from musinsa_live_search import MusinsaLiveSearch
 from live_product_attributes import LiveProductAttributes
 from product_measurements import ProductMeasurementClient
-from size_fit import validate_references
 from body_shape import classify
 from body_visibility import body_shape_analysis_allowed, with_body_visibility
 from schemas import (
@@ -364,7 +363,6 @@ def build_profile(payload: dict) -> UserProfile:
         hip_cm=number("hip_cm"),
         usual_top_size=payload.get("usual_top_size"),
         usual_bottom_size=payload.get("usual_bottom_size"),
-        reference_measurements=validate_references(payload.get("reference_measurements")),
         season=(
             current_season()
             if payload.get("season") in (None, "", "자동")
