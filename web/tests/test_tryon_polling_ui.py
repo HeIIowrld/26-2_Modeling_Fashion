@@ -81,3 +81,37 @@ applyShoppingTryonBatch({status: 'running', items: []});
 console.log(JSON.stringify(timers.size));
 """)
     assert result == 0
+
+
+@pytest.mark.parametrize("shoes_available", [False, True])
+def test_outfit_displays_image_for_only_supported_products(shoes_available):
+    source = SOURCE.read_text(encoding="utf-8")
+    functions = source[source.index("function combinationKey("):source.index("function renderLookPanel(")]
+    setup = """
+const state = {jobId: 'job', shoppingTryonResults: [], shoppingTryonBatch: {items: []}, tryon: {available: true}};
+const API_BASE = '';
+const escapeHtml = value => String(value);
+"""
+    body = """
+const products = [
+  {product_id: 'top', tryon_available: true},
+  {product_id: 'bottom', tryon_available: true},
+  {product_id: 'shoes', tryon_available: SHOES_AVAILABLE},
+];
+const entry = outfitEntry({products}, 0);
+const ids = products.filter(p => p.tryon_available).map(p => p.product_id);
+state.shoppingTryonBatch.items = [{product_ids: ids, status: 'running'}];
+const pending = renderOutfitTryon(entry);
+state.shoppingTryonResults = [{key: ids.join('|'), image: 'result.jpg'}];
+const done = renderOutfitTryon(entry);
+const other = outfitEntry({products: [...products.slice(0, 2), {product_id: 'other-shoes', tryon_available: SHOES_AVAILABLE}]}, 1);
+console.log(JSON.stringify({pending, done, differentSlot: entry.key !== other.key,
+  otherImage: renderOutfitTryon(other).includes('result.jpg')}));
+""".replace("SHOES_AVAILABLE", json.dumps(shoes_available))
+    result = subprocess.run(["node", "-e", setup + functions + body], capture_output=True,
+                            text=True, encoding="utf-8", check=True)
+    actual = json.loads(result.stdout)
+    assert 'data-status="running"' in actual["pending"]
+    assert '<img src="/api/jobs/job/images/result.jpg"' in actual["done"]
+    assert actual["differentSlot"]
+    assert actual["otherImage"] is not shoes_available
