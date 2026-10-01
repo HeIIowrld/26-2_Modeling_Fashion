@@ -104,9 +104,11 @@ def main() -> int:
         raise RuntimeError("검증된 상품 색상 교정값이 적용되지 않았습니다.")
 
     profile = {
+        "gender": "남성",
         "purpose": "데일리",
         "desired_style": "캐주얼",
         "change_scope": "전체 변경",
+        "change_categories": ["top", "bottom"],
         "min_budget": 50_000,
         "max_budget": 250_000,
         "budget": 150_000,
@@ -114,6 +116,15 @@ def main() -> int:
         "activity_level": "보통",
     }
     body, content_type = _multipart(args.image, profile)
+    preflight = _json_request(
+        f"{base_url}/api/validate-photo",
+        method="POST",
+        data=body,
+        headers={"Content-Type": content_type},
+    )
+    if not preflight.get("valid"):
+        raise RuntimeError(f"전신사진 사전 검사를 통과하지 못했습니다: {preflight.get('issues')!r}")
+    print("preflight", json.dumps({"valid": True, "warnings": preflight.get("warnings", [])}, ensure_ascii=False))
     created = _json_request(
         f"{base_url}/api/analyze",
         method="POST",
@@ -146,7 +157,8 @@ def main() -> int:
     if not shopping_results:
         raise RuntimeError("무신사 실시간 검색 결과가 없습니다.")
     echoed = result.get("request") or {}
-    for key in ("purpose", "desired_style", "change_scope", "min_budget", "max_budget"):
+    for key in ("gender", "purpose", "desired_style", "change_scope", "change_categories",
+                "min_budget", "max_budget"):
         if echoed.get(key) != profile[key]:
             raise RuntimeError(f"요청 조건이 결과에 다르게 기록됐습니다: {key}={echoed.get(key)!r}")
     print(

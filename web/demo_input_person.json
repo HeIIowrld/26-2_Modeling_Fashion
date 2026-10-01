@@ -1,0 +1,390 @@
+{
+  "input_quality": {
+    "passed": true,
+    "issues": [],
+    "score": 0.94
+  },
+  "pose": {
+    "valid": true,
+    "full_body_score": 0.94,
+    "body_shape": "사각체형",
+    "shoulder_hip_ratio": 1.37,
+    "upper_lower_ratio": 0.96,
+    "leg_ratio": 0.52,
+    "posture": "정면에 가까움",
+    "body_shape_confidence": 0.84,
+    "warnings": [],
+    "body_shape_basis": "사진 추정"
+  },
+  "outfit": {
+    "parser_backend": "demo_fixed",
+    "upper_color": "그레이",
+    "lower_color": "버건디",
+    "color_harmony": "그레이와 버건디의 차분한 대비",
+    "detected_items": [
+      "셔츠",
+      "팬츠"
+    ],
+    "style": "캐주얼",
+    "upper_style": "캐주얼",
+    "lower_style": "캐주얼",
+    "upper_style_confidence": 0.89,
+    "lower_style_confidence": 0.87,
+    "upper_type": "셔츠",
+    "lower_type": "팬츠",
+    "lower_subtype": "와이드 팬츠",
+    "pant_leg_shape": "와이드",
+    "pant_length": "풀렝스",
+    "sleeve_length": "긴소매",
+    "visible_sleeve_length": "긴소매",
+    "sleeve_state": "정상 착용",
+    "input_valid": true,
+    "input_error_code": "",
+    "input_error_message": "",
+    "layering_state": "단일 상의",
+    "upper_items": [
+      "셔츠"
+    ],
+    "inner_category": "해당 없음",
+    "outer_category": "해당 없음",
+    "wear_state_confidence": {
+      "sleeve": 0.9
+    },
+    "upper_length": "기본 기장",
+    "bottom_length": "풀렝스",
+    "fit": "오버핏",
+    "lower_fit": "와이드핏",
+    "neckline": "칼라넥",
+    "pattern": "체크",
+    "material": "코튼",
+    "lower_pattern": "무지",
+    "lower_material": "패브릭",
+    "sleeve_shape": "기본 소매",
+    "collar": "셔츠 칼라",
+    "silhouette": "H라인",
+    "details": [
+      "단추"
+    ],
+    "lower_details": [
+      "원턱"
+    ],
+    "attribute_sources": {},
+    "attribute_confidence": 0.88,
+    "notes": [],
+    "shoes": {
+      "status": "barefoot",
+      "accepted": false,
+      "item_type": "맨발",
+      "confidence": 1.0,
+      "source": "demo_fixed"
+    }
+  },
+  "outfit_summary": {
+    "상의": "그레이 체크 셔츠 (긴소매)",
+    "하의": "버건디 와이드 팬츠 (풀렝스)",
+    "신발": "맨발이어서 신발 패션 분석을 진행하지 않았습니다."
+  },
+  "current_outfit_evaluation": {
+    "total_score": 86.4,
+    "verdict": "추천 코디로 보완할 수 있어요",
+    "reliable": true,
+    "keep_threshold": 85.0,
+    "diagnostic_matrix": {
+      "top": {
+        "body_fit": 88.0,
+        "situation_fit": 91.0,
+        "style_fit": 87.0
+      },
+      "bottom": {
+        "body_fit": 84.0,
+        "situation_fit": 89.0,
+        "style_fit": 86.0
+      }
+    },
+    "pass_matrix": {
+      "top": {
+        "body_fit": true,
+        "situation_fit": true,
+        "style_fit": true
+      },
+      "bottom": {
+        "body_fit": false,
+        "situation_fit": true,
+        "style_fit": true
+      }
+    },
+    "harmony_score": 88.0,
+    "summary_points": [
+      "상의: 그레이 체크 셔츠 — 체형 적합도 88점 · 상황 적합도 91점 · 스타일 적합도 87점.",
+      "하의: 버건디 와이드 팬츠 — 체형 적합도 84점 · 상황 적합도 89점 · 스타일 적합도 86점.",
+      "상·하의 조화는 88점이며, 추천 코디로 보완할 수 있어요."
+    ]
+  },
+  "shopping_results": [
+    {
+      "product_id": "MS5215504",
+      "name": "프렌치 사이클리스트 재킷 [블랙]",
+      "brand": "무신사 스탠다드",
+      "price": 54890,
+      "image_url": "https://image.msscdn.net/images/goods_img/20250701/5215504/5215504_17568638045385_500.jpg",
+      "url": "https://www.musinsa.com/products/5215504",
+      "category": "top",
+      "gender": "남성",
+      "review_count": 25,
+      "review_score": 100,
+      "source": "demo_fixed",
+      "search_keywords": [
+        "재킷",
+        "레귤러",
+        "셔츠"
+      ],
+      "recommendation_reason": "추천 규칙에서 도출된 '레귤러' 핏 조건을 충족합니다.",
+      "recommendation_reason_source": "demo_fixed",
+      "fit_evidence": [],
+      "fit_evidence_labels": [],
+      "reason_rule_ids": [],
+      "size_fit": {},
+      "tryon_available": true,
+      "tryon_reason": ""
+    },
+    {
+      "product_id": "MS6961115",
+      "name": "코듀로이 워시드 오버 와이드 데님팬츠 3Color",
+      "brand": "언탭트 스튜디오",
+      "price": 33330,
+      "image_url": "https://image.msscdn.net/images/goods_img/20260730/6961115/6961115_17863286903975_500.jpg",
+      "url": "https://www.musinsa.com/products/6961115",
+      "category": "bottom",
+      "gender": "공용",
+      "review_count": 44,
+      "review_score": 100,
+      "source": "demo_fixed",
+      "search_keywords": [
+        "데님",
+        "슬랙스",
+        "스트레이트"
+      ],
+      "recommendation_reason": "추천 조건에서 도출된 '데님' 종류에 해당합니다.",
+      "recommendation_reason_source": "demo_fixed",
+      "fit_evidence": [],
+      "fit_evidence_labels": [],
+      "reason_rule_ids": [],
+      "size_fit": {},
+      "tryon_available": true,
+      "tryon_reason": ""
+    },
+    {
+      "product_id": "MS1021359",
+      "name": "0891 코즈웨이 베이직 페니 로퍼 밴타블랙",
+      "brand": "마이애미프로젝트",
+      "price": 81000,
+      "image_url": "https://image.msscdn.net/images/goods_img/20190419/1021359/1021359_17171190653859_500.jpg",
+      "url": "https://www.musinsa.com/products/1021359",
+      "category": "shoes",
+      "gender": "남성",
+      "review_count": 5849,
+      "review_score": 96,
+      "source": "demo_fixed",
+      "search_keywords": [
+        "로퍼",
+        "캐주얼"
+      ],
+      "recommendation_reason": "추천 조건에서 도출된 '로퍼' 종류에 해당합니다.",
+      "recommendation_reason_source": "demo_fixed",
+      "fit_evidence": [],
+      "fit_evidence_labels": [],
+      "reason_rule_ids": [],
+      "size_fit": {},
+      "tryon_available": true,
+      "tryon_reason": ""
+    },
+    {
+      "product_id": "MS7038178",
+      "name": "오버핏 옥스포드 미니 로고 셔츠 [화이트]",
+      "brand": "더 아이덴티티 프로젝트",
+      "price": 69600,
+      "image_url": "https://image.msscdn.net/images/goods_img/20260810/7038178/7038178_17870371481207_500.jpg",
+      "url": "https://www.musinsa.com/products/7038178",
+      "category": "top",
+      "gender": "남성",
+      "review_count": 0,
+      "review_score": 0,
+      "source": "demo_fixed",
+      "search_keywords": [
+        "셔츠",
+        "오버핏",
+        "화이트"
+      ],
+      "recommendation_reason": "추천 조건에서 도출된 '셔츠' 종류에 해당합니다.",
+      "recommendation_reason_source": "demo_fixed",
+      "fit_evidence": [],
+      "fit_evidence_labels": [],
+      "reason_rule_ids": [],
+      "size_fit": {},
+      "tryon_available": true,
+      "tryon_reason": ""
+    },
+    {
+      "product_id": "MS1312128",
+      "name": "라이트웨이트 리얼 와이드 히든 밴딩 슬랙스 [차콜 그레이]",
+      "brand": "무신사 스탠다드",
+      "price": 30690,
+      "image_url": "https://image.msscdn.net/images/goods_img/20200219/1312128/1312128_2_500.jpg",
+      "url": "https://www.musinsa.com/products/1312128",
+      "category": "bottom",
+      "gender": "남성",
+      "review_count": 0,
+      "review_score": 0,
+      "source": "demo_fixed",
+      "search_keywords": [
+        "슬랙스",
+        "와이드",
+        "차콜"
+      ],
+      "recommendation_reason": "추천 조건에서 도출된 '슬랙스' 종류에 해당합니다.",
+      "recommendation_reason_source": "demo_fixed",
+      "fit_evidence": [],
+      "fit_evidence_labels": [],
+      "reason_rule_ids": [],
+      "size_fit": {},
+      "tryon_available": true,
+      "tryon_reason": ""
+    },
+    {
+      "product_id": "MS7033441",
+      "name": "윈도우페인 체크 셔츠 (블랙)",
+      "brand": "쿠어",
+      "price": 162000,
+      "image_url": "https://image.msscdn.net/images/goods_img/20260810/7033441/7033441_17863298339199_500.jpg",
+      "url": "https://www.musinsa.com/products/7033441",
+      "category": "top",
+      "gender": "남성",
+      "review_count": 0,
+      "review_score": 0,
+      "source": "demo_fixed",
+      "search_keywords": [
+        "셔츠",
+        "체크",
+        "오버핏"
+      ],
+      "recommendation_reason": "추천 조건에서 도출된 '셔츠' 종류에 해당합니다.",
+      "recommendation_reason_source": "demo_fixed",
+      "fit_evidence": [],
+      "fit_evidence_labels": [],
+      "reason_rule_ids": [],
+      "size_fit": {},
+      "tryon_available": true,
+      "tryon_reason": ""
+    },
+    {
+      "product_id": "MS6365296",
+      "name": "에센셜 와이드 치노 팬츠 - 워시드 베이지",
+      "brand": "애습",
+      "price": 69300,
+      "image_url": "https://image.msscdn.net/images/goods_img/20260423/6365296/6365296_17769256748759_500.jpg",
+      "url": "https://www.musinsa.com/products/6365296",
+      "category": "bottom",
+      "gender": "남성",
+      "review_count": 0,
+      "review_score": 0,
+      "source": "demo_fixed",
+      "search_keywords": [
+        "치노",
+        "와이드",
+        "베이지"
+      ],
+      "recommendation_reason": "추천 조건에서 도출된 '치노' 종류에 해당합니다.",
+      "recommendation_reason_source": "demo_fixed",
+      "fit_evidence": [],
+      "fit_evidence_labels": [],
+      "reason_rule_ids": [],
+      "size_fit": {},
+      "tryon_available": true,
+      "tryon_reason": ""
+    }
+  ],
+  "rules": {
+    "implemented": 43,
+    "documented": 50,
+    "scoring": 37,
+    "unsupported": [
+      {
+        "id": "R-SIL-02",
+        "reason": "상품 실측 사이즈 데이터가 필요합니다."
+      },
+      {
+        "id": "R-ACC-01",
+        "reason": "액세서리 카탈로그가 필요합니다."
+      }
+    ]
+  },
+  "engine": {
+    "device": "local",
+    "product_search": {
+      "mode": "demo_fixed"
+    },
+    "vton_enabled": false
+  },
+  "tryon": {
+    "available": true,
+    "reason": "",
+    "warnings": []
+  },
+  "length_check": {
+    "status": "measured",
+    "value": "발목 기장",
+    "message": "",
+    "options": []
+  },
+  "images": {
+    "original": "original.jpg"
+  },
+  "shopping_outfits": [
+    {
+      "combination_id": "OUTFIT-1",
+      "product_ids": [
+        "MS5215504",
+        "MS6961115",
+        "MS1021359"
+      ],
+      "current_items": [],
+      "reason": "블랙 재킷과 워시드 와이드 데님에 블랙 로퍼를 맞춘 코디입니다.",
+      "reason_source": "demo_fixed",
+      "evidence": [],
+      "evidence_labels": [],
+      "rule_ids": []
+    },
+    {
+      "combination_id": "OUTFIT-2",
+      "product_ids": [
+        "MS7038178",
+        "MS1312128",
+        "MS1021359"
+      ],
+      "current_items": [],
+      "reason": "화이트 옥스포드 셔츠와 차콜 와이드 슬랙스에 블랙 로퍼를 맞춘 코디입니다.",
+      "reason_source": "demo_fixed",
+      "evidence": [],
+      "evidence_labels": [],
+      "rule_ids": []
+    },
+    {
+      "combination_id": "OUTFIT-3",
+      "product_ids": [
+        "MS7033441",
+        "MS6365296",
+        "MS1021359"
+      ],
+      "current_items": [],
+      "reason": "블랙 체크 셔츠와 워시드 베이지 치노에 블랙 로퍼를 맞춘 코디입니다.",
+      "reason_source": "demo_fixed",
+      "evidence": [],
+      "evidence_labels": [],
+      "rule_ids": []
+    }
+  ],
+  "demo": {
+    "preset": "input_person",
+    "selection": "fixed"
+  }
+}

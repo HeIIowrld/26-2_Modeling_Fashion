@@ -74,6 +74,7 @@ from pipeline import (  # noqa: E402
     warmup_engine,
 )
 from schemas import Recommendation  # noqa: E402
+from demo_api import install_demo_api  # noqa: E402
 
 # 업로드 사진은 프로젝트 폴더에 두지 않는다. 프로젝트가 OneDrive·Dropbox 같은
 # 동기화 폴더 안에 있으면 사용자의 전신사진이 클라우드로 올라가기 때문이다.
@@ -1066,6 +1067,9 @@ class NoCacheStaticFiles(StaticFiles):
         return response
 
 
+# 마지막으로 등록해 모델 준비·GPU admission보다 먼저 시연 요청을 처리한다.
+_demo_api = install_demo_api(app)
+app.router.add_event_handler("shutdown", _demo_api.close)
 app.mount("/", NoCacheStaticFiles(directory=STATIC_DIR, html=True), name="static")
 
 

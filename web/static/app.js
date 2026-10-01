@@ -8,7 +8,6 @@ const state = {
   file: null,
   bodyFile: null,
   options: null,
-  ruleTitles: {},
   jobId: null,
   result: null,
   step: 1,
@@ -506,7 +505,7 @@ function pollJob() {
       if (payload.status === "failed") { showError(payload.error); return; }
       updateProgress(null);
       state.result = payload.result;
-      renderResult(payload.result);
+      renderResult(payload.result, payload.shopping_tryon_batch);
       unlock(4);
       goto(4);
     } catch (error) {
@@ -560,7 +559,7 @@ function renderRequestSummary(request) {
   summary.hidden = chips.length === 0;
 }
 
-function renderResult(result) {
+function renderResult(result, initialBatch = null) {
   stopShoppingTryonBatchPolling();
   state.shoppingProducts = [];
   state.shoppingOutfits = [];
@@ -574,25 +573,26 @@ function renderResult(result) {
   $("result-data-badge").hidden = !isMock;
   $("result-disclaimer").textContent = isMock
     ? "현재 분석 수치와 상품은 서비스 흐름을 확인하기 위한 시연 데이터예요. 실제 모델 서버를 연결하면 실제 분석 결과로 바뀝니다."
-    : "무신사 상품은 실시간 검색 결과로 가격과 재고가 달라질 수 있습니다. 예상 착장샷은 실제 핏을 보장하지 않습니다.";
+    : "무신사 상품의 가격과 재고는 상품 페이지에서 확인해주세요. 예상 착장샷은 실제 핏을 보장하지 않습니다.";
 
   const shoppingResults = Array.isArray(result.shopping_results) ? result.shopping_results : [];
   resetPrivacyBar();
   const shoppingOutfits = Array.isArray(result.shopping_outfits) ? result.shopping_outfits : null;
   $("result-lede").textContent = shoppingOutfits && !shoppingOutfits.length
     ? "저득점 조합을 제외한 뒤 안전선을 통과한 자동 코디가 없어 개별 상품만 보여드려요."
-    : "현재 유지할 옷과 교체할 상품의 조화를 확인해 세 가지 코디로 구성했습니다.";
+    : `현재 유지할 옷과 교체할 상품의 조화를 확인해 ${shoppingOutfits?.length || 1}가지 코디로 구성했습니다.`;
 
   renderCurrentOutfitEvaluation(result.current_outfit_evaluation);
   renderCurrentOutfit(result);
   renderBodyStats(result.pose);
   renderShoppingProducts(result.shopping_results || [], result.shopping_outfits || []);
-  if (state.tryon.available
+  if (initialBatch?.items?.length) {
+    applyShoppingTryonBatch(initialBatch);
+  } else if (state.tryon.available
       && (result.shopping_results || []).some((product) => product.tryon_available)
       && (shoppingOutfits === null || shoppingOutfits.length)) {
     startShoppingTryonBatch();
   }
-  renderRules(result.rules);
   renderFigures(result.images);
   showView("recos");
 }
@@ -706,6 +706,7 @@ function lookItemList(result) {
 function renderOutfitTryon(entry) {
   const result = outfitTryonResult(entry.key);
   if (result) {
+    const extension = result.image?.toLowerCase().endsWith(".png") ? "png" : "jpg";
     const notes = [...new Set(result.warnings || [])];
     const warnings = notes.length
       ? `<details class="tryon-warning">
@@ -719,7 +720,7 @@ function renderOutfitTryon(entry) {
         <figcaption>
           ${lookItemList(result)}
           <a href="${API_BASE}/api/jobs/${state.jobId}/images/${result.image}"
-             download="fitta-${escapeHtml(entry.label)}.jpg">사진 저장</a>
+             download="fitta-${escapeHtml(entry.label)}.${extension}">사진 저장</a>
         </figcaption>
       </figure>${warnings}`;
   }
@@ -1093,7 +1094,7 @@ function renderCurrentOutfit(result) {
     </div>
     <div class="outfit-row">
       <span class="outfit-tag">신발</span>
-      <div class="outfit-desc">${escapeHtml(summary["신발"] || "신발 인식 학습 준비 중 · 입력 조건으로 추천 가능")}</div>
+      <div class="outfit-desc">${escapeHtml(summary["신발"] || "신발 상태를 확인하지 못했습니다.")}</div>
     </div>
     <div class="outfit-row">
       <span class="outfit-tag">조합</span>
@@ -1189,19 +1190,10 @@ function renderBodyStats(pose) {
   $("body-shape-note").textContent = `${basis} ${used}`;
 }
 
-function renderRules(rules) {
-  $("rule-summary").innerHTML = `
-    <div class="rule-metric"><span>구현된 규칙</span><b>${rules.implemented} / ${rules.documented}</b></div>
-    <div class="rule-metric"><span>추천 키워드 규칙</span><b>${rules.scoring}</b></div>
-    <div class="rule-metric"><span>추가 데이터 필요</span><b>${rules.unsupported.length}</b></div>`;
-  $("unsupported-list").innerHTML = rules.unsupported
-    .map((item) => `<li><code>${escapeHtml(item.id)}</code> — ${escapeHtml(item.reason)}</li>`)
-    .join("");
-}
-
 function renderFigures(images) {
   const tabs = $("figure-tabs");
   tabs.querySelectorAll(".figure-tab").forEach((tab) => {
+    tab.hidden = !images[tab.dataset.image];
     tab.onclick = () => {
       tabs.querySelectorAll(".figure-tab").forEach((el) => el.classList.remove("is-active"));
       tab.classList.add("is-active");
@@ -1374,11 +1366,6 @@ function showPreviewOnly(detail) {
       const hint = document.querySelector(".dz-privacy");
       if (hint) hint.textContent = `사진은 분석 완료 후 ${policy.ttl_minutes}분 이내 자동 삭제`;
     })
-    .catch(() => {});
-
-  fetch(API_BASE + "/api/rules")
-    .then((response) => response.json())
-    .then((payload) => { state.ruleTitles = payload.titles || {}; })
     .catch(() => {});
 
   // health info suppressed from topbar in this UI

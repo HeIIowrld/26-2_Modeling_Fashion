@@ -7,6 +7,7 @@ tunnel to the scheduled GPU worker.
 
 from __future__ import annotations
 
+import json
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -17,7 +18,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+try:
+    from .demo_api import MAX_SESSIONS, SESSION_TTL_SECONDS, install_demo_api
+except ImportError:  # uvicorn --app-dir web gateway:app
+    from demo_api import MAX_SESSIONS, SESSION_TTL_SECONDS, install_demo_api
+
 WEB_DIR = Path(__file__).resolve().parent
+LOCAL_OPTIONS = json.loads((WEB_DIR / "static" / "fallback-options.json").read_text(encoding="utf-8"))
 DEFAULT_GPU_API_URL = "http://127.0.0.1:18000"
 PROXY_METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 REQUEST_HEADER_BLOCKLIST = {
@@ -65,6 +72,7 @@ def create_app(
         try:
             yield
         finally:
+            demo.close()
             await application.state.gpu_client.aclose()
 
     application = FastAPI(
@@ -74,8 +82,14 @@ def create_app(
         openapi_url=None,
         lifespan=lifespan,
     )
+    demo = install_demo_api(application)
 
     async def proxy_api(request: Request, path: str = "") -> Response:
+        # 화면 입력 단계에서 쓰는 정보는 GPU 작업 서버가 꺼져 있어도 제공한다.
+        if request.method == "GET" and path == "options":
+            return JSONResponse(LOCAL_OPTIONS)
+        if request.method == "GET" and path == "retention":
+            return JSONResponse({"ttl_minutes": SESSION_TTL_SECONDS // 60, "max_sessions": MAX_SESSIONS})
         body = await request.body()
         headers = {
             name: value

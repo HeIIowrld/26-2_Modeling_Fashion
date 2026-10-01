@@ -106,7 +106,7 @@ input, textarea, select { caret-color: var(--signal); }
 
 /* 숫자는 자릿수가 바뀌어도 흔들리지 않게 한다. */
 .disp, .pick-score, .pick-price, .reco-score, .product-price,
-.score-bar b, .stat-row dd, .rule-metric b, .step-num, .block-num {
+.score-bar b, .stat-row dd, .step-num, .block-num {
   font-family: var(--disp);
   font-variant-numeric: tabular-nums;
 }
@@ -1146,22 +1146,6 @@ select {
 .confidence-pill.high { background: color-mix(in srgb, var(--good) 14%, transparent); color: var(--good); }
 .confidence-pill.mid  { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
 .confidence-pill.low  { background: var(--signal-tint); color: var(--bad); }
-
-.rule-summary { display: flex; flex-direction: column; gap: 8px; }
-.rule-metric {
-  display: flex; align-items: baseline; justify-content: space-between;
-  gap: 12px; font-size: .85rem; color: var(--ink-soft);
-}
-.rule-metric b { color: var(--ink); font-weight: 700; }
-
-.mini-disclosure { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
-.mini-disclosure summary {
-  cursor: pointer; font-size: .82rem; color: var(--ink-soft);
-  min-height: 44px; display: flex; align-items: center;
-}
-.mini-disclosure summary:hover { color: var(--ink); }
-.unsupported-list { margin: 8px 0 0; padding-left: 17px; font-size: .8rem; color: var(--ink-soft); }
-.unsupported-list li { margin-bottom: 5px; line-height: 1.55; }
 
 /* ── 개인정보 바 · 토스트 ─────────────────────────────── */
 .privacy-bar {

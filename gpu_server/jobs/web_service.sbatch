@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=32G
+#SBATCH --mem=64G
 #SBATCH --oversubscribe
 # 시간이 끝나면 작업을 놓고 우선순위 최하위로 다시 줄을 선다. 8시간이면 하루 세 번
 # 이 추첨을 겪는데, 같은 노드의 다른 사용자는 12~24시간을 쓴다. 같은 24시간으로 맞춰
@@ -17,7 +17,8 @@
 set -euo pipefail
 
 BASE=/mnt/data1/dsl01
-PROJECT=${FITTA_PROJECT:-$BASE/26-2_Modeling_Fashion}
+# 수동 제출도 운영 릴리스를 사용한다. 컨트롤러는 FITTA_PROJECT로 확정 경로를 넘긴다.
+PROJECT=${FITTA_PROJECT:-$BASE/releases/fitta_current}
 PYTHON=$BASE/opt/python/cpython-3.11.16-linux-x86_64-gnu/bin/python3.11
 WEB_HOST=${FASHION_WEB_HOST:-0.0.0.0}
 WEB_PORT=${FASHION_WEB_PORT:-8000}

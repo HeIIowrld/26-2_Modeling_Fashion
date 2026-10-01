@@ -25,9 +25,9 @@ class UIContractTests(unittest.TestCase):
                 "wardrobe",
                 "pose",
                 "quality",
-                "body",
                 "segment",
                 "attributes",
+                "body",
                 "candidates",
                 "scoring",
                 "preview",
@@ -42,6 +42,9 @@ class UIContractTests(unittest.TestCase):
         self.assertIn("renderRequestSummary(result?.request)", javascript)
         self.assertIn("무신사 상품 추천", html)
         self.assertIn("renderShoppingProducts(result.shopping_results || [], result.shopping_outfits || [])", javascript)
+        self.assertNotIn("적용된 규칙", html)
+        self.assertNotIn('id="rule-summary"', html)
+        self.assertNotIn("renderRules(result.rules)", javascript)
         # 조합 요약과 근거 목록이 같은 문장을 반복하지 않도록 근거를 바로 보인다.
         self.assertNotIn("왜 이 조합인가요?", javascript)
         self.assertIn('class="look-reasons"', javascript)
