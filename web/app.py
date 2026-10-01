@@ -71,6 +71,7 @@ from pipeline import (  # noqa: E402
     save_feedback,
     tryon_status,
     validate_input_photo,
+    warmup_engine,
 )
 from schemas import Recommendation  # noqa: E402
 
@@ -153,12 +154,45 @@ _jobs_lock = threading.Lock()
 _admission_lock = threading.Lock()
 _pending_analyzes = 0
 _analysis_starts: deque[float] = deque()
+# Replaced atomically, so health never waits for the model initialization lock.
+_model_readiness = {"status": "disabled", "elapsed_seconds": None}
+
+
+def _warm_models() -> None:
+    global _model_readiness
+    started = time.monotonic()
+    print("[WARMUP] loading analysis and try-on models", flush=True)
+    try:
+        warmup_engine()
+    except Exception as exc:
+        _model_readiness = {"status": "failed", "elapsed_seconds": round(time.monotonic() - started, 2)}
+        print(f"[WARMUP] failed: {type(exc).__name__}: {exc}", flush=True)
+    else:
+        _model_readiness = {"status": "ready", "elapsed_seconds": round(time.monotonic() - started, 2)}
+        print(f"[WARMUP] ready in {_model_readiness['elapsed_seconds']}s", flush=True)
+
+
+@app.on_event("startup")
+def _start_model_warmup() -> None:
+    global _model_readiness
+    if os.environ.get("FASHION_PRELOAD_MODELS", "0") != "1":
+        return
+    _model_readiness = {"status": "warming", "elapsed_seconds": None}
+    threading.Thread(target=_warm_models, name="model-warmup", daemon=True).start()
+
 
 
 @app.middleware("http")
 async def limit_analysis(request, call_next):
     """단일 GPU 서버의 전역 admission 한도. 프록시 IP 헤더를 신뢰하지 않는다."""
     global _pending_analyzes
+    if (_model_readiness["status"] in {"warming", "failed"}
+            and (request.url.path in {"/api/analyze", "/api/validate-photo", "/api/tryon", "/api/rules"}
+                 or (request.method == "POST" and request.url.path.startswith("/api/jobs/")))):
+        detail = ("서버가 가상 피팅 모델을 준비 중입니다. 잠시 후 다시 시도해 주세요."
+                  if _model_readiness["status"] == "warming"
+                  else "가상 피팅 모델 준비에 실패했습니다. 서버 상태를 확인 중입니다.")
+        return JSONResponse(status_code=503, headers={"Retry-After": "15"}, content={"detail": detail})
     if request.method != "POST" or request.url.path != "/api/analyze":
         return await call_next(request)
     sweep_now()
@@ -695,8 +729,15 @@ def catalog_quality(products) -> dict:
 @app.get("/api/health")
 def health() -> dict:
     """모델 적재 상태를 미리 알려 첫 분석의 대기 이유를 설명한다."""
+    readiness = dict(_model_readiness)
+    if readiness["status"] in {"warming", "failed"}:
+        return JSONResponse(status_code=503, headers={"Retry-After": "15"}, content={
+            "revision": BACKEND_REVISION, "ready": False, "model_readiness": readiness,
+        })
     engine = get_engine()
     return {
+        "model_readiness": readiness,
+        "ready": readiness["status"] == "ready",
         "revision": BACKEND_REVISION,
         "static_revision": release_revision(Path(__file__).parent.parent),
         "device": engine.device,

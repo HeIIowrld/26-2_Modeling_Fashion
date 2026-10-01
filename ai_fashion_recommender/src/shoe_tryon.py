@@ -101,6 +101,7 @@ class ShoeTryOn:
         self.seed = seed
         self.prompt = PROMPT if prompt is None else prompt
         self._pipeline = None
+        self._warmed_up = False
         self.last_report = {}
 
     @property
@@ -118,6 +119,20 @@ class ShoeTryOn:
             return bool(shards) and all((self.model_path / "text_encoder" / p).is_file() for p in shards)
         except (OSError, ValueError, KeyError, TypeError, AttributeError):
             return False
+
+    def warmup(self) -> None:
+        if self._warmed_up:
+            return
+        import torch
+        pipe = self._load_pipeline()
+        # CPU-offloaded safetensors can still be mmap-backed after loading.
+        # One synthetic step touches the weights before a real user's request.
+        pipe(image=Image.new("RGB", (256, 256), "gray"),
+             image_reference=Image.new("RGB", (512, 512), "gray"),
+             mask_image=Image.new("L", (256, 256), 255), prompt=self.prompt,
+             height=256, width=256, strength=1.0, num_inference_steps=1,
+             guidance_scale=1.0, generator=torch.Generator(device="cuda").manual_seed(self.seed))
+        self._warmed_up = True
 
     def _load_pipeline(self):
         if self._pipeline is None:
@@ -183,6 +198,13 @@ class OutfitTryOn(VirtualTryOnAdapter):
     @property
     def reference_bottom_lengths(self):
         return self.clothing.reference_bottom_lengths
+
+    def warmup(self) -> None:
+        self.clothing.warmup()
+        self.shoes.warmup()
+        if self.parser is None:
+            from clothing_parser import ClothingParser
+            self.parser = ClothingParser(use_fashn=True)
 
     def generate(self, person_image, recommendation, output_path, context=None):
         products = recommendation.products

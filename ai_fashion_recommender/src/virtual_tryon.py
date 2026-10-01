@@ -51,6 +51,9 @@ class VirtualTryOnAdapter:
     def available(self) -> bool:
         return self.enabled
 
+    def warmup(self) -> None:
+        """Load inference models before accepting user work, when implemented."""
+
     def generate(
         self,
         person_image: str | Path,
