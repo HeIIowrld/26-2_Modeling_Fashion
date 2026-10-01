@@ -5,7 +5,10 @@
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=32G
+# 32G 로는 반복해서 OOM 으로 죽었다 — 2026-10-01 에만 작업 249880·254245 가
+# OUT_OF_MEMORY 로 종료됐다(254245 는 27분 46초 만에). 서버에서는 이미 64G 로
+# 올려 쓰고 있었는데 git 에 반영되지 않아, 배포할 때마다 32G 로 되돌아갈 뻔했다.
+#SBATCH --mem=64G
 #SBATCH --oversubscribe
 # 시간이 끝나면 작업을 놓고 우선순위 최하위로 다시 줄을 선다. 8시간이면 하루 세 번
 # 이 추첨을 겪는데, 같은 노드의 다른 사용자는 12~24시간을 쓴다. 같은 24시간으로 맞춰
@@ -17,7 +20,10 @@
 set -euo pipefail
 
 BASE=/mnt/data1/dsl01
-PROJECT=${FITTA_PROJECT:-$BASE/26-2_Modeling_Fashion}
+# 기본값이 $BASE/26-2_Modeling_Fashion 이었는데, 그 폴더는 2026-08-22 에서 멈춘
+# 작업 사본이다(커밋 안 된 변경이 쌓여 있다). FITTA_PROJECT 를 넘기지 않고 띄우면
+# 두 달 전 코드가 서빙된다. 배포 링크를 기본값으로 둔다.
+PROJECT=${FITTA_PROJECT:-$BASE/releases/fitta_current}
 PYTHON=$BASE/opt/python/cpython-3.11.16-linux-x86_64-gnu/bin/python3.11
 WEB_HOST=${FASHION_WEB_HOST:-0.0.0.0}
 WEB_PORT=${FASHION_WEB_PORT:-8000}
