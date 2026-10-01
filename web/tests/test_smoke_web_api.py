@@ -70,11 +70,18 @@ class SmokeCombinationTests(unittest.TestCase):
         self.assertEqual(expected, outfits)
         self.assertEqual(app, expected)
 
-    def test_unprepared_products_and_duplicate_outfits_follow_the_app(self):
+    def test_unprepared_products_stay_in_look_identity_and_duplicates_are_removed(self):
         products = {"T1": "top", "B1": "bottom", "B2": "bottom", "S1": "shoes"}
         outfits = [["T1", "B1", "S1"], ["T1", "B2", "S1"], ["T1", "B1", "S1"]]
         app, expected = self._both(products, {"T1", "B1", "S1"}, outfits)
-        self.assertEqual(expected, [["T1", "B1", "S1"], ["T1", "S1"]])
+        self.assertEqual(expected, [["T1", "B1", "S1"], ["T1", "B2", "S1"]])
+        self.assertEqual(app, expected)
+
+    def test_unavailable_shoe_stays_in_full_look_key(self):
+        products = {"T1": "top", "B1": "bottom", "S1": "shoes"}
+        outfits = [["T1", "B1", "S1"]]
+        app, expected = self._both(products, {"T1", "B1"}, outfits)
+        self.assertEqual(expected, outfits)
         self.assertEqual(app, expected)
 
     def test_results_without_outfits_fall_back_to_the_category_product(self):

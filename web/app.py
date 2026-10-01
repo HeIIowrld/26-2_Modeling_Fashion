@@ -457,6 +457,8 @@ def _shopping_tryon_batch_snapshot_locked(job: dict) -> dict:
             "index": int(index),
             "product_ids": list(item.get("product_ids") or []),
             "categories": list(item.get("categories") or []),
+            "tryon_product_ids": list(item.get("tryon_product_ids") or []),
+            "tryon_categories": list(item.get("tryon_categories") or []),
             "status": item.get("status", "queued"),
             "image": item.get("image"),
             "cached": bool(item.get("cached")),
@@ -505,37 +507,62 @@ def _initialize_shopping_tryon_batch(job_id: str) -> dict | None:
             seen_ids.add(product_id)
             ordered_products.append(product)
 
+        result_products = {
+            str(item.get("product_id") or ""): item
+            for item in result.get("shopping_results") or []
+            if item.get("product_id")
+        }
         combinations = []
         seen_combinations: set[tuple[str, ...]] = set()
         has_outfit_decision = "shopping_outfits" in result
         for outfit in result.get("shopping_outfits") or []:
+            # product_ids is the complete LOOK identity used by the tabs. Shoes
+            # remain in this key even when the current VTON adapter can only
+            # render the top and bottom. The worker receives the renderable
+            # subset separately through tryon_product_ids.
+            product_ids = [
+                str(product_id)
+                for product_id in outfit.get("product_ids") or []
+                if str(product_id) in result_products
+            ]
             products = [
                 prepared[product_id]
-                for product_id in outfit.get("product_ids") or []
+                for product_id in product_ids
                 if product_id in prepared
             ]
-            key = tuple(product.product_id for product in products)
-            if products and key not in seen_combinations:
+            key = tuple(product_ids)
+            if product_ids and products and key not in seen_combinations:
                 seen_combinations.add(key)
-                combinations.append(products)
+                combinations.append((product_ids, products))
 
         if not combinations and not has_outfit_decision:
             groups = [[p for p in ordered_products if p.category == category]
                       for category in ("top", "bottom", "shoes")]
             groups = [group for group in groups if group]
-            combinations = [list(items) for items in cartesian_product(*groups)] if groups else []
+            combinations = [
+                ([product.product_id for product in products], list(products))
+                for products in cartesian_product(*groups)
+            ] if groups else []
 
         items = {
             index: {
-                "product_ids": [product.product_id for product in products],
-                "categories": [product.category for product in products],
+                "product_ids": product_ids,
+                "categories": [
+                    str(
+                        result_products.get(product_id, {}).get("category")
+                        or getattr(prepared.get(product_id), "category", "")
+                    )
+                    for product_id in product_ids
+                ],
+                "tryon_product_ids": [product.product_id for product in products],
+                "tryon_categories": [product.category for product in products],
                 "status": "queued",
                 "image": None,
                 "cached": False,
                 "warnings": [],
                 "error": None,
             }
-            for index, products in enumerate(combinations, start=1)
+            for index, (product_ids, products) in enumerate(combinations, start=1)
         }
         capability = result.get("tryon") or {}
         if items:
@@ -614,7 +641,9 @@ def _shopping_tryon_batch_worker(job_id: str) -> None:
                 break
             index = queued[0]
             item = batch["items"][index]
-            product_ids = list(item.get("product_ids") or [])
+            product_ids = list(
+                item.get("tryon_product_ids") or item.get("product_ids") or []
+            )
             item.update(status="running", error=None)
 
         try:
@@ -638,8 +667,8 @@ def _shopping_tryon_batch_worker(job_id: str) -> None:
                 image=generated["image"],
                 cached=bool(generated.get("cached")),
                 warnings=list(generated.get("warnings") or []),
-                product_ids=list(generated.get("product_ids") or product_ids),
-                categories=list(generated.get("categories") or []),
+                tryon_product_ids=list(generated.get("product_ids") or product_ids),
+                tryon_categories=list(generated.get("categories") or []),
                 error=None,
             )
     _finish_shopping_tryon_batch(job_id)

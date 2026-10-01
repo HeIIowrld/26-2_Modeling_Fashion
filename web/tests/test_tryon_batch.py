@@ -239,6 +239,47 @@ class TryOnBatchTests(unittest.TestCase):
             [["TOP1", "BOTTOM2"], ["TOP2", "BOTTOM1"]],
         )
 
+    def test_unsupported_shoe_stays_in_look_key_but_not_vton_input(self):
+        self.job["shopping_tryon_products"] = {
+            "TOP1": shopping_product("TOP1", "top"),
+            "BOTTOM1": shopping_product("BOTTOM1", "bottom"),
+        }
+        self.job["result"]["shopping_results"] = [
+            {"product_id": "TOP1", "category": "top", "tryon_available": True},
+            {"product_id": "BOTTOM1", "category": "bottom", "tryon_available": True},
+            {"product_id": "SHOE1", "category": "shoes", "tryon_available": False},
+        ]
+        self.job["result"]["shopping_outfits"] = [
+            {"product_ids": ["TOP1", "BOTTOM1", "SHOE1"]},
+        ]
+        calls = []
+
+        def fake_generate(_person, reco, output, *, context):
+            calls.append([product.product_id for product in reco.products])
+            output.write_bytes(b"look without shoe tryon")
+            return output, []
+
+        with (
+            patch.object(web_app, "_session_dir", return_value=self.session),
+            patch.object(web_app, "generate_tryon_with_warnings", side_effect=fake_generate),
+        ):
+            initialized = web_app._initialize_shopping_tryon_batch(self.job_id)
+            self.assertEqual(initialized["items"][0]["product_ids"], ["TOP1", "BOTTOM1", "SHOE1"])
+            self.assertEqual(initialized["items"][0]["tryon_product_ids"], ["TOP1", "BOTTOM1"])
+            web_app._start_shopping_tryon_batch(self.job_id)
+            for _ in range(300):
+                snapshot = web_app._read_shopping_tryon_batch(self.job_id)
+                if snapshot["status"] == "done":
+                    break
+                time.sleep(0.005)
+            else:
+                self.fail("shopping try-on batch did not finish")
+
+        self.assertEqual(calls, [["TOP1", "BOTTOM1"]])
+        self.assertEqual(snapshot["items"][0]["product_ids"], ["TOP1", "BOTTOM1", "SHOE1"])
+        self.assertEqual(snapshot["items"][0]["tryon_product_ids"], ["TOP1", "BOTTOM1"])
+        self.assertTrue(snapshot["items"][0]["image"])
+
     def test_explicit_empty_outfits_do_not_restore_rejected_combinations(self):
         products = {
             "TOP1": shopping_product("TOP1", "top"),

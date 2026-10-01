@@ -982,6 +982,11 @@ function applyShoppingTryonBatch(batch) {
   refreshOutfitTryonRenders();
   if (["done", "partial", "failed", "unavailable"].includes(batch.status)) {
     stopShoppingTryonBatchPolling();
+  } else if (["queued", "running"].includes(batch.status) && !state.shoppingTryonPoll) {
+    // The backend starts the automatic batch before the finished analysis is
+    // returned. Resume polling that already-running batch instead of waiting
+    // for a second manual POST that never happens.
+    state.shoppingTryonPoll = setInterval(pollShoppingTryonBatch, 1200);
   }
 }
 
@@ -1007,10 +1012,6 @@ async function startShoppingTryonBatch() {
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.detail || "무신사 전체 조합 렌더링을 시작하지 못했습니다.");
     applyShoppingTryonBatch(payload);
-    if (["queued", "running"].includes(payload.status)) {
-      stopShoppingTryonBatchPolling();
-      state.shoppingTryonPoll = setInterval(pollShoppingTryonBatch, 1200);
-    }
   } catch (error) {
     console.warn("무신사 전체 조합 배치를 사용할 수 없습니다:", error);
   }

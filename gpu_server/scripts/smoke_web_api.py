@@ -25,19 +25,26 @@ TRYON_CATEGORIES = ("top", "bottom", "shoes")
 def expected_shopping_combinations(result: dict) -> list[list[str]]:
     """앱(`_initialize_shopping_tryon_batch`)과 같은 규칙으로 무신사 배치 조합을 만든다.
 
-    추천 코디(`shopping_outfits`)가 있으면 코디 순서대로, 합성 준비가 된 상품
-    (`tryon_available`)만 남겨 중복 없이 쓴다. 룩 탭 이후 결과는 코디마다 한 조합이다.
-    코디가 없는 구형 결과만 상의·하의·신발 곱집합으로 처리한다.
+    추천 코디(`shopping_outfits`)가 있으면 코디 순서대로 전체 LOOK ID를 유지한다.
+    신발 합성이 준비되지 않았더라도 화면의 상의+하의+신발 키와 같아야 한다.
+    실제 VTON에는 앱이 `tryon_available` 하위 집합만 넘긴다. 코디가 없는 구형
+    결과만 합성 가능한 상의·하의·신발의 곱집합으로 처리한다.
     """
     available: dict[str, dict] = {}
     for product in result.get("shopping_results") or []:
         if product.get("tryon_available") and product.get("category") in TRYON_CATEGORIES:
             available.setdefault(str(product["product_id"]), product)
+    products = {
+        str(product["product_id"]): product
+        for product in result.get("shopping_results") or []
+        if product.get("category") in TRYON_CATEGORIES
+    }
     combinations: list[list[str]] = []
     seen: set[tuple[str, ...]] = set()
     for outfit in result.get("shopping_outfits") or []:
-        ids = [str(pid) for pid in outfit.get("product_ids") or [] if str(pid) in available]
-        if ids and tuple(ids) not in seen:
+        ids = [str(pid) for pid in outfit.get("product_ids") or [] if str(pid) in products]
+        renderable = [pid for pid in ids if pid in available]
+        if ids and renderable and tuple(ids) not in seen:
             seen.add(tuple(ids))
             combinations.append(ids)
     if combinations or "shopping_outfits" in result:

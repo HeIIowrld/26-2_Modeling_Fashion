@@ -123,6 +123,8 @@ class UIContractTests(unittest.TestCase):
         self.assertIn('id="shopping-tryon-panel"', html)
         self.assertIn("/shopping-tryon-batch", javascript)
         self.assertIn("startShoppingTryonBatch()", javascript)
+        self.assertIn('["queued", "running"].includes(batch.status)', javascript)
+        self.assertIn("!state.shoppingTryonPoll", javascript)
         self.assertIn("renderOutfitTryon", javascript)
         self.assertIn("refreshOutfitTryonRenders", javascript)
         self.assertNotIn("shopping-tryon-generate", javascript)
