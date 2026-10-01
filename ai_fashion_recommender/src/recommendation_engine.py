@@ -188,8 +188,8 @@ class RecommendationEngine:
     PIPELINE_RULE_IDS = {"R-COL-09", "R-DET-01", "R-TREND-01"}
     EXECUTABLE_RULE_IDS = SCORING_RULE_IDS | SAFETY_RULE_IDS | GUIDANCE_RULE_IDS | PIPELINE_RULE_IDS
 
-    # 사이즈 15점은 최종 진단 점수에 blend_size_score로 반영한다.
-    # 기준 옷이 없으면 평가하지 않는다. 보유 옷 5점은 목록이 있을 때만 활성화한다.
+    # 기준 옷 입력을 없애(2026-10-01) 사이즈 15점은 계산하지 않는다.
+    # 보유 옷 5점은 목록이 있을 때만 활성화한다.
     BASE_WEIGHTS = {
         "purpose_tpo": 0.20,
         "weather_activity": 0.12,
@@ -212,7 +212,7 @@ class RecommendationEngine:
     }
 
     UNSUPPORTED_RULE_REASONS = {
-        "R-SIL-02": "기준 옷 실측 유사도는 최종 점수에 반영합니다. 신축성·신체 여유량·실제 당김 판정은 아직 지원하지 않습니다.",
+        "R-SIL-02": "기준 옷 실측 입력을 없애 사이즈 유사도를 계산하지 않습니다. 상품 실측표는 화면에서 그대로 확인할 수 있습니다.",
         "R-SIL-04": "이너·아우터 레이어와 밑단 위치 데이터가 없습니다.",
         "R-COL-06": "로고·양말·가방처럼 작은 포인트 영역의 색 데이터가 없습니다.",
         "R-COL-07": "추천 상품 이미지의 아이템별 색 면적 데이터가 없습니다.",
@@ -1572,7 +1572,6 @@ class RecommendationEngine:
         profile: UserProfile,
         pose: PoseAnalysis,
         outfit: OutfitAnalysis,
-        size_comparisons: dict | None = None,
     ) -> tuple[float, dict[str, float], list[str], list[str], list[str], float]:
         products = [product for product in (top_product, bottom_product) if product]
         top = self._garment(top_product, "top", outfit)
@@ -1629,19 +1628,6 @@ class RecommendationEngine:
             for name, value in diagnostic["harmony_breakdown"].items()
         })
         reasons = diagnostic["reasons"]
-        from size_fit import compare_sizes, blend_size_score
-        comparisons = [
-            size_comparisons[product.product_id] if size_comparisons is not None else
-            compare_sizes(product.measurement_record, product.category,
-                          profile.reference_measurements.get(product.category))
-            for product in products if profile.reference_measurements
-        ]
-        total, size_value, size_coverage = blend_size_score(total, comparisons)
-        if size_value is not None:
-            breakdown["size_fit"] = size_value
-            breakdown["size_fit_coverage"] = size_coverage * 100
-            active_weight += 0.15 * size_coverage
-            reasons.extend(comparison["summary"] for comparison in comparisons)
         applied_rules = [
             rule_id for rule_id in dict.fromkeys(legacy_applied_rules + diagnostic["rules"])
             if self.rule_book.has(rule_id) and rule_id in self.EXECUTABLE_RULE_IDS
@@ -1721,22 +1707,6 @@ class RecommendationEngine:
 
         available_tops = self._available_for_profile("top", profile)
         available_bottoms = self._available_for_profile("bottom", profile)
-        if profile.reference_measurements:
-            # 현재 착장의 실제 치수는 알 수 없다. 교체 후보와 같은 15% 중립 축으로
-            # 비교해야 사이즈 입력 자체가 교체 이득을 인위적으로 낮추지 않는다.
-            current.total_score = round(0.85 * current.total_score + 0.15 * 50, 2)
-            current.score_breakdown["size_fit"] = 50.0
-            current.score_breakdown["size_fit_coverage"] = 0.0
-        from size_fit import compare_sizes
-        size_comparisons = {
-            product.product_id: compare_sizes(product.measurement_record, product.category,
-                                             profile.reference_measurements.get(product.category))
-            for product in available_tops + available_bottoms
-        }
-        available_tops = [p for p in available_tops
-                          if size_comparisons[p.product_id]["status"] != "no_available_sizes"]
-        available_bottoms = [p for p in available_bottoms
-                             if size_comparisons[p.product_id]["status"] != "no_available_sizes"]
         candidates = []
         min_b = getattr(profile, "min_budget", None)
         max_b = getattr(profile, "max_budget", None)
@@ -1762,7 +1732,7 @@ class RecommendationEngine:
                 if min_b is None and max_b is None and total_price > profile.budget:
                     continue
                 score, breakdown, reasons, applied_rules, tips, coverage = self._score_candidate(
-                    top, bottom, profile, pose, outfit, size_comparisons
+                    top, bottom, profile, pose, outfit
                 )
                 changed_count = 2 if action == "both" else 1
                 delta = round(score - current.total_score, 2)

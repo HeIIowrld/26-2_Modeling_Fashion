@@ -14,6 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "src"))  # 런타임 모듈은 src/에 있다
 
 from body_shape import classify, classify_from_circumferences, thresholds
@@ -197,3 +198,26 @@ class PhotoEstimatorSeamTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# 아래는 2026-10-01 기준 옷 실측 입력 제거로 test_size_scoring.py 를 정리하면서
+# 옮겨 온 검사다. 사이즈와 무관하게 '둘레로 판정한 체형'이 카탈로그 실루엣 규칙
+# (R-BOD-04)에 계속 연결되는지를 지킨다.
+import pytest  # noqa: E402
+from product_catalog import ProductCatalog  # noqa: E402
+from recommendation_engine import RecommendationEngine  # noqa: E402
+from schemas import UserProfile, PoseAnalysis, OutfitAnalysis, GOAL_BALANCE  # noqa: E402
+
+
+@pytest.mark.parametrize("shape", ["모래시계체형", "마름모꼴체형", "둥근체형"])
+def test_circumference_shapes_keep_balanced_catalog_guidance(shape):
+    catalog = ProductCatalog(ROOT / "data" / "products.csv")
+    engine = RecommendationEngine(ROOT / "FASHION_RULES_MASTER.md", catalog)
+    profile = UserProfile(silhouette_goal=GOAL_BALANCE, chest_cm=100, waist_cm=90, hip_cm=100)
+    pose = PoseAnalysis(True, .9, shape, 1, .5, .55, "정면", .9)
+    outfit = OutfitAnalysis("test", "화이트", "블랙", "보통 조합", [], "캐주얼")
+    top = engine._garment(next(p for p in catalog.products if p.category == "top"), "top", outfit)
+    bottom = engine._garment(None, "bottom", outfit)
+    top["body_shapes"] = ["균형형"]
+    _, _, rules = engine._silhouette_score(top, bottom, profile, pose)
+    assert "R-BOD-04" in rules

@@ -173,7 +173,12 @@ class PipelineBudgetAPITests(unittest.TestCase):
             self.assertIs(classify.call_args.args[1], body_pose)
             self.assertEqual(classify.call_args.kwargs['person_image'], body_path)
 
-    def test_live_size_comparison_reaches_web_payload_before_final_selection(self):
+    def test_product_size_table_reaches_web_payload(self):
+        """기준 옷 비교를 없앤 뒤(2026-10-01)에도 상품 실측표는 화면까지 와야 한다.
+
+        예전에는 이 실측으로 가장 가까운 사이즈를 골라 순위를 바꿨다. 지금은 비교 없이
+        상품이 표기한 치수를 그대로 보여 주기만 한다.
+        """
         import pipeline
         from musinsa_live_search import MusinsaLiveSearch
         from product_measurements import normalize_size_table
@@ -188,7 +193,7 @@ class PipelineBudgetAPITests(unittest.TestCase):
         self.addCleanup(search.close)
         fake_engine = FakeEngine()
         fake_engine.product_search = search
-        profile = pipeline.build_profile({"reference_measurements": {"top": {"chest_width_cm": 54, "length_cm": 70}}})
+        profile = pipeline.build_profile({})
         rows = [{"goodsNo": number, "goodsName": "상의", "finalPrice": 50000, "reviewCount": 100 if number == 1 else 1}
                 for number in (1, 2)]
         with tempfile.TemporaryDirectory() as directory:
@@ -199,11 +204,12 @@ class PipelineBudgetAPITests(unittest.TestCase):
                 search, "_fetch", side_effect=lambda category, *a, **kw: rows if category == "top" else []
             ):
                 result = pipeline.run_pipeline(image, profile, root / "out", lambda stage: None)
-        products = result.payload["shopping_results"]
-        self.assertEqual(products[0]["product_id"], "MS2")
-        self.assertEqual(products[0]["size_fit"]["closest_size"], "M")
-        self.assertEqual(products[0]["size_fit"]["differences"][0]["delta_cm"], 0)
-        self.assertNotIn("ranking_bonus", products[0]["size_fit"])
+        fit = result.payload["shopping_results"][0]["size_fit"]
+        self.assertEqual([row["size"] for row in fit["size_options"]], ["M"])
+        self.assertEqual(fit["columns"], {"chest_width_cm": "가슴단면", "length_cm": "총장"})
+        # 비교가 사라졌으므로 순위·추천 사이즈 값이 남아 있으면 안 된다.
+        for gone in ("closest_size", "differences", "ranking_bonus"):
+            self.assertNotIn(gone, fit)
         self.assertEqual(result.recommendations, [])
 
     def test_run_pipeline_uses_only_live_product_search(self):

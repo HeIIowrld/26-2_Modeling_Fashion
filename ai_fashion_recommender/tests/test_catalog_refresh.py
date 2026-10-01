@@ -122,3 +122,31 @@ def test_offline_candidates_reject_confirmed_measurement_category_conflict():
     assert top not in catalog.available()
     top.measurement_record = {"type_name": ""}
     assert top in catalog.available("top")
+
+
+def test_offline_cache_reuses_measurements_but_not_stale_stock(tmp_path):
+    """오래된 캐시의 재고는 '미확인'으로 돌리되 실측 자체는 재사용한다.
+
+    2026-10-01 기준 옷 비교를 없애면서 test_size_scoring.py 에서 옮겨 왔다.
+    사이즈 점수는 사라졌지만, 오래된 품절 정보가 영구히 남지 않아야 한다는
+    성질은 그대로 지켜야 한다.
+    """
+    import json, shutil, time
+    from product_measurements import normalize_size_table
+    from product_catalog import ProductCatalog
+
+    csv_path = tmp_path / "products.csv"
+    shutil.copyfile(ROOT / "data" / "products.csv", csv_path)
+    table = normalize_size_table("MS1", {"data": {"sizes": [{"name": "M", "items": [
+        {"name": "가슴단면", "value": 54}, {"name": "총장", "value": 70}]}]}})
+    table["sizes"][0]["available"] = False
+    path = tmp_path / "cache" / "product_measurements" / "MS1.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps({"record": table, "cached_at": time.time() - 7200}), encoding="utf-8")
+
+    cached = ProductCatalog(csv_path)._measurement_record("MS1")
+
+    assert cached["sizes"][0]["available"] is None          # 오래된 재고는 미확인
+    assert cached["sizes"][0]["measurements"]["chest_width_cm"] == 54  # 실측은 그대로
+    # 디스크 캐시 원본은 건드리지 않는다
+    assert json.loads(path.read_text(encoding="utf-8"))["record"]["sizes"][0]["available"] is False

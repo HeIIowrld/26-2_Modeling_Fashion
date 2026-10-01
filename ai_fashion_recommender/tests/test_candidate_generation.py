@@ -106,8 +106,12 @@ class CandidateGenerationTests(unittest.TestCase):
         self.assertLess(elapsed, 0.12)
         self.assertEqual([p.product_id for p in result], ["MS1"])
 
-    def test_measurements_rerank_before_the_final_limit(self):
-        self.profile.reference_measurements = {"top": {"chest_width_cm": 54, "length_cm": 70}}
+    def test_measurements_are_attached_to_the_shortlist(self):
+        """기준 옷 비교를 없앤 뒤(2026-10-01)에도 상품 실측표는 계속 붙어야 한다.
+
+        예전에는 이 실측으로 순위를 다시 매겼지만 지금은 화면 표시용이다.
+        그래도 조회는 상위 후보에만 하고, 결과가 카드에 실려야 한다.
+        """
         client = Mock()
         def measurements(product_id):
             chest = 54 if product_id == "MS2" else 68
@@ -117,10 +121,13 @@ class CandidateGenerationTests(unittest.TestCase):
         self.search.measurements = client
         with patch.object(self.search, "_fetch", return_value=[item(1, "니트", reviews=1000), item(2, "니트", reviews=1)]):
             results = self.search.search(self.targets, self.profile, limit=1)
-        self.assertEqual(results[0].product_id, "MS2")
-        self.assertEqual(results[0].size_fit["closest_size"], "M")
         self.assertEqual(client.get.call_count, 2)
-        self.assertNotIn("ranking_bonus", results[0].public_dict()["size_fit"])
+        fit = results[0].public_dict()["size_fit"]
+        self.assertEqual([row["size"] for row in fit["size_options"]], ["M"])
+        self.assertEqual(fit["columns"], {"chest_width_cm": "가슴단면", "length_cm": "총장"})
+        # 비교가 사라졌으므로 순위 보정값도 없어야 한다.
+        self.assertNotIn("ranking_bonus", fit)
+        self.assertNotIn("closest_size", fit)
 
     def test_measurement_failure_keeps_shopping_results(self):
         self.search.measurements = Mock()
