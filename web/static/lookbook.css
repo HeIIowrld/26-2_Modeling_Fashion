@@ -830,6 +830,9 @@ select {
 .change-categories input { width: 18px; height: 18px; accent-color: var(--signal); }
 .shopping-category-heading { grid-column: 1 / -1; margin: 14px 0 0; font-size: 1rem; }
 .shopping-card {
+  /* 근거 줄 수(1~3)와 상품명 길이가 카드마다 달라 가격·링크 줄이 제각각 높이에
+     놓였다. 카드를 세로 플렉스로 잇고 가격줄을 바닥으로 밀어 한 줄에 세운다. */
+  display: flex; flex-direction: column;
   min-width: 0; overflow: hidden; color: inherit;
   border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel);
   transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
@@ -838,7 +841,10 @@ select {
 .shopping-card:hover {
   color: inherit; transform: translateY(-3px); border-color: var(--ink); box-shadow: var(--shadow-sm);
 }
-.shopping-link { display: block; color: inherit; text-decoration: none; }
+.shopping-link {
+  display: flex; flex-direction: column; flex: 1 1 auto;
+  color: inherit; text-decoration: none;
+}
 .shopping-link:focus-visible, .shopping-tryon-choice button:focus-visible { outline: 3px solid var(--signal); outline-offset: -3px; }
 .shopping-image-wrap { position: relative; aspect-ratio: 5 / 6; overflow: hidden; background: var(--panel-2); }
 .shopping-image { width: 100%; height: 100%; display: block; object-fit: cover; }
@@ -846,7 +852,7 @@ select {
   position: absolute; top: 12px; left: 12px; padding: 5px 9px;
   background: rgba(17, 24, 39, .84); color: #fff; font-size: .72rem; font-weight: 800;
 }
-.shopping-copy { padding: 15px; }
+.shopping-copy { display: flex; flex-direction: column; flex: 1 1 auto; padding: 15px; }
 .shopping-brand { color: var(--ink-soft); font-size: .75rem; font-weight: 700; }
 .shopping-copy h3 {
   min-height: 2.8em; margin: 6px 0 8px; overflow: hidden;
@@ -872,7 +878,10 @@ select {
    ('종 / 류'). 라벨은 고정 폭으로 잡고, 설명은 남은 폭을 쓴다. */
 .shopping-reason li { display: flex; gap: 8px; margin-top: 3px; align-items: baseline; }
 .shopping-reason li b {
-  flex: 0 0 2.8em;            /* 세 라벨의 시작선을 맞춘다 */
+  /* 가장 긴 라벨이 '스타일'(3자)이다. 2.8em 이면 '상품 사진'(4자) 같은 라벨이
+     칸을 넘쳐 그 카드만 본문이 오른쪽으로 밀렸다. 라벨을 3자 이하로 줄이고
+     칸도 3자가 들어가게 잡아 모든 카드의 본문 시작선을 맞춘다. */
+  flex: 0 0 3.2em;
   color: var(--ink); font-weight: 700;
   word-break: keep-all; white-space: nowrap;
 }
@@ -890,7 +899,8 @@ select {
 .size-reference { background: var(--panel); }
 .size-closest { font-weight: 600; }
 .shopping-bottom {
-  display: flex; align-items: end; justify-content: space-between; gap: 10px; margin-top: 14px;
+  display: flex; align-items: end; justify-content: space-between; gap: 10px;
+  margin-top: auto; padding-top: 14px;   /* auto 로 카드 바닥에 붙인다 */
 }
 .shopping-bottom strong { font-family: var(--disp); font-size: 1rem; }
 .shopping-bottom span { color: var(--signal-ink); font-size: .75rem; font-weight: 800; white-space: nowrap; }
