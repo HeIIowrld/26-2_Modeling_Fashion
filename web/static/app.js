@@ -662,9 +662,17 @@ function combinationKey(productIds) {
 }
 
 function outfitEntry(outfit, index) {
+  const products = outfit.products || [];
   return {
     label: `LOOK ${index + 1}`,
-    key: combinationKey((outfit.products || []).map((product) => product.product_id)),
+    // key is always the complete LOOK identity shown in the tab.
+    key: combinationKey(products.map((product) => product.product_id)),
+    // Older GPU workers expose only the subset they can actually synthesize
+    // (currently top/bottom). Keep that transport key separate so a shoe can
+    // remain part of the LOOK without hiding its generated image.
+    tryonKey: combinationKey(
+      products.filter((product) => product.tryon_available).map((product) => product.product_id)
+    ),
   };
 }
 
@@ -672,15 +680,20 @@ function lookEntries() {
   return state.shoppingOutfits.map(outfitEntry);
 }
 
-function outfitTryonResult(key) {
+function matchesOutfitTryon(entry, productIds) {
+  const candidate = combinationKey(productIds || []);
+  return candidate === entry.key || Boolean(entry.tryonKey && candidate === entry.tryonKey);
+}
+
+function outfitTryonResult(entry) {
   return state.shoppingTryonResults.find(
-    (result) => combinationKey((result.key || "").split("|")) === key
+    (result) => matchesOutfitTryon(entry, (result.key || "").split("|"))
   ) || null;
 }
 
-function outfitBatchItem(key) {
+function outfitBatchItem(entry) {
   return (state.shoppingTryonBatch?.items || []).find(
-    (item) => combinationKey(item.product_ids || []) === key
+    (item) => matchesOutfitTryon(entry, item.product_ids || [])
   ) || null;
 }
 
@@ -704,7 +717,7 @@ function lookItemList(result) {
 }
 
 function renderOutfitTryon(entry) {
-  const result = outfitTryonResult(entry.key);
+  const result = outfitTryonResult(entry);
   if (result) {
     const notes = [...new Set(result.warnings || [])];
     const warnings = notes.length
@@ -723,7 +736,7 @@ function renderOutfitTryon(entry) {
         </figcaption>
       </figure>${warnings}`;
   }
-  const item = outfitBatchItem(entry.key);
+  const item = outfitBatchItem(entry);
   const status = item?.status || "";
   const reason = status === "failed" ? item?.error : "";
   const copy = reason || {
@@ -774,8 +787,8 @@ function renderLooks(entries) {
   state.lookSelected = Math.max(0, index);
   const statusLabel = { queued: "대기", running: "생성 중", done: "완료", failed: "실패" };
   const tabs = entries.map((entry, position) => {
-    const result = outfitTryonResult(entry.key);
-    const status = result ? "done" : (outfitBatchItem(entry.key)?.status || "");
+    const result = outfitTryonResult(entry);
+    const status = result ? "done" : (outfitBatchItem(entry)?.status || "");
     return `<button type="button" role="tab" id="look-tab-${position}"
       aria-controls="look-panel-${position}" aria-selected="${position === state.lookSelected}"
       tabindex="${position === state.lookSelected ? 0 : -1}" data-look-tab="${position}"
@@ -869,8 +882,8 @@ function refreshOutfitTryonRenders() {
   const statusLabel = { queued: "대기", running: "생성 중", done: "완료", failed: "실패" };
   document.querySelectorAll("[data-look-tab]").forEach((button) => {
     const entry = entries[Number(button.dataset.lookTab)];
-    const status = outfitTryonResult(entry.key)
-      ? "done" : (outfitBatchItem(entry.key)?.status || "");
+    const status = outfitTryonResult(entry)
+      ? "done" : (outfitBatchItem(entry)?.status || "");
     const badge = button.querySelector("small");
     if (!status) return badge?.remove();
     const text = statusLabel[status] || status;
