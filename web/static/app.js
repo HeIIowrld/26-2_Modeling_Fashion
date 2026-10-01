@@ -602,7 +602,17 @@ function renderSizeFit(fit) {
      상품이 표기한 실측 자체는 참조값과 무관하게 쓸모가 있어 표만 남긴다. */
   const columns = Object.entries(fit?.columns || {});
   const rows = fit?.size_options || [];
-  if (!rows.length || !columns.length) return "";
+  if (!rows.length || !columns.length) {
+    /* 실측이 없는 이유는 여러 가지다 — 신발은 조회 대상이 아니고, 상·하의도
+       상위 후보만 조회하며, 무신사에 실측표가 없는 상품도 있다. 화면에서 그
+       구분까지 할 필요는 없지만, 아무 말 없이 빠지면 "왜 어떤 카드에만 있지?"가
+       된다. 한 줄로 밝힌다.
+       '무신사에 없다'고 쓰지 않는다 — 조회를 안 한 경우에는 사실이 아니다.
+       접힌 실측표와 같은 한 줄 높이라 카드끼리 높이도 어긋나지 않는다. */
+    return `<section class="shopping-size-fit is-empty" aria-label="상품 실측">
+      <small>실측 정보가 없어요</small>
+    </section>`;
+  }
   const cells = (measurements) => columns.map(([key]) =>
     `<td>${measurements?.[key] == null ? "—" : escapeHtml(String(measurements[key]))}</td>`
   ).join("");

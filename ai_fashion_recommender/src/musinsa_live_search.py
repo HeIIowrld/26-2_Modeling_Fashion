@@ -185,8 +185,6 @@ class ShoppingProduct:
         data.pop("retrieval_score", None)
         data.pop("photo_attributes", None)
         data.pop("ranking_adjustments", None)
-        data["size_fit"].pop("ranking_bonus", None)
-        data["size_fit"].pop("score", None)
         return data
 
 
