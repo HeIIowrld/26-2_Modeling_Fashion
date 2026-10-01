@@ -602,7 +602,17 @@ function renderSizeFit(fit) {
      상품이 표기한 실측 자체는 참조값과 무관하게 쓸모가 있어 표만 남긴다. */
   const columns = Object.entries(fit?.columns || {});
   const rows = fit?.size_options || [];
-  if (!rows.length || !columns.length) return "";
+  if (!rows.length || !columns.length) {
+    /* 실측이 없는 이유는 여러 가지다 — 신발은 조회 대상이 아니고, 상·하의도
+       상위 후보만 조회하며, 무신사에 실측표가 없는 상품도 있다. 화면에서 그
+       구분까지 할 필요는 없지만, 아무 말 없이 빠지면 "왜 어떤 카드에만 있지?"가
+       된다. 한 줄로 밝힌다.
+       '무신사에 없다'고 쓰지 않는다 — 조회를 안 한 경우에는 사실이 아니다.
+       접힌 실측표와 같은 한 줄 높이라 카드끼리 높이도 어긋나지 않는다. */
+    return `<section class="shopping-size-fit is-empty" aria-label="상품 실측">
+      <small>실측 정보가 없어요</small>
+    </section>`;
+  }
   const cells = (measurements) => columns.map(([key]) =>
     `<td>${measurements?.[key] == null ? "—" : escapeHtml(String(measurements[key]))}</td>`
   ).join("");
@@ -665,6 +675,9 @@ function outfitEntry(outfit, index) {
   return {
     label: `LOOK ${index + 1}`,
     key: combinationKey((outfit.products || []).map((product) => product.product_id)),
+    tryonKey: combinationKey((outfit.products || [])
+      .filter((product) => product.tryon_available)
+      .map((product) => product.product_id)),
   };
 }
 
@@ -704,7 +717,7 @@ function lookItemList(result) {
 }
 
 function renderOutfitTryon(entry) {
-  const result = outfitTryonResult(entry.key);
+  const result = outfitTryonResult(entry.tryonKey);
   if (result) {
     const extension = result.image?.toLowerCase().endsWith(".png") ? "png" : "jpg";
     const notes = [...new Set(result.warnings || [])];
@@ -724,7 +737,7 @@ function renderOutfitTryon(entry) {
         </figcaption>
       </figure>${warnings}`;
   }
-  const item = outfitBatchItem(entry.key);
+  const item = outfitBatchItem(entry.tryonKey);
   const status = item?.status || "";
   const reason = status === "failed" ? item?.error : "";
   const copy = reason || {
@@ -775,8 +788,8 @@ function renderLooks(entries) {
   state.lookSelected = Math.max(0, index);
   const statusLabel = { queued: "대기", running: "생성 중", done: "완료", failed: "실패" };
   const tabs = entries.map((entry, position) => {
-    const result = outfitTryonResult(entry.key);
-    const status = result ? "done" : (outfitBatchItem(entry.key)?.status || "");
+    const result = outfitTryonResult(entry.tryonKey);
+    const status = result ? "done" : (outfitBatchItem(entry.tryonKey)?.status || "");
     return `<button type="button" role="tab" id="look-tab-${position}"
       aria-controls="look-panel-${position}" aria-selected="${position === state.lookSelected}"
       tabindex="${position === state.lookSelected ? 0 : -1}" data-look-tab="${position}"
@@ -870,8 +883,8 @@ function refreshOutfitTryonRenders() {
   const statusLabel = { queued: "대기", running: "생성 중", done: "완료", failed: "실패" };
   document.querySelectorAll("[data-look-tab]").forEach((button) => {
     const entry = entries[Number(button.dataset.lookTab)];
-    const status = outfitTryonResult(entry.key)
-      ? "done" : (outfitBatchItem(entry.key)?.status || "");
+    const status = outfitTryonResult(entry.tryonKey)
+      ? "done" : (outfitBatchItem(entry.tryonKey)?.status || "");
     const badge = button.querySelector("small");
     if (!status) return badge?.remove();
     const text = statusLabel[status] || status;
@@ -983,6 +996,9 @@ function applyShoppingTryonBatch(batch) {
   refreshOutfitTryonRenders();
   if (["done", "partial", "failed", "unavailable"].includes(batch.status)) {
     stopShoppingTryonBatchPolling();
+  } else if (["queued", "running"].includes(batch.status)
+      && state.jobId && state.shoppingTryonPoll == null) {
+    state.shoppingTryonPoll = setInterval(pollShoppingTryonBatch, 1200);
   }
 }
 
@@ -1008,10 +1024,6 @@ async function startShoppingTryonBatch() {
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.detail || "무신사 전체 조합 렌더링을 시작하지 못했습니다.");
     applyShoppingTryonBatch(payload);
-    if (["queued", "running"].includes(payload.status)) {
-      stopShoppingTryonBatchPolling();
-      state.shoppingTryonPoll = setInterval(pollShoppingTryonBatch, 1200);
-    }
   } catch (error) {
     console.warn("무신사 전체 조합 배치를 사용할 수 없습니다:", error);
   }

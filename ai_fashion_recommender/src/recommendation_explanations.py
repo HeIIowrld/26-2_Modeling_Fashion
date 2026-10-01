@@ -29,9 +29,9 @@ PROPORTION_CONFIDENCE_THRESHOLD = 0.65
 SHORT_LEG_RATIO = 0.60
 BODY_SHAPE_RULES = {"R-BOD-01": "삼각체형", "R-BOD-06": "삼각체형", "R-BOD-02": "역삼각체형", "R-BOD-03": "사각체형"}
 BODY_SHAPE_TEMPLATES = {
-    "역삼각체형": {"top": "역삼각체형으로 분석되어 상체가 단순하고 정돈되어 보이는 '{keywords}' 상의를 우선했습니다.", "bottom": "역삼각체형으로 분석되어 상·하체 균형을 위해 하체에 구조감을 더하는 '{keywords}' 실루엣을 우선했습니다."},
-    "삼각체형": {"top": "삼각체형으로 분석되어 상체 라인에 구조감을 더해 시선을 위쪽으로 모을 수 있는 '{keywords}' 상의를 우선했습니다.", "bottom": "삼각체형으로 분석되어 하체 볼륨이 과하게 강조되지 않도록 정돈된 '{keywords}' 실루엣을 우선했습니다."},
-    "사각체형": {"top": "사각체형으로 분석되어 상·하체 볼륨을 한쪽씩 나눠 줄 '{keywords}' 상의를 우선했습니다.", "bottom": "사각체형으로 분석되어 상의와 볼륨이 겹치지 않도록 정돈된 '{keywords}' 실루엣을 우선했습니다."},
+    "역삼각체형": {"top": "역삼각체형으로 분석되어 상체가 단순하고 정돈되어 보이는 '{keywords}' 상의로 골랐어요.", "bottom": "역삼각체형으로 분석되어 상·하체 균형을 위해 하체에 구조감을 더하는 '{keywords}' 실루엣으로 골랐어요."},
+    "삼각체형": {"top": "삼각체형으로 분석되어 상체 라인에 구조감을 더해 시선을 위쪽으로 모을 수 있는 '{keywords}' 상의로 골랐어요.", "bottom": "삼각체형으로 분석되어 하체 볼륨이 과하게 강조되지 않도록 정돈된 '{keywords}' 실루엣으로 골랐어요."},
+    "사각체형": {"top": "사각체형으로 분석되어 상·하체 볼륨을 한쪽씩 나눠 줄 '{keywords}' 상의로 골랐어요.", "bottom": "사각체형으로 분석되어 상의와 볼륨이 겹치지 않도록 정돈된 '{keywords}' 실루엣으로 골랐어요."},
 }
 MATCHABLE_ATTRIBUTES = (
     "item_type", "fit", "length", "waistline", "material", "color",
@@ -124,7 +124,7 @@ def build_product_evidence(product: Any, profile: UserProfile, pose: PoseAnalysi
         rule_ids = tuple(dict.fromkeys(rule for keyword in shape_keywords for rule in rules_of(keyword) if rule in BODY_SHAPE_RULES))
         shapes = {BODY_SHAPE_RULES[rule] for rule in rule_ids}
         if shapes == {pose.body_shape}:
-            text = BODY_SHAPE_TEMPLATES[pose.body_shape].get(category, "{shape}으로 분석되어 균형을 고려한 '{keywords}' 실루엣을 우선했습니다.").format(shape=pose.body_shape, keywords=quoted(shape_keywords))
+            text = BODY_SHAPE_TEMPLATES[pose.body_shape].get(category, "{shape}으로 분석되어 균형을 고려한 '{keywords}' 실루엣으로 골랐어요.").format(shape=pose.body_shape, keywords=quoted(shape_keywords))
             evidence.append(ProductEvidence(
                 "body_shape", "체형", text, rule_ids, "체형",
                 tuple(shape_keywords), "photo_analysis",
@@ -141,7 +141,7 @@ def build_product_evidence(product: Any, profile: UserProfile, pose: PoseAnalysi
         )
         if goal or reliable_ratio:
             basis = f"‘{goal}’ 목표" if goal else "다리 비율"
-            text = f"{basis}에 맞춰 허리선과 세로선이 길게 이어지는 '{quoted(proportion)}' 디자인을 우선했습니다."
+            text = f"{basis}에 맞춰 허리선과 세로선이 길게 이어지는 '{quoted(proportion)}' 디자인으로 골랐어요."
             evidence.append(ProductEvidence(
                 "proportion", "비율", text, ("R-BOD-05",), basis,
                 tuple(proportion), "user_input" if goal else "photo_analysis",
@@ -195,8 +195,9 @@ def build_product_evidence(product: Any, profile: UserProfile, pose: PoseAnalysi
         # 여러 출처가 섞이면 공통된 하나일 때만 밝힌다.
         common = detail_sources[0] if detail_sources and len(set(detail_sources)) == 1 else ""
         evidence.append(ProductEvidence(
-            "detail", "·".join(dict.fromkeys(labels[attr] for _, attr in details)),
-            _with_source(common, f"{names} 조건에 맞습니다."),
+            "detail", (lambda kinds: kinds[0] if len(kinds) == 1 else "속성")(
+                list(dict.fromkeys(labels[attr] for _, attr in details))),
+            _with_source(common, f"{names} 조건에 맞아요."),
             tuple(dict.fromkeys(rule for keyword, _ in details for rule in rules_of(keyword))),
             "상품 속성", tuple(keyword for keyword, _ in details),
             ",".join(dict.fromkeys(detail_sources)),
@@ -207,8 +208,10 @@ def build_product_evidence(product: Any, profile: UserProfile, pose: PoseAnalysi
                       and value.get("keyword") in attributes.get(axis, [])]
     if photo_keywords:
         evidence.insert(0, ProductEvidence(
-            "product_photo", "상품 사진",
-            f"상품 사진에서 '{quoted(photo_keywords)}' 특징이 추정되어 추천 조건을 보충합니다.",
+            # 라벨은 두 글자로 맞춘다 — 네 글자면 고정 폭 칸을 넘쳐 그 카드만 본문이 밀린다.
+            # 문장에는 '상품 사진'과 '추정'을 남긴다. LLM 경로 검증(build_reason_prompt)이 요구한다.
+            "product_photo", "사진",
+            f"상품 사진에서 '{quoted(photo_keywords)}'로 추정했어요.",
             tuple(dict.fromkeys(rule for keyword in photo_keywords for rule in rules_of(keyword))),
             "상품 사진 추정", tuple(photo_keywords), "product_photo",
         ))

@@ -129,6 +129,39 @@ class CandidateGenerationTests(unittest.TestCase):
         self.assertNotIn("ranking_bonus", fit)
         self.assertNotIn("closest_size", fit)
 
+    def test_every_size_sold_out_drops_the_product(self):
+        """확인된 사이즈가 전부 품절이면 후보에서 뺀다.
+
+        2026-10-01 사이즈 비교를 없애면서 이 필터가 조용히 꺼져 있었다
+        (`status != "no_available_sizes"` 로 걸렀는데 그 status 를 더는 만들지 않았다).
+        살 수 없는 상품을 추천하지 않기 위한 장치라 다시 켜고 여기서 지킨다.
+        """
+        def table(product_id, available):
+            record = normalize_size_table(product_id, {"data": {"sizes": [{"name": "M", "items": [
+                {"name": "가슴단면", "value": 54}, {"name": "총장", "value": 70}]}]}})
+            record["sizes"][0]["available"] = available
+            return record
+        client = Mock()
+        client.get.side_effect = lambda pid: table(pid, pid != "MS1")
+        self.search.measurements = client
+        with patch.object(self.search, "_fetch", return_value=[item(1, "니트", reviews=1000),
+                                                               item(2, "니트", reviews=1)]):
+            results = self.search.search(self.targets, self.profile, limit=2)
+        self.assertEqual([p.product_id for p in results], ["MS2"])
+
+    def test_unknown_stock_is_not_treated_as_sold_out(self):
+        """조회에 실패해 사이즈를 모르는 상품은 거르지 않는다.
+
+        모르는 것과 품절은 다르다. 실측 조회가 느리거나 실패했다고 해서
+        멀쩡한 상품이 추천에서 사라지면 안 된다.
+        """
+        client = Mock()
+        client.get.side_effect = OSError("unavailable")
+        self.search.measurements = client
+        with patch.object(self.search, "_fetch", return_value=[item(1, "니트")]):
+            results = self.search.search(self.targets, self.profile, limit=1)
+        self.assertEqual([p.product_id for p in results], ["MS1"])
+
     def test_measurement_failure_keeps_shopping_results(self):
         self.search.measurements = Mock()
         self.search.measurements.get.side_effect = OSError("unavailable")
