@@ -75,8 +75,20 @@ console.log(JSON.stringify([
         for gone in ("기준 옷", "이 사이즈", "사이즈 비교"):
             self.assertNotIn(gone, html)
 
-    def test_no_table_renders_nothing(self):
-        """실측이 없다고 해서 빈 카드를 그리지 않는다."""
-        self.assertEqual(self._render_size_fit(
-            {"status": "missing_measurements", "columns": {}, "size_options": []},
-            escape=False), "")
+    def test_no_table_says_so_instead_of_disappearing(self):
+        """실측이 없으면 조용히 빠지지 말고 한 줄로 밝힌다.
+
+        아무 말 없이 빠지면 "왜 어떤 카드에만 사이즈 표가 있지?"가 된다.
+        신발은 조회 대상이 아니고, 상·하의도 상위 후보만 조회하며,
+        무신사에 실측표가 없는 상품도 있다.
+        """
+        for fit in ({"status": "missing_measurements", "columns": {}, "size_options": []},
+                    {"status": "unavailable", "columns": {}, "size_options": []},
+                    {}):
+            with self.subTest(status=fit.get("status", "없음")):
+                html = self._render_size_fit(fit, escape=False)
+                self.assertIn("실측 정보가 없어요", html)
+                # 표가 없으니 표 자체는 그리지 않는다.
+                self.assertNotIn("<table", html)
+                # 조회를 안 한 경우도 있으므로 '무신사에 없다'고 단정하지 않는다.
+                self.assertNotIn("무신사", html)
