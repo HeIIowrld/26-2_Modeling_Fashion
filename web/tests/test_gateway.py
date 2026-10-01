@@ -45,6 +45,14 @@ class GatewayTests(unittest.TestCase):
             },
         )
 
+    def test_preserves_retry_after_for_capacity_limits(self) -> None:
+        app = create_app("http://gpu.invalid", transport=httpx.MockTransport(
+            lambda request: httpx.Response(429, json={"detail": "busy"}, headers={"Retry-After": "60"})))
+        with TestClient(app) as client:
+            response = client.post("/api/analyze")
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response.headers["retry-after"], "60")
+
     def test_preserves_binary_image_response(self) -> None:
         jpeg = b"\xff\xd8test-image\xff\xd9"
 

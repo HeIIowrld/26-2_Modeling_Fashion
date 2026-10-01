@@ -37,6 +37,16 @@ class ColorExtractionTests(unittest.TestCase):
     def test_size_dropdown_is_not_mistaken_for_a_color(self):
         self.assertEqual(color_options_from(options_payload([], sizes=("S", "M"))), [])
 
+    def test_dropdown_requires_explicit_color_metadata_and_ignores_deleted(self):
+        payload = {"data": {"basic": [{"displayType": "DROPDOWN", "optionValues": [
+            {"name": "Navy", "color": {"colorCode": "36"}},
+            {"name": "S", "color": None},
+            {"name": "M", "color": {}},
+            {"name": "Black", "color": {"colorCode": "1"}, "isDeleted": True},
+        ]}, {"displayType": "COLOR_CHIP", "isDeleted": True,
+             "optionValues": [{"name": "White"}]}]}}
+        self.assertEqual(color_options_from(payload), ["Navy"])
+
     def test_seller_named_option_groups_do_not_break_it(self):
         """optionItems 의 optionName 은 판매자가 정한다('컬러' 대신 'C' 인 상품이 있다).
 

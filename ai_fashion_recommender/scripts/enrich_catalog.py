@@ -46,7 +46,7 @@ OUTPUT_FIELDS = [
     "water_resistant", "visual_weight", "detail_level", "waistline",
     "pattern_scale", "pattern_contrast", "brand", "gender", "image_url", "image_path",
     # 무신사가 파는 색 전부(팔레트). color 는 그중 대표 하나다.
-    "color_options",
+    "color_options", "stock_checked_at",
     # 출처 추적용. 무신사가 표기한 원본 값을 그대로 남겨 둔다.
     "detail_color", "detail_colors", "detail_season", "detail_fit", "detail_thickness",
     "detail_sheer", "detail_category",

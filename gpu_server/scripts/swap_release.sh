@@ -1,15 +1,7 @@
 #!/usr/bin/env bash
-# releases/fitta_current 를 새 릴리스로 바꾸고, 재시작이 필요한지 알려준다.
-#
-# 화면 파일(web/static)만 바뀌었으면 재시작하지 않는다. uvicorn 이 정적 경로를
-# 풀지 않고 들고 있어(app.py의 STATIC_DIR) 링크만 바꿔도 새 화면이 나간다.
-# 파이썬 코드가 바뀌었으면 이미 적재된 모듈은 그대로이므로 반드시 재시작해야 한다.
-#
-# 재시작은 Slurm 작업을 놓고 다시 줄을 선다는 뜻이다. 우선순위가 대기 시간으로만
-# 매겨지는 클러스터라 AGE 가 0 으로 초기화되고, 노드가 차 있으면 몇 시간씩 기다린다.
-# 그래서 필요할 때만 재시작한다.
-#
-#   swap_release.sh <새 릴리스 폴더 이름> [--restart|--no-restart]
+# 실행 중인 서버는 확정된 릴리스 경로를 사용하므로 화면만 바뀌어도 재시작한다.
+# --no-restart 는 링크만 준비하고 실제 반영을 미루는 명시적 옵션이다.
+# swap_release.sh <새 릴리스 폴더 이름> [--restart|--no-restart]
 set -uo pipefail
 
 RELEASES=/data1/dsl01/releases
@@ -42,16 +34,8 @@ else
   echo "$changed" | sed 's/^/  /'
 fi
 
-# 화면 파일만 바뀌었는지 본다. 그 외가 하나라도 있으면 재시작이 필요하다.
-other=$(echo "$changed" | grep -v '^\s*$' | grep -v '^web/static/' || true)
-if [ -n "$other" ]; then
-  need_restart=yes
-  echo "→ web/static 밖이 바뀌었습니다. 재시작이 필요합니다."
-else
-  need_restart=no
-  echo "→ 화면 파일만 바뀌었습니다. 재시작 없이 반영됩니다."
-fi
-
+# 확정 경로로 제출된 실행/대기 작업은 링크 변경을 자동으로 읽지 않는다.
+need_restart=yes
 ln -sfn "$NEW" "$RELEASES/fitta_current"
 echo "링크 전환 완료: $(readlink "$RELEASES/fitta_current")"
 
@@ -61,22 +45,12 @@ case "$MODE" in
   *) do_restart=$need_restart ;;
 esac
 
-# 대기 중인 작업은 아직 아무 코드도 읽지 않았다. 시작할 때 fitta_current 를 보므로
-# 새 릴리스를 알아서 집는다. 여기서 재시작하면 큐에서 쌓은 대기 시간만 버린다.
-state=$(squeue -u "$USER" -h -n fitta-web -o "%T" | head -1)
-if [ "$do_restart" = yes ] && [ "$state" = "PENDING" ] && [ "$MODE" != "--restart" ]; then
-  echo "작업이 아직 대기 중입니다. 시작할 때 새 릴리스를 읽으므로 재시작하지 않습니다."
-  echo "굳이 재제출하려면 --restart 를 붙이세요(쌓인 대기 시간을 잃습니다)."
-  do_restart=no
-fi
-
 if [ "$do_restart" = yes ]; then
   echo "fitta-web 을 재시작합니다. GPU 를 놓고 다시 줄을 섭니다."
+  systemctl --user daemon-reload
   systemctl --user restart fitta-web.service
   sleep 3
   squeue -u "$USER" -n fitta-web -o "%.8i %.2t %.12l %R"
 elif [ "$need_restart" = yes ]; then
-  echo "재시작하지 않았습니다."
-else
-  echo "재시작하지 않았습니다. 실행 중인 작업이 그대로 새 화면을 서빙합니다."
+  echo "링크만 바꿨습니다. 실행/대기 작업에는 새 릴리스가 아직 반영되지 않았습니다."
 fi

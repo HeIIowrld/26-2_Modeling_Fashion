@@ -18,6 +18,30 @@ class SizeFitUITests(unittest.TestCase):
                                 capture_output=True, check=True)
         return json.loads(result.stdout)
 
+    def test_catalog_card_distinguishes_unknown_stock_date(self):
+        source = (STATIC / "app.js").read_text(encoding="utf-8")
+        function = source[source.index("function renderShoppingProductCard("):source.index("function renderShoppingProducts(")]
+        setup = """
+const escapeHtml = (s) => String(s).replaceAll('<', '&lt;');
+const state = {shoppingSelection: {}, tryon: {available: false}};
+const renderSizeFit = () => '';
+const renderShoppingReason = () => '';
+const product = {product_id: 'MS1', name: '셔츠', category: 'top', price: 100,
+                 url: '', image_url: '', source: 'musinsa_catalog_fallback'};
+"""
+        code = setup + function + """
+console.log(JSON.stringify([
+  renderShoppingProductCard(product),
+  renderShoppingProductCard({...product, stock_checked_at: '2026-09-25T12:00:00Z'}),
+  renderShoppingProductCard({...product, source: 'musinsa_live'})
+]));
+"""
+        unknown, dated, live = self.run_js(code)
+        self.assertIn("재고 확인 시점 미상", unknown)
+        self.assertIn("수집 기준", dated)
+        self.assertNotIn("시점 미상", dated)
+        self.assertNotIn("시점 미상", live)
+
     def test_measurement_text_is_escaped_and_zero_difference_is_displayed(self):
         source = (STATIC / "app.js").read_text(encoding="utf-8")
         function = source[source.index("function renderSizeFit("):source.index("function renderShoppingProducts(")]

@@ -18,8 +18,8 @@ from body_shape_prior import (  # noqa: E402
     fit_transition_needed,
     target_fit_label,
 )
-from tryon_transition import transition_prompt  # noqa: E402
-from catvton_tryon import CatVTONTryOn  # noqa: E402
+from tryon_transition import transition_envelope, transition_prompt  # noqa: E402
+from catvton_tryon import CatVTONTryOn, agnostic_upper_mask  # noqa: E402
 from schemas import Product, Recommendation  # noqa: E402
 
 
@@ -65,6 +65,26 @@ class FitVocabularyTests(unittest.TestCase):
         self.assertEqual(current_fit_label(outfit, "bottom"), ("세미와이드", "shared_fit_head"))
         product = SimpleNamespace(fit="스트레이트핏", name="베이직 팬츠")
         self.assertEqual(target_fit_label(product, "bottom"), "스트레이트핏")
+
+    def test_explicit_product_fit_overrides_a_conflicting_photo_prediction(self):
+        skinny = SimpleNamespace(fit="와이드핏", name="하이웨이스트 스키니 진")
+        semiwide = SimpleNamespace(fit="슬림핏", name="세미와이드 데님")
+        oversized = SimpleNamespace(fit="슬림핏", name="오버핏 셔츠")
+        self.assertEqual(fit_level("bottom", target_fit_label(skinny, "bottom")), 0)
+        self.assertEqual(fit_level("bottom", target_fit_label(semiwide, "bottom")), 2)
+        self.assertEqual(fit_level("top", target_fit_label(oversized, "top")), 3)
+
+    def test_conflicting_name_fit_terms_use_structured_fit_or_abstain(self):
+        ambiguous = SimpleNamespace(fit="레귤러핏", name="슬림 와이드 데님")
+        ungrounded = SimpleNamespace(fit="", name="슬림 와이드 데님")
+        self.assertEqual(target_fit_label(ambiguous, "bottom"), "레귤러핏")
+        self.assertEqual(target_fit_label(ungrounded, "bottom"), "")
+
+    def test_seller_fit_is_kept_when_marketing_name_differs(self):
+        product = SimpleNamespace(
+            seller_fit="여유핏", fit="레귤러핏", name="오버핏 니트"
+        )
+        self.assertEqual(target_fit_label(product, "top"), "여유핏")
 
     def test_transition_prompt_explains_fit_change_without_claiming_measurements(self):
         prompt = transition_prompt(
@@ -187,6 +207,54 @@ class BodyPriorTryOnIntegrationTests(unittest.TestCase):
         self.assertIn("와이드", captured["quality"]["transition_prompt"])
         self.assertIn("스트레이트핏", captured["quality"]["transition_prompt"])
         self.assertGreater(captured["mask"].sum(), 0)
+        self.assertFalse(adapter.last_raw_masks["bottom"][seg == 3].any())
+
+    def test_upper_fit_transition_does_not_edit_the_kept_pants(self):
+        seg = scene()
+        upper = seg == 3
+        pose = SimpleNamespace(
+            landmarks={name: (x / W, y / H, 0.99) for name, (x, y) in POINTS.items()}
+        )
+        outfit = SimpleNamespace(
+            fit="오버핏", sleeve_length="긴팔", layering_state="단일 상의",
+            attribute_sources={"fit": "shared_fit_head"},
+        )
+        adapter = CatVTONTryOn(
+            width=90, height=160, transition_editor=SimpleNamespace(available=True),
+            post_quality_gate=False,
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            person = directory / "person.png"
+            garment = directory / "garment.png"
+            Image.new("RGB", (W, H), (128, 128, 128)).save(person)
+            Image.new("RGB", (80, 120), "black").save(garment)
+            product = Product(
+                product_id="T1", name="베이직 셔츠", category="top", color="블랙",
+                style="", purposes=[], body_shapes=[], price=0, season="", stock=True,
+                fit="레귤러핏", image_path=str(garment),
+            )
+            recommendation = Recommendation(
+                rank=1, products=[product], total_score=0, score_breakdown={}, reasons=[]
+            )
+            fake_utils = SimpleNamespace(resize_and_crop=lambda image, size: image.resize(size))
+            with (
+                mock.patch.dict(sys.modules, {"utils": fake_utils}),
+                mock.patch.object(adapter, "_load_pipeline"),
+                mock.patch.object(adapter, "_prepare_garment_reference", return_value=Image.open(garment).convert("RGB")),
+                mock.patch.object(adapter, "_tryon_once", side_effect=lambda current, *_args, **_kwargs: current.copy()),
+            ):
+                adapter.generate(
+                    person, recommendation, directory / "out.png",
+                    context={"upper_style_mask": upper, "segmentation": seg, "pose": pose, "outfit": outfit},
+                )
+
+        self.assertTrue(any("fit-transition" in note for note in adapter.last_mask_notes))
+        policy_mask = agnostic_upper_mask(upper, seg, POINTS)
+        base_envelope = transition_envelope(policy_mask, seg, POINTS, "top")
+        prior_extension = adapter.last_raw_masks["top"] & ~base_envelope
+        self.assertFalse(prior_extension[seg == 6].any())
 
 
 if __name__ == "__main__":

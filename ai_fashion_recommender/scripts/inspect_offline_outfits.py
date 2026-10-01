@@ -49,11 +49,11 @@ def main():
             if p.suffix.lower() in {".jpg", ".jpeg", ".png"}]
     records = []
     for path in sorted((args.root / "renders").rglob("*.json")):
-        record = json.loads(path.read_text())
+        record = json.loads(path.read_text(encoding="utf-8"))
         output = path.with_suffix(".png")
         if output.is_file() and record.get("reference_pose"):
             jobs.append(("renders", output, PoseAnalysis(**record["reference_pose"]), record))
-    catalog = json.loads((args.root / "catalog.json").read_text())
+    catalog = json.loads((args.root / "catalog.json").read_text(encoding="utf-8"))
     for row in catalog["products"]:
         p = row["product"]
         if p["category"] != "shoes":
@@ -64,7 +64,7 @@ def main():
             key = digest({"image": sha(path), "analysis": fingerprint,
                           "pose": asdict(pose) if pose else pose})
             if target.exists() and target.with_suffix(".npz").exists():
-                cached = json.loads(target.read_text())
+                cached = json.loads(target.read_text(encoding="utf-8"))
                 if cached.get("key") == key:
                     continue
             try:

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import csv
+import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 from schemas import Product
+from product_measurements import category_from_type_name
 
 
 class ProductCatalog:
@@ -30,6 +33,27 @@ class ProductCatalog:
             bool(product.image_color) and product.image_color != product.catalog_color
             for product in self.products
         )
+
+    def _measurement_record(self, product_id: str) -> dict:
+        """온라인 클라이언트의 실측 캐시를 재사용한다. 오래된 재고는 미확인이다."""
+        if not product_id.isalnum():
+            return {}
+        path = self.csv_path.parent / "cache" / "product_measurements" / f"{product_id}.json"
+        try:
+            saved = json.loads(path.read_text(encoding="utf-8"))
+            record = saved["record"]
+            from product_measurements import SCHEMA_VERSION
+            if record.get("product_id") != product_id or record.get("schema_version") != SCHEMA_VERSION:
+                return {}
+            age = datetime.now(timezone.utc).timestamp() - float(saved["cached_at"])
+            if not 0 <= age < 3600:
+                for size in record.get("sizes", []):
+                    size["available"] = None
+                for variant in record.get("variants", []):
+                    variant["available"] = None
+            return record
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
+            return {}
 
     def _load_color_audits(self) -> dict[str, dict[str, str]]:
         if not self.color_audit_path.is_file():
@@ -88,6 +112,7 @@ class ProductCatalog:
                 url=row.get("url", ""),
                 item_type=row.get("item_type", ""),
                 fit=row.get("fit", ""),
+                seller_fit=row.get("detail_fit", "") or "",
                 length=row.get("length", ""),
                 pattern=row.get("pattern", "무지") or "무지",
                 material=row.get("material", ""),
@@ -113,6 +138,8 @@ class ProductCatalog:
                               else "catalog" if catalog_color else
                               "photo" if photo_color else "none"),
                 color_options=split_values(row.get("color_options")),
+                measurement_record=self._measurement_record(row["product_id"]),
+                stock_checked_at=row.get("stock_checked_at") or "",
             )
 
         with self.csv_path.open(encoding="utf-8-sig", newline="") as handle:
@@ -126,6 +153,7 @@ class ProductCatalog:
             product
             for product in self.products
             if product.stock
+            and category_from_type_name(product.measurement_record.get("type_name", "")) in ("", product.category)
             and (category is None or product.category == category)
             and (not gender or product.gender in ("", "공용", gender))
         ]

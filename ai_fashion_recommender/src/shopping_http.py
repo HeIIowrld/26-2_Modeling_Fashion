@@ -18,11 +18,11 @@ HEADERS = {
 T = TypeVar("T")
 
 
-def fetch_json(url: str, timeout: float = 3.0) -> dict:
+def fetch_json(url: str, timeout: float = 3.0, *, max_bytes: int = 2_000_000) -> dict:
     request = urllib.request.Request(url, headers=HEADERS)
     with urllib.request.urlopen(request, timeout=timeout) as response:
-        raw = response.read(2_000_001)
-    if len(raw) > 2_000_000:
+        raw = response.read(max_bytes + 1)
+    if len(raw) > max_bytes:
         raise ValueError("상품 응답 크기 제한 초과")
     payload = json.loads(raw)
     if not isinstance(payload, dict):

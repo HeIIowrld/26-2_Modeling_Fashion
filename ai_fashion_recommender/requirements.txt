@@ -1,11 +1,14 @@
-numpy
-Pillow
+numpy==1.26.4
+Pillow==11.1.0
 # 아이폰 기본 저장 형식(HEIC) 업로드. 없으면 JPG·PNG·WEBP 만 받는다.
 pillow-heif
-opencv-python
+opencv-python==4.10.0.84
+opencv-contrib-python==4.11.0.86
 mediapipe==0.10.14
-torch
-transformers
+# GPU wheel은 플랫폼에 맞게 먼저 설치한다. CPU 기준 환경은 docs/RUNTIME_PROFILES.md 참고.
+torch>=2.9,<2.11
+transformers==4.44.2
+huggingface-hub==0.24.6
 fashn-human-parser==0.1.1
 open-clip-torch==3.3.0
 ftfy==6.3.1
@@ -15,8 +18,8 @@ pycocotools
 # 가상 피팅 (CatVTON)
 # src/catvton_tryon.py 가 diffusers 를 직접 import 한다(스케줄러 교체).
 # accelerate 는 third_party/CatVTON/model/pipeline.py 가 쓴다.
-diffusers
-accelerate
+diffusers==0.30.3
+accelerate==0.33.0
 
 # 웹 앱
 gradio
@@ -26,6 +29,6 @@ jupyter
 ipykernel
 
 # 웹 실행 환경
-fastapi
-uvicorn
-python-multipart
+fastapi==0.141.1
+uvicorn==0.41.0
+python-multipart==0.0.32

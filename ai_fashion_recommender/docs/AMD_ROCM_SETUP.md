@@ -21,6 +21,8 @@ C:\venvs\fashion-gpu\Scripts\python.exe -m pip install "mediapipe==0.10.14" open
 ROCm 빌드도 `torch.cuda.is_available()`가 그대로 동작한다. 코드를 고치지 않고
 NVIDIA 환경(Colab, HF Spaces)으로 그대로 옮길 수 있다.
 
+이 문서는 기존 ROCm 별도 환경의 설치 기록이다. 기본 `requirements.txt`의 로컬 CPU 기준과 섞어 설치하지 않는다. ROCm GPU 생성은 이번 변경에서 재검증하지 않았다. 환경별 검증 범위는 [RUNTIME_PROFILES.md](RUNTIME_PROFILES.md)를 참고한다.
+
 ## 걸렸던 문제
 
 - **MIOpen BatchNorm 컴파일 실패** — ROCm Windows에서 SegFormer(FASHN 파서)가 GPU에서

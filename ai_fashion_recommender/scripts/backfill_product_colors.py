@@ -10,7 +10,8 @@
 
 색 출처의 우선순위는 대표 사진과 얼마나 맞는지로 정했다(2026-09-25):
   1. 상품명 색  — 상의 81개에서 78%, 내가 확신한 65개에서 85%
-  2. 컬러칩 첫 색 — 345개에서 46% (여러 색 중 어느 것이 대표 사진인지 알려 주지 않는다)
+  2. 모든 컬러칩이 하나의 팔레트인 경우만 대표 색으로 사용한다.
+     첫 컬러칩만 고르면 대표 사진과 일치율이 46%여서 다색 옵션은 보류한다.
   3. 둘 다 없으면 **비워 둔다**. 예전 크롤러는 '그레이'를 넣었고 근거 없는 그레이가 329개였다.
 
 상품명 색은 네트워크가 필요 없다. 옵션 API 갱신은 --fetch 를 줄 때만 한다.
@@ -24,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import sys
 import time
 import urllib.error
@@ -33,12 +35,28 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from config import DATA_DIR  # noqa: E402
 from enrich_catalog import load_derivation  # noqa: E402
-from product_colors import palettes_for, title_palettes  # noqa: E402
+from product_colors import palette_of, palettes_for, title_palettes  # noqa: E402
 from product_measurements import color_options_from  # noqa: E402
 from shopping_http import fetch_json  # noqa: E402
 
 OPTIONS_URL = "https://goods-detail.musinsa.com/api2/goods/{no}/options"
-NEW_COLUMNS = ("color_options", "detail_colors")
+NEW_COLUMNS = ("color_options", "detail_colors", "color_evidence")
+
+
+def representative_color(title, names, table):
+    """여러 색 중 첫 색을 대표 사진 색으로 단정하지 않는다."""
+    colors = title_palettes(title, table)
+    if len(colors) == 1:
+        return colors[0], "product_title"
+    # 제목에 두 색이 있으면 배색/팩 상품일 수 있어 단일 색 옵션보다 우선 보류한다.
+    if colors:
+        return "", "multiple_title_colors"
+    palettes = palettes_for(names, table)
+    if (len(palettes) == 1 and names
+            and all(palette_of(name, table) == palettes[0] and len(title_palettes(name, table)) <= 1
+                    for name in names)):
+        return palettes[0], "single_option_palette"
+    return "", "ambiguous_options" if names else "no_color_evidence"
 
 
 class RateLimited(Exception):
@@ -63,6 +81,9 @@ def main() -> int:
     cli.add_argument("--output", type=Path)
     cli.add_argument("--limit", type=int)
     cli.add_argument("--fetch", action="store_true", help="색 옵션을 무신사에서 새로 받는다")
+    cli.add_argument("--missing-only", action="store_true", help="색이 비어 있는 행만 갱신한다")
+    cli.add_argument("--preserve-existing-colors", action="store_true", help="전체 색 옵션을 보강하되 기존 대표 색은 유지한다")
+    cli.add_argument("--from-measurement-cache", type=Path, help="실측 수집 시 받은 색 옵션을 네트워크 없이 재사용한다")
     cli.add_argument("--delay", type=float, default=0.25, help="요청 간격(초)")
     cli.add_argument("--retries", type=int, default=3)
     cli.add_argument("--backoff", type=float, default=30.0, help="429 뒤 첫 대기(초)")
@@ -71,6 +92,8 @@ def main() -> int:
     cli.add_argument("--dry-run", action="store_true")
     cli.add_argument("--force", action="store_true", help="실패가 많아도 저장")
     args = cli.parse_args()
+    if args.fetch and args.from_measurement_cache:
+        cli.error("--fetch와 --from-measurement-cache는 함께 사용할 수 없습니다.")
 
     with args.input.open(encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
@@ -79,19 +102,33 @@ def main() -> int:
     for column in NEW_COLUMNS:
         if column not in fields:
             fields.append(column)
-    targets = rows[: args.limit] if args.limit else rows
+    targets = [row for row in rows if not args.missing_only or not row.get("color", "").strip()]
+    targets = targets[:args.limit] if args.limit else targets
     table = load_derivation()["musinsa_color"]
 
     started = time.monotonic()
     fetched, failures, rate_limited = [], 0, 0
-    if not args.fetch:
+    if args.from_measurement_cache:
+        for row in targets:
+            try:
+                saved = json.loads((args.from_measurement_cache / f"{row['product_id']}.json").read_text(encoding="utf-8"))
+                record = saved["record"]
+                if record.get("product_id") != row["product_id"] or "options_unavailable" in record.get("issues", []):
+                    raise ValueError("색 옵션 조회 미완료")
+                raw_options = (saved.get("raw") or {}).get("options")
+                fetched.append(color_options_from({"data": raw_options}) if isinstance(raw_options, dict)
+                               else record.get("color_options", []))
+            except (OSError, ValueError, KeyError, TypeError):
+                fetched.append(None)
+                failures += 1
+    elif not args.fetch:
         # 상품명 색만으로도 대부분 채워진다. 기존 CSV 의 칩 값을 그대로 쓴다.
         fetched = [[value.strip() for value in (row.get("detail_colors") or row.get("detail_color") or "").split("|")
                     if value.strip()] for row in targets]
     # 무신사는 몰아치면 429를 준다(2026-09-25 실측: 4스레드·무간격 2224건에서 94% 거절).
     # 한 줄씩 간격을 두고 받고, 429 가 나오면 기다렸다 다시 시도한다.
     for index, row in enumerate(targets) if args.fetch else ():
-        names, wait = [], args.backoff
+        names, wait = None, args.backoff
         for attempt in range(args.retries + 1):
             try:
                 names = fetch_colors(row["product_id"], args.timeout)
@@ -114,23 +151,20 @@ def main() -> int:
 
     changed = multi = emptied = from_title = 0
     for row, names in zip(targets, fetched):
+        if names is None:
+            continue  # 조회 실패는 '색 없음'이 아니다. 기존 근거를 보존한다.
         palettes = palettes_for(names, table)
-        title = title_palettes(row.get("name", ""), table)
         before = row.get("color", "")
         if names:
             row["detail_color"] = names[0]
             row["detail_colors"] = "|".join(names)
-        if len(title) == 1:
-            row["color"] = title[0]
-            row["color_options"] = "|".join(palettes) if palettes else title[0]
-            from_title += 1
-        elif palettes:
-            row["color"] = palettes[0]
-            row["color_options"] = "|".join(palettes)
-        else:
-            # 근거가 없으면 비워 둔다. 사진 색 감사가 채울 수 있다.
-            row["color"] = ""
-            row["color_options"] = ""
+        color, evidence = representative_color(row.get("name", ""), names, table)
+        if args.preserve_existing_colors and before.strip():
+            color, evidence = before, row.get("color_evidence") or "existing_catalog"
+        row["color"] = color
+        row["color_evidence"] = evidence
+        row["color_options"] = "|".join(palettes) if palettes else color
+        from_title += evidence == "product_title"
         changed += row["color"] != before
         multi += len(palettes) > 1
         emptied += not row["color"]

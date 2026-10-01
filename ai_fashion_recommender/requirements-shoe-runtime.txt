@@ -1,0 +1,5 @@
+# 별도 가상환경 전용. requirements.txt와 함께 설치하지 않는다.
+# gpu_server/SHOES_VTON.md에 기록된 서버 환경. GPU wheel은 먼저 설치한다.
+diffusers==0.40.0
+transformers==5.15.1
+accelerate==1.14.0

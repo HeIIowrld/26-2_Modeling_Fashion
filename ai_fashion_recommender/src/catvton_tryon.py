@@ -59,6 +59,14 @@ GARMENT_TARGET_LABELS = {
     "bottom": (4, 5, 6, 7),
 }
 
+# The body prior is a location estimate, not an edit permission. Its dilation
+# can cross the waist seam, so only pixels belonging to the selected garment
+# or its exposed limb/torso may enlarge a transition edit.
+FIT_PRIOR_EDIT_LABELS = {
+    "top": (3, 4, 10, 12, 16),
+    "bottom": (4, 5, 6, 7, 14),
+}
+
 # 인페인팅 마스크에서 항상 제외해 원본을 보존하는 라벨:
 # 1=face, 2=hair, 8=bag, 9=hat, 11=glasses, 13=hands, 15=feet
 PROTECT_LABELS = (1, 2, 8, 9, 11, 13, 15)
@@ -1688,7 +1696,9 @@ class CatVTONTryOn(VirtualTryOnAdapter):
                         or (shortening is not None and shortening > 0)):
                     envelope = transition_envelope(raw_mask, segmentation, landmarks_px, category)
                     if envelope is not None and body_prior is not None:
-                        envelope |= body_prior.plausible_mask
+                        envelope |= body_prior.plausible_mask & np.isin(
+                            segmentation, FIT_PRIOR_EDIT_LABELS[category]
+                        )
                     if (envelope is not None and self.transition_editor is not None
                             and self.transition_editor.available):
                         raw_mask = envelope

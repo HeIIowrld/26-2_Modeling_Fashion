@@ -16,6 +16,7 @@ import tempfile
 import threading
 import time
 import uuid
+from collections import deque
 from itertools import product as cartesian_product
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
@@ -39,6 +40,17 @@ if str(WEB_DIR) not in sys.path:
 # 파이썬 코드는 이미 적재돼 있어 이 방법으로 바뀌지 않는다 — 코드가 바뀐 배포는
 # 반드시 재시작해야 한다. gpu_server/scripts/swap_release.sh 가 그 판단을 돕는다.
 STATIC_DIR = Path(__file__).parent / "static"
+
+
+def release_revision(root: Path) -> str | None:
+    try:
+        return (root / "REVISION").read_text(encoding="utf-8").strip() or None
+    except OSError:
+        return None
+
+
+# 실행 중인 Python 릴리스와 hot-swap 가능한 정적 릴리스를 구분한다.
+BACKEND_REVISION = release_revision(WEB_DIR.parent)
 
 from pipeline import (  # noqa: E402
     GENDERS,
@@ -110,6 +122,8 @@ PRODUCT_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
 # 업로드한 전신사진은 개인정보다. 결과를 확인할 동안만 두고 곧바로 지운다.
 SESSION_TTL = timedelta(minutes=30)
 MAX_SESSIONS = 20
+MAX_ACTIVE_ANALYSES = 2
+ANALYSES_PER_MINUTE = 6
 SWEEP_INTERVAL_SECONDS = 300
 TRYON_BATCH_LIMIT = 3
 TRYON_PRODUCT_LIMIT = 3
@@ -136,6 +150,37 @@ if _allowed_origins:
 
 _jobs: dict[str, dict] = {}
 _jobs_lock = threading.Lock()
+_admission_lock = threading.Lock()
+_pending_analyzes = 0
+_analysis_starts: deque[float] = deque()
+
+
+@app.middleware("http")
+async def limit_analysis(request, call_next):
+    """단일 GPU 서버의 전역 admission 한도. 프록시 IP 헤더를 신뢰하지 않는다."""
+    global _pending_analyzes
+    if request.method != "POST" or request.url.path != "/api/analyze":
+        return await call_next(request)
+    sweep_now()
+    now = time.monotonic()
+    with _admission_lock:
+        while _analysis_starts and now - _analysis_starts[0] >= 60:
+            _analysis_starts.popleft()
+        with _jobs_lock:
+            running = sum(job["status"] == "running" for job in _jobs.values())
+            retained = len(_jobs)
+        if (len(_analysis_starts) >= ANALYSES_PER_MINUTE
+                or running + _pending_analyzes >= MAX_ACTIVE_ANALYSES
+                or retained + _pending_analyzes >= MAX_SESSIONS):
+            return JSONResponse(status_code=429, headers={"Retry-After": "60"},
+                                content={"detail": "분석 요청이 많습니다. 기존 결과는 유지되며, 잠시 후 다시 시도해주세요."})
+        _pending_analyzes += 1
+        _analysis_starts.append(now)
+    try:
+        return await call_next(request)
+    finally:
+        with _admission_lock:
+            _pending_analyzes -= 1
 
 
 def prune_sessions(
@@ -144,9 +189,10 @@ def prune_sessions(
     max_sessions: int = MAX_SESSIONS,
     protected: frozenset[str] = frozenset(),
 ) -> list[str]:
-    """보관 기한이 지났거나 개수를 넘은 세션 폴더를 지우고 지운 ID를 돌려준다.
+    """보관 기한이 지난 세션 폴더만 지우고 지운 ID를 돌려준다.
 
     분석이 진행 중인 세션은 `protected`로 받아 건드리지 않는다.
+    max_sessions 인자는 호출 호환용이며 개수 제한은 새 요청 접수 시 적용한다.
     """
     if not root.is_dir():
         return []
@@ -156,9 +202,9 @@ def prune_sessions(
     deadline = datetime.now(timezone.utc) - ttl
 
     removed: list[str] = []
-    for index, path in enumerate(sessions):
+    for path in sessions:
         modified = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)
-        if (modified < deadline or index >= max_sessions) and purge_session(path):
+        if modified < deadline and purge_session(path):
             removed.append(path.name)
     return removed
 
@@ -631,11 +677,28 @@ def options() -> dict:
     return form_options()
 
 
+def catalog_quality(products) -> dict:
+    """로드한 데이터 자체를 집계해 캐시 누락 배포를 확인한다."""
+    records = [product.measurement_record for product in products]
+    dates = [record["fetched_at"] for record in records if record.get("fetched_at")]
+    return {
+        "measurement_records": sum(bool(record) for record in records),
+        "measurements_ready": sum(record.get("status") == "ready" for record in records),
+        "measurements_missing": sum(record.get("status") == "missing" for record in records),
+        "unknown_colors": sum(not product.color for product in products),
+        "photo_colors": sum(product.color_source == "photo" for product in products),
+        "oldest_measurement_fetch": min(dates) if dates else None,
+        "newest_measurement_fetch": max(dates) if dates else None,
+    }
+
+
 @app.get("/api/health")
 def health() -> dict:
     """모델 적재 상태를 미리 알려 첫 분석의 대기 이유를 설명한다."""
     engine = get_engine()
     return {
+        "revision": BACKEND_REVISION,
+        "static_revision": release_revision(Path(__file__).parent.parent),
         "device": engine.device,
         "trained_heads": engine.trained_heads,
         "parser_backend": engine.parser_backend,
@@ -643,6 +706,7 @@ def health() -> dict:
         "tryon_categories": sorted(getattr(engine.tryon, "supported_categories", {"top", "bottom"}))
         if engine.tryon.available else [],
         "product_count": len(engine.recommender.catalog.products),
+        "catalog_quality": catalog_quality(engine.recommender.catalog.products),
         "product_color_audits": len(engine.recommender.catalog.color_audits),
         "product_color_overrides": engine.recommender.catalog.color_override_count,
         "product_color_mismatches": engine.recommender.catalog.color_mismatch_count,

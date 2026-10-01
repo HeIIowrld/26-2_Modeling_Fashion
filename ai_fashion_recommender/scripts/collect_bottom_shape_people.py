@@ -35,7 +35,7 @@ MS_PER_QUERY = 12
 
 
 def fashionpedia():
-    data = json.loads(ANNOTATIONS.read_text())
+    data = json.loads(ANNOTATIONS.read_text(encoding="utf-8"))
     labels, boxes = defaultdict(set), defaultdict(list)
     for a in data["annotations"]:
         if a["category_id"] < 24:

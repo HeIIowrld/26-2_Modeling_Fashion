@@ -15,6 +15,9 @@ from schemas import (
     CurrentOutfitEvaluation,
     FOCUS_LOWER,
     FOCUS_UPPER,
+    FOCUS_BALANCED,
+    SHAPE_DIAMOND,
+    SHAPE_ROUND,
     SHAPE_HOURGLASS,
     SHAPE_INVERTED_TRIANGLE,
     SHAPE_RECTANGLE,
@@ -185,7 +188,8 @@ class RecommendationEngine:
     PIPELINE_RULE_IDS = {"R-COL-09", "R-DET-01", "R-TREND-01"}
     EXECUTABLE_RULE_IDS = SCORING_RULE_IDS | SAFETY_RULE_IDS | GUIDANCE_RULE_IDS | PIPELINE_RULE_IDS
 
-    # 실측 사이즈 15점은 아직 계산하지 않는다. 보유 옷 5점은 목록이 있을 때만 활성화한다.
+    # 사이즈 15점은 최종 진단 점수에 blend_size_score로 반영한다.
+    # 기준 옷이 없으면 평가하지 않는다. 보유 옷 5점은 목록이 있을 때만 활성화한다.
     BASE_WEIGHTS = {
         "purpose_tpo": 0.20,
         "weather_activity": 0.12,
@@ -208,7 +212,7 @@ class RecommendationEngine:
     }
 
     UNSUPPORTED_RULE_REASONS = {
-        "R-SIL-02": "상품별 실측 사이즈와 사용자 신체 치수가 없어 당김·여유량을 판정할 수 없습니다.",
+        "R-SIL-02": "기준 옷 실측 유사도는 최종 점수에 반영합니다. 신축성·신체 여유량·실제 당김 판정은 아직 지원하지 않습니다.",
         "R-SIL-04": "이너·아우터 레이어와 밑단 위치 데이터가 없습니다.",
         "R-COL-06": "로고·양말·가방처럼 작은 포인트 영역의 색 데이터가 없습니다.",
         "R-COL-07": "추천 상품 이미지의 아이템별 색 면적 데이터가 없습니다.",
@@ -547,12 +551,14 @@ class RecommendationEngine:
         )
 
     # 체형이 알려주는 "시선을 나눠 줄 쪽". 상품 카탈로그의 body_shapes 칼럼과 짝이 맞는다.
-    # 마름모꼴·둥근체형은 허리가 중심이라 대응하는 R-BOD 규칙이 문서에 아직 없어 비워 둔다.
+    # 둘레 기반 체형도 균형 목표를 지원하되 특정 부위를 강조하도록 강제하지 않는다.
     BODY_SHAPE_FOCUS = {
         SHAPE_INVERTED_TRIANGLE: FOCUS_LOWER,  # 어깨가 넓으니 하체로 시선을 나눈다
         SHAPE_TRIANGLE: FOCUS_UPPER,           # 골반이 넓으니 상체로 시선을 나눈다
         SHAPE_RECTANGLE: "",                     # 어느 쪽이든 한쪽에 볼륨을 두면 된다
-        SHAPE_HOURGLASS: "",
+        SHAPE_HOURGLASS: FOCUS_BALANCED,
+        SHAPE_DIAMOND: FOCUS_BALANCED,
+        SHAPE_ROUND: FOCUS_BALANCED,
     }
 
     def _catalog_shape_score(self, top: dict, bottom: dict, focus: str) -> float | None:
@@ -563,6 +569,12 @@ class RecommendationEngine:
         """
         if not focus:
             return None
+        if focus == FOCUS_BALANCED:
+            labels = [item.get("body_shapes") or [] for item in (top, bottom)]
+            known = [values for values in labels if values]
+            if not known:
+                return None
+            return sum(1.0 if FOCUS_BALANCED in values else 0.66 for values in known) / len(known)
         wanted = top if focus == FOCUS_UPPER else bottom
         other = bottom if focus == FOCUS_UPPER else top
         shapes = wanted.get("body_shapes") or []
@@ -1560,6 +1572,7 @@ class RecommendationEngine:
         profile: UserProfile,
         pose: PoseAnalysis,
         outfit: OutfitAnalysis,
+        size_comparisons: dict | None = None,
     ) -> tuple[float, dict[str, float], list[str], list[str], list[str], float]:
         products = [product for product in (top_product, bottom_product) if product]
         top = self._garment(top_product, "top", outfit)
@@ -1616,6 +1629,19 @@ class RecommendationEngine:
             for name, value in diagnostic["harmony_breakdown"].items()
         })
         reasons = diagnostic["reasons"]
+        from size_fit import compare_sizes, blend_size_score
+        comparisons = [
+            size_comparisons[product.product_id] if size_comparisons is not None else
+            compare_sizes(product.measurement_record, product.category,
+                          profile.reference_measurements.get(product.category))
+            for product in products if profile.reference_measurements
+        ]
+        total, size_value, size_coverage = blend_size_score(total, comparisons)
+        if size_value is not None:
+            breakdown["size_fit"] = size_value
+            breakdown["size_fit_coverage"] = size_coverage * 100
+            active_weight += 0.15 * size_coverage
+            reasons.extend(comparison["summary"] for comparison in comparisons)
         applied_rules = [
             rule_id for rule_id in dict.fromkeys(legacy_applied_rules + diagnostic["rules"])
             if self.rule_book.has(rule_id) and rule_id in self.EXECUTABLE_RULE_IDS
@@ -1695,6 +1721,22 @@ class RecommendationEngine:
 
         available_tops = self._available_for_profile("top", profile)
         available_bottoms = self._available_for_profile("bottom", profile)
+        if profile.reference_measurements:
+            # 현재 착장의 실제 치수는 알 수 없다. 교체 후보와 같은 15% 중립 축으로
+            # 비교해야 사이즈 입력 자체가 교체 이득을 인위적으로 낮추지 않는다.
+            current.total_score = round(0.85 * current.total_score + 0.15 * 50, 2)
+            current.score_breakdown["size_fit"] = 50.0
+            current.score_breakdown["size_fit_coverage"] = 0.0
+        from size_fit import compare_sizes
+        size_comparisons = {
+            product.product_id: compare_sizes(product.measurement_record, product.category,
+                                             profile.reference_measurements.get(product.category))
+            for product in available_tops + available_bottoms
+        }
+        available_tops = [p for p in available_tops
+                          if size_comparisons[p.product_id]["status"] != "no_available_sizes"]
+        available_bottoms = [p for p in available_bottoms
+                             if size_comparisons[p.product_id]["status"] != "no_available_sizes"]
         candidates = []
         min_b = getattr(profile, "min_budget", None)
         max_b = getattr(profile, "max_budget", None)
@@ -1720,7 +1762,7 @@ class RecommendationEngine:
                 if min_b is None and max_b is None and total_price > profile.budget:
                     continue
                 score, breakdown, reasons, applied_rules, tips, coverage = self._score_candidate(
-                    top, bottom, profile, pose, outfit
+                    top, bottom, profile, pose, outfit, size_comparisons
                 )
                 changed_count = 2 if action == "both" else 1
                 delta = round(score - current.total_score, 2)

@@ -33,6 +33,7 @@ REQUEST_HEADER_BLOCKLIST = {
     "upgrade",
 }
 RESPONSE_HEADERS = {
+    "retry-after",
     "cache-control",
     "content-disposition",
     "content-language",

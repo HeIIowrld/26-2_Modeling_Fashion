@@ -464,6 +464,7 @@ class EnrichedCatalogLoadsTests(unittest.TestCase):
             "color": "화이트", "style": "미니멀", "purposes": "데일리|출근",
             "body_shapes": "균형형", "price": "39000", "season": "사계절",
             "stock": "true", "item_type": "셔츠", "fit": "레귤러핏",
+            "detail_fit": "여유핏",
             "length": "기본 기장", "pattern": "무지", "material": "코튼",
             "neckline": "셔츠 칼라", "formality": "4", "activity_tags": "업무",
             "warmth": "3", "breathability": "4", "water_resistant": "false",
@@ -478,6 +479,7 @@ class EnrichedCatalogLoadsTests(unittest.TestCase):
         self.assertEqual(product.product_id, "M001")
         self.assertEqual(product.image_path, "garments/raw/M001.jpg")
         self.assertEqual(product.formality, 4)
+        self.assertEqual(product.seller_fit, "여유핏")
         self.assertTrue(product.stock)
         self.assertEqual(product.purposes, ["데일리", "출근"])
 
