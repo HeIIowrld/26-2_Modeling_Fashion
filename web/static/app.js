@@ -665,6 +665,9 @@ function outfitEntry(outfit, index) {
   return {
     label: `LOOK ${index + 1}`,
     key: combinationKey((outfit.products || []).map((product) => product.product_id)),
+    tryonKey: combinationKey((outfit.products || [])
+      .filter((product) => product.tryon_available)
+      .map((product) => product.product_id)),
   };
 }
 
@@ -704,7 +707,7 @@ function lookItemList(result) {
 }
 
 function renderOutfitTryon(entry) {
-  const result = outfitTryonResult(entry.key);
+  const result = outfitTryonResult(entry.tryonKey);
   if (result) {
     const notes = [...new Set(result.warnings || [])];
     const warnings = notes.length
@@ -723,7 +726,7 @@ function renderOutfitTryon(entry) {
         </figcaption>
       </figure>${warnings}`;
   }
-  const item = outfitBatchItem(entry.key);
+  const item = outfitBatchItem(entry.tryonKey);
   const status = item?.status || "";
   const reason = status === "failed" ? item?.error : "";
   const copy = reason || {
@@ -774,8 +777,8 @@ function renderLooks(entries) {
   state.lookSelected = Math.max(0, index);
   const statusLabel = { queued: "대기", running: "생성 중", done: "완료", failed: "실패" };
   const tabs = entries.map((entry, position) => {
-    const result = outfitTryonResult(entry.key);
-    const status = result ? "done" : (outfitBatchItem(entry.key)?.status || "");
+    const result = outfitTryonResult(entry.tryonKey);
+    const status = result ? "done" : (outfitBatchItem(entry.tryonKey)?.status || "");
     return `<button type="button" role="tab" id="look-tab-${position}"
       aria-controls="look-panel-${position}" aria-selected="${position === state.lookSelected}"
       tabindex="${position === state.lookSelected ? 0 : -1}" data-look-tab="${position}"
@@ -869,8 +872,8 @@ function refreshOutfitTryonRenders() {
   const statusLabel = { queued: "대기", running: "생성 중", done: "완료", failed: "실패" };
   document.querySelectorAll("[data-look-tab]").forEach((button) => {
     const entry = entries[Number(button.dataset.lookTab)];
-    const status = outfitTryonResult(entry.key)
-      ? "done" : (outfitBatchItem(entry.key)?.status || "");
+    const status = outfitTryonResult(entry.tryonKey)
+      ? "done" : (outfitBatchItem(entry.tryonKey)?.status || "");
     const badge = button.querySelector("small");
     if (!status) return badge?.remove();
     const text = statusLabel[status] || status;
@@ -982,6 +985,9 @@ function applyShoppingTryonBatch(batch) {
   refreshOutfitTryonRenders();
   if (["done", "partial", "failed", "unavailable"].includes(batch.status)) {
     stopShoppingTryonBatchPolling();
+  } else if (["queued", "running"].includes(batch.status)
+      && state.jobId && state.shoppingTryonPoll == null) {
+    state.shoppingTryonPoll = setInterval(pollShoppingTryonBatch, 1200);
   }
 }
 
@@ -1007,10 +1013,6 @@ async function startShoppingTryonBatch() {
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.detail || "무신사 전체 조합 렌더링을 시작하지 못했습니다.");
     applyShoppingTryonBatch(payload);
-    if (["queued", "running"].includes(payload.status)) {
-      stopShoppingTryonBatchPolling();
-      state.shoppingTryonPoll = setInterval(pollShoppingTryonBatch, 1200);
-    }
   } catch (error) {
     console.warn("무신사 전체 조합 배치를 사용할 수 없습니다:", error);
   }
