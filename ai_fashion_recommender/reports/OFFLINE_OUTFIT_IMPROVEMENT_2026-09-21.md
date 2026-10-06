@@ -51,10 +51,16 @@
 피부 구멍 제거와 태슬 표현 개선을 확인했다. 하지만 밑단이 상품보다 짧고 상품 착용자의
 목걸이가 전이되는 문제가 남아 두 건도 검증 추천으로 승인하지 않았다.
 
-| 비교 | 개선 전 | 개선 후 |
-|---|---|---|
-| 여성 예시: 피부 구멍과 신발 | [첫 FLUX 결과](../data/cache/outfit_library/review_v2/renders/a103b1ab50a1b35566bc/a103b1ab50a1b35566bc-31689023-edea1698819e.png) | [보강 후](../data/cache/outfit_library/review_v2/renders/a103b1ab50a1b35566bc/a103b1ab50a1b35566bc-31689023-7397f18c977a.png) |
-| 남성 예시: 신발 종류 | [끈 있는 신발로 변형](../data/cache/outfit_library/review_v2/renders/a103b1ab50a1b35566bc/a103b1ab50a1b35566bc-49d7e52d-8f02a1fe6571.png) | [태슬 로퍼 반영](../data/cache/outfit_library/review_v2/renders/a103b1ab50a1b35566bc/a103b1ab50a1b35566bc-49d7e52d-9bb81c87e9f3.png) |
+아래 이미지는 당시 로컬에서 생성한 비교 자료이며 Git에 포함되지 않습니다.
+저장소에서 열 수 있는 링크 대신 파일명과 관찰 내용을 기록합니다. 로컬 보관 경로는
+`ai_fashion_recommender/data/cache/outfit_library/review_v2/renders/a103b1ab50a1b35566bc/`입니다.
+같은 파일을 다시 생성하려면 당시 입력 이미지·체크포인트·설정을 별도로 확보해야 하며,
+현재 코드를 실행하는 것만으로 동일한 결과가 보장되지는 않습니다.
+
+| 비교 | 개선 전 로컬 파일 | 개선 후 로컬 파일 |
+| --- | --- | --- |
+| 여성 예시: 피부 구멍과 신발 | `a103b1ab50a1b35566bc-31689023-edea1698819e.png` (첫 FLUX 결과) | `a103b1ab50a1b35566bc-31689023-7397f18c977a.png` (보강 후) |
+| 남성 예시: 신발 종류 | `a103b1ab50a1b35566bc-49d7e52d-8f02a1fe6571.png` (끈 있는 신발로 변형) | `a103b1ab50a1b35566bc-49d7e52d-9bb81c87e9f3.png` (태슬 로퍼 반영) |
 
 시각 판정은 Codex의 이미지 검토이며 독립적인 사람 평가가 아니다. 반복 검토하면서
 만든 개발 표본이므로 개선율의 모집단 추정이나 모델 일반화 성능으로 제시하지 않는다.

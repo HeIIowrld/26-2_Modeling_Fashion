@@ -173,7 +173,7 @@ Linear(256 → 18)         4,626 파라미터   ← 답이 18가지
 | 설정 | `model_complexity=1`, `enable_segmentation=True` (`pose_analyzer.py:93`) |
 | 출력 | 관절 33점의 x·y·z 좌표 + 사람 실루엣 마스크 |
 | 우리가 계산하는 것 | 어깨:골반 비율, 상체:하체 비율, 다리 길이 비율 |
-| 주의 | **파이썬 3.13에서 동작하지 않는다.** 3.9~3.12 필요 |
+| 주의 | **검증한 Python 3.11 환경을 권장한다.** 환경별 의존성은 [실행 환경 안내](../ai_fashion_recommender/docs/RUNTIME_PROFILES.md) 참고 |
 
 **왜 이걸 골랐나**: 별도 라이선스 동의나 모델 다운로드 없이 CPU에서 즉시 돌아간다. 3D world 좌표를 제공해서 카메라 각도에 덜 민감하다.
 
