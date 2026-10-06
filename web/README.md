@@ -148,16 +148,18 @@ R-SIL-02의 당김·주름 판단 전체를 구현한 것으로 집계하지 않
 시각을 상품별 JSON으로 저장하며 TTL은 1시간입니다. 사용자 실측은 상품 캐시에 저장하지
 않습니다. 캐시를 쓸 수 없는 환경에서는 메모리로 동작합니다.
 
-표본 수집과 확보율 보고서는 다음 명령으로 재생성합니다.
+현재 카탈로그의 실측 수집 결과는 다음 명령으로 새 보고서를 만들 수 있습니다.
 
 ```bash
-python ai_fashion_recommender/scripts/collect_product_measurements.py --limit 50
+python ai_fashion_recommender/scripts/backfill_product_measurements.py --limit 50 --report ai_fashion_recommender/outputs/product_measurements.json
 ```
 
-2026-09-15 표본에서는 35개 브랜드의 상의 25개·하의 25개 모두 단면과 총장을 확보했습니다.
-이는 추출 가능성 확인이며 전체 카탈로그의 확보율 또는 실제 착용 적합도 검증 결과는 아닙니다.
-[수집 결과](../ai_fashion_recommender/reports/product_measurements_2026-09-15.json)와
-[검색 실행 결과](../ai_fashion_recommender/reports/candidate_search_2026-09-15.json)를 참고하세요.
+이 명령은 현재 카탈로그를 대상으로 외부 서비스를 조회하며, 과거의 고정 표본을 재현하는 명령은 아닙니다.
+카탈로그·네트워크 상태에 따라 결과가 달라집니다. 생성 보고서는 로컬 `outputs/`에 저장하며 Git에는 포함하지 않습니다.
+
+2026-09-15 표본의 상의 25개·하의 25개 실측 확보 결과는 당시 개발 기록입니다.
+원본 수집·검색 JSON은 현재 저장소에 포함되지 않아 저장소만으로 이 수치를 재검증할 수 없습니다.
+전체 카탈로그 확보율이나 실제 착용 적합도 지표로 사용하지 않습니다.
 
 ## 현재 코디 점수와 추천 이유
 

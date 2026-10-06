@@ -131,7 +131,8 @@ macro-F1은 약 6.7%p 개선됐습니다. 3차 보강 모델은 기존 검증셋
 ### 모델 없이 화면 흐름 확인
 
 ```bash
-git clone https://github.com/HeIIowrld/26-2_Modeling_Fashion.git
+# 개인 저장소 (팀 원본은 https://github.com/HeIIowrld/26-2_Modeling_Fashion)
+git clone https://github.com/chlgus0119/26-2_Modeling_Fashion.git
 cd 26-2_Modeling_Fashion
 python web/mock_server.py --host 127.0.0.1 --port 8000
 ```

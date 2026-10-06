@@ -54,7 +54,7 @@ recommendation_engine.py (규칙 기반, 학습 없음)
 
 ### 1-2. ★ 학습 대상 모델의 정확한 구조
 
-파일: [fashion_attribute_model.py](../fashion_attribute_model.py) `build_attribute_heads()`
+파일: [fashion_attribute_model.py](../src/fashion_attribute_model.py) `build_attribute_heads()`
 
 ```
 FashionSigLIP 이미지 임베딩 (768차원, L2 정규화, requires_grad=False)
@@ -158,7 +158,7 @@ valid[task_name] = bool(values)   # 라벨이 비어 있으면 valid=False
 
 ### 2-5. 17개 속성 스키마 (총 124 라벨)
 
-파일: [fashion_attribute_schema.py](../fashion_attribute_schema.py)
+파일: [fashion_attribute_schema.py](../src/fashion_attribute_schema.py)
 
 | task | 방식 | 라벨 | min_conf |
 |---|---|---|---|
