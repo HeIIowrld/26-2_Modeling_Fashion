@@ -1,2 +1,2 @@
-*.sh text eol=lf
-*.sbatch text eol=lf
+# Preserve presentation bytes and suppress binary content in text diffs.
+*.pdf binary
