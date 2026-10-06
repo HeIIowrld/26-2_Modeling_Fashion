@@ -22,7 +22,7 @@ def setup_cell(name, data_dir, project_input=''):
 @pytest.mark.parametrize('cwd', [PROJECT.parent, PROJECT])
 def test_setup_finds_project_from_repo_or_notebook_folder(name, cwd, tmp_path, monkeypatch):
     monkeypatch.chdir(cwd)
-    monkeypatch.setattr(sys, 'path', sys.path.copy())
+    monkeypatch.setattr(sys, 'path', sys.path.copy() + [str(PROJECT / 'src')] * 2)
     namespace = {}
     code = setup_cell(name, tmp_path)
     exec(code, namespace)
