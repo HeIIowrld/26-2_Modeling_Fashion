@@ -25,12 +25,8 @@ __pycache__/
 /datasets/people/
 /datasets/garments/
 
-# 영상 수집 파이프라인 산출물 (대용량, 재수집 가능) — 코드는 collect/에 커밋한다
+# 로컬 수집 원본은 커밋하지 않는다
 /data/
-collect/*.log
-
-# 실행 도구 바이너리 (ffmpeg, mediapipe 모델) — setup.py가 내려받는다
-collect/tools/
 
 # impeccable(디자인 도구)이 npx install 로 심는 파일들.
 # 도구 본체는 저장소에 넣지 않는다 — 각자 `npx impeccable install` 로 받는다.
@@ -64,8 +60,13 @@ collect/tools/
 /*.pdf
 /*.pptx
 
-# PROJECT_HANDBOOK.md 를 보기 좋게 렌더한 사본. 원본 .md 만 커밋한다.
+# 프로젝트 핸드북의 HTML 렌더링 사본. docs/project-handbook.md만 관리한다.
 /PROJECT_HANDBOOK.html
 
 # 발표자료를 어디로 옮겼는지 적어 둔 개인 메모
 /발표자료 위치.txt
+
+# 발표 편집 중간본과 개인 작업 파일
+/.codex-finalizer-*/
+/output/
+/*.docx

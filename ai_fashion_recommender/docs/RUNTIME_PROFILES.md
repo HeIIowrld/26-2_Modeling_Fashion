@@ -22,6 +22,5 @@ GPU wheel은 플랫폼에 맞춰 설치한다. CPU 제약 파일로 GPU 서버�
 신발 전용 파일은 기본 CatVTON requirements와 함께 설치하지 않는다. 통합 GPU 서버의 환경을 재현하려면 기존 GPU 검증 환경의 전체 freeze와 체크포인트를 확보한 뒤 별도 환경에서 검증해야 한다.
 공식 [FLUX.2 인페인팅 구현](https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/flux2/pipeline_flux2_klein_inpaint.py)에도 해당 클래스가 있으며, 오래된 로컬 diffusers에 없다는 이유로 모든 환경에서 실행 불가라고 단정할 수 없다.
 
-`collect/requirements.txt`는 mediapipe 0.10.14와 numpy 1.26.4로 기본 환경과 맞췄다. `mp.solutions`와 Tasks API를 함께 사용하는 기존 코드 때문이다.
 선택적 Notebook/Gradio 도구를 포함한 모든 전이 의존성을 잠근 파일은 아직 아니다. 새 venv 전체 설치와 GPU 생성은 이번 작업에서 실행하지 않았다.
 기존 전역 환경의 `pip check`는 craftground↔protobuf 및 cvxpy↔numpy 충돌을 보고했다. 이번 작업은 패키지를 설치하거나 전역 환경을 변경하지 않았다. 시연 환경은 별도 venv로 유지한다.

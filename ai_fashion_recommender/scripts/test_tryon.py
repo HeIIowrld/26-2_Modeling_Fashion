@@ -97,7 +97,7 @@ def main() -> None:
     if not images:
         raise SystemExit(
             f"{SAMPLE_ROOT}에서 테스트 이미지를 찾지 못했습니다. "
-            "먼저 collect/ 파이프라인으로 프레임을 모으세요 (README '데이터 수집' 참고)."
+            "사용 권한이 있는 정면 전신사진을 datasets/people/men 또는 women에 준비하세요."
         )
 
     pose_analyzer = PoseAnalyzer()
