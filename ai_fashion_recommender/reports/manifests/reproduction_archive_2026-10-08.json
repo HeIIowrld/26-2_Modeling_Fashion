@@ -1,0 +1,2723 @@
+{
+  "schema_version": 1,
+  "repository": "HeIIowrld/26-2_Modeling_Fashion",
+  "archived_on": "2026-10-08",
+  "release_tag": "reproduction-2026-10-08",
+  "release_url": "https://github.com/HeIIowrld/26-2_Modeling_Fashion/releases/tag/reproduction-2026-10-08",
+  "source_commit": "f5df16a8fa0186820c10d846137d42ee65e4452e",
+  "source_snapshot_files": 509,
+  "metadata_archive_files": 381,
+  "metadata_uncompressed_bytes": 4545104,
+  "historical_records": "Files retain original bytes and original timestamps inside recorded results. September experiment logs are not checks of the October source snapshot. Original absolute paths are historical references; restore_root and restore_path are portable archive mappings.",
+  "excluded_and_retained_locally": [
+    "Personal input photos and derived images",
+    "DeepFashion and other original dataset/product images",
+    "Browser profiles, cookies and browser caches",
+    "Model/embedding caches and live catalog measurements",
+    "HTML review pages and image/array artifacts; metadata-only archive cannot restore the visual review in full"
+  ],
+  "cleanup_rule": "Delete only original metadata files and local package assets after byte/hash verification of GitHub downloads and confirmed PR merge. Retain all excluded files.",
+  "restore_roots": {
+    "repository": "A checkout of 26-2_Modeling_Fashion",
+    "outerwear_visual_review": "A separately selected outerwear_visual_review_20260925 directory"
+  },
+  "assets": [
+    {
+      "filename": "fitta-source-2026-10-08.zip",
+      "role": "Tracked source snapshot at source_commit; current on 2026-10-08 before archive documentation.",
+      "download_url": "https://github.com/HeIIowrld/26-2_Modeling_Fashion/releases/download/reproduction-2026-10-08/fitta-source-2026-10-08.zip",
+      "bytes": 38518761,
+      "sha256": "1f90af720944b979826ca679a062736dbdb4333868edff26c2b56f271a4122ec"
+    },
+    {
+      "filename": "fitta-reproduction-metadata-2026-10-08.zip",
+      "role": "381 historical experimental configuration, result, baseline code and validation log files.",
+      "download_url": "https://github.com/HeIIowrld/26-2_Modeling_Fashion/releases/download/reproduction-2026-10-08/fitta-reproduction-metadata-2026-10-08.zip",
+      "bytes": 758793,
+      "sha256": "449126ab4baafa4555ce4c8c2b9ef1db9c0fb56de77196003cf45ee29edc5580"
+    },
+    {
+      "filename": "ai_fashion_recommender_final_r2.zip",
+      "role": "Historical 145-file R2 distribution package; retained byte-for-byte, not the current web source.",
+      "download_url": "https://github.com/HeIIowrld/26-2_Modeling_Fashion/releases/download/reproduction-2026-10-08/ai_fashion_recommender_final_r2.zip",
+      "bytes": 27914851,
+      "sha256": "8250e7ce4fca05fac25e862b9e88c8f4bec864bb6b3e84982de36299b4e13ce1"
+    },
+    {
+      "filename": "PACKAGE_CHECKSUMS.json",
+      "role": "Historical R2 package and adopted/baseline model checksums.",
+      "download_url": "https://github.com/HeIIowrld/26-2_Modeling_Fashion/releases/download/reproduction-2026-10-08/PACKAGE_CHECKSUMS.json",
+      "bytes": 2677,
+      "sha256": "7180d7779000403407ea602476d69c3c19c610cceb73d5d3f9c785bbd70853ba"
+    }
+  ],
+  "metadata_files": [
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/baseline/catvton_tryon.py",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/baseline/catvton_tryon.py",
+      "bytes": 50826,
+      "sha256": "b1070e02ab6a183f75fb97acdd804af7b7725aecf03731f0e1aef369dec0f72f"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/baseline/musinsa_live_search.py",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/baseline/musinsa_live_search.py",
+      "bytes": 18045,
+      "sha256": "79eb44defed2eb7b7a1b2b452bf99365ffa843ddb5475e1ebe5776d95219ff77"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/baseline/pipeline.py",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/baseline/pipeline.py",
+      "bytes": 28420,
+      "sha256": "d16888fc680597f43c6706b9f799170ddc739b81d2b5cbba627f8269c3b35690"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/fitta-followup-unit.log",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/fitta-followup-unit.log",
+      "bytes": 2954,
+      "sha256": "78d4af91dd03c0e0154a83d65aaddaa126acea36bf9d81e37456d6b6dad963df"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/fitta-followup-web.log",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/fitta-followup-web.log",
+      "bytes": 1250,
+      "sha256": "2ef263cb8e369811c183ea3f278c919bfe075bcafc32df8dc323046e7561a2e3"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/clean_original/_reference_quality.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/clean_original/_reference_quality.json",
+      "bytes": 447,
+      "sha256": "80b00943a4ba0cb499d46eb1daeeb2b184d90405be6cdcbfd407a65b8a55def5"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/clean_thumbnail/_reference_quality.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/clean_thumbnail/_reference_quality.json",
+      "bytes": 448,
+      "sha256": "a363c4921879a76edcd978b213178d70cbf97ec46ac730710e8f43e36b27009d"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS1367806.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS1367806.json",
+      "bytes": 5779,
+      "sha256": "3ed62fe4176278939f2667b5b849f4edeee1ca4b4e8957b84a4e3aa7d3f27ea5"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS2226767.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS2226767.json",
+      "bytes": 26627,
+      "sha256": "cb8e2e0d5d69e1ad22e1b28a4e5daf7045bad2f8abb1da8e07cdc33347ee8a3b"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS3198066.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS3198066.json",
+      "bytes": 9642,
+      "sha256": "35c280f02c22120fdef65d276499bdf58846d1e0ee2dcacc2776504ff122400f"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS3489531.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS3489531.json",
+      "bytes": 5782,
+      "sha256": "f3151881ff4dc7bdb37ea21747a30fd0dc97d288bd217c8dc96879509e455924"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS3533201.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS3533201.json",
+      "bytes": 9500,
+      "sha256": "53c0bcd0c63eaa20950b3d926a4d55d6294b1addbd87de5a7fc1ecd9778cee01"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS3830004.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS3830004.json",
+      "bytes": 7351,
+      "sha256": "f8d3a1ddf1ba3d260e7b5a5bb5847120e22d9bb309895716b8b78b987257bc0c"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS3899258.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS3899258.json",
+      "bytes": 10525,
+      "sha256": "108002987c7beac8b727e30f2e0789bc687641ed8b9c28564a991460f576dada"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS4264568.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS4264568.json",
+      "bytes": 8765,
+      "sha256": "92622d9587c9c17c8ebf738bc2c1df69678bf6923cbdc8a25954b23aab4d5d57"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS4723516.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS4723516.json",
+      "bytes": 3263,
+      "sha256": "00fdf815fcb61c6db42a44f6056740911494f7970ff82e787e87f59b4a5b9f82"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS5006412.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS5006412.json",
+      "bytes": 8628,
+      "sha256": "58ce446304fcc26fc5c57ee30ec2bbbb22a8494d6ef374165fbd932667818447"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS5358816.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS5358816.json",
+      "bytes": 5791,
+      "sha256": "978e9c4c3391d8bc54a22b08acfaa364fa43cac275de092dd89ae1dc3171fdc3"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS5360020.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS5360020.json",
+      "bytes": 7291,
+      "sha256": "615de4c4fe538128fe55861adc49e831a610b211d560b2f05435dc7dcb595b29"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS6038264.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS6038264.json",
+      "bytes": 5591,
+      "sha256": "fe5e027e78dbe2a5c0f7664e4e729084b05f87be74e7ab57c16c846b6a42b1b3"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS6623729.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS6623729.json",
+      "bytes": 8765,
+      "sha256": "9faedb125921131fc6a629c12b52855a2b6a7e212efc36cb49c67bdd372727f0"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS6623730.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS6623730.json",
+      "bytes": 8765,
+      "sha256": "b2dd9b39361ef0fabacaada4c70ee27c82572d95958c83fc9e3f4abe72f2658d"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS6704401.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS6704401.json",
+      "bytes": 7239,
+      "sha256": "4510176ea4c57a0be6f8ab1344e62a6bb6f413ca94f2bbca5a7622762582335b"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS6704405.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS6704405.json",
+      "bytes": 7239,
+      "sha256": "f9bea5f672b03617ba0c9af23508adb4ece6c819128f0ed2c3331f610dc9e5a6"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS6946668.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS6946668.json",
+      "bytes": 10964,
+      "sha256": "310a849f0bc3ced740eeca6a8020ce7102d1cb4fc82ebd195dbe092e66ca3942"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS6981068.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS6981068.json",
+      "bytes": 5801,
+      "sha256": "8d0f7d57e17bc00e161c8ab15baa4feafe885728e5b10960b2b5e02bcb6c8f59"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS7066724.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS7066724.json",
+      "bytes": 11360,
+      "sha256": "387dbb6d0bb1e16765800ea2300cac28c0da9192e66c8254520891aaf361417f"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS7159243.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_casual/measurement_cache/MS7159243.json",
+      "bytes": 2660,
+      "sha256": "d5dc69a5fe02d8a69d8410394668b985ec0a3bf3458606e7cec194afc3dec4c8"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/clean_original/_reference_quality.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/clean_original/_reference_quality.json",
+      "bytes": 446,
+      "sha256": "c6637d327b74a1af9ff0d7e7923fac040019a8e46f20fee928f50d42c530f118"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/clean_thumbnail/_reference_quality.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/clean_thumbnail/_reference_quality.json",
+      "bytes": 446,
+      "sha256": "a69a537b5f3f1b6385500893e7f315a26d519615af5d89899f25aeef9c7390ca"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS3556538.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS3556538.json",
+      "bytes": 8229,
+      "sha256": "bfe3e50ad16c64ed9293b2cb80971bad01dc198f191f6f7507b3605b851788f3"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS3888498.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS3888498.json",
+      "bytes": 7324,
+      "sha256": "8dba0bb5bd259394534ac52c606e67849979a0552162cd4e364015040b39e9bc"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS3938918.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS3938918.json",
+      "bytes": 17367,
+      "sha256": "aaebdc57ab184bce27e1064327b12a327b2b80a96ed242224bbc43c0e5b4672e"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS4159891.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS4159891.json",
+      "bytes": 9476,
+      "sha256": "ccad4d250694f6d7646d8a5f5a26f0222660f9459be26ac1fa828e244ea30ead"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS4515546.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS4515546.json",
+      "bytes": 5710,
+      "sha256": "74688cdc0b9e544dd4263f07ece962a318044765f7619ab4e31b4bd13df081a8"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS4528725.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS4528725.json",
+      "bytes": 145518,
+      "sha256": "43f28c0c99a087f78456ee392c1f189ba205fa9ebc82108e10184d407fcb6c3f"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS4745197.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS4745197.json",
+      "bytes": 5115,
+      "sha256": "cf6e8350fe32e99120c355901259076be7175c68b63a423b3b3ad64fd0d2c5b1"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS5011142.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS5011142.json",
+      "bytes": 3481,
+      "sha256": "14bc822584349d90c994ad3f525148b025d3c1592569b1794fbefe9d44f83ccf"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6271492.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6271492.json",
+      "bytes": 7205,
+      "sha256": "f8bd48b2e3ebe85d087f0140d94f975df1f7a962d71d159a488b3144d0219edb"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6271493.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6271493.json",
+      "bytes": 7206,
+      "sha256": "b89c9d80e86ab95c15336c227e23642a0b9c219d73a41b52daa9c34f468c757a"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6271497.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6271497.json",
+      "bytes": 7206,
+      "sha256": "d1eaab66ea62172858f1d331defadbbe2ae4f23ff1cb0d51de625befb1e3e500"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6596166.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6596166.json",
+      "bytes": 7229,
+      "sha256": "56bcd0c7008fce7a75afd610f5a279921f2e112d0caf0f2519e72fd00901aa1e"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6623729.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6623729.json",
+      "bytes": 8765,
+      "sha256": "05c15fa92bf29faa794767013e428128770b64e0315a0a9a12a2690544434b41"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6623730.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6623730.json",
+      "bytes": 8765,
+      "sha256": "f8cbae698c3825da5b29e89d7df44b74c2fe0a0cb5f855ac92ce10621c347386"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6654464.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6654464.json",
+      "bytes": 5885,
+      "sha256": "54bec03a714a4a21a15d82e29a6b5e58c213e6536a435071bc3f2b240176c1bf"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6685522.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6685522.json",
+      "bytes": 5710,
+      "sha256": "a0a2e7c873fc57a3eeb04cb88944dffcbae8e6df71eb76ea031ead71e90fcd30"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6685523.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6685523.json",
+      "bytes": 5708,
+      "sha256": "5a7e608079c64841c3dc80b57f93eb1b5d51899dcf43a0a11cef10beef3874c9"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6797131.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6797131.json",
+      "bytes": 15222,
+      "sha256": "40b827ffd2ebe724b77ee399a39f3be9201b3820c2e8e0b91522bad33fcd00c2"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6946668.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS6946668.json",
+      "bytes": 10963,
+      "sha256": "19bd08a993171eab64eca2aaa68104217b8118f1483b45f41d8479d99b387b45"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS7252373.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS7252373.json",
+      "bytes": 6767,
+      "sha256": "7e7ab1d3d2c2763b2f83ab145ac1f1466e55fccba1894a4921eed6d0a04135de"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS7285529.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS7285529.json",
+      "bytes": 5586,
+      "sha256": "d8c285dd869cb78d9e6fdf5e9e5f515e9315584a42cc7e283cce3b2c4ebe80fb"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS7285530.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS7285530.json",
+      "bytes": 5587,
+      "sha256": "12a437baea7f2f81cf719d8c26692fc3fe7490716602f060691e82fc4e19da7c"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS7285531.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/men_office/measurement_cache/MS7285531.json",
+      "bytes": 5587,
+      "sha256": "918e6071fe0bb264ea335038959e954e63b16ce0ea8ed05d8a9e2e2be4d0a3bb"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/results.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/results.json",
+      "bytes": 36495,
+      "sha256": "1c115be85137d2959d6931d3a202d935fe96da7827fa1fdbb5de3856f0a093a6"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/run.sbatch",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/run.sbatch",
+      "bytes": 1932,
+      "sha256": "0f9ac6f37569ea8318aee3ebb38d2d8312d2951f5bdd150b7d9e3558d32de309"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/unit_tests.log",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/unit_tests.log",
+      "bytes": 3222,
+      "sha256": "b50bdd6eae10ac0beb3f98aee2c24bb0475f11c8d576a01eaf689572b5d07108"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/web_tests.log",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/web_tests.log",
+      "bytes": 1782,
+      "sha256": "a134e00ce0d678dc76a082c9d59c58024a503ef07c833245bdce83545c590064"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/clean_original/_reference_quality.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/clean_original/_reference_quality.json",
+      "bytes": 448,
+      "sha256": "f8cd359656823e8f62a20db40e7e2ada7ab4a978ccd1001502b589c7f8ba9e1c"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/clean_thumbnail/_reference_quality.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/clean_thumbnail/_reference_quality.json",
+      "bytes": 447,
+      "sha256": "e526ec9236818fedd70d5cd3057e28346d48657b1172bfd4ac8a0950bb096c69"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS1752894.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS1752894.json",
+      "bytes": 7059,
+      "sha256": "bff54b9e028f84e044372b13136e2d4bfcc4d00997668caeba573e36b6a55b1c"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS3116812.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS3116812.json",
+      "bytes": 7049,
+      "sha256": "1ad5d74ed2093657a2f7a1fbd2c559f37cc787b6c5e2283caf06c53f25f92095"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS3249482.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS3249482.json",
+      "bytes": 8251,
+      "sha256": "0a33b7ae6ae386c38a530ed004f6d2dc5b0d48aba14d5e26ff817e377a56ada3"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS3467818.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS3467818.json",
+      "bytes": 7194,
+      "sha256": "02f88062c584dbb80bc3b8fcfbb882c9e6b6006d26455414c8ee7e79ab153cc0"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS3918531.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS3918531.json",
+      "bytes": 9001,
+      "sha256": "539b1dcfea21ac177fbe198b1745e6bcdd120acd6fa08bb1a7e9e91feb2d4640"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS4283666.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS4283666.json",
+      "bytes": 7261,
+      "sha256": "38adbd9c4fdd904726bf10f98edb50d848aeb5a8dfe74c39aa84959172ad2779"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS4469207.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS4469207.json",
+      "bytes": 10266,
+      "sha256": "b3022ded262798e125a8e1f776d3afaf63c877db42c2e3e06f72bd629c6c67b5"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS4613453.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS4613453.json",
+      "bytes": 7363,
+      "sha256": "832c1929124842242e560ea1f08dbf62e8463c2167bf09edf5624042485dacd2"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS5320041.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS5320041.json",
+      "bytes": 5785,
+      "sha256": "9988b7a114748dfed6701a741093d8b961db6a6e9b9e24f32a2361c4b1af6bef"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS5360020.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS5360020.json",
+      "bytes": 7291,
+      "sha256": "84d0b084e08a3114ac435fd9d2e9ad82ab0728b7ff5421b775e8b5bae3463676"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS5982493.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS5982493.json",
+      "bytes": 6540,
+      "sha256": "29bc324611447f9d6307cefddfce595877662535d56e307fcda8eeb7a953432c"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS5985043.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS5985043.json",
+      "bytes": 6683,
+      "sha256": "2cb6ed15f5d80100f461d86c441d522d52e2fb5fece52c6a5ec1269492f5c7f7"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS6062487.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS6062487.json",
+      "bytes": 4175,
+      "sha256": "6502d8b61e4c1d06d9ef4aef6910cb2ba7594cc3ee5c4780ab8e173501955d81"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS6477427.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS6477427.json",
+      "bytes": 3326,
+      "sha256": "be70f02dfa884ad8ae424c3b04eae9b33dfe5d6ff4f592a41437a9a37b5ba447"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS6970665.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS6970665.json",
+      "bytes": 40190,
+      "sha256": "da7e6a29e9fedf6bb89d5bd6d7f03868885ca04cd8526744f6f21e4dfa0bfe02"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS7066724.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_casual/measurement_cache/MS7066724.json",
+      "bytes": 11360,
+      "sha256": "f506528bb8f49dc51f7847055973174d21a69dfb697e2b6060a7061474d7ae4a"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/clean_original/_reference_quality.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/clean_original/_reference_quality.json",
+      "bytes": 449,
+      "sha256": "fc4eeaa855ce17f6107870aef387a643a232e4ef8742ac6d888e61c041c193a8"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/clean_thumbnail/_reference_quality.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/clean_thumbnail/_reference_quality.json",
+      "bytes": 448,
+      "sha256": "e3d82e726913adb562cc9c2a7844341162683a40d183aa6310eab510bf653cbf"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS3888498.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS3888498.json",
+      "bytes": 7323,
+      "sha256": "acf5f6b5b3bc477f804e8ccca848d0ad2f44579568823401a1902e1b479e0fb5"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS4503690.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS4503690.json",
+      "bytes": 9551,
+      "sha256": "524cfd93e6199815f0f04e6539bbcde7364352054e995ee31c1726e904278c11"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS4745197.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS4745197.json",
+      "bytes": 5115,
+      "sha256": "f109d01db586fef94a113a16958c161505924c2359fcb6d89e8fc53f4eb84218"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS4821816.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS4821816.json",
+      "bytes": 7480,
+      "sha256": "e4c236930f0c240d6664333689165d98b2c434415348906758873d9698a63311"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS4876175.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS4876175.json",
+      "bytes": 4186,
+      "sha256": "62a0e779efe0024ad1c7d58162d18abbbb457b1f7419c1bc947e398109cd935f"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS6012836.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS6012836.json",
+      "bytes": 10820,
+      "sha256": "2aea8f6f85e400937b8bdd7bd860bc1c3f3ed576bef5d0ca5def125f523394aa"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS6042335.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS6042335.json",
+      "bytes": 5677,
+      "sha256": "0b42f922d9ec810c33c616cfb0fb24e72710d3bf04c4ca78a22fc26170fd09c7"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS6191583.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS6191583.json",
+      "bytes": 5677,
+      "sha256": "db9874b30fa283703e9cd68697ad2f06003934e43edc978e98a087404b83b54d"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS6271492.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS6271492.json",
+      "bytes": 7206,
+      "sha256": "b8ad32531cab2257577f0611241d3969f54ab6b92c0923ca21a634b2257d2c48"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS6271493.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS6271493.json",
+      "bytes": 7206,
+      "sha256": "a12a5c7ce4647c2cfaffe33f1506124186d01df590277236fbfdf56693f1c483"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS6573788.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS6573788.json",
+      "bytes": 16783,
+      "sha256": "36e4906a48bcec1c786c64d3381a1a5802f917a739469681cf04af50261db0e2"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS6623729.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS6623729.json",
+      "bytes": 8764,
+      "sha256": "f26d6b6beb023d4f039eb9290bc7aa8640283ba1499e136d9e5cdfdcad5b5f36"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS6623730.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS6623730.json",
+      "bytes": 8765,
+      "sha256": "0e58a813f2008ea010296cf8e3d6f50d02558a64b9e63e5fe3f3c68377685c6f"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS7049439.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS7049439.json",
+      "bytes": 7389,
+      "sha256": "ac153c4c5ce9c0cb49ab757fda8dd6a73ef9273412565f7f55b9a097178cd600"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS7128079.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS7128079.json",
+      "bytes": 5612,
+      "sha256": "b6139d334c71d70dc26866f1c5cdf5b55010bc5ace77264fffc4aa4d715fa3ae"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS7252373.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS7252373.json",
+      "bytes": 6768,
+      "sha256": "056be26156770dd78bcfcdc6179267d9ae40b346ed3d46844c3f834108f758ac"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS7285529.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS7285529.json",
+      "bytes": 5587,
+      "sha256": "bd1cc8d6a9f3d6ac44adb9e7c2d5c8d7370f46766fb8dedc9ac475bff8aa6001"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS7285530.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS7285530.json",
+      "bytes": 5587,
+      "sha256": "8b5d699b7c9768675c82ecba356510a1c30291f1b078cf689867d17c623304c3"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS7285531.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15/women_date/measurement_cache/MS7285531.json",
+      "bytes": 5587,
+      "sha256": "b037b1a6e742683eb89963c768968e63ebf666747e9cf56ce9cfd54d4fd31a9c"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS1367806.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS1367806.json",
+      "bytes": 5780,
+      "sha256": "0fc77ca68de5b00dd2a3db972c1f299f7e8a0cabc687cdeb14710dc2e508adb6"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS2226767.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS2226767.json",
+      "bytes": 26628,
+      "sha256": "513bcf086397cc096cc16ba76d9261e0b57c3090e4e230115790100937dc2f9d"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS3198066.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS3198066.json",
+      "bytes": 9642,
+      "sha256": "477187d0452dddaef077d1bf391a8f4127ceaf1e5650a9894f44ef6f3afbb05a"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS3489531.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS3489531.json",
+      "bytes": 5782,
+      "sha256": "17b49fd7979b75e5b5645c0e342f8310ea0a724e4d3e58a09bc71fdf7680d89b"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS3533201.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS3533201.json",
+      "bytes": 9500,
+      "sha256": "d4aff67777de19ad53b810cf0d3998964d378d6bef52cd34273b07eb3bde6eaa"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS3830004.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS3830004.json",
+      "bytes": 7351,
+      "sha256": "1ea463e59a4016e49f78df369be94747220827389159df4b67593e2b0bce6aeb"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS3899258.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS3899258.json",
+      "bytes": 10525,
+      "sha256": "9b96c63c26d5ffa95b0e0b60147c8b992b62c500711f8325e793b70875c2db76"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS4264568.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS4264568.json",
+      "bytes": 8765,
+      "sha256": "cf845c0129f76f13ae50418da0dfd58d20dd4e80796acef3b70039e199914e3e"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS4723516.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS4723516.json",
+      "bytes": 3262,
+      "sha256": "d895ab5e7ca0c964f7d1e92a88071bdd2518909da4f12d1ad4274696eef14502"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS5006412.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS5006412.json",
+      "bytes": 8628,
+      "sha256": "d1a369bfe30a831e8a282d6fa04fff6f66a2ec6c7906f6aac6cd8ad293ac1315"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS5358816.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS5358816.json",
+      "bytes": 5791,
+      "sha256": "71fee270f5fe7bc78bf1616c67215f2ee4e0de6b17bec71f387b67eb564e9dd4"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS5360020.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS5360020.json",
+      "bytes": 7290,
+      "sha256": "3d8e249c7eb424cd32fb0ba68d4c185efa86d47cc6f994ecda0d9ca9b70543d7"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS6038264.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS6038264.json",
+      "bytes": 5590,
+      "sha256": "f8467099a608c69e6ea231d324a21ec1d113b90845dded4cba48d316fa45b522"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS6623729.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS6623729.json",
+      "bytes": 8765,
+      "sha256": "b8b4c14f7ca48c8f96a9b047d980a48f59bbbc11aba980f9d0e4eadb0476b643"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS6623730.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS6623730.json",
+      "bytes": 8765,
+      "sha256": "981987985cb9aab3205ee7a279aedf21901d686080970c7fe32061d423e6fd1f"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS6704401.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS6704401.json",
+      "bytes": 7238,
+      "sha256": "f25016dd928aeaaf404465d82b410b937c4d3f51dc2f3bb4f6a35c9d0c60801f"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS6704405.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS6704405.json",
+      "bytes": 7239,
+      "sha256": "88235908f8e646d24bc06ef7df4a1632ab0e519905fa7c730da9202a313f23ab"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS6946668.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS6946668.json",
+      "bytes": 10964,
+      "sha256": "43704144eda480fdc0682191886f99a9870fda7c69d95971919e95b88361ba9a"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS6981068.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS6981068.json",
+      "bytes": 5801,
+      "sha256": "ab6f990ffdd19ce2aecc4bb6462935a8bc754114efc2746f9809835a89e0fadf"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS7066724.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS7066724.json",
+      "bytes": 11360,
+      "sha256": "e396ef543b2f758354e94809a8cd8bbbbda2f24ed93d9091c28850471b5299e4"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS7159243.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_casual/measurement_cache/MS7159243.json",
+      "bytes": 2660,
+      "sha256": "c575a11c80c03bcf34344c7b8a05f69a284c107a1bdf5f7ab6b8f60317a792c1"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS3556538.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS3556538.json",
+      "bytes": 8229,
+      "sha256": "e60ca82db9b3de8a0bad2755e25cd18faaa942fad8234b4ff73afb4c35948ba4"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS3888498.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS3888498.json",
+      "bytes": 7324,
+      "sha256": "eba06c3d2271994b84594bba480dcbd9cab2668c27cf9a16b2be2557c416740c"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS3938918.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS3938918.json",
+      "bytes": 17367,
+      "sha256": "558787bcabc5ba4929337daa879f548552ce49e5f8ef3cba3de0cf57f5cccbc6"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS4159891.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS4159891.json",
+      "bytes": 9476,
+      "sha256": "0c3796c4eb2226d59cb3e6df3d2dd6215e89fd69b0d388458f6e0e2b9ebcb213"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS4515546.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS4515546.json",
+      "bytes": 5709,
+      "sha256": "860468235dc1c316792278a6fdff6e049274be6cdbdbbd489c4334e5beeb24e5"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS4528725.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS4528725.json",
+      "bytes": 145518,
+      "sha256": "028ea9c77f1a21c79243382ec163ccdce91add4132cf98f0103a38312eeda8d6"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS4745197.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS4745197.json",
+      "bytes": 5115,
+      "sha256": "7fcfca7c1ebee11a72a8877a40a125ecaf34a8497df2a710b74d8758265df45e"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS5011142.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS5011142.json",
+      "bytes": 3481,
+      "sha256": "a3870081458c963ffd63225391c18dcc71532b579c69ab9506578613aa6e925f"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6271492.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6271492.json",
+      "bytes": 7206,
+      "sha256": "13893c6d92833cd9b71b04a8f3ee2ae3b20d82d1e6216b168010982d3f659396"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6271493.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6271493.json",
+      "bytes": 7205,
+      "sha256": "6e7692ad5ba8935d907710fa9067d621091b0e0a3aedd804a9963e6f982e67a6"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6271497.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6271497.json",
+      "bytes": 7206,
+      "sha256": "e3f4c77af7fe6305f86e105907c380cb47d02dc814e9ca2fd35ff8e17fcae5ca"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6596166.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6596166.json",
+      "bytes": 7229,
+      "sha256": "2f9941a787ac637aa461207b29e7d32c0e3f0e384fbeef4e9316a88abc03693e"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6623729.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6623729.json",
+      "bytes": 8764,
+      "sha256": "23d0b683eb18766721cd7dc39e3566fb1b04b9279efc146c4844fbede1cd28f3"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6623730.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6623730.json",
+      "bytes": 8765,
+      "sha256": "3ea7b805b044a69e260b2221cb5ef17619475abb7c066a15e6356eccab0b0bdf"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6654464.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6654464.json",
+      "bytes": 5884,
+      "sha256": "0cd3e7c535ed2caf924765e33083d0477641e2e89a4ba829356ce4a35e9b5fac"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6685522.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6685522.json",
+      "bytes": 5711,
+      "sha256": "5abb7955cd64b1c1a8bb0f21a06a9cfda8a415e840adda9b74e0bec4c1d82349"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6685523.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6685523.json",
+      "bytes": 5707,
+      "sha256": "a9ac253d61eb966a7ebd273338923bfbbd0ac58464703ef5b98f46784798dfaf"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6797131.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6797131.json",
+      "bytes": 15222,
+      "sha256": "f8538e3609866df5f56849874a62734c5107c380507c3b72380c3b4d480de0ae"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6946668.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS6946668.json",
+      "bytes": 10963,
+      "sha256": "da3eda466157fd72fd27ce5d81cd64f510086f359c23cc6ffd0cf03ae16c922d"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS7252373.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS7252373.json",
+      "bytes": 6767,
+      "sha256": "d956e01d9fa603a9393bf74634f6477030abf7a868c51d7c09142146f0f20066"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS7285529.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS7285529.json",
+      "bytes": 5587,
+      "sha256": "9628edb26c8b4fc1bbd24ed655896d5f9c8f48f5990387f3df1affab583b5aa5"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS7285530.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS7285530.json",
+      "bytes": 5587,
+      "sha256": "2d9fc46f0204f950161e5a6c7dea430d09000d4daaa564758cbd194c70622fd5"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS7285531.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/men_office/measurement_cache/MS7285531.json",
+      "bytes": 5587,
+      "sha256": "5dc2a8efce8b33ebeaaf7050821117a76fd31e29ef11567ab5613018f884c1d9"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/results.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/results.json",
+      "bytes": 24481,
+      "sha256": "4ec27011b6719b6371150a54d401a3f2e9d2fff4d0254fbce2443baa123c0716"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS1752894.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS1752894.json",
+      "bytes": 7059,
+      "sha256": "07c24274b28ac745ad511c6383718766b4b4eb14c6b1a1eb6a262d7b2023a4c3"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS3116812.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS3116812.json",
+      "bytes": 7049,
+      "sha256": "6c24515e7904cbdf225068e5b2048c0acf62678d786664517e4eae777e7f0904"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS3249482.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS3249482.json",
+      "bytes": 8251,
+      "sha256": "ba8fdc3ac579757fab4c9873d43435d2a919010f4c92b16eead7f00d0e3b8fd5"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS3467818.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS3467818.json",
+      "bytes": 7194,
+      "sha256": "128e7c27623396bf6b109ab653698a789b60cd69160ba37d5a7366c3043f52ec"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS3918531.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS3918531.json",
+      "bytes": 9002,
+      "sha256": "b8b6ee2eebaf1e33dec8b61c53ae286ec86ae7bcd0806fbbf8f610403fa29b44"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS4283666.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS4283666.json",
+      "bytes": 7261,
+      "sha256": "6ecb130002b8b4eb1772a26e4e3e3b67d825ebe62bafdeded747e41956b889e2"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS4469207.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS4469207.json",
+      "bytes": 10267,
+      "sha256": "d5b9b53d33811735d34f3e61fb2213c8d17405dde42d2049f5ec42a15366a04b"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS4613453.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS4613453.json",
+      "bytes": 7364,
+      "sha256": "90420f74e3bea8b87fc8c3f4b9a777081a6a596e368a87467257bebaa1c9518e"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS5320041.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS5320041.json",
+      "bytes": 5785,
+      "sha256": "85917e90eab4d79579dfbc2ea9ed1277329cfb7f29525f0139eeee3f17bd2836"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS5360020.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS5360020.json",
+      "bytes": 7291,
+      "sha256": "91c3bd5746f853c86588364b63a9cbdd5a68f04788a94875466323e6600d98da"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS5982493.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS5982493.json",
+      "bytes": 6540,
+      "sha256": "25549c44dabd58e8a0bbb66d6697b376589db8e7fbd9e95053751891859fe49a"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS5985043.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS5985043.json",
+      "bytes": 6683,
+      "sha256": "877e2039211f6da0f03950dfcdbbbe71165fa7d14f476f62ad3017b17a7e1fa1"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS6062487.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS6062487.json",
+      "bytes": 4176,
+      "sha256": "d73538703b983fe1014db889f4f3cef3399234107ff6d9128f7bd28f08a2830a"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS6477427.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS6477427.json",
+      "bytes": 3326,
+      "sha256": "60d9ae3bdabddea425c060500115e26a0efbb1ba64d354cb1f120dfd46b22a68"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS6970665.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS6970665.json",
+      "bytes": 40190,
+      "sha256": "e6d3bc0bf624d41efe1019401f6e40afb11e178c6d70447afcf53a886ef77ddc"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS7066724.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_casual/measurement_cache/MS7066724.json",
+      "bytes": 11360,
+      "sha256": "92e8e674200c91b0405733ebb28193f481aa2bdef9833236ef0b0e7cf0df7d42"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS3888498.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS3888498.json",
+      "bytes": 7324,
+      "sha256": "029ea8212995f077b175811610774b6f0c9e28765936e5893d4047ae924044a6"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS4503690.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS4503690.json",
+      "bytes": 9551,
+      "sha256": "fbd86d4007221fd89b694f27ab44d67f71fb9ad01b815dd616cea4023daebe9d"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS4745197.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS4745197.json",
+      "bytes": 5115,
+      "sha256": "c5c3317743bd0c8eae392a791b7778ca8382748a32d0176bc8d1379d899e8104"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS4821816.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS4821816.json",
+      "bytes": 7480,
+      "sha256": "ed6ecb2b5e680c20d0991a67a32077a3343c15a525ee646a0a699c33f166f81e"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS4876175.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS4876175.json",
+      "bytes": 4186,
+      "sha256": "a19ea98bb2429d9b8a1f0187d0f9ed4e62965f919abd872b69fa013158b75249"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS6012836.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS6012836.json",
+      "bytes": 10818,
+      "sha256": "730b3a5483b6ada1c7fd858630cfd7be1fb64fbb48fa8efc3f65090d6b041969"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS6042335.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS6042335.json",
+      "bytes": 5678,
+      "sha256": "441661369b693aea17eb71aa859c056cade46f1cdcc7e430076d5eab2c4cd00d"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS6191583.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS6191583.json",
+      "bytes": 5677,
+      "sha256": "b95966a751d6118059b36e5cd3741fd971e852436f4b4d705f0d16e17d1a7952"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS6271492.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS6271492.json",
+      "bytes": 7205,
+      "sha256": "c98cd9b05b224f35bc3c8570318fdb701db61bb52cf0e57e4e59fc63c77856e9"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS6271493.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS6271493.json",
+      "bytes": 7206,
+      "sha256": "491f682256375451c45b5460377bd9c2c1f624f0ba7b811a8b63aafbdfa380e9"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS6573788.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS6573788.json",
+      "bytes": 16783,
+      "sha256": "5bb12a75c2b9033167bc910b2b6e763e8e935906a6e10215fa41d83a27c537ee"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS6623729.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS6623729.json",
+      "bytes": 8765,
+      "sha256": "fa2207103afb15dc9cd7c7c9f7026cc8d036ff57c7e957d17ff5241482d9502f"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS6623730.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS6623730.json",
+      "bytes": 8765,
+      "sha256": "1dd4f773e938139b9e373c66de4493e148ebbe5654c032f458860d2b749de1b6"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS7049439.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS7049439.json",
+      "bytes": 7390,
+      "sha256": "c9a571c284d0febecfbf5fc4335e8ae98fc1144399c18cbff34ed334dd87a719"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS7128079.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS7128079.json",
+      "bytes": 5613,
+      "sha256": "2315deb5eb080fab9f1bfe2c1137a43368c2edec20f90d7edb53db44a65ced73"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS7252373.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS7252373.json",
+      "bytes": 6767,
+      "sha256": "0d847e5fb9526da210addc58c1b4d121902ef7c82c7e351bc9800eeeb2845ed8"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS7285529.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS7285529.json",
+      "bytes": 5587,
+      "sha256": "3235e9ceb1e96712559af9ca9ea3412782b045c2fe5aa140c4840ade6adf6662"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS7285530.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS7285530.json",
+      "bytes": 5587,
+      "sha256": "e3f57a981c12f2a90a416b4c93ce5d2519b7a86026563606306de7992367e9f2"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS7285531.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/diversity_quality_2026-09-15_local/women_date/measurement_cache/MS7285531.json",
+      "bytes": 5587,
+      "sha256": "42bcf62a2f7f7c7e4c3bcafce55070d3dfe32ffe8ff67db30c6bf4c3518e1969"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/api_profile.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/api_profile.json",
+      "bytes": 1144,
+      "sha256": "78553dbb07aa1248a7c80f77dcbb221266b454876e415b29fc391c74bd28de2c"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/api_profile_no_reference.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/api_profile_no_reference.json",
+      "bytes": 958,
+      "sha256": "60cfedf54a8d404846469ebfde1c3ca61d1dae9aa73b98090f419af44a8225d1"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/baseline/musinsa_live_search.py",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/baseline/musinsa_live_search.py",
+      "bytes": 12327,
+      "sha256": "814f52dd703aefa946f735e2a14355a0983118cf1da2a313770bb8d575d41607"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/baseline/pipeline.py",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/baseline/pipeline.py",
+      "bytes": 31526,
+      "sha256": "cb58584774aaff2db0fa9019af24f3409daf020b1cb54d83830f26e000a469c3"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/deployment.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/deployment.json",
+      "bytes": 1806,
+      "sha256": "b7ec3d4650d98ca62b2b6eee82f6a5fe7e6d27b40eea0639f1e031e0ae1f8c81"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/gpu_execution.log",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/gpu_execution.log",
+      "bytes": 51283,
+      "sha256": "ba205268834a776b18fabc52c3e3eb7935dfb49d130991e918759b4d6d869fad"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/gpu_unit_tests.log",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/gpu_unit_tests.log",
+      "bytes": 2350,
+      "sha256": "8a8de5ede0318e7cce1379dd2ddf1eab9b2b03b2080fdac65096d1384cf1a29b"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/gpu_web_tests.log",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/gpu_web_tests.log",
+      "bytes": 6015,
+      "sha256": "8202946ac58a9e697c50307613eba09e5c5f95a76955ebfc2b9487e48e9c5735"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/gpu_web_tests_final.log",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/gpu_web_tests_final.log",
+      "bytes": 5090,
+      "sha256": "5f238fe0fe9e65cf574afa18cfad6496b59d83c18db0f1214422dd7f4093fe93"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/captured_candidates.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/captured_candidates.json",
+      "bytes": 287510,
+      "sha256": "a124b2fd50ee72ae9df46819c3df4df967d25df201d59d32df22da85178c8708"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/comparison.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/comparison.json",
+      "bytes": 13050,
+      "sha256": "0cf2b0a5ea0cc241a2ac74b451dcb37a7cf2428e5f59867b416a63e4a68b7446"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS2226767.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS2226767.json",
+      "bytes": 26628,
+      "sha256": "1e2443728050845310ddd7861c39357bb438fff54d2e159d835d8c536859850c"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS3489531.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS3489531.json",
+      "bytes": 5782,
+      "sha256": "861096eed0ec0980d259de80dc346a668e72b8467dc24d9a346d5a5bd2d63ded"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS3533201.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS3533201.json",
+      "bytes": 9500,
+      "sha256": "f515cdfa1cf7ee868681902413755ec37128966bc2582a336d38eb5d01b31393"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS3830004.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS3830004.json",
+      "bytes": 7351,
+      "sha256": "81a77c6ee625b4496c5013aa577015bc1a0f29146f8c5f00528f006a0e997000"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS4264568.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS4264568.json",
+      "bytes": 8765,
+      "sha256": "7869b8c63e48f15d0fdcc4418f1337258b2a9cce924c82d4d2a4ed6e093cc20c"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS4723516.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS4723516.json",
+      "bytes": 3263,
+      "sha256": "e3c83d6d2f68cb5b891c1500a84932153c1db584776264e319ea596ee1115c76"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS5358816.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS5358816.json",
+      "bytes": 5790,
+      "sha256": "e23b21b699ca14f54ea156086bfd2c3a17be0d33bace8f20e72f87ed85c0c591"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS5360020.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS5360020.json",
+      "bytes": 7291,
+      "sha256": "ec5e16d80eb8e4d59a6373c4acc234507101f7494a391137f8369b68b363c27b"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS5781329.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS5781329.json",
+      "bytes": 4255,
+      "sha256": "d32977f0027b62fbf537beace1b52b03844932a9238f50ad00f71ec0a0d02ab3"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS6038264.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS6038264.json",
+      "bytes": 5591,
+      "sha256": "e1ad865469ab96e20730ec4bd05d2b8b5f8b016ad981366ff7c30810a4be67a6"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS6623729.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS6623729.json",
+      "bytes": 8765,
+      "sha256": "ff4efed027528206adc6c4e28142270f5f12c58b8f12b57b253ce76b4ef880ac"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS6623730.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS6623730.json",
+      "bytes": 8765,
+      "sha256": "6523b994d3d2525762f0d2280bf2bcdf933dccba345e3e172e5a55641383d102"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS6704401.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS6704401.json",
+      "bytes": 7239,
+      "sha256": "c5db3197b60a4aea92fd78f3b9479401849f33af9c3f3e2893debf1f7aad4247"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS6704405.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS6704405.json",
+      "bytes": 7239,
+      "sha256": "73533eee63f03b30c249d888020227dc1458af34d080e9849172486e45a4a847"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS6946668.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS6946668.json",
+      "bytes": 10964,
+      "sha256": "95e8c28dd8a384153ba37d4ee7b2f213901bfc4a6cc2b33675a291fb767f4f71"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS6981068.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS6981068.json",
+      "bytes": 5801,
+      "sha256": "b15af444aa7078fa92503bbc5632c8bb570c90065c7dc08e05db819c283e091c"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS7066724.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_casual/measurement_cache/MS7066724.json",
+      "bytes": 11360,
+      "sha256": "7307d9376440b73bbd74cc223b34bc39e79a2b8c9ffe83cdc347ce6e16935f12"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/captured_candidates.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/captured_candidates.json",
+      "bytes": 451634,
+      "sha256": "71c24d8d0591dbfae7c5914c00cf7c654a392f90c8c67b950cdb4c2a5090c316"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/comparison.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/comparison.json",
+      "bytes": 11037,
+      "sha256": "4af9b68ba87f534b82071904d961688614f5bb2789fb64202f36266cac6fab79"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS3556538.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS3556538.json",
+      "bytes": 8228,
+      "sha256": "88489fc0665bbee514ff4b939fbc610b8e6fc60f3c6c1b47e6e38d89e80eb87e"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS3888498.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS3888498.json",
+      "bytes": 7323,
+      "sha256": "c01133fd616e6040726d56a7085875828289f9e11336af9a85b3ba8f2ee95f2f"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS4159891.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS4159891.json",
+      "bytes": 9475,
+      "sha256": "c7c9afd5b5d6fbcd4d63cde4336862c37d9d5bd9b5e2a065e85abbfabe76e860"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS4515546.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS4515546.json",
+      "bytes": 5710,
+      "sha256": "7f80091638302ef94392e3bdd8344ab4c93843203a310f8285166de773c08e8e"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS4515584.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS4515584.json",
+      "bytes": 5713,
+      "sha256": "5d95b0bef3b42ad148dd8f3542cc3692eb6e1eeae52c20ada00c566478173284"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS4745197.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS4745197.json",
+      "bytes": 5115,
+      "sha256": "200217395b8dad94a0507884b410b4cc6cf1fd78cbb74b9103a9a562add2d9f6"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS5011142.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS5011142.json",
+      "bytes": 3480,
+      "sha256": "13d7a9d39906d10cc9cf92d8ccbb1b41d3d1e8d3cc6e3ee984c98f8bf76d485c"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS6271492.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS6271492.json",
+      "bytes": 7206,
+      "sha256": "5c03294379138bba8776a4f06fe2462406fd9548d0e0c7e7bc238bae7a25bc68"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS6271493.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS6271493.json",
+      "bytes": 7206,
+      "sha256": "3eec7472a711c2c97febb56263530a730b1169db337caf064239161880ca2049"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS6271497.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS6271497.json",
+      "bytes": 7206,
+      "sha256": "6c52d758eb7ddf7f261a165a3f76dfdc64fb142752fefe9c35d2a0d5a1657c6f"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS6596166.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS6596166.json",
+      "bytes": 7230,
+      "sha256": "1dff2c240abdaa5688929bc42eba9104274b4f779f921a86ea6b0b080a491c30"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS6623729.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS6623729.json",
+      "bytes": 8765,
+      "sha256": "ba2a43b9c39fa279f1d6145c4f764a1daec0ee9386d3e9cafd47737864ac4cdb"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS6623730.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS6623730.json",
+      "bytes": 8764,
+      "sha256": "5b98dfd99eb98fc4e8d2dec70c80024709d879fe0201bca875a018f702584c4d"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS6685522.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS6685522.json",
+      "bytes": 5710,
+      "sha256": "78020b7295d9ffa2819b4641d63e8fdd8cc118b29708470d397c1738e8d00705"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS6685523.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS6685523.json",
+      "bytes": 5708,
+      "sha256": "a958e1025b1acba9543347f9549323148ee45f49feb3228d87bb88f14d5017a4"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS7252373.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS7252373.json",
+      "bytes": 6766,
+      "sha256": "34055b4fe479d8dcada96b92d95be5c3a371061dfd5778d2072918dccf7c0cfa"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS7285529.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS7285529.json",
+      "bytes": 5587,
+      "sha256": "500c3d0959486f88be4bf06da2531b14caa863ee2ebdfc1d2e829fbbe7e116f8"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS7285530.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS7285530.json",
+      "bytes": 5587,
+      "sha256": "08d3732a3b79eee0257177fe4a16601e3fabdbbaab0fe11b88b7a1a43cc2a974"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS7285531.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/men_office/measurement_cache/MS7285531.json",
+      "bytes": 5587,
+      "sha256": "676b1296e340e3848afa0f7e440b911a462d8e368832faafba78d30b8ff38262"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/previous_release.txt",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/previous_release.txt",
+      "bytes": 23,
+      "sha256": "540ba43853748930a4232be627da4d53f9f2496ae7402a4fb1f81c70c01dc204"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_http/analysis.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_http/analysis.json",
+      "bytes": 32404,
+      "sha256": "f77b62348569d08102d86daae2cedb2cd8c77b6343900523610f45d14bea671a"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_http/cached_tryon.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_http/cached_tryon.json",
+      "bytes": 746,
+      "sha256": "fdcc24931691564ba2d10131c653f4b79b74f0be002f06c442fe5e29a289549a"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_http/health.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_http/health.json",
+      "bytes": 292,
+      "sha256": "955207d1b9057da5b3264e4b042aa5118f522e6beb4f913aadc659b17420d62e"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_http/profile.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_http/profile.json",
+      "bytes": 1145,
+      "sha256": "28848ca4a554f05ca88862695975c507944d1c0f87178fa95bf23a1bf207ac31"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_http/shopping_batch.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_http/shopping_batch.json",
+      "bytes": 1851,
+      "sha256": "f0ef3a56ca2233819d7bd7766c61a882389b595d1b3074b2609861bdc3cdf065"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_http/summary.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_http/summary.json",
+      "bytes": 309,
+      "sha256": "f16a7529984021b00294a11755846f19aeb039de9bc17cb1d90bf6642cbc155d"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_http.log",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_http.log",
+      "bytes": 1533,
+      "sha256": "dbde53e225ed41e0a7e0e084a890dce687abd8c6c65476e240c32fcba946ce4f"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_no_reference/analysis.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_no_reference/analysis.json",
+      "bytes": 21456,
+      "sha256": "233545b4a72a6d9576c3c172d9d782cbf0a4073205dbc372118b6c9d0363f039"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_no_reference/cached_tryon.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_no_reference/cached_tryon.json",
+      "bytes": 746,
+      "sha256": "fdcc24931691564ba2d10131c653f4b79b74f0be002f06c442fe5e29a289549a"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_no_reference/health.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_no_reference/health.json",
+      "bytes": 292,
+      "sha256": "955207d1b9057da5b3264e4b042aa5118f522e6beb4f913aadc659b17420d62e"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_no_reference/profile.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_no_reference/profile.json",
+      "bytes": 959,
+      "sha256": "5c25fc322cc069d3b0741341345b59be296eb14a1f5c37148e710ba3cda382dc"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_no_reference/shopping_batch.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_no_reference/shopping_batch.json",
+      "bytes": 1851,
+      "sha256": "1d6ae96e3b142cd5ce7e5457201f887cadc159ba8ec15bf8a610402d581a6267"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_no_reference/summary.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_no_reference/summary.json",
+      "bytes": 308,
+      "sha256": "1b304eef1bc634b8e11e53a6526fc59cc3871db7ebd5c334575efefa6b16d97e"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_no_reference.log",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_no_reference.log",
+      "bytes": 1346,
+      "sha256": "d20205a3e4dfb60a3715efe51da88daf5dab65e992103b9ae59e7c3f1a7c8bda"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_static.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/production_static.json",
+      "bytes": 203,
+      "sha256": "f4b5c82a23590db85c9189bf8540a0a0f3e3060a2bdbb14c1be13d5e161e4050"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/results.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/results.json",
+      "bytes": 208610,
+      "sha256": "c6c8572568a7c3d66c4d9f8c93cd1f0df876e27512b391df65e1904ed9afaad5"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/staging_http/analysis.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/staging_http/analysis.json",
+      "bytes": 32404,
+      "sha256": "1da04bff37f4c8b1459b50fd4f9ecec4b31931d833936dbc56bb1441f9156333"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/staging_http/cached_tryon.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/staging_http/cached_tryon.json",
+      "bytes": 746,
+      "sha256": "fdcc24931691564ba2d10131c653f4b79b74f0be002f06c442fe5e29a289549a"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/staging_http/health.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/staging_http/health.json",
+      "bytes": 292,
+      "sha256": "955207d1b9057da5b3264e4b042aa5118f522e6beb4f913aadc659b17420d62e"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/staging_http/profile.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/staging_http/profile.json",
+      "bytes": 1145,
+      "sha256": "28848ca4a554f05ca88862695975c507944d1c0f87178fa95bf23a1bf207ac31"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/staging_http/shopping_batch.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/staging_http/shopping_batch.json",
+      "bytes": 1851,
+      "sha256": "f0ef3a56ca2233819d7bd7766c61a882389b595d1b3074b2609861bdc3cdf065"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/staging_http/summary.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/staging_http/summary.json",
+      "bytes": 310,
+      "sha256": "a0452b6434ac349ae025bf757cac4bf6c336dec3efae275ee05df0486282cfb0"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/staging_http.log",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/staging_http.log",
+      "bytes": 1594,
+      "sha256": "da0e5d4bf9c5f1b95cf40a7941852ed7414dd0c27c4b92855481af421b714f3a"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/captured_candidates.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/captured_candidates.json",
+      "bytes": 431639,
+      "sha256": "3fea30204641b2a46c85be79558ec60e6d15d75c6b270582d9a4f5658f7a9132"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/comparison.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/comparison.json",
+      "bytes": 11277,
+      "sha256": "86dbc4b8d0b0af3790c90e18476a136d2dcc425bdf15361ff3366f0584d0afb9"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS1752894.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS1752894.json",
+      "bytes": 7059,
+      "sha256": "5eac1730abe66f4c8316a5428d534b16c3ebb40b367ef146316812b8aa935332"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS2028335.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS2028335.json",
+      "bytes": 21363,
+      "sha256": "5dbfd0fb77402939eb8ff99afb531b7fbdb669eb8ac9f5e0bbd4fd0ba567c51d"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS3116812.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS3116812.json",
+      "bytes": 7049,
+      "sha256": "1244993f01032b7dfeed25caf5f17fcb669c28c757c29a461b9f48b354747915"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS3249482.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS3249482.json",
+      "bytes": 8250,
+      "sha256": "408631df5c4effb29c5937dca9fc1c7bab7ce9ee0da20f58b0798cf2bf9f4384"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS3467818.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS3467818.json",
+      "bytes": 7194,
+      "sha256": "a59b9e1f9b77a1c2e758696c7bc0fcf8dfdf679ee626f02b82fe869adf8e71e6"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS3918531.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS3918531.json",
+      "bytes": 9002,
+      "sha256": "01b5a8dd0783433f356b567c684e051cea7e02681c1fcbe1f09af37a63e9ba98"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS4283666.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS4283666.json",
+      "bytes": 7261,
+      "sha256": "ec0c2bf1e164453b27f98654a8a650789165064caf695614c470f508f0672407"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS4469207.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS4469207.json",
+      "bytes": 10267,
+      "sha256": "4226827e92590ef8f2caeab7adf3aa2d9de6a34ee5579ef78ab3bd40630ffb4b"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS4613453.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS4613453.json",
+      "bytes": 7364,
+      "sha256": "fb99b61f4cf1c91e535b787b5e39679bf88831bfe4beb3fbd70b80eb561d5323"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS5320041.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS5320041.json",
+      "bytes": 5785,
+      "sha256": "6a9e684d2227a3779a0e6f280c06db4da0bac3c24b5ee22baee13f398fe2c088"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS5360020.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS5360020.json",
+      "bytes": 7291,
+      "sha256": "91c6bd1e8a3dbcb52edfcaa925615ad7edd80d40bc7766080b05701fd28ba78d"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS5982493.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS5982493.json",
+      "bytes": 6540,
+      "sha256": "2b8deb610f664aab86dc5982f08afabc17449e75376afa59d3af13e424630cda"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS5985043.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS5985043.json",
+      "bytes": 6683,
+      "sha256": "d5184cb0e50764d9ee50ed64cb0eed1e1fff35a737d3358f40142604037763de"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS6062487.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS6062487.json",
+      "bytes": 4175,
+      "sha256": "18d22b91e1751d520989fbb39278209fd73f558411812bd536e95bd66967d7ec"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS6477427.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS6477427.json",
+      "bytes": 3326,
+      "sha256": "e4b95f3d0aefa9610be96bd0cd9f0e897abc6d39c7385f6e3d09fc089d44962c"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS6970665.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS6970665.json",
+      "bytes": 40190,
+      "sha256": "1b1b5c42c72580b8bb2137db0b35c5f75004c739fa981a552606d67bf97a8022"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS7066724.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_casual/measurement_cache/MS7066724.json",
+      "bytes": 11360,
+      "sha256": "07a970e0a70781cb5ceb4292722ae36d7b5f891ddd244d65fe2ff74690aca891"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/captured_candidates.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/captured_candidates.json",
+      "bytes": 457462,
+      "sha256": "d203cf014c6228e77b3d1f66ed24507c42d8e7f62b8a1f91ffdfd1ac4d595686"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/comparison.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/comparison.json",
+      "bytes": 11199,
+      "sha256": "a40d27d3f7adee8cb7228228ed248d5b9ca4d68e2c25b2829d30f22031b63d16"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS3888498.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS3888498.json",
+      "bytes": 7324,
+      "sha256": "170d667f58da9da4e0b1047d3c054d7dba4efc5eecada7049e87a45d6f94b722"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS4503690.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS4503690.json",
+      "bytes": 9550,
+      "sha256": "5ec9560c704bf0e046d07879bcfc1e604f5111c542aec22e323dbb7d6d53d6cc"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS4745197.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS4745197.json",
+      "bytes": 5114,
+      "sha256": "05d4eb1e502b53fbf141fd612c083dd0b9a9c9f4195b21a9e18f67b8f2a68d1f"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS4821816.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS4821816.json",
+      "bytes": 7480,
+      "sha256": "1efca06cd0c27026e892adba875b5cc8bcb5b8c7779cb2a041e1419085e25a82"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS4863629.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS4863629.json",
+      "bytes": 3799,
+      "sha256": "076bbb12e798232f8de7cb7f4fc60646d1dfd2e8011b35df3e2f2f19b001c2c3"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS4876175.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS4876175.json",
+      "bytes": 4186,
+      "sha256": "e4b373db4a40deb0d5d5091f735eb8bdf51c64bb5a8dc8b0ef44d0ea3c32c51c"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS6271492.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS6271492.json",
+      "bytes": 7205,
+      "sha256": "d2714756392eae47a28184df2eaf03771e7963ac9c017ec6255e9d80eb803237"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS6271493.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS6271493.json",
+      "bytes": 7206,
+      "sha256": "6c832378372207fe7480ead8fdbe88b6b029f0ea3d4770787e678d07141f1ec5"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS6573788.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS6573788.json",
+      "bytes": 16783,
+      "sha256": "c56b73724d33b67545a33a2c3348b90362a24f574702d5f1657eabcbebdbbf34"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS6623729.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS6623729.json",
+      "bytes": 8765,
+      "sha256": "2ba54c4e72ec773a75274b6ee69a3e17f70270a6d604d1a7e0b145dc736a8e16"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS6623730.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS6623730.json",
+      "bytes": 8765,
+      "sha256": "b2d497f9d62928f59dbaf9e4b8c535ba205e1491476ac7bd4c300be0f5740870"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS7049439.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS7049439.json",
+      "bytes": 7390,
+      "sha256": "2f18e708fd5de7e33c17ac98252d49603fc91d7123312fa4c10d256183327402"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS7051966.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS7051966.json",
+      "bytes": 14007,
+      "sha256": "021cb4f2e70bbe71a35db256976fb6e4356abcfb42c19a586139fba4f459e7b3"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS7057797.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS7057797.json",
+      "bytes": 7386,
+      "sha256": "b7cab334a5e16076b6dddcc6ab520f08ef6ca4ed4d32b8dee747f37fbdf4daaf"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS7128079.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS7128079.json",
+      "bytes": 5613,
+      "sha256": "c2d2799cd17b6aa4c3603465e1b8e363cc7ecca2acb2f1787c8885dedff6163f"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS7252373.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS7252373.json",
+      "bytes": 6768,
+      "sha256": "3d85e66ceb94a8e728905da32190c4acbfce51923151c58f592e5ef1d6e249f6"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS7285529.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS7285529.json",
+      "bytes": 5587,
+      "sha256": "90df7f5de4c417dbb94d553f758bba56f8440659dee618a3be3ed7a910639b0a"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS7285530.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS7285530.json",
+      "bytes": 5587,
+      "sha256": "7e89a5a7d06b7699c6e39a4be58d7615c144ee52dbba7e64d6d5861c5d47c7a3"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS7285531.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/gpu_validation_2026-09-15/women_date/measurement_cache/MS7285531.json",
+      "bytes": 5586,
+      "sha256": "8751f940047b02b393275ab15785bb959990b7e02805411e12dd34d1346b09e1"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/meeting_validation_2026-09-15/diff_check.log",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/meeting_validation_2026-09-15/diff_check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/meeting_validation_2026-09-15/javascript_syntax.log",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/meeting_validation_2026-09-15/javascript_syntax.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/meeting_validation_2026-09-15/shared_tests.log",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/meeting_validation_2026-09-15/shared_tests.log",
+      "bytes": 1654,
+      "sha256": "3d22cb3e9a730b7a20b81cc122fb29f59de915ac610c603a7329ce6d721222a0"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/meeting_validation_2026-09-15/summary.json",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/meeting_validation_2026-09-15/summary.json",
+      "bytes": 1416,
+      "sha256": "fbf6e465c47b6a22629adc2dd2fd3ef15e8eb15204e0f5f31c49f7909ce369ba"
+    },
+    {
+      "archive_path": "repository/ai_fashion_recommender/reports/runs/meeting_validation_2026-09-15/web_tests.log",
+      "restore_root": "repository",
+      "restore_path": "ai_fashion_recommender/reports/runs/meeting_validation_2026-09-15/web_tests.log",
+      "bytes": 4450,
+      "sha256": "780939892a2e208f74ebb95ddd8c0ecd5626127f24d0db741f55c5921d37f27f"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/denim05047_fashn_labels.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/denim05047_fashn_labels.json",
+      "bytes": 448,
+      "sha256": "b5d8371f9e9a62f67cae70b9c3c907bb695d82dc3c8210e03eaf3d587fbff5e0"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_catvton_denim05047_narrow.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_catvton_denim05047_narrow.json",
+      "bytes": 968,
+      "sha256": "c79ead5142e9f99306a998f8eb9763692d16206385c19bb61d61493a45de01a6"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_catvton_denim05047_pose_oracle.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_catvton_denim05047_pose_oracle.json",
+      "bytes": 1349,
+      "sha256": "c7c80da0bef8a7a4fa4b28f489349f332a99989094b57071172d2709a0bf6e47"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_catvton_denim05047_pose_oracle_standard.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_catvton_denim05047_pose_oracle_standard.json",
+      "bytes": 1367,
+      "sha256": "f2241bab95c128d6d2f021229baf39789543721c47939593bc50b28c8557cfc9"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_catvton_denim05047_standard.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_catvton_denim05047_standard.json",
+      "bytes": 971,
+      "sha256": "79eab30c3a4da566dbd55990746c47f02fc3d28dfb7737d381da8e10a2f282b6"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_catvton_denim05047_standard_identity_locked.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_catvton_denim05047_standard_identity_locked.json",
+      "bytes": 1698,
+      "sha256": "ca3998dc3f760ced2d1c508a778e5e28f52eeb6e8f492ba9d23475d1a1961ba6"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_catvton_denim05047_standard_source_locked.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_catvton_denim05047_standard_source_locked.json",
+      "bytes": 1678,
+      "sha256": "5a30b402eb3b337c57617009ab8a53d7868f854899596429d76de052994ddbc9"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_catvton_fur07123_standard.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_catvton_fur07123_standard.json",
+      "bytes": 966,
+      "sha256": "6457bc36f1bb661d13573e88b4a2d482c371fdde30f993bce594f051061ab483"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_catvton_fur07123_standard_source_locked.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_catvton_fur07123_standard_source_locked.json",
+      "bytes": 1441,
+      "sha256": "629be5d3b835d440adaaadc2df75be689dccf86573ca87cc83dd24015187e4fc"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_catvton_longcoat01582_standard.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_catvton_longcoat01582_standard.json",
+      "bytes": 977,
+      "sha256": "34db644849f11543dd25b8feb9f93c1b8b11a4deb00be54406997b2dc6cd9fe1"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_catvton_longcoat01582_standard_source_locked.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_catvton_longcoat01582_standard_source_locked.json",
+      "bytes": 1696,
+      "sha256": "0a46001ed9f9f1cda10d5ea3cff39734b0e15411b6de3eb720a321e504163f56"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_catvton_puffer05412_standard.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_catvton_puffer05412_standard.json",
+      "bytes": 973,
+      "sha256": "8123040f5ca5bd40d0ef0954e9a8a5a02010f7c135e45f332b98c0bca2a41482"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_catvton_puffer05412_standard_source_locked.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_catvton_puffer05412_standard_source_locked.json",
+      "bytes": 1453,
+      "sha256": "ccb04ff7a2a9b8c2073b1d44c4303ee61b96eb719bb992db8b7d0dc347ca8746"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_denim05047_composite.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_denim05047_composite.json",
+      "bytes": 1647,
+      "sha256": "b31998a86127394fb7e7b7b35195243419b0e305895fd719e32c6f20656ca980"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_denim05047_fashn_inner_mask.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_denim05047_fashn_inner_mask.json",
+      "bytes": 1114,
+      "sha256": "01f4f40b74e295f0bb8b0a2288113067f7fa45abb29952af0ae765bf54a6f7bd"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_denim05047_identity_only.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_denim05047_identity_only.json",
+      "bytes": 1669,
+      "sha256": "6b7ba12efde367d902a8aaebe151208066e78fe21ef30ec6a1f511cc4ce942dd"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_denim05047_inner_box_mask.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_denim05047_inner_box_mask.json",
+      "bytes": 964,
+      "sha256": "2df7f69b7c7a5c1561bd2131a7c524589d6ea6044ae5c67c875be83bf4b16493"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_denim05047_inner_box_overlap_mask.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_denim05047_inner_box_overlap_mask.json",
+      "bytes": 1003,
+      "sha256": "95c8d4bb3d3d33110d5dc7ef5350cc558a56cbcf68257a64dadee840a0a45f27"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_denim05047_inner_box_refined.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_denim05047_inner_box_refined.json",
+      "bytes": 1366,
+      "sha256": "a3df32bb84724a1c43a00e43f9d0aafb67b542554f01bbad6722eded4e07b8cb"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_denim05047_inner_edit_mask.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_denim05047_inner_edit_mask.json",
+      "bytes": 931,
+      "sha256": "80aa8c5acb5d84d2405083f5855047bd93c59757f7356f07846509ba71af5042"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_denim05047_inner_gate_mask.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_denim05047_inner_gate_mask.json",
+      "bytes": 1094,
+      "sha256": "024f39077094c5f1c40ba70bf780fec1dd4920a5c4b9caa8e1a117a1f394841d"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_denim05047_inner_overlap_refined.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_denim05047_inner_overlap_refined.json",
+      "bytes": 1401,
+      "sha256": "20fb0e95a7e476a86a1198a83a54adf8656f50e89f2a388f6fcaf3ec9472c3b1"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_denim05047_inner_refined.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_denim05047_inner_refined.json",
+      "bytes": 1328,
+      "sha256": "755c835b8fa9ef5e2d43d81b3f4dda8f7de7fd3f744905098e34f635be7f33d1"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_fur07123_composite.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_fur07123_composite.json",
+      "bytes": 1409,
+      "sha256": "bf890d328002090c1764f06547dd5c59cb7760e905778598466bbe7289967de5"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_fur07123_hair_release.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_fur07123_hair_release.json",
+      "bytes": 1403,
+      "sha256": "63a13c8b60e47d99e7d696041824e4956746ce16f555fcc732f1a0b4d9ef0d98"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_fur07123_identity_hair_release.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_fur07123_identity_hair_release.json",
+      "bytes": 1429,
+      "sha256": "8d35b43d378b2513b30bcdd3cdddc9b59f772e66e5b49936bf96c938440ef199"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_fur07123_identity_only.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_fur07123_identity_only.json",
+      "bytes": 1432,
+      "sha256": "3de84e061385f20dadc27dd971e14c806694ca269f5b9e757a849b741af7f7a8"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_longcoat01582_composite.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_longcoat01582_composite.json",
+      "bytes": 1665,
+      "sha256": "1a2a807f85cfe9458abeac249772e3c3735453d28653308d2857e0968f9a9ea5"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_longcoat01582_hair_release.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_longcoat01582_hair_release.json",
+      "bytes": 1660,
+      "sha256": "f20413c81e50d1b26f23419e57523fdb7172c2c7176995e1f888bbe558a1843f"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_longcoat01582_identity_hair_release.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_longcoat01582_identity_hair_release.json",
+      "bytes": 1685,
+      "sha256": "9ed2422d68f7fa65f985d1abad24c97fe821303da97cc1acd64b664fdfb2a91e"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_longcoat01582_identity_only.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_longcoat01582_identity_only.json",
+      "bytes": 1687,
+      "sha256": "263e267b66e8079904d938c546c805e91849e481c23c588ca2dc0573e983e4ad"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_longcoat01582_inner_probe_mask.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_longcoat01582_inner_probe_mask.json",
+      "bytes": 1001,
+      "sha256": "288772c4878e319ef1600d7b1ca4b4ebc9b3c93d6f0a634218a1da15e0d8c90e"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_puffer05412_composite.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_puffer05412_composite.json",
+      "bytes": 1392,
+      "sha256": "471f7facf649f0986d68178b2a857101df0601edf32f5828e140d11a7c10b046"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_puffer05412_hair_release.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_puffer05412_hair_release.json",
+      "bytes": 1390,
+      "sha256": "d4b5c6836c41730277a5ff9f51ae9d810485ea923894bb5abb54a8e2a079caaa"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_puffer05412_identity_hair_release.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_puffer05412_identity_hair_release.json",
+      "bytes": 1448,
+      "sha256": "36aefb7f99713d71b3848185e1c58ad9eb54935fa9f8954048c24ca3ecbe6c9c"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_puffer05412_identity_only.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_puffer05412_identity_only.json",
+      "bytes": 1444,
+      "sha256": "f47498f81faf7dea985fc3f45e1bccd05f6fc80ba65056710434e8026428beb4"
+    },
+    {
+      "archive_path": "outerwear_visual_review/assets/lvton_puffer05412_raw_reference_identity.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "assets/lvton_puffer05412_raw_reference_identity.json",
+      "bytes": 1448,
+      "sha256": "66fe01fe95378c4192850549afdc036e31d70709a5f38d8e1d339e967f15d126"
+    },
+    {
+      "archive_path": "outerwear_visual_review/coat_boundary/accessory_metrics.csv",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "coat_boundary/accessory_metrics.csv",
+      "bytes": 1088,
+      "sha256": "6c06d15645aaa811f721edb30e983f55aff42d80c02406932dab972646085e23"
+    },
+    {
+      "archive_path": "outerwear_visual_review/coat_boundary/denim05047_background_harmonized.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "coat_boundary/denim05047_background_harmonized.json",
+      "bytes": 916,
+      "sha256": "c4d94704d33f4d25d991481532f05288275c6c340f254653c2bc7c392ae8d0e6"
+    },
+    {
+      "archive_path": "outerwear_visual_review/coat_boundary/fur07123_background_harmonized.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "coat_boundary/fur07123_background_harmonized.json",
+      "bytes": 908,
+      "sha256": "a92d8cb713891c40f2776948c73b1c0a89b28b73b5a1eec017032e709dcbe3e5"
+    },
+    {
+      "archive_path": "outerwear_visual_review/coat_boundary/longcoat01582_background_harmonized.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "coat_boundary/longcoat01582_background_harmonized.json",
+      "bytes": 1032,
+      "sha256": "eb8a7617ad79409579dc39ede85314587f1f992ef6336099931c87842082d635"
+    },
+    {
+      "archive_path": "outerwear_visual_review/coat_boundary/longcoat01582_background_harmonized_v2.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "coat_boundary/longcoat01582_background_harmonized_v2.json",
+      "bytes": 1035,
+      "sha256": "188a90ff563d26317069f8ea577fc01d5dc2bdb75670280244fe942adcaa4898"
+    },
+    {
+      "archive_path": "outerwear_visual_review/coat_boundary/metrics.csv",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "coat_boundary/metrics.csv",
+      "bytes": 1729,
+      "sha256": "e5864a9eaf0437e48e1ff8a796e1acd32ef87cc1e69fe96b592cac7216718098"
+    },
+    {
+      "archive_path": "outerwear_visual_review/coat_boundary/puffer05412_background_harmonized.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "coat_boundary/puffer05412_background_harmonized.json",
+      "bytes": 923,
+      "sha256": "3001e8fbd7ded01d9315436393ded0b0b02884359497d613dab272211dce285d"
+    },
+    {
+      "archive_path": "outerwear_visual_review/dior_output/MEN-Jackets_Vests-id_00005047-01_4_full/result.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "dior_output/MEN-Jackets_Vests-id_00005047-01_4_full/result.json",
+      "bytes": 1145,
+      "sha256": "f277c5a15e03cb0f31e469cd8dda902d1b5988f17549a7efb3b00ae0cd9eac55"
+    },
+    {
+      "archive_path": "outerwear_visual_review/dior_output/WOMEN-Jackets_Coats-id_00001582-03_4_full/result.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "dior_output/WOMEN-Jackets_Coats-id_00001582-03_4_full/result.json",
+      "bytes": 1149,
+      "sha256": "48f3ed9d979780ff1da858dd33f14b94f17356c3645497526713812ffc5181ff"
+    },
+    {
+      "archive_path": "outerwear_visual_review/dior_output/WOMEN-Jackets_Coats-id_00004979-01_4_full/result.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "dior_output/WOMEN-Jackets_Coats-id_00004979-01_4_full/result.json",
+      "bytes": 1144,
+      "sha256": "f5c2e866f0d50f352b43e03729a40844e771059253e414c3a5ebde84b5adb76e"
+    },
+    {
+      "archive_path": "outerwear_visual_review/dior_output/WOMEN-Jackets_Coats-id_00005297-03_4_full/result.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "dior_output/WOMEN-Jackets_Coats-id_00005297-03_4_full/result.json",
+      "bytes": 1148,
+      "sha256": "e567c61ebb2bb58b1e4e3d8770c20d7208b450c51696fff9d3d17718ac08a63f"
+    },
+    {
+      "archive_path": "outerwear_visual_review/dior_output/WOMEN-Jackets_Coats-id_00005412-03_4_full/result.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "dior_output/WOMEN-Jackets_Coats-id_00005412-03_4_full/result.json",
+      "bytes": 1382,
+      "sha256": "bd1db26129ae94f6921ce39bc003c544591a7a7356d83b1bb13f040d3de49217"
+    },
+    {
+      "archive_path": "outerwear_visual_review/dior_output/WOMEN-Jackets_Coats-id_00007123-02_4_full/result.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "dior_output/WOMEN-Jackets_Coats-id_00007123-02_4_full/result.json",
+      "bytes": 1382,
+      "sha256": "252fb9023bd4e7efc06f5b2d22b68d7a43e1da5dbc2f2138d4286a087534c98c"
+    },
+    {
+      "archive_path": "outerwear_visual_review/lvton_remaining_manifest.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "lvton_remaining_manifest.json",
+      "bytes": 1931,
+      "sha256": "ce1a89b81d08d7efdce9b1bbcb3288b3d82bb2ad8d80380cf139b0abcf3998ff"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/denim05047_background_refined.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/denim05047_background_refined.json",
+      "bytes": 1296,
+      "sha256": "b17f5c70face88eda83184f95ad37f79c7b2c6f0ea5fc8ef874708a1d359325b"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/denim05047_final_shoulder_audit.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/denim05047_final_shoulder_audit.json",
+      "bytes": 785,
+      "sha256": "4a4a06b83b295c0c7552f721ef4d12d920d74b7b93313cca6eb1c7b9372466f7"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/denim05047_occlusion_aware.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/denim05047_occlusion_aware.json",
+      "bytes": 1632,
+      "sha256": "cf7496dbb5522123aece2b56dfd7b4582070849af6a58b532fa603a86bfef6dc"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/denim05047_pocket_release.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/denim05047_pocket_release.json",
+      "bytes": 1459,
+      "sha256": "f4133aca58ca645404c26768d559c33b1de773e180842e98b6f390b2ccd7383e"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/denim05047_seed123_source_locked.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/denim05047_seed123_source_locked.json",
+      "bytes": 1589,
+      "sha256": "ce9b821fd02260bb1541c618628f171205706aef9b1c0b1b5092696a37441476"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/denim05047_shoulder_audit.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/denim05047_shoulder_audit.json",
+      "bytes": 1073,
+      "sha256": "40d676a9ebc3ae53f33d22b2430dea492cdc6eba9148558af744a8be3e01526d"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/denim05047_three_zone.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/denim05047_three_zone.json",
+      "bytes": 1431,
+      "sha256": "cd2cb1109ac03ff69cad45801da79f45fe7f7cd2e296695de818cfaed0d365cc"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/denim05047_zones_catvton_source_locked.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/denim05047_zones_catvton_source_locked.json",
+      "bytes": 1645,
+      "sha256": "5638e811febd5bb217c1022947b071af47b6551049f672aefe771b4e122621f8"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/fur07123_final_shoulder_audit.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/fur07123_final_shoulder_audit.json",
+      "bytes": 811,
+      "sha256": "9ea84ac89364ed5b8075b22e0f0ae132ad7d2cd88a9207e5efaa94d3c43d328d"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/fur07123_occlusion_aware.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/fur07123_occlusion_aware.json",
+      "bytes": 1334,
+      "sha256": "f0639d541d251b566aade38ba1eb6bd08674deef4a05b7b2972279977dd52f53"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/fur07123_pocket_release.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/fur07123_pocket_release.json",
+      "bytes": 1461,
+      "sha256": "69f34d57ee26c975fb199257791eb3f3255d437bd6d72f7e6f73b77822ce6fd3"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/fur07123_pocket_release_background_refined.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/fur07123_pocket_release_background_refined.json",
+      "bytes": 1367,
+      "sha256": "25da8a161e77ec7e9d182b9def90a5830a546e493ef0fac11d212919c7593e86"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/fur07123_pocket_release_catvton_source_locked.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/fur07123_pocket_release_catvton_source_locked.json",
+      "bytes": 1696,
+      "sha256": "f2b0e627d0def47687f59f6bc2e218e6219e22e8361f5a1c565398addcc52ab9"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/fur07123_pocket_release_catvton_source_locked_no_carry.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/fur07123_pocket_release_catvton_source_locked_no_carry.json",
+      "bytes": 1639,
+      "sha256": "0e33f2d30367ccdd366f6901ebbf21886ca4262ba6d3ef5f5cad4d3bb22ecce2"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/fur07123_pocket_release_with_mask.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/fur07123_pocket_release_with_mask.json",
+      "bytes": 1659,
+      "sha256": "da785096a312e06d543bda6b420d9d71b0be8443a121b121dc4029f3a17c48bb"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/fur07123_shoulder_audit.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/fur07123_shoulder_audit.json",
+      "bytes": 1064,
+      "sha256": "7097aa4e0f908c51ce56c9f26a93be6da1e6187b32de22d2987f21cc6293024b"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/fur07123_three_zone.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/fur07123_three_zone.json",
+      "bytes": 1192,
+      "sha256": "1c3c079d24bbd7961268cd566649d620c6b7ff4cbb9e1f9d34d53bf908c6929c"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/fur07123_zones_catvton_source_locked.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/fur07123_zones_catvton_source_locked.json",
+      "bytes": 1362,
+      "sha256": "6f3b83219b9ddd38fbb55abf72b9101fb90a70a21abe500da92d480d98580ac7"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/longcoat01582_background_refined.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/longcoat01582_background_refined.json",
+      "bytes": 1348,
+      "sha256": "ccffb34c4f516804f6d7852e21a0907e7e93a04517a30e6868f408de6949aa28"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/longcoat01582_final_shoulder_audit.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/longcoat01582_final_shoulder_audit.json",
+      "bytes": 807,
+      "sha256": "ea1a4380d1a090393690bf520803ca3757b03657f38cd29cb650689e26a421e8"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/longcoat01582_occlusion_aware.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/longcoat01582_occlusion_aware.json",
+      "bytes": 1639,
+      "sha256": "f4efe28056392dfffc9df288c20053efe835cef2dac4ffd478209fcae67a0fac"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/longcoat01582_pocket_release.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/longcoat01582_pocket_release.json",
+      "bytes": 1465,
+      "sha256": "067a21f84338a09e7e81cd68d9a810cfac223ba904ab0669e970f2c2802d03d2"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/longcoat01582_seed123_background_refined.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/longcoat01582_seed123_background_refined.json",
+      "bytes": 1342,
+      "sha256": "83ddba8f8791a693955cbe1208b4b9d2c68dffa6916844b63a1245500e9a5c06"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/longcoat01582_seed123_source_locked.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/longcoat01582_seed123_source_locked.json",
+      "bytes": 1600,
+      "sha256": "c248aa8be1a5d7c91d70e1b7c78e85d1701e10413084b31165ffa478a0dcb662"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/longcoat01582_shoulder_audit.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/longcoat01582_shoulder_audit.json",
+      "bytes": 1070,
+      "sha256": "4a5b224411953717e17c6582f5543aebc548c90bcc6613d63906285b82a1133b"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/longcoat01582_three_zone.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/longcoat01582_three_zone.json",
+      "bytes": 1441,
+      "sha256": "001e26f6854a2447ac599d210d72fe6fcc5e5981123488716f9b82a8d5f37f6f"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/longcoat01582_zones_catvton_source_locked.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/longcoat01582_zones_catvton_source_locked.json",
+      "bytes": 1660,
+      "sha256": "a9bb83a49c0b1709f6a2a07610a6c893f4dedd0e8e4e9c940ba7c7dfa4c59b1b"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/puffer05412_background_refined.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/puffer05412_background_refined.json",
+      "bytes": 1343,
+      "sha256": "7c41716507211d06f5a7e7efb4d3ffac4392a8e65f4116c58ac91b0e1ae466eb"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/puffer05412_final_shoulder_audit.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/puffer05412_final_shoulder_audit.json",
+      "bytes": 801,
+      "sha256": "d7ba5d48ae0e0bdf3ac6d8b6094771e408d1ea76b0f981bfce55336787b76c71"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/puffer05412_occlusion_aware.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/puffer05412_occlusion_aware.json",
+      "bytes": 1335,
+      "sha256": "6a724cc8785f6bdeee770b93fefb44ba7a11f27828a758e63e091895ad62877f"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/puffer05412_pocket_release.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/puffer05412_pocket_release.json",
+      "bytes": 1456,
+      "sha256": "cdab385e61894e87d98a4d9af60b6a7d2f52e5444dd3936f92436e6762f9e026"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/puffer05412_seed7_background_refined.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/puffer05412_seed7_background_refined.json",
+      "bytes": 1333,
+      "sha256": "e799d491aeeb818974a3dea84bab5e17a68caeec14d9d96125a65d7d08fe3383"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/puffer05412_seed7_source_locked.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/puffer05412_seed7_source_locked.json",
+      "bytes": 1587,
+      "sha256": "ce74815893ed4bb1dfae6fbe5d5aa8ffbf2d377f8d85c878ce660fb7ded28929"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/puffer05412_shoulder_audit.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/puffer05412_shoulder_audit.json",
+      "bytes": 1078,
+      "sha256": "20a02f1dc068e0a477041d9248bb5fe5bf2395c3a0f96d1c1d4766509d4ea18f"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/puffer05412_three_zone.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/puffer05412_three_zone.json",
+      "bytes": 1197,
+      "sha256": "92853b8749ab231da2766aa7bc4a25a7b4bbc02d6a5981e633730b07b9d32a54"
+    },
+    {
+      "archive_path": "outerwear_visual_review/source_zones/puffer05412_zones_catvton_source_locked.json",
+      "restore_root": "outerwear_visual_review",
+      "restore_path": "source_zones/puffer05412_zones_catvton_source_locked.json",
+      "bytes": 1363,
+      "sha256": "d9831c22d4419957205612886a8f7ccf9fadeedab4336c7439a591774915e90f"
+    }
+  ]
+}
