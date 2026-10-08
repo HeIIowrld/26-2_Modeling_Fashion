@@ -19,6 +19,7 @@
 ## 실험 결과와 개발 기록
 
 - [실험 보고서 색인](../ai_fashion_recommender/reports/README.md)
+- [2026-10-08 재현 자료 보관·복구](../ai_fashion_recommender/reports/README.md#재현-자료-보관--2026-10-08): GitHub Release와 파일별 체크섬.
 - [프로젝트 핸드북](project-handbook.md)
 - [제품·화면 설계 기록](product-design.md)
 - [VTON 품질 개선 정리](vton-quality-summary.md)
